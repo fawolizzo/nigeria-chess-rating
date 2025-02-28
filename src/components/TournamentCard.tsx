@@ -1,6 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Tournament } from "@/lib/mockData";
+import { Calendar, MapPin, Users, Clock } from "lucide-react";
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -55,15 +56,24 @@ const TournamentCard = ({ tournament }: TournamentCardProps) => {
           <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-gold-dark dark:group-hover:text-gold-light transition-colors">
             {tournament.name}
           </h3>
-          <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-            <div>
-              {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
+          <div className="mb-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" />
+              <span>{formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}</span>
             </div>
-            <div>{tournament.location}</div>
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" />
+              <span>{tournament.location}</span>
+            </div>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <div className="text-gray-600 dark:text-gray-300">
-              {tournament.participants} players • {tournament.rounds} rounds
+            <div className="flex items-center text-gray-600 dark:text-gray-300">
+              <Users className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+              <span>{tournament.participants} players</span>
+            </div>
+            <div className="flex items-center text-gray-600 dark:text-gray-300">
+              <Clock className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+              <span>{tournament.rounds} rounds</span>
             </div>
           </div>
         </div>
