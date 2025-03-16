@@ -41,8 +41,13 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         throw new Error("Worksheet not found");
       }
       
-      const jsonData = utils.sheet_to_json<any>(worksheet);
-      console.log("Parsed Excel data:", jsonData);
+      const jsonData = utils.sheet_to_json<any>(worksheet, { 
+        raw: false,
+        header: 1, // Try as array first to debug headers
+        blankrows: false
+      });
+      
+      console.log("Raw Excel data (array format):", jsonData);
       
       if (!jsonData || jsonData.length === 0) {
         toast({
@@ -54,14 +59,86 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         return;
       }
       
-      // Log the structure of the first row to help with debugging
-      if (jsonData.length > 0) {
-        console.log("First row structure:", Object.keys(jsonData[0]));
+      // Check if the first row looks like headers
+      const firstRow = jsonData[0];
+      console.log("First row (potential headers):", firstRow);
+      
+      // Now try with headers (this is the usual way)
+      const jsonWithHeaders = utils.sheet_to_json<any>(worksheet, {
+        raw: false,
+        defval: "",
+        blankrows: false
+      });
+      
+      console.log("Excel data with headers:", jsonWithHeaders);
+      
+      // If no data with headers, try processing the array format
+      let processedData;
+      if (jsonWithHeaders.length === 0 && jsonData.length > 1) {
+        // Try to determine if first row is headers
+        const potentialHeaders = firstRow.map((h: any) => 
+          typeof h === "string" ? h.toLowerCase().trim() : ""
+        );
+        
+        // Check if any potential header contains name-like terms
+        const hasNameHeader = potentialHeaders.some((h: string) => 
+          h.includes("name") || h === "player" || h.includes("player")
+        );
+        
+        if (hasNameHeader) {
+          // First row is likely headers, process from second row
+          processedData = [];
+          for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            const obj: any = {};
+            
+            for (let j = 0; j < potentialHeaders.length; j++) {
+              if (j < row.length && potentialHeaders[j]) {
+                obj[potentialHeaders[j]] = row[j];
+              }
+            }
+            
+            if (Object.keys(obj).length > 0) {
+              processedData.push(obj);
+            }
+          }
+        } else {
+          // No headers, assume first column is name, second is rating
+          processedData = [];
+          for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (row.length > 0 && row[0]) {
+              processedData.push({
+                name: row[0],
+                rating: row.length > 1 ? row[1] : 800,
+                state: row.length > 2 ? row[2] : "",
+                gender: row.length > 3 ? row[3] : "M"
+              });
+            }
+          }
+        }
+        
+        console.log("Processed data from array format:", processedData);
+      } else {
+        processedData = jsonWithHeaders;
+      }
+      
+      if (!processedData || processedData.length === 0) {
+        toast({
+          title: "No data found",
+          description: "Could not extract data from the file. Please check the file format.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
       }
       
       // Map the data to our Player structure with better column detection
-      const players = jsonData.map((row) => {
+      const players = processedData.map((row: any) => {
         // Try to handle common column names with much more flexibility
+        // Display the row for debugging
+        console.log("Processing row:", row);
+        
         // Name field detection
         const nameKeys = ["name", "player", "player name", "player_name", "fullname", "full name", "full_name"];
         const nameValue = findValueByKeys(row, nameKeys);
@@ -87,14 +164,25 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         const cityValue = findValueByKeys(row, cityKeys);
         
         // Get proper values with fallbacks
-        const name = nameValue || "";
+        let name = nameValue || "";
+        
+        // If we have a raw array and no name was found but the first cell has content
+        if (!name && Array.isArray(row) && row.length > 0 && row[0]) {
+          name = row[0];
+        }
+        
+        // If the name is a number, convert to string
+        if (typeof name === 'number') {
+          name = name.toString();
+        }
+        
         const rating = parseInt(ratingValue) || 800;
         const title = titleValue || undefined;
         const gender = (typeof genderValue === 'string' && genderValue.toUpperCase() === "F") ? "F" : "M";
         const state = stateValue || undefined;
         const city = cityValue || undefined;
         
-        console.log(`Processed player: ${name}, rating: ${rating}, gender: ${gender}, state: ${state}`);
+        console.log(`Processed player: "${name}", rating: ${rating}, gender: ${gender}, state: ${state || 'undefined'}`);
         
         return {
           name,
@@ -113,9 +201,10 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
       console.log(`Found ${validPlayers.length} valid players out of ${players.length} total rows`);
       
       if (validPlayers.length === 0) {
+        // Show more helpful error message with instructions
         toast({
           title: "No valid players found",
-          description: "The file doesn't contain properly formatted player data. Column names should include 'name', 'rating', etc.",
+          description: "The file doesn't contain properly formatted player data. Make sure your Excel file has a column named 'Name' or 'Player'.",
           variant: "destructive"
         });
         return;
@@ -144,9 +233,14 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
 
   // Helper function to find a value using various possible keys (case insensitive)
   const findValueByKeys = (row: any, possibleKeys: string[]): any => {
+    // Special case for array rows
+    if (Array.isArray(row)) {
+      return row.length > 0 ? row[0] : null;
+    }
+    
     // First check exact matches
     for (const key of possibleKeys) {
-      if (row[key] !== undefined) return row[key];
+      if (row[key] !== undefined && row[key] !== "") return row[key];
     }
     
     // Then check for case-insensitive matches
@@ -155,7 +249,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
       const matchingKey = rowKeys.find(
         k => k.toLowerCase() === possibleKey.toLowerCase()
       );
-      if (matchingKey && row[matchingKey] !== undefined) {
+      if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== "") {
         return row[matchingKey];
       }
     }
@@ -165,7 +259,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
       const matchingKey = rowKeys.find(
         k => k.toLowerCase().includes(possibleKey.toLowerCase())
       );
-      if (matchingKey && row[matchingKey] !== undefined) {
+      if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== "") {
         return row[matchingKey];
       }
     }

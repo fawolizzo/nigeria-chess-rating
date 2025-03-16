@@ -65,6 +65,7 @@ const TournamentPlayerSelector = ({
     })) as ImportPlayerWithTempId[];
     
     setImportedPlayers(playersWithIds);
+    setSelectedImportIds(playersWithIds.map(p => p.tempId)); // Auto-select all imported players
     
     // Switch to the review tab
     setActiveTab("review");
@@ -177,7 +178,7 @@ const TournamentPlayerSelector = ({
               {activeTab === "review" && importedPlayers.length > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Select players to import. All imported players will require approval from a Rating Officer.
+                    Review and confirm players to import. All imported players will require approval from a Rating Officer.
                   </p>
                   
                   <div className="border rounded-md overflow-hidden">
@@ -221,28 +222,28 @@ const TournamentPlayerSelector = ({
                       onClick={submitImportedPlayers}
                       disabled={selectedImportIds.length === 0}
                     >
-                      Submit {selectedImportIds.length} Players
+                      Submit {selectedImportIds.length} Player{selectedImportIds.length !== 1 ? 's' : ''}
                     </Button>
                   </DialogFooter>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-10">
-                  <Users className="h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-1">No players to review</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Import players from a CSV or Excel file first
-                  </p>
-                  
-                  <div className="w-full max-w-md mx-auto mb-6">
+                <div className="py-6">
+                  <div className="w-full mx-auto">
                     <FileUploadButton 
                       onPlayersImported={handlePlayersImported} 
                       buttonText="Import Players from CSV/Excel"
                     />
                   </div>
                   
-                  <Button variant="outline" onClick={() => setActiveTab("select")}>
-                    Back to Player Selection
-                  </Button>
+                  <div className="text-center mt-6">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload a CSV or Excel file with player information.
+                      <br />The file should have columns for Name, Rating, and optionally Title, State, City, and Gender.
+                    </p>
+                    <Button variant="outline" onClick={() => setActiveTab("select")}>
+                      Back to Player Selection
+                    </Button>
+                  </div>
                 </div>
               )}
             </TabsContent>
