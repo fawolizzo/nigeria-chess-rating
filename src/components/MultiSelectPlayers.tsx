@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getAllPlayers, Player } from "@/lib/mockData";
 
 interface MultiSelectPlayersProps {
@@ -97,7 +98,7 @@ const MultiSelectPlayers = ({
         <DialogHeader>
           <DialogTitle>Select Players</DialogTitle>
           <DialogDescription>
-            Search and select multiple players to add to your tournament.
+            Select one or more players to add to your tournament.
           </DialogDescription>
         </DialogHeader>
         
@@ -171,7 +172,13 @@ const MultiSelectPlayers = ({
                       onClick={() => handleSelectPlayer(player)}
                     >
                       <div className="flex items-center">
-                        <div className="ml-3">
+                        <Checkbox 
+                          checked={isSelected}
+                          onCheckedChange={() => handleSelectPlayer(player)}
+                          className="mr-3"
+                          id={`player-${player.id}`}
+                        />
+                        <div>
                           <div className="font-medium text-gray-900 dark:text-white">
                             {player.title && (
                               <span className="text-gold-dark dark:text-gold-light mr-1">
@@ -186,10 +193,8 @@ const MultiSelectPlayers = ({
                         </div>
                       </div>
                       
-                      {isSelected ? (
+                      {isSelected && (
                         <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      ) : (
-                        <PlusCircle className="h-5 w-5 text-gray-400 dark:text-gray-600" />
                       )}
                     </div>
                   );

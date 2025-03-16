@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { UserPlus } from "lucide-react";
+import { Plus } from "lucide-react";
 import MultiSelectPlayers from "./MultiSelectPlayers";
 import { Player } from "@/lib/mockData";
 
@@ -31,8 +31,8 @@ const TournamentPlayerSelector = ({
         className="text-sm"
         onClick={() => setIsMultiSelectOpen(true)}
       >
-        <UserPlus className="h-4 w-4 mr-2" />
-        Add Multiple Players
+        <Plus className="h-4 w-4 mr-2" />
+        Add Existing Player
       </Button>
       
       <MultiSelectPlayers
