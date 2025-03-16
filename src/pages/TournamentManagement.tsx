@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -6,10 +5,10 @@ import { Users, Trophy, Award } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Player, addPlayer, getAllPlayers } from "@/lib/mockData";
+import { Player, addPlayer, getAllPlayers, updatePlayer } from "@/lib/mockData";
 import StandingsTable from "@/components/StandingsTable";
 
-// Import our new components
+// Import our components
 import PlayerFormModal from "@/components/tournament/PlayerFormModal";
 import TournamentHeader from "@/components/tournament/TournamentHeader";
 import PlayersTab from "@/components/tournament/PlayersTab";
@@ -25,7 +24,7 @@ interface Tournament {
   location: string;
   city: string;
   state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
   timeControl: string;
   rounds: number;
   organizerId: string;
@@ -396,6 +395,124 @@ const TournamentManagement = () => {
     }
   };
 
+  const handleProcessRatings = (processedRounds: Array<{
+    roundNumber: number;
+    matches: Array<{
+      whiteId: string;
+      blackId: string;
+      result: "1-0" | "0-1" | "1/2-1/2" | "*";
+      whiteRatingChange: number;
+      blackRatingChange: number;
+    }>;
+  }>) => {
+    if (!tournament) return;
+    
+    // Update tournament pairings with rating changes
+    const updatedPairings = tournament.pairings?.map(round => {
+      const processedRound = processedRounds.find(pr => pr.roundNumber === round.roundNumber);
+      
+      if (processedRound) {
+        return {
+          ...round,
+          matches: round.matches.map(match => {
+            const processedMatch = processedRound.matches.find(
+              pm => pm.whiteId === match.whiteId && pm.blackId === match.blackId
+            );
+            
+            if (processedMatch) {
+              return {
+                ...match,
+                whiteRatingChange: processedMatch.whiteRatingChange,
+                blackRatingChange: processedMatch.blackRatingChange
+              };
+            }
+            
+            return match;
+          })
+        };
+      }
+      
+      return round;
+    });
+    
+    // Update player ratings in the system
+    const playerUpdates: Record<string, { 
+      ratingChange: number, 
+      gameResult: "win" | "loss" | "draw" 
+    }> = {};
+    
+    processedRounds.forEach(round => {
+      round.matches.forEach(match => {
+        if (match.result !== "*") {
+          // Track white player updates
+          if (!playerUpdates[match.whiteId]) {
+            playerUpdates[match.whiteId] = { 
+              ratingChange: 0, 
+              gameResult: "draw" 
+            };
+          }
+          
+          // Track black player updates
+          if (!playerUpdates[match.blackId]) {
+            playerUpdates[match.blackId] = { 
+              ratingChange: 0, 
+              gameResult: "draw" 
+            };
+          }
+          
+          // Add rating changes
+          playerUpdates[match.whiteId].ratingChange += match.whiteRatingChange;
+          playerUpdates[match.blackId].ratingChange += match.blackRatingChange;
+          
+          // Record game result
+          if (match.result === "1-0") {
+            playerUpdates[match.whiteId].gameResult = "win";
+            playerUpdates[match.blackId].gameResult = "loss";
+          } else if (match.result === "0-1") {
+            playerUpdates[match.whiteId].gameResult = "loss";
+            playerUpdates[match.blackId].gameResult = "win";
+          }
+        }
+      });
+    });
+    
+    // Apply updates to players
+    Object.entries(playerUpdates).forEach(([playerId, update]) => {
+      const player = registeredPlayers.find(p => p.id === playerId);
+      if (player) {
+        const updatedPlayer = {
+          ...player,
+          rating: player.rating + update.ratingChange,
+          gamesPlayed: (player.gamesPlayed || 0) + 1,
+          ratingHistory: [
+            ...(player.ratingHistory || []),
+            {
+              date: new Date().toISOString().split('T')[0],
+              rating: player.rating + update.ratingChange,
+              tournament: tournament.name
+            }
+          ]
+        };
+        
+        // Update player in system
+        updatePlayer(updatedPlayer);
+      }
+    });
+    
+    // Update tournament with processed pairings
+    const updatedTournament = {
+      ...tournament,
+      pairings: updatedPairings
+    };
+    
+    updateTournament(updatedTournament);
+    
+    toast({
+      title: "Ratings processed",
+      description: "Player ratings have been updated based on match results.",
+    });
+  };
+
   const filteredPlayers = allPlayers
     .filter(player => 
       !registeredPlayers.some(rp => rp.id === player.id) &&
@@ -494,6 +611,7 @@ const TournamentManagement = () => {
                     onRoundSelect={setSelectedRound}
                     onGeneratePairings={generatePairings}
                     onSaveResults={saveResults}
+                    onProcessRatings={handleProcessRatings}
                   />
                 </TabsContent>
                 
