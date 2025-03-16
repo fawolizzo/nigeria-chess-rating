@@ -1,13 +1,14 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, CheckCircle2, ShieldCheck, Users, BarChart3 } from "lucide-react";
+import { ChevronRight, CheckCircle2, ShieldCheck, Users, BarChart3, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OrganizerApprovals from "./OrganizerApprovals";
-import { getAllTournaments } from "@/lib/mockData";
+import { getAllTournaments, updateTournament } from "@/lib/mockData";
 import TournamentRatingDialog from "./TournamentRatingDialog";
+import PlayerManagement from "./PlayerManagement";
 
 const OfficerDashboardContent = () => {
   const navigate = useNavigate();
@@ -16,8 +17,13 @@ const OfficerDashboardContent = () => {
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
-  // Get completed tournaments that need processing
+  // Get pending tournaments that need approval
   const pendingTournaments = getAllTournaments().filter(
+    tournament => tournament.status === "pending"
+  );
+  
+  // Get completed tournaments that need processing
+  const completedTournaments = getAllTournaments().filter(
     tournament => tournament.status === "completed"
   );
   
@@ -35,6 +41,24 @@ const OfficerDashboardContent = () => {
     // Refresh the tournament lists
     setRefreshTrigger(prev => prev + 1);
   };
+  
+  const handleApproveTournament = (tournament) => {
+    const updatedTournament = {
+      ...tournament,
+      status: "upcoming"
+    };
+    updateTournament(updatedTournament);
+    setRefreshTrigger(prev => prev + 1);
+  };
+  
+  const handleRejectTournament = (tournament) => {
+    const updatedTournament = {
+      ...tournament,
+      status: "rejected"
+    };
+    updateTournament(updatedTournament);
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return (
     <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -45,6 +69,9 @@ const OfficerDashboardContent = () => {
         <TabsTrigger value="organizer-approvals" className="flex gap-1 items-center">
           <ShieldCheck size={16} /> Organizer Approvals
         </TabsTrigger>
+        <TabsTrigger value="player-management" className="flex gap-1 items-center">
+          <UserPlus size={16} /> Player Management
+        </TabsTrigger>
         <TabsTrigger value="rating-history" className="flex gap-1 items-center">
           <CheckCircle2 size={16} /> Processed Tournaments
         </TabsTrigger>
@@ -52,21 +79,78 @@ const OfficerDashboardContent = () => {
       
       <TabsContent value="tournament-reviews">
         <div className="space-y-6">
+          {/* Pending Tournament Approvals */}
           <Card>
             <CardHeader>
-              <CardTitle>Pending Tournament Reviews</CardTitle>
+              <CardTitle>Pending Tournament Approvals</CardTitle>
               <CardDescription>
-                Review and process ratings for completed tournaments
+                Review and approve tournaments created by organizers
               </CardDescription>
             </CardHeader>
             <CardContent>
               {pendingTournaments.length === 0 ? (
                 <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                  No pending tournaments to review
+                  No pending tournaments to approve
                 </div>
               ) : (
                 <div className="space-y-4">
                   {pendingTournaments.map((tournament) => (
+                    <div 
+                      key={tournament.id}
+                      className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-800"
+                    >
+                      <div>
+                        <h3 className="font-medium">{tournament.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(tournament.startDate).toLocaleDateString()} • {tournament.location}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/tournament/${tournament.id}`)}
+                        >
+                          View Details
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={() => handleApproveTournament(tournament)}
+                          className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                        >
+                          Approve
+                        </Button>
+                        <Button 
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectTournament(tournament)}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Completed Tournaments for Rating Processing */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Completed Tournaments</CardTitle>
+              <CardDescription>
+                Process ratings for completed tournaments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {completedTournaments.length === 0 ? (
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  No completed tournaments to process
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {completedTournaments.map((tournament) => (
                     <div 
                       key={tournament.id}
                       className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-800"
@@ -88,7 +172,7 @@ const OfficerDashboardContent = () => {
                         <Button 
                           size="sm"
                           onClick={() => handleProcessTournament(tournament)}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                         >
                           Process Ratings
                         </Button>
@@ -104,6 +188,10 @@ const OfficerDashboardContent = () => {
       
       <TabsContent value="organizer-approvals">
         <OrganizerApprovals />
+      </TabsContent>
+      
+      <TabsContent value="player-management">
+        <PlayerManagement />
       </TabsContent>
       
       <TabsContent value="rating-history">

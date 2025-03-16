@@ -60,16 +60,13 @@ export interface Tournament {
 export const players: Player[] = [];
 export const tournaments: Tournament[] = [];
 
+// Helper functions for players
 export const getPlayerById = (id: string): Player | undefined => {
-  return players.find(player => player.id === id);
-};
-
-export const getTournamentById = (id: string): Tournament | undefined => {
-  return tournaments.find(tournament => tournament.id === id);
+  return getAllPlayers().find(player => player.id === id);
 };
 
 export const getPlayersByTournamentId = (tournamentId: string): Player[] => {
-  return players.filter(player => 
+  return getAllPlayers().filter(player => 
     player.tournamentResults.some(result => result.tournamentId === tournamentId)
   );
 };
@@ -96,6 +93,11 @@ export const addPlayer = (newPlayer: Player): void => {
   savePlayers([...allPlayers, newPlayer]);
 };
 
+// Helper functions for tournaments
+export const getTournamentById = (id: string): Tournament | undefined => {
+  return getAllTournaments().find(tournament => tournament.id === id);
+};
+
 export const saveTournaments = (updatedTournaments: Tournament[]): void => {
   localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
 };
@@ -111,4 +113,23 @@ export const updateTournament = (updatedTournament: Tournament): void => {
     tournament.id === updatedTournament.id ? updatedTournament : tournament
   );
   saveTournaments(updatedTournaments);
+};
+
+export const addTournament = (newTournament: Tournament): void => {
+  const allTournaments = getAllTournaments();
+  
+  // Ensure new tournaments created by organizers have "pending" status
+  if (!newTournament.status) {
+    newTournament.status = 'pending';
+  }
+  
+  saveTournaments([...allTournaments, newTournament]);
+};
+
+export const deleteTournament = (tournamentId: string): void => {
+  const allTournaments = getAllTournaments();
+  const filteredTournaments = allTournaments.filter(
+    tournament => tournament.id !== tournamentId
+  );
+  saveTournaments(filteredTournaments);
 };
