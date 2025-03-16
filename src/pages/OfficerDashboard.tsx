@@ -189,7 +189,6 @@ const OfficerDashboard = () => {
       if (savedTournaments) {
         const allTournaments = JSON.parse(savedTournaments);
         const pending = allTournaments.filter((t: Tournament) => t.status === 'pending');
-        // Fix for TypeScript error: Update the filter to properly handle status types
         const completed = allTournaments.filter((t: Tournament) => t.status === 'completed');
         setPendingTournaments(pending);
         setCompletedTournaments(completed);
@@ -787,3 +786,237 @@ const OfficerDashboard = () => {
                                 variant="ghost" 
                                 size="sm"
                                 onClick={() => navigate(`/player/${player.id}`)}
+                              >
+                                View Profile
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="results" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tournament Results</CardTitle>
+                <CardDescription>
+                  View results from processed tournaments
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <FileText className="h-10 w-10 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Coming Soon</h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Tournament results history will be available here.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      
+      <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Player</DialogTitle>
+            <DialogDescription>
+              Add a new player to the rating database.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a title" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {chessTitles.map(title => (
+                            <SelectItem key={title} value={title}>
+                              {title || "None"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Male</SelectItem>
+                          <SelectItem value="F">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="birthYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Birth Year</FormLabel>
+                      <FormControl>
+                        <Input placeholder="1990" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="rating"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Initial Rating</FormLabel>
+                      <FormControl>
+                        <Input placeholder="1200" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Lagos" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="club"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Club (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Lagos Chess Club" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="submit">Create Player</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Process Tournament Report</DialogTitle>
+            <DialogDescription>
+              Upload a tournament report JSON file to process results and update player ratings.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
+              <Label htmlFor="report-file" className="w-full flex flex-col items-center cursor-pointer">
+                <FileUp className="h-8 w-8 mb-2 text-gray-400" />
+                <span className="text-sm font-medium mb-1">Click to upload report file</span>
+                <span className="text-xs text-gray-500">JSON format only</span>
+              </Label>
+              <Input 
+                id="report-file" 
+                type="file" 
+                accept=".json" 
+                className="hidden" 
+                onChange={processReportFile}
+                key={fileUploadKey}
+                disabled={isProcessingReport}
+              />
+            </div>
+            
+            {isProcessingReport && (
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+              </div>
+            )}
+            
+            {selectedTournament && (
+              <div className="text-sm">
+                <p className="font-medium">Selected Tournament:</p>
+                <p>{selectedTournament.name}</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {new Date(selectedTournament.startDate).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' })} - 
+                  {new Date(selectedTournament.endDate).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default OfficerDashboard;
+
