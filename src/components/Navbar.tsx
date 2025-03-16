@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { NavLink, Link } from "react-router-dom";
+import { Menu, X, ChevronDown, UserPlus, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,6 +90,21 @@ const Navbar = () => {
             >
               About
             </NavLink>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/login" className="flex items-center">
+                  <LogIn className="mr-1 h-4 w-4" />
+                  <span>Sign In</span>
+                </Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link to="/register" className="flex items-center">
+                  <UserPlus className="mr-1 h-4 w-4" />
+                  <span>Register</span>
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -113,7 +129,7 @@ const Navbar = () => {
       <div
         className={`md:hidden transition-all duration-300 ease-in-out ${
           isMenuOpen
-            ? "max-h-64 opacity-100"
+            ? "max-h-screen opacity-100"
             : "max-h-0 opacity-0 pointer-events-none"
         } overflow-hidden`}
       >
@@ -170,6 +186,29 @@ const Navbar = () => {
           >
             About
           </NavLink>
+          
+          <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700">
+            <Link
+              to="/login"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <div className="flex items-center">
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </div>
+            </Link>
+            <Link
+              to="/register"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <div className="flex items-center">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Register
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
     </nav>
