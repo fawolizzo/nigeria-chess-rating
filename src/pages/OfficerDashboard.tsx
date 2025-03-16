@@ -39,7 +39,6 @@ import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock, File
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useUser as useUserContext } from "@/contexts/UserContext";
 
 interface Tournament {
   id: string;
@@ -50,73 +49,14 @@ interface Tournament {
   location: string;
   city: string;
   state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
   timeControl: string;
   rounds: number;
   organizerId: string;
   registrationOpen?: boolean;
   participants?: number;
+  coverImage?: string;
   category?: string;
-  pairings?: Array<{
-    roundNumber: number;
-    matches: Array<{
-      whiteId: string;
-      blackId: string;
-      result?: string;
-      whiteRatingChange?: number;
-      blackRatingChange?: number;
-    }>;
-  }>;
-}
-
-interface TournamentReport {
-  tournament: {
-    id: string;
-    name: string;
-    description: string;
-    startDate: string;
-    endDate: string;
-    location: string;
-    city: string;
-    state: string;
-    timeControl: string;
-    rounds: number;
-    category: string;
-    organizerId: string;
-    dateGenerated: string;
-  };
-  players: Array<{
-    id: string;
-    name: string;
-    title: string;
-    rating: number;
-    ratingChange: number;
-    gender: string;
-    country: string;
-    state: string;
-    club: string;
-  }>;
-  standings: Array<{
-    position: number;
-    playerId: string;
-    name: string;
-    score: number;
-    initialRating: number;
-  }>;
-  rounds: Array<{
-    roundNumber: number;
-    matches: Array<{
-      whiteId: string;
-      whiteName: string;
-      whiteRating: number;
-      blackId: string;
-      blackName: string;
-      blackRating: number;
-      result: string;
-      whiteRatingChange: number;
-      blackRatingChange: number;
-    }>;
-  }>;
 }
 
 const playerSchema = z.object({
@@ -139,18 +79,20 @@ const playerSchema = z.object({
 type PlayerFormValues = z.infer<typeof playerSchema>;
 
 const OfficerDashboard = () => {
-  const { currentUser } = useUserContext();
-  const navigate = useNavigate();
   const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
-  const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
-  const [completedTournaments, setCompletedTournaments] = useState<Tournament[]>([]);
-  const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
-  const [isProcessingReport, setIsProcessingReport] = useState(false);
-  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
+  const [isApproveTournamentDialogOpen, setIsApproveTournamentDialogOpen] = useState(false);
+  const [isRejectTournamentDialogOpen, setIsRejectTournamentDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [fileUploadKey, setFileUploadKey] = useState(Date.now());
+  const [activeTab, setActiveTab] = useState("players");
+  const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
+  const { currentUser } = useUser();
+  const navigate = useNavigate();
 
   const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", ""];
 
@@ -178,20 +120,12 @@ const OfficerDashboard = () => {
       setIsLoading(true);
       
       const allPlayers = getAllPlayers();
-      
-      const pending = allPlayers.filter((p: Player) => p.status === 'pending');
-      const approved = allPlayers.filter((p: Player) => p.status === 'approved' || !p.status);
-      
-      setPendingPlayers(pending);
-      setApprovedPlayers(approved);
+      setPendingPlayers(allPlayers.filter(player => player.status === 'pending'));
+      setApprovedPlayers(allPlayers.filter(player => player.status === 'approved'));
       
       const savedTournaments = localStorage.getItem('tournaments');
       if (savedTournaments) {
-        const allTournaments = JSON.parse(savedTournaments);
-        const pending = allTournaments.filter((t: Tournament) => t.status === 'pending');
-        const completed = allTournaments.filter((t: Tournament) => t.status === 'completed');
-        setPendingTournaments(pending);
-        setCompletedTournaments(completed);
+        setTournaments(JSON.parse(savedTournaments));
       }
       
       setIsLoading(false);
@@ -200,82 +134,94 @@ const OfficerDashboard = () => {
     loadData();
   }, [currentUser, navigate]);
 
-  const handleApprovePlayer = (player: Player) => {
-    const updatedPlayer = {
-      ...player,
-      status: 'approved' as const
-    };
+  const handleApprovePlayer = () => {
+    if (!selectedPlayerId) return;
     
+    const playerToApprove = pendingPlayers.find(player => player.id === selectedPlayerId);
+    if (!playerToApprove) return;
+    
+    const updatedPlayer = { ...playerToApprove, status: 'approved' as 'pending' | 'approved' | 'rejected' };
     updatePlayer(updatedPlayer);
     
-    setPendingPlayers(prev => prev.filter(p => p.id !== player.id));
+    setPendingPlayers(prev => prev.filter(player => player.id !== selectedPlayerId));
     setApprovedPlayers(prev => [...prev, updatedPlayer]);
+    
+    setIsApproveDialogOpen(false);
+    setSelectedPlayerId(null);
     
     toast({
       title: "Player approved",
-      description: `${player.name} has been approved.`,
+      description: `${updatedPlayer.name} has been approved.`,
     });
   };
 
-  const handleRejectPlayer = (player: Player) => {
-    const updatedPlayer = {
-      ...player,
-      status: 'rejected' as const
-    };
+  const handleRejectPlayer = () => {
+    if (!selectedPlayerId) return;
     
+    const playerToReject = pendingPlayers.find(player => player.id === selectedPlayerId);
+    if (!playerToReject) return;
+    
+    const updatedPlayer = { ...playerToReject, status: 'rejected' as 'pending' | 'approved' | 'rejected' };
     updatePlayer(updatedPlayer);
     
-    setPendingPlayers(prev => prev.filter(p => p.id !== player.id));
+    setPendingPlayers(prev => prev.filter(player => player.id !== selectedPlayerId));
+    
+    setIsRejectDialogOpen(false);
+    setSelectedPlayerId(null);
     
     toast({
       title: "Player rejected",
-      description: `${player.name} has been rejected.`,
+      description: `${updatedPlayer.name} has been rejected.`,
+      variant: "destructive",
     });
   };
 
-  const handleApproveTournament = (tournament: Tournament) => {
-    const updatedTournament = {
-      ...tournament,
-      status: 'upcoming' as const
-    };
+  const handleApproveTournament = () => {
+    if (!selectedTournamentId) return;
     
-    const savedTournaments = localStorage.getItem('tournaments');
-    if (savedTournaments) {
-      const allTournaments = JSON.parse(savedTournaments);
-      const updatedTournaments = allTournaments.map((t: Tournament) => 
-        t.id === tournament.id ? updatedTournament : t
-      );
-      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-    }
+    const tournamentToApprove = tournaments.find(tournament => tournament.id === selectedTournamentId);
+    if (!tournamentToApprove) return;
     
-    setPendingTournaments(prev => prev.filter(t => t.id !== tournament.id));
+    const updatedTournament = { ...tournamentToApprove, status: 'upcoming' as 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' };
+    
+    const updatedTournaments = tournaments.map(tournament => 
+      tournament.id === selectedTournamentId ? updatedTournament : tournament
+    );
+    localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+    
+    setTournaments(updatedTournaments);
+    
+    setIsApproveTournamentDialogOpen(false);
+    setSelectedTournamentId(null);
     
     toast({
       title: "Tournament approved",
-      description: `${tournament.name} has been approved.`,
+      description: `${updatedTournament.name} has been approved.`,
     });
   };
 
-  const handleRejectTournament = (tournament: Tournament) => {
-    const updatedTournament = {
-      ...tournament,
-      status: 'rejected' as const
-    };
+  const handleRejectTournament = () => {
+    if (!selectedTournamentId) return;
     
-    const savedTournaments = localStorage.getItem('tournaments');
-    if (savedTournaments) {
-      const allTournaments = JSON.parse(savedTournaments);
-      const updatedTournaments = allTournaments.map((t: Tournament) => 
-        t.id === tournament.id ? updatedTournament : t
-      );
-      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-    }
+    const tournamentToReject = tournaments.find(tournament => tournament.id === selectedTournamentId);
+    if (!tournamentToReject) return;
     
-    setPendingTournaments(prev => prev.filter(t => t.id !== tournament.id));
+    const updatedTournament = { ...tournamentToReject, status: 'rejected' as 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' };
+    
+    const updatedTournaments = tournaments.map(tournament => 
+      tournament.id === selectedTournamentId ? updatedTournament : tournament
+    );
+    localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+    
+    setTournaments(updatedTournaments);
+    
+    setIsRejectTournamentDialogOpen(false);
+    setSelectedTournamentId(null);
     
     toast({
       title: "Tournament rejected",
-      description: `${tournament.name} has been rejected.`,
+      description: `${updatedTournament.name} has been rejected.`,
+      variant: "destructive",
     });
   };
 
@@ -315,112 +261,6 @@ const OfficerDashboard = () => {
     });
   };
 
-  const handleProcessTournament = (tournament: Tournament) => {
-    setSelectedTournament(tournament);
-    setReportDialogOpen(true);
-  };
-
-  const processReportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsProcessingReport(true);
-    
-    try {
-      const fileContent = await readFileAsText(file);
-      const reportData: TournamentReport = JSON.parse(fileContent);
-      
-      const allPlayers = getAllPlayers();
-      const updatedPlayers: Player[] = [];
-      
-      for (const reportPlayer of reportData.players) {
-        const player = allPlayers.find(p => p.id === reportPlayer.id);
-        
-        if (player) {
-          const newRating = player.rating + reportPlayer.ratingChange;
-          const timeControl = getTimeControlCategory(reportData.tournament.timeControl);
-          
-          const updatedPlayer = {
-            ...player,
-            rating: timeControl === 'classical' ? newRating : player.rating,
-            rapidRating: timeControl === 'rapid' ? (player.rapidRating || player.rating) + reportPlayer.ratingChange : (player.rapidRating || player.rating),
-            blitzRating: timeControl === 'blitz' ? (player.blitzRating || player.rating) + reportPlayer.ratingChange : (player.blitzRating || player.rating),
-            ratingHistory: [
-              ...(player.ratingHistory || []),
-              { date: new Date().toISOString().split('T')[0], rating: newRating }
-            ],
-            tournamentResults: [
-              ...(player.tournamentResults || []),
-              {
-                tournamentId: reportData.tournament.id,
-                position: reportData.standings.find(s => s.playerId === player.id)?.position || 0,
-                ratingChange: reportPlayer.ratingChange
-              }
-            ]
-          };
-          
-          updatePlayer(updatedPlayer);
-          updatedPlayers.push(updatedPlayer);
-        }
-      }
-      
-      const savedTournaments = localStorage.getItem('tournaments');
-      if (savedTournaments) {
-        const allTournaments = JSON.parse(savedTournaments);
-        const updatedTournaments = allTournaments.map((t: Tournament) => 
-          t.id === reportData.tournament.id 
-            ? { ...t, status: 'processed' as const } 
-            : t
-        );
-        localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-        
-        setCompletedTournaments(prev => prev.filter(t => t.id !== reportData.tournament.id));
-      }
-      
-      setFileUploadKey(Date.now());
-      setReportDialogOpen(false);
-      
-      toast({
-        title: "Tournament Processed",
-        description: `Successfully processed "${reportData.tournament.name}" and updated ${updatedPlayers.length} player ratings.`,
-      });
-    } catch (error) {
-      console.error("Error processing report:", error);
-      toast({
-        title: "Processing Failed",
-        description: "There was an error processing the tournament report file.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingReport(false);
-    }
-  };
-  
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => resolve(event.target?.result as string);
-      reader.onerror = (error) => reject(error);
-      reader.readAsText(file);
-    });
-  };
-  
-  const getTimeControlCategory = (timeControl: string): 'classical' | 'rapid' | 'blitz' => {
-    const totalMinutes = parseTimeControl(timeControl);
-    
-    if (totalMinutes >= 60) return 'classical';
-    if (totalMinutes >= 10) return 'rapid';
-    return 'blitz';
-  };
-  
-  const parseTimeControl = (timeControl: string): number => {
-    const parts = timeControl.split('+');
-    const baseMinutes = parseInt(parts[0]) || 0;
-    const increment = parts.length > 1 ? parseInt(parts[1]) || 0 : 0;
-    
-    return baseMinutes + (increment * 60 / 60);
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
@@ -456,418 +296,313 @@ const OfficerDashboard = () => {
           </Button>
         </div>
         
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="pending">
-              Pending Players
-              {pendingPlayers.length > 0 && (
-                <Badge className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                  {pendingPlayers.length}
-                </Badge>
-              )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="players" className="flex items-center">
+              <Users className="w-4 h-4 mr-2" />
+              Players
             </TabsTrigger>
-            <TabsTrigger value="tournaments">
-              Pending Tournaments
-              {pendingTournaments.length > 0 && (
-                <Badge className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                  {pendingTournaments.length}
-                </Badge>
-              )}
+            <TabsTrigger value="tournaments" className="flex items-center">
+              <Calendar className="w-4 h-4 mr-2" />
+              Tournaments
             </TabsTrigger>
-            <TabsTrigger value="completed">
-              Completed Tournaments
-              {completedTournaments.length > 0 && (
-                <Badge className="ml-2 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                  {completedTournaments.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="players">All Players</TabsTrigger>
-            <TabsTrigger value="results">Tournament Results</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="pending" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Players Pending Approval</CardTitle>
-                <CardDescription>
-                  These players were created by tournament organizers and need your approval
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {pendingPlayers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <AlertTriangle className="h-10 w-10 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pending players</h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      There are no players waiting for approval at this time.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingPlayers.map(player => (
-                      <div key={player.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
+          <TabsContent value="players" className="space-y-4 mt-4">
+            <h2 className="text-lg font-semibold">Pending Player Approvals</h2>
+            
+            {pendingPlayers.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No pending player approvals</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pendingPlayers.map((player) => (
+                  <Card key={player.id} className="relative overflow-hidden">
+                    <div className="absolute top-2 right-2 flex space-x-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedPlayerId(player.id);
+                          setIsApproveDialogOpen(true);
+                        }}
+                      >
+                        <Check className="h-4 w-4 text-green-500" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedPlayerId(player.id);
+                          setIsRejectDialogOpen(true);
+                        }}
+                      >
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">
+                        {player.title && `${player.title} `}{player.name}
+                      </CardTitle>
+                      <CardDescription>
+                        Rating: {player.rating}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                         <div>
-                          <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
-                            {player.title && (
-                              <span className="text-gold-dark dark:text-gold-light mr-1">
-                                {player.title}
-                              </span>
-                            )}
-                            {player.name}
-                          </h3>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {player.state}, {player.country || "Nigeria"} • {player.gender === 'M' ? 'Male' : 'Female'} • Born: {player.birthYear}
-                          </div>
-                          {player.club && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              Club: {player.club}
-                            </div>
-                          )}
+                          <span className="text-gray-500 dark:text-gray-400">Country:</span> {player.country}
                         </div>
-                        
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
-                            onClick={() => handleRejectPlayer(player)}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:border-green-900/30 dark:hover:bg-green-900/20 dark:hover:text-green-300"
-                            onClick={() => handleApprovePlayer(player)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">State:</span> {player.state}
+                        </div>
+                        {player.club && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500 dark:text-gray-400">Club:</span> {player.club}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <Separator className="my-4" />
+            
+            <h2 className="text-lg font-semibold">Approved Players</h2>
+            
+            {approvedPlayers.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No approved players yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {approvedPlayers.map((player) => (
+                  <Card key={player.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">
+                        {player.title && `${player.title} `}{player.name}
+                      </CardTitle>
+                      <CardDescription>
+                        Rating: {player.rating}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Country:</span> {player.country}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">State:</span> {player.state}
+                        </div>
+                        {player.club && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500 dark:text-gray-400">Club:</span> {player.club}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="tournaments" className="space-y-4 mt-4">
+            <h2 className="text-lg font-semibold">Pending Tournament Approvals</h2>
+            
+            {tournaments.filter(tournament => tournament.status === 'pending').length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No pending tournament approvals</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tournaments.filter(tournament => tournament.status === 'pending').map((tournament) => (
+                  <Card key={tournament.id} className="relative overflow-hidden">
+                    <div className="absolute top-2 right-2 flex space-x-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedTournamentId(tournament.id);
+                          setIsApproveTournamentDialogOpen(true);
+                        }}
+                      >
+                        <Check className="h-4 w-4 text-green-500" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedTournamentId(tournament.id);
+                          setIsRejectTournamentDialogOpen(true);
+                        }}
+                      >
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{tournament.name}</CardTitle>
+                      <CardDescription>
+                        {tournament.location}, {tournament.city}, {tournament.state}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Start Date:</span> {new Date(tournament.startDate).toLocaleDateString()}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">End Date:</span> {new Date(tournament.endDate).toLocaleDateString()}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Time Control:</span> {tournament.timeControl}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Rounds:</span> {tournament.rounds}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="tournaments" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tournaments Pending Approval</CardTitle>
-                <CardDescription>
-                  These tournaments were created by organizers and need your approval
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {pendingTournaments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <AlertTriangle className="h-10 w-10 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pending tournaments</h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      There are no tournaments waiting for approval at this time.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {pendingTournaments.map(tournament => (
-                      <div key={tournament.id} className="flex flex-col p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium text-lg text-gray-900 dark:text-white">
-                              {tournament.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {tournament.description.substring(0, 100)}
-                              {tournament.description.length > 100 ? '...' : ''}
-                            </p>
-                          </div>
-                          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
-                            Pending Approval
-                          </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <Separator className="my-4" />
+            
+            <h2 className="text-lg font-semibold">Approved Tournaments</h2>
+            
+            {tournaments.filter(tournament => tournament.status !== 'pending').length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No approved tournaments yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tournaments.filter(tournament => tournament.status !== 'pending').map((tournament) => (
+                  <Card key={tournament.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{tournament.name}</CardTitle>
+                      <CardDescription>
+                        {tournament.location}, {tournament.city}, {tournament.state}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Start Date:</span> {new Date(tournament.startDate).toLocaleDateString()}
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
-                          <div className="flex items-center text-sm">
-                            <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>
-                              {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
-                            </span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.timeControl}</span>
-                          </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">End Date:</span> {new Date(tournament.endDate).toLocaleDateString()}
                         </div>
-                        
-                        <div className="flex justify-end space-x-2 mt-4">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
-                            onClick={() => handleRejectTournament(tournament)}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:border-green-900/30 dark:hover:bg-green-900/20 dark:hover:text-green-300"
-                            onClick={() => handleApproveTournament(tournament)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/tournament/${tournament.id}`)}
-                          >
-                            View Details
-                          </Button>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Time Control:</span> {tournament.timeControl}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Rounds:</span> {tournament.rounds}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="completed" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Completed Tournaments</CardTitle>
-                <CardDescription>
-                  Process completed tournaments to update player ratings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {completedTournaments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <FileText className="h-10 w-10 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No completed tournaments</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">
-                      There are no completed tournaments waiting to be processed.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {completedTournaments.map(tournament => (
-                      <div key={tournament.id} className="flex flex-col p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium text-lg text-gray-900 dark:text-white">
-                              {tournament.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {tournament.description.substring(0, 100)}
-                              {tournament.description.length > 100 ? '...' : ''}
-                            </p>
-                          </div>
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
-                            Completed
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
-                          <div className="flex items-center text-sm">
-                            <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>
-                              {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
-                            </span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.timeControl}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-end space-x-2 mt-4">
-                          <Button 
-                            variant="default" 
-                            size="sm" 
-                            className="flex items-center"
-                            onClick={() => handleProcessTournament(tournament)}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-1" />
-                            Process Tournament
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/tournament/${tournament.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="players" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Active Players</CardTitle>
-                <CardDescription>
-                  View and manage all approved players
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {approvedPlayers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-10 w-10 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No players found</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">
-                      There are no approved players in the system.
-                    </p>
-                    <Button
-                      onClick={() => setIsCreatePlayerOpen(true)}
-                      className="flex items-center"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Create New Player
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-800">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-gray-800/50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Name</th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Rating</th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">State</th>
-                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Gender</th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                        {approvedPlayers.map(player => (
-                          <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <span className="font-medium text-gray-900 dark:text-white">
-                                  {player.title && (
-                                    <span className="text-gold-dark dark:text-gold-light mr-1">
-                                      {player.title}
-                                    </span>
-                                  )}
-                                  {player.name}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                              {player.rating || "Unrated"}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                              {player.state || "-"}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                              {player.gender === 'M' ? 'Male' : 'Female'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => navigate(`/player/${player.id}`)}
-                              >
-                                View Profile
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="results" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tournament Results</CardTitle>
-                <CardDescription>
-                  View results from processed tournaments
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <FileText className="h-10 w-10 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Coming Soon</h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Tournament results history will be available here.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
-      </div>
-      
-      <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create New Player</DialogTitle>
-            <DialogDescription>
-              Add a new player to the rating database.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
+
+        <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Player</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve this player?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setIsApproveDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApprovePlayer}>Approve</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Player</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to reject this player?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setIsRejectDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleRejectPlayer}>Reject</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isApproveTournamentDialogOpen} onOpenChange={setIsApproveTournamentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Tournament</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to approve this tournament?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setIsApproveTournamentDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApproveTournament}>Approve</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isRejectTournamentDialogOpen} onOpenChange={setIsRejectTournamentDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Tournament</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to reject this tournament?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setIsRejectTournamentDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleRejectTournament}>Reject</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Player</DialogTitle>
+              <DialogDescription>
+                Fill in the details to create a new player
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="title"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a title" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {chessTitles.map(title => (
-                            <SelectItem key={title} value={title}>
-                              {title || "None"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter player name" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -875,36 +610,109 @@ const OfficerDashboard = () => {
                 
                 <FormField
                   control={form.control}
-                  name="gender"
+                  name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gender</FormLabel>
+                      <FormLabel>Title (Optional)</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
+                            <SelectValue placeholder="Select a title (if any)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="M">Male</SelectItem>
-                          <SelectItem value="F">Female</SelectItem>
+                          {chessTitles.map((title) => (
+                            <SelectItem key={title} value={title || " "}>
+                              {title || "No title"}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        FIDE/national chess title if applicable
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="M">Male</SelectItem>
+                            <SelectItem value="F">Female</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="birthYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Birth Year</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="YYYY" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
                 <FormField
                   control={form.control}
-                  name="birthYear"
+                  name="state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Birth Year</FormLabel>
+                      <FormLabel>State</FormLabel>
                       <FormControl>
-                        <Input placeholder="1990" {...field} />
+                        <Input placeholder="Enter state" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter country" {...field} disabled value="Nigeria" />
+                      </FormControl>
+                      <FormDescription>
+                        Only Nigerian players can be created
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="club"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Club (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter club" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -918,105 +726,27 @@ const OfficerDashboard = () => {
                     <FormItem>
                       <FormLabel>Initial Rating</FormLabel>
                       <FormControl>
-                        <Input placeholder="1200" {...field} />
+                        <Input type="number" placeholder="Enter rating" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Player's starting rating (default is 0)
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Lagos" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="club"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Club (optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Lagos Chess Club" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button type="submit">Create Player</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Process Tournament Report</DialogTitle>
-            <DialogDescription>
-              Upload a tournament report JSON file to process results and update player ratings.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
-              <Label htmlFor="report-file" className="w-full flex flex-col items-center cursor-pointer">
-                <FileUp className="h-8 w-8 mb-2 text-gray-400" />
-                <span className="text-sm font-medium mb-1">Click to upload report file</span>
-                <span className="text-xs text-gray-500">JSON format only</span>
-              </Label>
-              <Input 
-                id="report-file" 
-                type="file" 
-                accept=".json" 
-                className="hidden" 
-                onChange={processReportFile}
-                key={fileUploadKey}
-                disabled={isProcessingReport}
-              />
-            </div>
-            
-            {isProcessingReport && (
-              <div className="flex justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-              </div>
-            )}
-            
-            {selectedTournament && (
-              <div className="text-sm">
-                <p className="font-medium">Selected Tournament:</p>
-                <p>{selectedTournament.name}</p>
-                <p className="text-gray-500 dark:text-gray-400">
-                  {new Date(selectedTournament.startDate).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' })} - 
-                  {new Date(selectedTournament.endDate).toLocaleDateString('en-NG', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                
+                <DialogFooter>
+                  <Button type="submit">Create Player</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+        
+      </div>
     </div>
   );
 };
 
 export default OfficerDashboard;
-

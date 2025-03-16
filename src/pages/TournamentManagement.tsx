@@ -359,36 +359,28 @@ const TournamentManagement = () => {
     });
   };
 
-  const handleCreatePlayer = (data: PlayerFormValues) => {
-    if (!currentUser) return;
+  const completeTournament = () => {
+    if (!tournament) return;
     
-    const newPlayer: Player = {
-      id: `player_${Date.now()}`,
-      name: data.name,
-      title: data.title && data.title.length > 0 ? data.title : undefined,
-      rating: 800,
-      country: data.country,
-      state: data.state,
-      club: data.club && data.club.length > 0 ? data.club : undefined,
-      gender: data.gender,
-      birthYear: parseInt(data.birthYear),
-      ratingHistory: [{ date: new Date().toISOString().split('T')[0], rating: 800 }],
-      tournamentResults: [],
-      status: 'pending',
-      createdBy: currentUser.id,
-      gamesPlayed: 0
+    const updatedTournament = {
+      ...tournament,
+      status: "completed" as "upcoming" | "ongoing" | "completed" | "pending" | "rejected"
     };
     
-    addPlayer(newPlayer);
+    const savedTournaments = localStorage.getItem('tournaments');
+    if (savedTournaments) {
+      const parsedTournaments = JSON.parse(savedTournaments);
+      const updatedTournaments = parsedTournaments.map((t: Tournament) => 
+        t.id === tournament.id ? updatedTournament : t
+      );
+      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+    }
     
-    setAllPlayers(prev => [...prev, newPlayer]);
-    
-    form.reset();
-    setIsCreatePlayerOpen(false);
+    setTournament(updatedTournament);
     
     toast({
-      title: "Player created",
-      description: "The player has been created and is awaiting approval from a rating officer.",
+      title: "Tournament completed",
+      description: "The tournament has been marked as completed successfully.",
     });
   };
 
@@ -904,583 +896,40 @@ const TournamentManagement = () => {
     }
   };
 
+  const handleCreatePlayer = (data: PlayerFormValues) => {
+    if (!currentUser) return;
+    
+    const newPlayer: Player = {
+      id: `player_${Date.now()}`,
+      name: data.name,
+      title: data.title && data.title.length > 0 ? data.title : undefined,
+      rating: 800,
+      country: data.country,
+      state: data.state,
+      club: data.club && data.club.length > 0 ? data.club : undefined,
+      gender: data.gender,
+      birthYear: parseInt(data.birthYear),
+      ratingHistory: [{ date: new Date().toISOString().split('T')[0], rating: 800 }],
+      tournamentResults: [],
+      status: 'pending',
+      createdBy: currentUser.id,
+      gamesPlayed: 0
+    };
+    
+    addPlayer(newPlayer);
+    
+    setAllPlayers(prev => [...prev, newPlayer]);
+    
+    form.reset();
+    setIsCreatePlayerOpen(false);
+    
+    toast({
+      title: "Player created",
+      description: "The player has been created and is awaiting approval from a rating officer.",
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!tournament) {
-    return null;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      
-      <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto animate-fade-in">
-        <div className="flex justify-between items-center mb-8">
-          <button
-            onClick={() => navigate('/organizer-dashboard')}
-            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Dashboard
-          </button>
-          
-          <div className="flex space-x-2">
-            {tournament.status === "upcoming" && (
-              <>
-                <Button
-                  variant={tournament.registrationOpen ? "destructive" : "outline"}
-                  onClick={toggleRegistrationStatus}
-                >
-                  {tournament.registrationOpen ? "Close Registration" : "Open Registration"}
-                </Button>
-                
-                <Button
-                  onClick={startTournament}
-                  disabled={!tournament.players?.length || tournament.players.length < 2}
-                >
-                  Start Tournament
-                </Button>
-              </>
-            )}
-            
-            {tournament.status === "completed" && (
-              <Button 
-                variant="outline" 
-                onClick={generateTournamentReport} 
-                disabled={isGeneratingReport}
-                className="flex items-center"
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                {isGeneratingReport ? "Generating..." : "Generate Report"}
-              </Button>
-            )}
-            
-            <Button variant="outline" onClick={() => navigate(`/tournament/${id}`)}>
-              View Public Page
-            </Button>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">{tournament.name}</CardTitle>
-              <div className="flex items-center mt-2">
-                <Badge 
-                  variant={
-                    tournament.status === 'upcoming' ? 'outline' :
-                    tournament.status === 'ongoing' ? 'default' :
-                    tournament.status === 'completed' ? 'secondary' :
-                    tournament.status === 'pending' ? 'outline' : 'destructive'
-                  }
-                  className="mr-2"
-                >
-                  {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
-                </Badge>
-                {tournament.registrationOpen && (
-                  <Badge variant="outline">Registration Open</Badge>
-                )}
-              </div>
-              <CardDescription className="mt-2">
-                {tournament.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Location</p>
-                  <p>{tournament.location}, {tournament.city}, {tournament.state}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Dates</p>
-                  <p>{new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Time Control</p>
-                  <p>{tournament.timeControl}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Rounds</p>
-                  <p>{tournament.rounds} {tournament.rounds === 1 ? 'round' : 'rounds'}</p>
-                </div>
-                {tournament.currentRound && tournament.status === "ongoing" && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Round</p>
-                    <p>{tournament.currentRound} of {tournament.rounds}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Participants</p>
-                  <p>{registeredPlayers.length} {registeredPlayers.length === 1 ? 'player' : 'players'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="players" className="flex items-center">
-              <Users className="w-4 h-4 mr-2" />
-              Players
-            </TabsTrigger>
-            <TabsTrigger value="pairings" className="flex items-center">
-              <Trophy className="w-4 h-4 mr-2" />
-              Rounds & Pairings
-            </TabsTrigger>
-            <TabsTrigger value="standings" className="flex items-center">
-              <Award className="w-4 h-4 mr-2" />
-              Standings
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="players" className="space-y-4 mt-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Registered Players ({registeredPlayers.length})</h2>
-              <div className="flex space-x-2">
-                <Button onClick={() => setIsAddPlayerOpen(true)} disabled={tournament.status !== "upcoming"}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Existing Player
-                </Button>
-                <Button variant="outline" onClick={() => setIsCreatePlayerOpen(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Create New Player
-                </Button>
-              </div>
-            </div>
-            
-            {registeredPlayers.length === 0 ? (
-              <div className="text-center py-8">
-                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
-                <p className="mt-4 text-gray-500 dark:text-gray-400">No players have registered for this tournament yet.</p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsAddPlayerOpen(true)} 
-                  className="mt-4" 
-                  disabled={tournament.status !== "upcoming"}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Existing Player
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {registeredPlayers.map((player) => (
-                  <Card key={player.id} className="relative overflow-hidden">
-                    {tournament.status === "upcoming" && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="absolute top-2 right-2 h-6 w-6"
-                        onClick={() => handleRemovePlayer(player.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">
-                        {player.title && `${player.title} `}{player.name}
-                      </CardTitle>
-                      <CardDescription>
-                        Rating: {player.rating}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-sm">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Country:</span> {player.country}
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">State:</span> {player.state}
-                        </div>
-                        {player.club && (
-                          <div className="col-span-2">
-                            <span className="text-gray-500 dark:text-gray-400">Club:</span> {player.club}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            <Dialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Player to Tournament</DialogTitle>
-                  <DialogDescription>
-                    Search for a player to add to this tournament.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="my-4">
-                  <Input
-                    placeholder="Search players..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="mb-4"
-                  />
-                  
-                  <div className="max-h-64 overflow-y-auto">
-                    {filteredPlayers.length === 0 ? (
-                      <p className="text-center text-gray-500 dark:text-gray-400 py-4">
-                        No players found
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {filteredPlayers.map((player) => (
-                          <div
-                            key={player.id}
-                            className={`p-3 border rounded-md flex justify-between items-center cursor-pointer ${
-                              selectedPlayerId === player.id
-                                ? "border-primary bg-primary/5"
-                                : "hover:bg-gray-50 dark:hover:bg-gray-900"
-                            }`}
-                            onClick={() => setSelectedPlayerId(player.id)}
-                          >
-                            <div>
-                              <p className="font-medium">
-                                {player.title && `${player.title} `}{player.name}
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Rating: {player.rating} • {player.state}, {player.country}
-                              </p>
-                            </div>
-                            {selectedPlayerId === player.id && (
-                              <Check className="h-4 w-4 text-primary" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsAddPlayerOpen(false);
-                      setSelectedPlayerId("");
-                      setSearchQuery("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddPlayer}
-                    disabled={!selectedPlayerId}
-                  >
-                    Add Player
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Player</DialogTitle>
-                  <DialogDescription>
-                    Fill in the details to create a new player. The player will need to be approved by a rating officer.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter player name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Title (Optional)</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a title (if any)" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {chessTitles.map((title) => (
-                                <SelectItem key={title} value={title}>
-                                  {title || "No title"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            FIDE/national chess title if applicable
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="gender"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Gender</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select gender" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="M">Male</SelectItem>
-                                <SelectItem value="F">Female</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="birthYear"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Birth Year</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="YYYY" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter state" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="country"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Country</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter country" {...field} disabled value="Nigeria" />
-                          </FormControl>
-                          <FormDescription>
-                            Only Nigerian players can be created
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="club"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Club (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter club" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <DialogFooter>
-                      <Button type="submit">Create Player</Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
-          
-          <TabsContent value="pairings" className="mt-4">
-            {tournament.status === "upcoming" ? (
-              <div className="text-center py-12">
-                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
-                <p className="mt-4 text-gray-500 dark:text-gray-400">Tournament has not started yet.</p>
-                <Button 
-                  onClick={startTournament} 
-                  className="mt-4" 
-                  disabled={!tournament.players?.length || tournament.players.length < 2}
-                >
-                  Start Tournament
-                </Button>
-              </div>
-            ) : tournament.status === "completed" ? (
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Tournament Completed</h2>
-                
-                <div className="mb-6">
-                  <Label htmlFor="round-selector">View Round</Label>
-                  <Select value={selectedRound.toString()} onValueChange={(value) => setSelectedRound(parseInt(value))}>
-                    <SelectTrigger id="round-selector" className="w-full sm:w-auto mt-1">
-                      <SelectValue placeholder="Select Round" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: tournament.rounds }, (_, i) => i + 1).map((round) => (
-                        <SelectItem key={round} value={round.toString()}>
-                          Round {round}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="mb-6">
-                  <PairingSystem
-                    players={registeredPlayers}
-                    onGeneratePairings={() => {}}
-                    pairings={tournament.pairings?.find(p => p.roundNumber === selectedRound)?.matches || []}
-                    roundNumber={selectedRound}
-                    readonly={true}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h2 className="text-lg font-semibold">Round {tournament.currentRound} of {tournament.rounds}</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {pairingsGenerated ? "Pairings have been generated" : "Generate pairings for this round"}
-                    </p>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    {!pairingsGenerated && (
-                      <Button onClick={generatePairings}>
-                        Generate Pairings
-                      </Button>
-                    )}
-                    
-                    {pairingsGenerated && (
-                      <Button 
-                        onClick={advanceToNextRound} 
-                        disabled={tournament.currentRound === tournament.rounds}
-                      >
-                        {tournament.currentRound === tournament.rounds ? "Complete Tournament" : "Next Round"}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                {pairingsGenerated ? (
-                  <div className="mb-6">
-                    <ResultRecorder
-                      pairings={tournament.pairings?.find(p => p.roundNumber === tournament.currentRound)?.matches || []}
-                      players={registeredPlayers}
-                      roundNumber={tournament.currentRound || 1}
-                      onSaveResults={saveResults}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center py-12 border rounded-md bg-gray-50 dark:bg-gray-900">
-                    <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
-                    <p className="mt-4 text-gray-500 dark:text-gray-400">No pairings generated for this round.</p>
-                    <Button onClick={generatePairings} className="mt-4">
-                      Generate Pairings
-                    </Button>
-                  </div>
-                )}
-                
-                {tournament.currentRound !== 1 && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4">Previous Rounds</h3>
-                    
-                    <div className="overflow-x-auto">
-                      <Tabs defaultValue="1" className="w-full">
-                        <TabsList className="flex flex-nowrap overflow-x-auto mb-4 max-w-full">
-                          {Array.from({ length: tournament.currentRound - 1 }, (_, i) => i + 1).map((round) => (
-                            <TabsTrigger key={round} value={round.toString()} className="flex-shrink-0">
-                              Round {round}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                        
-                        {Array.from({ length: tournament.currentRound - 1 }, (_, i) => i + 1).map((round) => (
-                          <TabsContent key={round} value={round.toString()}>
-                            <PairingSystem
-                              players={registeredPlayers}
-                              onGeneratePairings={() => {}}
-                              pairings={tournament.pairings?.find(p => p.roundNumber === round)?.matches || []}
-                              roundNumber={round}
-                              readonly={true}
-                            />
-                          </TabsContent>
-                        ))}
-                      </Tabs>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="standings" className="mt-4">
-            {tournament.status === "upcoming" ? (
-              <div className="text-center py-12">
-                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
-                <p className="mt-4 text-gray-500 dark:text-gray-400">Tournament has not started yet.</p>
-                <Button 
-                  onClick={startTournament} 
-                  className="mt-4" 
-                  disabled={!tournament.players?.length || tournament.players.length < 2}
-                >
-                  Start Tournament
-                </Button>
-              </div>
-            ) : (
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Current Standings</h2>
-                <StandingsTable 
-                  standings={standings} 
-                  players={registeredPlayers} 
-                />
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-};
-
-export default TournamentManagement;
+        <div className="animate-pulse flex flex-col items-center
