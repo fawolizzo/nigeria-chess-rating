@@ -56,6 +56,8 @@ const TournamentPlayerSelector = ({
   };
 
   const handlePlayersImported = (players: Partial<Player>[]) => {
+    console.log("Players imported:", players);
+    
     // Add temporary IDs to the imported players for selection
     const playersWithIds = players.map(player => ({
       ...player,
@@ -63,6 +65,7 @@ const TournamentPlayerSelector = ({
     })) as ImportPlayerWithTempId[];
     
     setImportedPlayers(playersWithIds);
+    
     // Switch to the review tab
     setActiveTab("review");
   };
@@ -115,6 +118,12 @@ const TournamentPlayerSelector = ({
     setActiveTab("select");
   };
   
+  const resetImportedPlayers = () => {
+    setImportedPlayers([]);
+    setSelectedImportIds([]);
+    setActiveTab("import");
+  };
+  
   return (
     <div className="relative">
       <Button 
@@ -149,13 +158,12 @@ const TournamentPlayerSelector = ({
                   onOpenChange={() => {}}
                   onPlayersSelected={handlePlayersSelected}
                   excludeIds={existingPlayerIds}
-                  hideDialog={true}
                 />
               </div>
             </TabsContent>
             
             <TabsContent value="import">
-              {importedPlayers.length > 0 ? (
+              {activeTab === "review" && importedPlayers.length > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">
                     Select players to import. All imported players will require approval from a Rating Officer.
@@ -194,10 +202,7 @@ const TournamentPlayerSelector = ({
                   <DialogFooter className="mt-4">
                     <Button 
                       variant="outline" 
-                      onClick={() => {
-                        setActiveTab("import");
-                        setSelectedImportIds([]);
-                      }}
+                      onClick={resetImportedPlayers}
                     >
                       Back
                     </Button>
@@ -217,7 +222,7 @@ const TournamentPlayerSelector = ({
                     Import players from a CSV or Excel file first
                   </p>
                   
-                  <div className="w-full max-w-sm mx-auto mb-6">
+                  <div className="w-full max-w-md mx-auto mb-6">
                     <FileUploadButton 
                       onPlayersImported={handlePlayersImported} 
                       buttonText="Import Players from CSV/Excel"

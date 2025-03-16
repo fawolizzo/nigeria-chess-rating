@@ -30,37 +30,92 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
     try {
       const data = await file.arrayBuffer();
       const workbook = read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = utils.sheet_to_json<any>(worksheet);
       
-      // Map the data to our Player structure
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        throw new Error("Invalid Excel file format");
+      }
+      
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      
+      if (!worksheet) {
+        throw new Error("Worksheet not found");
+      }
+      
+      const jsonData = utils.sheet_to_json<any>(worksheet);
+      console.log("Parsed Excel data:", jsonData);
+      
+      if (!jsonData || jsonData.length === 0) {
+        toast({
+          title: "Empty file",
+          description: "The file doesn't contain any data. Please check the file.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Log the structure of the first row to help with debugging
+      if (jsonData.length > 0) {
+        console.log("First row structure:", Object.keys(jsonData[0]));
+      }
+      
+      // Map the data to our Player structure with better column detection
       const players = jsonData.map((row) => {
-        // Try to handle common column names with some flexibility
-        const name = row.name || row.Name || row.PLAYER || row.Player || row.FULL_NAME || row.full_name || row["Full Name"] || "";
-        const rating = parseInt(row.rating || row.Rating || row.RATING || row.ELO || row.elo || row.FIDE || row.fide || "0") || 800;
-        const title = row.title || row.Title || row.TITLE || "";
-        const gender = (row.gender || row.Gender || row.GENDER || row.sex || row.Sex || row.SEX || "M").toUpperCase() === "F" ? "F" : "M";
-        const state = row.state || row.State || row.STATE || "";
-        const city = row.city || row.City || row.CITY || "";
+        // Try to handle common column names with much more flexibility
+        // Name field detection
+        const nameKeys = ["name", "player", "player name", "player_name", "fullname", "full name", "full_name"];
+        const nameValue = findValueByKeys(row, nameKeys);
+        
+        // Rating field detection
+        const ratingKeys = ["rating", "elo", "fide", "chess rating", "chess_rating"];
+        const ratingValue = findValueByKeys(row, ratingKeys);
+        
+        // Title field detection
+        const titleKeys = ["title", "chess title", "chess_title"];
+        const titleValue = findValueByKeys(row, titleKeys);
+        
+        // Gender field detection
+        const genderKeys = ["gender", "sex"];
+        const genderValue = findValueByKeys(row, genderKeys);
+        
+        // State field detection
+        const stateKeys = ["state", "province", "region"];
+        const stateValue = findValueByKeys(row, stateKeys);
+        
+        // City field detection
+        const cityKeys = ["city", "town"];
+        const cityValue = findValueByKeys(row, cityKeys);
+        
+        // Get proper values with fallbacks
+        const name = nameValue || "";
+        const rating = parseInt(ratingValue) || 800;
+        const title = titleValue || undefined;
+        const gender = (typeof genderValue === 'string' && genderValue.toUpperCase() === "F") ? "F" : "M";
+        const state = stateValue || undefined;
+        const city = cityValue || undefined;
+        
+        console.log(`Processed player: ${name}, rating: ${rating}, gender: ${gender}, state: ${state}`);
         
         return {
           name,
           rating,
-          title: title || undefined,
-          gender: gender as ("M" | "F"),
-          state: state || undefined,
-          city: city || undefined,
-          status: "pending" as const // Use const assertion to match the expected union type
+          title,
+          gender: gender as "M" | "F",
+          state,
+          city,
+          status: "pending" as const
         };
       });
       
       // Filter out any rows without names
-      const validPlayers = players.filter(player => player.name);
+      const validPlayers = players.filter(player => player.name && player.name.trim() !== "");
+      
+      console.log(`Found ${validPlayers.length} valid players out of ${players.length} total rows`);
       
       if (validPlayers.length === 0) {
         toast({
           title: "No valid players found",
-          description: "The file doesn't contain properly formatted player data. Please check the file format.",
+          description: "The file doesn't contain properly formatted player data. Column names should include 'name', 'rating', etc.",
           variant: "destructive"
         });
         return;
@@ -85,6 +140,37 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper function to find a value using various possible keys (case insensitive)
+  const findValueByKeys = (row: any, possibleKeys: string[]): any => {
+    // First check exact matches
+    for (const key of possibleKeys) {
+      if (row[key] !== undefined) return row[key];
+    }
+    
+    // Then check for case-insensitive matches
+    const rowKeys = Object.keys(row);
+    for (const possibleKey of possibleKeys) {
+      const matchingKey = rowKeys.find(
+        k => k.toLowerCase() === possibleKey.toLowerCase()
+      );
+      if (matchingKey && row[matchingKey] !== undefined) {
+        return row[matchingKey];
+      }
+    }
+    
+    // Finally check for partial matches
+    for (const possibleKey of possibleKeys) {
+      const matchingKey = rowKeys.find(
+        k => k.toLowerCase().includes(possibleKey.toLowerCase())
+      );
+      if (matchingKey && row[matchingKey] !== undefined) {
+        return row[matchingKey];
+      }
+    }
+    
+    return null;
   };
 
   const clearFile = () => {
