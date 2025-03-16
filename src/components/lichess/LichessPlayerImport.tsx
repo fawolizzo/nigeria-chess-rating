@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -43,7 +42,6 @@ const LichessPlayerImport = ({ onPlayerImported }: LichessPlayerImportProps) => 
         id: `player_${Date.now()}`,
         ...lichessPlayerData,
         state: "Lagos", // Default value, can be changed later
-        city: "", // Default value, can be changed later
         federationId: "",
         ratingHistory: [
           {

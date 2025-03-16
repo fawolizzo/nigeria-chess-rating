@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -9,9 +8,10 @@ export interface Player {
   country?: string;
   club?: string;
   state?: string;
+  city?: string;  // Add city field
   gender: 'M' | 'F';
   birthYear?: number;
-  ratingHistory: { date: string; rating: number; reason?: string }[];
+  ratingHistory: { date: string; rating: number; lichessRating?: number; reason?: string }[];
   achievements?: string[];
   tournamentResults: {
     tournamentId: string;
@@ -21,6 +21,9 @@ export interface Player {
   status?: 'pending' | 'approved' | 'rejected' | 'processed';
   createdBy?: string; // ID of the user who created this player
   gamesPlayed?: number;
+  lichessId?: string;  // Add lichessId field
+  lichessUrl?: string; // Add lichessUrl field
+  federationId?: string;
 }
 
 export interface Tournament {
