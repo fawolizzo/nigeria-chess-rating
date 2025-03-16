@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -52,6 +51,8 @@ export interface Tournament {
     }>;
   }>;
   currentRound?: number;
+  processingDate?: string; // Date when tournament was processed
+  processedPlayerIds?: string[]; // IDs of players who participated
 }
 
 export const players: Player[] = [
@@ -436,4 +437,3 @@ export const updateTournament = (updatedTournament: Tournament): void => {
   );
   saveTournaments(updatedTournaments);
 };
-

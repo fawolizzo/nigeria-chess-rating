@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getTournamentById, getPlayersByTournamentId, Tournament, Player } from "@/lib/mockData";
+import { getTournamentById, getPlayersByTournamentId, Tournament, Player, getAllPlayers } from "@/lib/mockData";
 import Navbar from "@/components/Navbar";
 import { Calendar, MapPin, Users, Info, Trophy, Award } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +10,7 @@ import StandingsTable from "@/components/StandingsTable";
 import PairingSystem from "@/components/PairingSystem";
 import { useUser } from "@/contexts/UserContext";
 import TournamentRatingDialog from "@/components/officer/TournamentRatingDialog";
+import ProcessedTournamentDetails from "@/components/officer/ProcessedTournamentDetails";
 
 interface PlayerWithScore extends Player {
   score: number;
@@ -34,11 +34,20 @@ const TournamentDetails = () => {
       if (fetchedTournament) {
         setTournament(fetchedTournament);
         
-        // Get all players for this tournament
-        const tournamentPlayers = getPlayersByTournamentId(id);
+        let tournamentPlayers: Player[] = [];
+        
+        if (fetchedTournament.status === 'processed' && fetchedTournament.processedPlayerIds) {
+          const allPlayers = getAllPlayers();
+          tournamentPlayers = allPlayers.filter(player => 
+            fetchedTournament.processedPlayerIds?.includes(player.id) ||
+            player.tournamentResults.some(result => result.tournamentId === id)
+          );
+        } else {
+          tournamentPlayers = getPlayersByTournamentId(id);
+        }
+        
         setPlayers(tournamentPlayers);
         
-        // Calculate standings if tournament is ongoing or completed
         if (fetchedTournament.status === "ongoing" || fetchedTournament.status === "completed" || fetchedTournament.status === "processed") {
           calculateStandings(fetchedTournament, tournamentPlayers);
         }
@@ -69,12 +78,10 @@ const TournamentDetails = () => {
     
     const playerScores: Record<string, { score: number, tiebreak: number[] }> = {};
     
-    // Initialize player scores
     playerList.forEach(player => {
       playerScores[player.id] = { score: 0, tiebreak: [0, 0] };
     });
     
-    // Calculate scores from match results
     tournament.pairings.forEach(round => {
       round.matches.forEach(match => {
         if (match.result === "1-0") {
@@ -88,14 +95,12 @@ const TournamentDetails = () => {
       });
     });
     
-    // Create standings with players and scores
     const calculatedStandings = playerList.map(player => ({
       ...player,
       score: playerScores[player.id]?.score || 0,
       tiebreak: playerScores[player.id]?.tiebreak || [0, 0],
     }));
     
-    // Sort by score (descending)
     calculatedStandings.sort((a, b) => b.score - a.score);
     
     setStandings(calculatedStandings);
@@ -108,11 +113,20 @@ const TournamentDetails = () => {
   };
 
   const handleRatingProcessed = () => {
-    // Reload tournament data after processing
     if (id) {
       const updatedTournament = getTournamentById(id);
       if (updatedTournament) {
         setTournament(updatedTournament);
+        
+        if (updatedTournament.status === 'processed' && updatedTournament.processedPlayerIds) {
+          const allPlayers = getAllPlayers();
+          const processedPlayers = allPlayers.filter(player => 
+            updatedTournament.processedPlayerIds?.includes(player.id) ||
+            player.tournamentResults.some(result => result.tournamentId === id)
+          );
+          setPlayers(processedPlayers);
+          calculateStandings(updatedTournament, processedPlayers);
+        }
       }
     }
   };
@@ -178,6 +192,10 @@ const TournamentDetails = () => {
             )}
           </div>
         </div>
+        
+        {tournament.status === 'processed' && currentUser?.role === "rating_officer" && (
+          <ProcessedTournamentDetails tournament={tournament} players={players} />
+        )}
         
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <Tabs defaultValue={tournament.status === "upcoming" ? "info" : "standings"}>

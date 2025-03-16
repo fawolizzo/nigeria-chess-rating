@@ -105,6 +105,10 @@ const TournamentRatingDialog = ({
         Object.entries(playerUpdates).forEach(([playerId, update]) => {
           const player = allPlayers.find(p => p.id === playerId);
           if (player) {
+            // Calculate final position based on score
+            // This is a simplified approach - in a real system you might have tiebreakers
+            const finalPosition = calculatePlayerPosition(playerId, processedRounds);
+            
             const updatedPlayer = {
               ...player,
               rating: player.rating + update.ratingChange,
@@ -116,6 +120,15 @@ const TournamentRatingDialog = ({
                   rating: player.rating + update.ratingChange,
                   reason: `Tournament: ${tournament.name}`
                 }
+              ],
+              // Update tournament results to include this tournament
+              tournamentResults: [
+                ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
+                {
+                  tournamentId: tournament.id,
+                  position: finalPosition,
+                  ratingChange: update.ratingChange
+                }
               ]
             };
             
@@ -125,10 +138,18 @@ const TournamentRatingDialog = ({
         });
       }
       
-      // Mark tournament as processed
+      // Mark tournament as processed and store the processing details
       const updatedTournament = {
         ...tournament,
-        status: 'processed' as Tournament['status']
+        status: 'processed' as Tournament['status'],
+        processingDate: new Date().toISOString(),
+        processedPlayerIds: Object.keys(tournament.pairings?.reduce((acc, round) => {
+          round.matches.forEach(match => {
+            acc[match.whiteId] = true;
+            acc[match.blackId] = true;
+          });
+          return acc;
+        }, {} as Record<string, boolean>) || {})
       };
       updateTournament(updatedTournament);
       
@@ -150,6 +171,34 @@ const TournamentRatingDialog = ({
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Helper function to calculate a player's position in the tournament
+  const calculatePlayerPosition = (playerId: string, processedRounds: any[]): number => {
+    // Calculate total score for each player
+    const playerScores: Record<string, number> = {};
+    
+    processedRounds.forEach(round => {
+      round.matches.forEach((match: any) => {
+        if (match.result === "1-0") {
+          playerScores[match.whiteId] = (playerScores[match.whiteId] || 0) + 1;
+        } else if (match.result === "0-1") {
+          playerScores[match.blackId] = (playerScores[match.blackId] || 0) + 1;
+        } else if (match.result === "1/2-1/2") {
+          playerScores[match.whiteId] = (playerScores[match.whiteId] || 0) + 0.5;
+          playerScores[match.blackId] = (playerScores[match.blackId] || 0) + 0.5;
+        }
+      });
+    });
+    
+    // Convert scores to array and sort by score (descending)
+    const sortedPlayers = Object.entries(playerScores)
+      .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
+      .map(([id]) => id);
+    
+    // Find position of this player (1-based index)
+    const position = sortedPlayers.indexOf(playerId) + 1;
+    return position > 0 ? position : sortedPlayers.length; // Default to last if not found
   };
 
   return (

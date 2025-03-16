@@ -1,15 +1,26 @@
 
 import React from "react";
-import { Player } from "@/lib/mockData";
+import { Player, getTournamentById } from "@/lib/mockData";
 import PerformanceChart from "@/components/PerformanceChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getKFactor } from "@/lib/ratingCalculation";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Trophy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface PlayerPerformanceProps {
   player: Player;
 }
 
 const PlayerPerformance: React.FC<PlayerPerformanceProps> = ({ player }) => {
+  const navigate = useNavigate();
   const kFactor = getKFactor(player.rating, player.gamesPlayed || 0);
   
   // Get rating stats
@@ -90,6 +101,60 @@ const PlayerPerformance: React.FC<PlayerPerformanceProps> = ({ player }) => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Tournament Results Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tournament Results</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {player.tournamentResults.length > 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tournament</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Rating Change</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {player.tournamentResults.map(result => {
+                    const tournament = getTournamentById(result.tournamentId);
+                    return (
+                      <TableRow 
+                        key={result.tournamentId} 
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => navigate(`/tournament/${result.tournamentId}`)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Trophy size={16} className="text-amber-500" />
+                            {tournament?.name || `Tournament #${result.tournamentId}`}
+                          </div>
+                          {tournament && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {tournament.startDate} - {tournament.endDate}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{result.position}</TableCell>
+                        <TableCell className={result.ratingChange >= 0 ? "text-green-500" : "text-red-500"}>
+                          {result.ratingChange > 0 ? "+" : ""}{result.ratingChange}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              No tournament results available
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
