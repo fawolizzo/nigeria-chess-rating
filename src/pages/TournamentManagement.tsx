@@ -75,6 +75,7 @@ interface Tournament {
   currentRound?: number;
 }
 
+// Make the interface consistent with the one in StandingsTable
 interface PlayerWithScore extends Player {
   score: number;
   tiebreak: number[];
@@ -203,7 +204,7 @@ const TournamentManagement = () => {
 
     const updatedTournament = {
       ...tournament,
-      status: "ongoing",
+      status: "ongoing" as const, // Using const assertion to specify the exact type
       currentRound: 1,
       pairings: [],
     };
@@ -217,7 +218,7 @@ const TournamentManagement = () => {
 
     const updatedTournament = {
       ...tournament,
-      status: "completed",
+      status: "completed" as const, // Using const assertion for the type
     };
 
     updateTournament(updatedTournament);
@@ -295,7 +296,7 @@ const TournamentManagement = () => {
       matches: registeredPlayers.map((player, index) => ({
         whiteId: player.id,
         blackId: registeredPlayers[(index + 1) % registeredPlayers.length].id,
-        result: "*", // Default value indicating the match hasn't been played yet
+        result: "*" as const, // Using const assertion to specify the literal type
       })),
     };
 
@@ -308,8 +309,11 @@ const TournamentManagement = () => {
     setPairingsGenerated(true);
   };
 
-  const saveResults = (roundNumber: number, results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {
+  const saveResults = (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {
     if (!tournament) return;
+    
+    // Get the current round number
+    const roundNumber = selectedRound;
   
     const updatedPairings = tournament.pairings?.map(pairing => {
       if (pairing.roundNumber === roundNumber) {

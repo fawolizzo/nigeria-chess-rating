@@ -5,7 +5,8 @@ import { Player } from "@/lib/mockData";
 
 interface PlayerWithScore extends Player {
   score: number;
-  opponents: string[];
+  tiebreak: number[];
+  opponents?: string[]; // Make opponents optional to match the interface in TournamentManagement
 }
 
 interface StandingsTableProps {
@@ -17,12 +18,14 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
   const calculateBuchholz = (player: PlayerWithScore) => {
     // Buchholz is the sum of the scores of all the player's opponents
     let buchholz = 0;
-    player.opponents.forEach(opponentId => {
-      const opponent = standings.find(p => p.id === opponentId);
-      if (opponent) {
-        buchholz += opponent.score;
-      }
-    });
+    if (player.opponents) {
+      player.opponents.forEach(opponentId => {
+        const opponent = standings.find(p => p.id === opponentId);
+        if (opponent) {
+          buchholz += opponent.score;
+        }
+      });
+    }
     return buchholz;
   };
 
