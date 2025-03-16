@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Upload } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Player, addPlayer } from "@/lib/mockData";
 import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
 import { useToast } from "@/components/ui/use-toast";
@@ -92,6 +92,7 @@ const TournamentPlayerSelector = ({
         state: player.state,
         city: player.city,
         gender: player.gender || "M",
+        birthYear: player.birthYear,
         ratingHistory: [{ 
           date: new Date().toISOString().split('T')[0], 
           rating: player.rating || 800,
@@ -144,7 +145,7 @@ const TournamentPlayerSelector = ({
         onClick={() => handleDialogClose(true)}
       >
         <Plus className="h-4 w-4 mr-2" />
-        Add Existing Player
+        Add Players
       </Button>
       
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
@@ -164,7 +165,7 @@ const TournamentPlayerSelector = ({
             
             <TabsContent value="select" className="mt-4">
               <MultiSelectPlayers
-                isOpen={true}
+                isOpen={activeTab === "select"}
                 onOpenChange={(open) => {
                   if (!open) handleDialogClose(false);
                 }}
@@ -182,17 +183,18 @@ const TournamentPlayerSelector = ({
                   </p>
                   
                   <div className="border rounded-md overflow-hidden">
-                    <div className="grid grid-cols-[auto_1fr_auto] gap-2 p-2 bg-muted font-medium text-sm">
+                    <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 p-2 bg-muted font-medium text-sm">
                       <div></div>
                       <div>Player</div>
                       <div>Rating</div>
+                      <div>Birth Year</div>
                     </div>
                     
                     <div className="max-h-[300px] overflow-y-auto">
                       {importedPlayers.map((player) => (
                         <div 
                           key={player.tempId} 
-                          className="grid grid-cols-[auto_1fr_auto] gap-2 p-2 border-t items-center hover:bg-muted/50"
+                          className="grid grid-cols-[auto_1fr_auto_auto] gap-2 p-2 border-t items-center hover:bg-muted/50"
                         >
                           <input
                             type="checkbox"
@@ -206,6 +208,7 @@ const TournamentPlayerSelector = ({
                             {player.state && <span className="text-xs text-muted-foreground ml-2">({player.state})</span>}
                           </div>
                           <div>{player.rating || 800}</div>
+                          <div>{player.birthYear || "-"}</div>
                         </div>
                       ))}
                     </div>
@@ -238,11 +241,12 @@ const TournamentPlayerSelector = ({
                   <div className="text-center mt-6">
                     <p className="text-sm text-muted-foreground mb-4">
                       Upload a CSV or Excel file with player information.
-                      <br />The file should have columns for Name, Rating, and optionally Title, State, City, and Gender.
+                      <br />The file should have columns for Player Name, Rating, and optionally Title, Birth Year, and Gender.
                     </p>
-                    <Button variant="outline" onClick={() => setActiveTab("select")}>
-                      Back to Player Selection
-                    </Button>
+                    <div className="mt-3 p-3 bg-muted rounded-md text-sm">
+                      <p>Expected column headers:</p>
+                      <p className="text-xs mt-1">Player, Rating, Title, B-Year (or Birth Year), Gender/Sex</p>
+                    </div>
                   </div>
                 </div>
               )}

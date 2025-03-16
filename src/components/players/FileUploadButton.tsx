@@ -41,184 +41,165 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         throw new Error("Worksheet not found");
       }
       
-      const jsonData = utils.sheet_to_json<any>(worksheet, { 
+      // Get raw data as array to examine structure
+      const rawData = utils.sheet_to_json<any>(worksheet, { 
         raw: false,
-        header: 1, // Try as array first to debug headers
+        header: 1,
         blankrows: false
       });
       
-      console.log("Raw Excel data (array format):", jsonData);
+      console.log("Raw Excel data:", rawData);
       
-      if (!jsonData || jsonData.length === 0) {
+      if (!rawData || rawData.length <= 1) {
         toast({
           title: "Empty file",
-          description: "The file doesn't contain any data. Please check the file.",
+          description: "The file doesn't contain enough data. Please check the file.",
           variant: "destructive"
         });
         setIsLoading(false);
         return;
       }
       
-      // Check if the first row looks like headers
-      const firstRow = jsonData[0];
-      console.log("First row (potential headers):", firstRow);
+      // Look at first row to identify column headers
+      const headerRow = rawData[0];
+      console.log("Header row:", headerRow);
       
-      // Now try with headers (this is the usual way)
-      const jsonWithHeaders = utils.sheet_to_json<any>(worksheet, {
-        raw: false,
-        defval: "",
-        blankrows: false
+      // Map common header names to standard fields
+      const columnMap: Record<string, number> = {};
+      
+      // These are the field names we're looking for
+      const fieldMappings: Record<string, string[]> = {
+        name: ["player", "name", "full name", "player name"],
+        title: ["title", "chess title"],
+        rating: ["rating", "elo", "fide rating", "chess rating"],
+        birthYear: ["birth year", "b-year", "year", "birthyear", "birth", "byear", "dob"],
+        gender: ["gender", "sex", "m/f"],
+        federation: ["fed", "federation", "country"]
+      };
+      
+      // Find the index of each field in the header row
+      headerRow.forEach((header: string, index: number) => {
+        if (!header) return;
+        
+        const headerText = header.toString().toLowerCase().trim();
+        
+        // Check each field type
+        Object.entries(fieldMappings).forEach(([field, possibleNames]) => {
+          if (possibleNames.some(name => headerText === name || headerText.includes(name))) {
+            columnMap[field] = index;
+          }
+        });
+        
+        // Additional special cases
+        if (headerText === "#" || headerText === "no" || headerText === "num" || headerText === "number") {
+          columnMap["id"] = index;
+        }
       });
       
-      console.log("Excel data with headers:", jsonWithHeaders);
+      console.log("Identified columns:", columnMap);
       
-      // If no data with headers, try processing the array format
-      let processedData;
-      if (jsonWithHeaders.length === 0 && jsonData.length > 1) {
-        // Try to determine if first row is headers
-        const potentialHeaders = firstRow.map((h: any) => 
-          typeof h === "string" ? h.toLowerCase().trim() : ""
-        );
-        
-        // Check if any potential header contains name-like terms
-        const hasNameHeader = potentialHeaders.some((h: string) => 
-          h.includes("name") || h === "player" || h.includes("player")
-        );
-        
-        if (hasNameHeader) {
-          // First row is likely headers, process from second row
-          processedData = [];
-          for (let i = 1; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            const obj: any = {};
-            
-            for (let j = 0; j < potentialHeaders.length; j++) {
-              if (j < row.length && potentialHeaders[j]) {
-                obj[potentialHeaders[j]] = row[j];
-              }
-            }
-            
-            if (Object.keys(obj).length > 0) {
-              processedData.push(obj);
-            }
-          }
-        } else {
-          // No headers, assume first column is name, second is rating
-          processedData = [];
-          for (let i = 0; i < jsonData.length; i++) {
-            const row = jsonData[i];
-            if (row.length > 0 && row[0]) {
-              processedData.push({
-                name: row[0],
-                rating: row.length > 1 ? row[1] : 800,
-                state: row.length > 2 ? row[2] : "",
-                gender: row.length > 3 ? row[3] : "M"
-              });
-            }
-          }
+      // If we can't find player name column, try alternative approach
+      if (!('name' in columnMap)) {
+        // Look for a column that might contain player names (usually the 2nd column)
+        if (headerRow.length > 1) {
+          columnMap['name'] = 1; // Typically the 2nd column (index 1) contains names
+          console.log("Using column 1 as player name column");
         }
-        
-        console.log("Processed data from array format:", processedData);
-      } else {
-        processedData = jsonWithHeaders;
       }
       
-      if (!processedData || processedData.length === 0) {
+      // If we still don't have a name column, we can't proceed
+      if (!('name' in columnMap)) {
         toast({
-          title: "No data found",
-          description: "Could not extract data from the file. Please check the file format.",
+          title: "Invalid file format",
+          description: "Could not identify a player name column. Please ensure your file has a 'Player' column.",
           variant: "destructive"
         });
         setIsLoading(false);
         return;
       }
       
-      // Map the data to our Player structure with better column detection
-      const players = processedData.map((row: any) => {
-        // Try to handle common column names with much more flexibility
-        // Display the row for debugging
-        console.log("Processing row:", row);
+      // Process the data rows
+      const processedPlayers: Partial<Player>[] = [];
+      
+      // Start from row 1 (skip header)
+      for (let i = 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (!row || row.length === 0) continue;
         
-        // Name field detection
-        const nameKeys = ["name", "player", "player name", "player_name", "fullname", "full name", "full_name"];
-        const nameValue = findValueByKeys(row, nameKeys);
+        // Get player name
+        const nameIndex = columnMap['name'];
+        const name = row[nameIndex];
         
-        // Rating field detection
-        const ratingKeys = ["rating", "elo", "fide", "chess rating", "chess_rating"];
-        const ratingValue = findValueByKeys(row, ratingKeys);
+        if (!name) continue; // Skip rows without names
         
-        // Title field detection
-        const titleKeys = ["title", "chess title", "chess_title"];
-        const titleValue = findValueByKeys(row, titleKeys);
+        const title = 'title' in columnMap ? row[columnMap['title']] : null;
+        const ratingValue = 'rating' in columnMap ? row[columnMap['rating']] : null;
+        const rating = ratingValue ? parseInt(ratingValue.toString()) : 800;
+        const birthYearValue = 'birthYear' in columnMap ? row[columnMap['birthYear']] : null;
+        const birthYear = birthYearValue ? parseInt(birthYearValue.toString()) : undefined;
         
-        // Gender field detection
-        const genderKeys = ["gender", "sex"];
-        const genderValue = findValueByKeys(row, genderKeys);
-        
-        // State field detection
-        const stateKeys = ["state", "province", "region"];
-        const stateValue = findValueByKeys(row, stateKeys);
-        
-        // City field detection
-        const cityKeys = ["city", "town"];
-        const cityValue = findValueByKeys(row, cityKeys);
-        
-        // Get proper values with fallbacks
-        let name = nameValue || "";
-        
-        // If we have a raw array and no name was found but the first cell has content
-        if (!name && Array.isArray(row) && row.length > 0 && row[0]) {
-          name = row[0];
+        // Default gender to M, but check for specific gender value if available
+        let gender: 'M' | 'F' = 'M';
+        if ('gender' in columnMap) {
+          const genderValue = row[columnMap['gender']];
+          if (genderValue && typeof genderValue === 'string') {
+            const genderStr = genderValue.toString().toUpperCase().trim();
+            if (genderStr === 'F' || genderStr === 'FEMALE' || genderStr === 'W') {
+              gender = 'F';
+            }
+          }
         }
         
-        // If the name is a number, convert to string
-        if (typeof name === 'number') {
-          name = name.toString();
+        // Add federation/country as state if available
+        let state: string | undefined;
+        if ('federation' in columnMap) {
+          const federation = row[columnMap['federation']];
+          if (federation && federation.toString() !== 'NGR') {
+            state = federation.toString();
+          }
         }
         
-        const rating = parseInt(ratingValue) || 800;
-        const title = titleValue || undefined;
-        const gender = (typeof genderValue === 'string' && genderValue.toUpperCase() === "F") ? "F" : "M";
-        const state = stateValue || undefined;
-        const city = cityValue || undefined;
-        
-        console.log(`Processed player: "${name}", rating: ${rating}, gender: ${gender}, state: ${state || 'undefined'}`);
-        
-        return {
-          name,
+        // Create the player object
+        const player: Partial<Player> = {
+          name: name.toString(),
           rating,
-          title,
-          gender: gender as "M" | "F",
-          state,
-          city,
-          status: "pending" as const
+          gender,
+          birthYear,
+          state
         };
-      });
+        
+        // Add title if it exists and isn't empty
+        if (title && title.toString().trim()) {
+          player.title = title.toString().trim();
+        }
+        
+        console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}`);
+        processedPlayers.push(player);
+      }
       
-      // Filter out any rows without names
-      const validPlayers = players.filter(player => player.name && player.name.trim() !== "");
+      console.log(`Found ${processedPlayers.length} valid players`);
       
-      console.log(`Found ${validPlayers.length} valid players out of ${players.length} total rows`);
-      
-      if (validPlayers.length === 0) {
-        // Show more helpful error message with instructions
+      if (processedPlayers.length === 0) {
         toast({
           title: "No valid players found",
-          description: "The file doesn't contain properly formatted player data. Make sure your Excel file has a column named 'Name' or 'Player'.",
+          description: "Could not extract any valid players from the file. Please check the file format.",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
       
-      onPlayersImported(validPlayers);
+      // Send the players to the parent component
+      onPlayersImported(processedPlayers);
       
       toast({
         title: "Players imported",
-        description: `Successfully imported ${validPlayers.length} players from file.`,
+        description: `Successfully imported ${processedPlayers.length} players from file.`,
       });
       
       // Reset file selection
       setFile(null);
+      
     } catch (error) {
       console.error("Error processing file:", error);
       toast({
@@ -229,42 +210,6 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Helper function to find a value using various possible keys (case insensitive)
-  const findValueByKeys = (row: any, possibleKeys: string[]): any => {
-    // Special case for array rows
-    if (Array.isArray(row)) {
-      return row.length > 0 ? row[0] : null;
-    }
-    
-    // First check exact matches
-    for (const key of possibleKeys) {
-      if (row[key] !== undefined && row[key] !== "") return row[key];
-    }
-    
-    // Then check for case-insensitive matches
-    const rowKeys = Object.keys(row);
-    for (const possibleKey of possibleKeys) {
-      const matchingKey = rowKeys.find(
-        k => k.toLowerCase() === possibleKey.toLowerCase()
-      );
-      if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== "") {
-        return row[matchingKey];
-      }
-    }
-    
-    // Finally check for partial matches
-    for (const possibleKey of possibleKeys) {
-      const matchingKey = rowKeys.find(
-        k => k.toLowerCase().includes(possibleKey.toLowerCase())
-      );
-      if (matchingKey && row[matchingKey] !== undefined && row[matchingKey] !== "") {
-        return row[matchingKey];
-      }
-    }
-    
-    return null;
   };
 
   const clearFile = () => {
