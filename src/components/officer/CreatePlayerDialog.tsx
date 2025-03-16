@@ -13,20 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { v4 as uuidv4 } from "uuid";
-import { useUser } from "@/contexts/UserContext";
-import { addPlayer } from "@/lib/mockData";
+import { addPlayer, Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
-import StateSelector from "@/components/selectors/StateSelector";
+import PlayerFormFields from "@/components/player/PlayerFormFields";
+import { v4 as uuidv4 } from "uuid";
 
 const playerSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -52,7 +44,6 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
   onOpenChange,
   onSuccess
 }) => {
-  const { currentUser } = useUser();
   const { toast } = useToast();
   
   const form = useForm<PlayerFormValues>({
@@ -71,7 +62,9 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
 
   const onSubmit = (data: PlayerFormValues) => {
     try {
-      const newPlayer = {
+      const currentDate = new Date().toISOString();
+      
+      const newPlayer: Player = {
         id: uuidv4(),
         name: data.name,
         title: data.title || undefined,
@@ -83,15 +76,12 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
         birthYear: data.birthYear,
         ratingHistory: [
           {
-            date: new Date().toISOString(),
+            date: currentDate,
             rating: data.rating,
             reason: "Initial rating"
           }
         ],
-        achievements: [],
         tournamentResults: [],
-        status: "approved" as const,
-        createdBy: currentUser?.id,
         gamesPlayed: 0
       };
       
@@ -124,190 +114,13 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Create New Player</DialogTitle>
           <DialogDescription>
-            Enter the player's details to add them to the Nigerian Chess Rating system.
+            Add a new player to the Nigerian Chess Rating system.
           </DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter player's full name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title (Optional)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="None" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">None</SelectItem>
-                        <SelectItem value="CM">CM</SelectItem>
-                        <SelectItem value="FM">FM</SelectItem>
-                        <SelectItem value="IM">IM</SelectItem>
-                        <SelectItem value="GM">GM</SelectItem>
-                        <SelectItem value="WCM">WCM</SelectItem>
-                        <SelectItem value="WFM">WFM</SelectItem>
-                        <SelectItem value="WIM">WIM</SelectItem>
-                        <SelectItem value="WGM">WGM</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="gender"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Gender</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="M">Male</SelectItem>
-                        <SelectItem value="F">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="rating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Classical Rating</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={800} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="birthYear"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Birth Year (Optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="YYYY" 
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => {
-                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="rapidRating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Rapid Rating (Optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min={800} 
-                        placeholder="Rapid rating" 
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => {
-                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="blitzRating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Blitz Rating (Optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min={800} 
-                        placeholder="Blitz rating" 
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => {
-                          const value = e.target.value ? parseInt(e.target.value) : undefined;
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State (Optional)</FormLabel>
-                  <FormControl>
-                    <StateSelector
-                      value={field.value || ""}
-                      onValueChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <PlayerFormFields control={form.control} formState={form.formState} />
             
             <DialogFooter>
               <Button 
