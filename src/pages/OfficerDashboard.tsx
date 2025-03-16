@@ -6,7 +6,8 @@ import {
   addPlayer, 
   getAllTournaments,
   updateTournament,
-  Player 
+  Player,
+  Tournament
 } from "@/lib/mockData";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -47,25 +48,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import GenerateReportDialog from "@/components/GenerateReportDialog";
-
-interface Tournament {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  city: string;
-  state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
-  timeControl: string;
-  rounds: number;
-  organizerId: string;
-  registrationOpen?: boolean;
-  participants?: number;
-  coverImage?: string;
-  category?: string;
-}
 
 const playerSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
@@ -687,7 +669,7 @@ const OfficerDashboard = () => {
                           <span className="text-gray-500 dark:text-gray-400">End Date:</span> {new Date(tournament.endDate).toLocaleDateString()}
                         </div>
                         <div className="col-span-2">
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 mt-1">
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 ml-2">
                             Processed
                           </Badge>
                         </div>
