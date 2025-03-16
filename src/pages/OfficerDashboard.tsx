@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Shield, CheckCircle, XCircle, ChevronDown, Eye } from "lucide-react";
+import { Shield, CheckCircle, XCircle, ChevronDown, Eye, Users } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,7 +85,7 @@ const OrganizerCard = ({ organizer, onApprove, onReject, isApproved = false }) =
             <CardTitle className="text-lg">{organizer.fullName}</CardTitle>
             <CardDescription>{organizer.email}</CardDescription>
           </div>
-          <Badge variant={isApproved ? "success" : "outline"} className={isApproved ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" : ""}>
+          <Badge variant={isApproved ? "default" : "outline"} className={isApproved ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" : ""}>
             {isApproved ? "Approved" : "Pending"}
           </Badge>
         </div>

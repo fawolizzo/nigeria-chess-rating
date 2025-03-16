@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Calendar, Users, Clock, Award, Plus, MapPin, File, List } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -20,7 +19,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
 
-// Mock data for upcoming tournaments
 const MOCK_TOURNAMENTS = [
   {
     id: "1",
@@ -44,7 +42,6 @@ const MOCK_TOURNAMENTS = [
   },
 ];
 
-// Form validation schema
 const tournamentSchema = z.object({
   name: z.string().min(5, "Tournament name must be at least 5 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -53,7 +50,7 @@ const tournamentSchema = z.object({
   location: z.string().min(3, "Location is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
-  rounds: z.string().transform(val => parseInt(val)),
+  rounds: z.string().transform(val => Number(val)),
   timeControl: z.string().min(2, "Time control is required")
 }).refine(data => {
   return data.endDate >= data.startDate;
@@ -62,7 +59,6 @@ const tournamentSchema = z.object({
   path: ["endDate"]
 });
 
-// Nigerian states
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", 
   "Bayelsa", "Benue", "Borno", "Cross River", "Delta", 
@@ -98,7 +94,6 @@ const OrganizerDashboard = () => {
   };
 
   const handleCreateTournament = (data: z.infer<typeof tournamentSchema>) => {
-    // Create a new tournament object
     const newTournament = {
       id: `${tournaments.length + 1}`,
       name: data.name,
@@ -110,14 +105,11 @@ const OrganizerDashboard = () => {
       rounds: data.rounds
     };
     
-    // Add to tournaments
     setTournaments([newTournament, ...tournaments]);
     
-    // Close dialog and reset form
     setIsCreateTournamentOpen(false);
     form.reset();
     
-    // Show success toast
     toast({
       title: "Tournament Created",
       description: `${data.name} has been successfully created.`,
@@ -228,7 +220,6 @@ const OrganizerDashboard = () => {
         </Tabs>
       </div>
       
-      {/* Create Tournament Dialog */}
       <Dialog open={isCreateTournamentOpen} onOpenChange={setIsCreateTournamentOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
