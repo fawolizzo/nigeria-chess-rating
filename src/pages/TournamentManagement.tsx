@@ -109,6 +109,7 @@ const TournamentManagement = () => {
   const [pairingsGenerated, setPairingsGenerated] = useState(false);
   const [standings, setStandings] = useState<PlayerWithScore[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
@@ -706,7 +707,7 @@ const TournamentManagement = () => {
                           
                           <Button
                             variant="default"
-                            onClick={() => setIsAddPlayerOpen(true)}
+                            onClick={() => setIsCreatePlayerOpen(true)}
                             className="flex items-center gap-1 justify-center"
                           >
                             <Plus size={16} /> Add Existing Player
@@ -938,3 +939,4 @@ const TournamentManagement = () => {
 };
 
 export default TournamentManagement;
+
