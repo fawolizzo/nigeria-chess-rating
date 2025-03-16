@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ export interface Tournament {
   city?: string;
   state?: string;
   category?: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed';
   participants?: number;
   rounds: number;
   timeControl: string;
@@ -32,7 +31,6 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
     return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
-  // Status badge color
   const getStatusClass = (status: Tournament['status']) => {
     switch (status) {
       case 'upcoming':
@@ -45,13 +43,15 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
       case 'rejected':
         return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+      case 'processed':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
   const handleRegisterClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation to details page
+    e.preventDefault();
     if (onRegister) {
       onRegister(tournament.id);
     }
