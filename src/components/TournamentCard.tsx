@@ -1,25 +1,7 @@
-
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-export interface Tournament {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  city?: string;
-  state?: string;
-  category?: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed';
-  participants?: number;
-  rounds: number;
-  timeControl: string;
-  coverImage?: string;
-  description?: string;
-  registrationOpen?: boolean;
-}
+import { Tournament } from "@/lib/mockData";
 
 interface TournamentCardProps {
   tournament: Tournament;

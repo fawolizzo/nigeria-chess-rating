@@ -28,6 +28,8 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   location: string;
+  city?: string;
+  state?: string;
   category: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed';
   participants: number;
@@ -35,6 +37,7 @@ export interface Tournament {
   timeControl: string;
   coverImage?: string;
   description?: string;
+  registrationOpen?: boolean;
 }
 
 export const players: Player[] = [
@@ -275,6 +278,8 @@ export const tournaments: Tournament[] = [
     startDate: "2023-12-10",
     endDate: "2023-12-18",
     location: "Abuja, Nigeria",
+    city: "Abuja",
+    state: "FCT",
     category: "National",
     status: "completed",
     participants: 64,
@@ -289,6 +294,8 @@ export const tournaments: Tournament[] = [
     startDate: "2023-09-05",
     endDate: "2023-09-12",
     location: "Lagos, Nigeria",
+    city: "Lagos",
+    state: "Lagos",
     category: "International",
     status: "completed",
     participants: 120,
@@ -303,6 +310,8 @@ export const tournaments: Tournament[] = [
     startDate: "2023-10-15",
     endDate: "2023-10-22",
     location: "Enugu, Nigeria",
+    city: "Enugu",
+    state: "Enugu",
     category: "National",
     status: "completed",
     participants: 32,
@@ -317,6 +326,8 @@ export const tournaments: Tournament[] = [
     startDate: "2024-01-20",
     endDate: "2024-01-28",
     location: "Port Harcourt, Nigeria",
+    city: "Port Harcourt",
+    state: "Rivers",
     category: "Open",
     status: "completed",
     participants: 86,
@@ -331,6 +342,8 @@ export const tournaments: Tournament[] = [
     startDate: "2024-04-05",
     endDate: "2024-04-10",
     location: "Ibadan, Nigeria",
+    city: "Ibadan",
+    state: "Oyo",
     category: "Junior",
     status: "upcoming",
     participants: 48,
@@ -345,6 +358,8 @@ export const tournaments: Tournament[] = [
     startDate: "2024-05-15",
     endDate: "2024-05-23",
     location: "Multiple Cities, Nigeria",
+    city: "Multiple Cities",
+    state: "Multiple Cities",
     category: "National Circuit",
     status: "upcoming",
     participants: 100,
