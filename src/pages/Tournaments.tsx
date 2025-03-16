@@ -59,7 +59,7 @@ const Tournaments = () => {
             Tournaments
           </h1>
           <div>
-            <SearchBar />
+            <SearchBar onSearch={setSearchTerm} />
           </div>
         </div>
 
