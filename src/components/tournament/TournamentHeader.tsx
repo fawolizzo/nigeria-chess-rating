@@ -22,9 +22,9 @@ interface TournamentHeaderProps {
   onToggleRegistration: () => void;
   onStartTournament: () => void;
   onCompleteTournament: () => void;
-  onGenerateReport: () => void;
   canStartTournament: boolean;
-  isGeneratingReport: boolean;
+  isOfficer?: boolean;
+  onProcessRatings?: () => void;
 }
 
 const TournamentHeader = ({
@@ -32,9 +32,9 @@ const TournamentHeader = ({
   onToggleRegistration,
   onStartTournament,
   onCompleteTournament,
-  onGenerateReport,
   canStartTournament,
-  isGeneratingReport
+  isOfficer = false,
+  onProcessRatings
 }: TournamentHeaderProps) => {
   const navigate = useNavigate();
 
@@ -58,7 +58,7 @@ const TournamentHeader = ({
         </div>
         
         <div className="flex flex-wrap gap-2">
-          {tournament.status === "upcoming" && (
+          {!isOfficer && tournament.status === "upcoming" && (
             <>
               <Button
                 onClick={onToggleRegistration}
@@ -78,7 +78,7 @@ const TournamentHeader = ({
             </>
           )}
           
-          {tournament.status === "ongoing" && (
+          {!isOfficer && tournament.status === "ongoing" && (
             <Button
               onClick={onCompleteTournament}
               className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700"
@@ -87,15 +87,12 @@ const TournamentHeader = ({
             </Button>
           )}
           
-          {tournament.status === "completed" && (
+          {isOfficer && tournament.status === "completed" && onProcessRatings && (
             <Button
-              onClick={onGenerateReport}
-              className="flex-1 sm:flex-none flex items-center gap-2"
-              variant="outline"
-              disabled={isGeneratingReport}
+              onClick={onProcessRatings}
+              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
             >
-              <FileDown size={16} /> 
-              {isGeneratingReport ? "Generating..." : "Export Report"}
+              Process Ratings
             </Button>
           )}
         </div>
@@ -105,6 +102,8 @@ const TournamentHeader = ({
         <Badge className={
           tournament.status === "upcoming" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
           tournament.status === "ongoing" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" :
+          tournament.status === "completed" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300" :
+          tournament.status === "processed" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300" :
           "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
         }>
           {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}

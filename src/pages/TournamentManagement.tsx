@@ -64,7 +64,6 @@ const TournamentManagement = () => {
   const [selectedRound, setSelectedRound] = useState(1);
   const [pairingsGenerated, setPairingsGenerated] = useState(false);
   const [standings, setStandings] = useState<PlayerWithScore[]>([]);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -162,6 +161,11 @@ const TournamentManagement = () => {
 
     updateTournament(updatedTournament);
     setActiveTab("standings");
+    
+    toast({
+      title: "Tournament Completed",
+      description: "The tournament has been marked as completed and will be reviewed by the Rating Officer.",
+    });
   };
 
   const updateTournament = (updatedTournament: Tournament) => {
@@ -338,181 +342,6 @@ const TournamentManagement = () => {
     setStandings(standingsArray);
   };
 
-  const generateTournamentReport = async () => {
-    if (!tournament) return;
-  
-    setIsGeneratingReport(true);
-  
-    try {
-      const reportData = {
-        tournamentName: tournament.name,
-        startDate: new Date(tournament.startDate).toLocaleDateString(),
-        endDate: new Date(tournament.endDate).toLocaleDateString(),
-        location: `${tournament.location}, ${tournament.city}, ${tournament.state}`,
-        timeControl: tournament.timeControl,
-        rounds: tournament.rounds,
-        status: tournament.status,
-        registeredPlayers: registeredPlayers.map(player => ({
-          name: player.name,
-          rating: player.rating,
-          title: player.title || "N/A",
-        })),
-        finalStandings: standings.map((player, index) => ({
-          rank: index + 1,
-          name: player.name,
-          score: player.score,
-        })),
-      };
-  
-      const reportJSON = JSON.stringify(reportData, null, 2);
-  
-      const blob = new Blob([reportJSON], { type: "application/json" });
-  
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${tournament.name.replace(/\s+/g, "_")}_report.json`;
-  
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-  
-      URL.revokeObjectURL(url);
-  
-      toast({
-        title: "Report generated",
-        description: "The tournament report has been generated successfully.",
-      });
-    } catch (error) {
-      console.error("Error generating tournament report:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate tournament report.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingReport(false);
-    }
-  };
-
-  const handleProcessRatings = (processedRounds: Array<{
-    roundNumber: number;
-    matches: Array<{
-      whiteId: string;
-      blackId: string;
-      result: "1-0" | "0-1" | "1/2-1/2" | "*";
-      whiteRatingChange: number;
-      blackRatingChange: number;
-    }>;
-  }>) => {
-    if (!tournament) return;
-    
-    // Update tournament pairings with rating changes
-    const updatedPairings = tournament.pairings?.map(round => {
-      const processedRound = processedRounds.find(pr => pr.roundNumber === round.roundNumber);
-      
-      if (processedRound) {
-        return {
-          ...round,
-          matches: round.matches.map(match => {
-            const processedMatch = processedRound.matches.find(
-              pm => pm.whiteId === match.whiteId && pm.blackId === match.blackId
-            );
-            
-            if (processedMatch) {
-              return {
-                ...match,
-                whiteRatingChange: processedMatch.whiteRatingChange,
-                blackRatingChange: processedMatch.blackRatingChange
-              };
-            }
-            
-            return match;
-          })
-        };
-      }
-      
-      return round;
-    });
-    
-    // Update player ratings in the system
-    const playerUpdates: Record<string, { 
-      ratingChange: number, 
-      gameResult: "win" | "loss" | "draw" 
-    }> = {};
-    
-    processedRounds.forEach(round => {
-      round.matches.forEach(match => {
-        if (match.result !== "*") {
-          // Track white player updates
-          if (!playerUpdates[match.whiteId]) {
-            playerUpdates[match.whiteId] = { 
-              ratingChange: 0, 
-              gameResult: "draw" 
-            };
-          }
-          
-          // Track black player updates
-          if (!playerUpdates[match.blackId]) {
-            playerUpdates[match.blackId] = { 
-              ratingChange: 0, 
-              gameResult: "draw" 
-            };
-          }
-          
-          // Add rating changes
-          playerUpdates[match.whiteId].ratingChange += match.whiteRatingChange;
-          playerUpdates[match.blackId].ratingChange += match.blackRatingChange;
-          
-          // Record game result
-          if (match.result === "1-0") {
-            playerUpdates[match.whiteId].gameResult = "win";
-            playerUpdates[match.blackId].gameResult = "loss";
-          } else if (match.result === "0-1") {
-            playerUpdates[match.whiteId].gameResult = "loss";
-            playerUpdates[match.blackId].gameResult = "win";
-          }
-        }
-      });
-    });
-    
-    // Apply updates to players
-    Object.entries(playerUpdates).forEach(([playerId, update]) => {
-      const player = registeredPlayers.find(p => p.id === playerId);
-      if (player) {
-        const updatedPlayer = {
-          ...player,
-          rating: player.rating + update.ratingChange,
-          gamesPlayed: (player.gamesPlayed || 0) + 1,
-          ratingHistory: [
-            ...(player.ratingHistory || []),
-            {
-              date: new Date().toISOString().split('T')[0],
-              rating: player.rating + update.ratingChange,
-              tournament: tournament.name
-            }
-          ]
-        };
-        
-        // Update player in system
-        updatePlayer(updatedPlayer);
-      }
-    });
-    
-    // Update tournament with processed pairings
-    const updatedTournament = {
-      ...tournament,
-      pairings: updatedPairings
-    };
-    
-    updateTournament(updatedTournament);
-    
-    toast({
-      title: "Ratings processed",
-      description: "Player ratings have been updated based on match results.",
-    });
-  };
-
   const filteredPlayers = allPlayers
     .filter(player => 
       !registeredPlayers.some(rp => rp.id === player.id) &&
@@ -548,9 +377,7 @@ const TournamentManagement = () => {
           onToggleRegistration={toggleRegistrationStatus}
           onStartTournament={startTournament}
           onCompleteTournament={completeTournament}
-          onGenerateReport={generateTournamentReport}
           canStartTournament={tournament.players !== undefined && tournament.players.length >= 2}
-          isGeneratingReport={isGeneratingReport}
         />
         
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 mb-6">
@@ -611,7 +438,6 @@ const TournamentManagement = () => {
                     onRoundSelect={setSelectedRound}
                     onGeneratePairings={generatePairings}
                     onSaveResults={saveResults}
-                    onProcessRatings={handleProcessRatings}
                   />
                 </TabsContent>
                 

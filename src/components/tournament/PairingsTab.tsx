@@ -1,12 +1,11 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
 import PairingSystem from "@/components/PairingSystem";
 import ResultRecorder from "@/components/ResultRecorder";
-import TournamentRatingProcessor from "@/components/tournament/TournamentRatingProcessor";
 
 interface PairingsTabProps {
   tournamentStatus: string;
@@ -32,16 +31,6 @@ interface PairingsTabProps {
     blackId: string;
     result: "1-0" | "0-1" | "1/2-1/2" | "*"
   }>) => void;
-  onProcessRatings?: (processedPairings: Array<{
-    roundNumber: number;
-    matches: Array<{
-      whiteId: string;
-      blackId: string;
-      result: "1-0" | "0-1" | "1/2-1/2" | "*";
-      whiteRatingChange: number;
-      blackRatingChange: number;
-    }>;
-  }>) => void;
 }
 
 const PairingsTab = ({
@@ -55,27 +44,10 @@ const PairingsTab = ({
   onRoundSelect,
   onGeneratePairings,
   onSaveResults,
-  onProcessRatings
 }: PairingsTabProps) => {
-  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   const currentPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
   const isOngoing = tournamentStatus === "ongoing";
   const isCurrentRound = selectedRound === currentRound;
-  
-  // Convert pairings to format needed for rating processor
-  const matchResults = pairings ? pairings.map(round => ({
-    roundNumber: round.roundNumber,
-    matches: round.matches.map(match => ({
-      whiteId: match.whiteId,
-      blackId: match.blackId,
-      result: (match.result || "*") as "1-0" | "0-1" | "1/2-1/2" | "*"
-    }))
-  })) : [];
-  
-  // Check if there are any matches with results that could be processed
-  const hasResultsToProcess = matchResults.some(round => 
-    round.matches.some(match => match.result !== "*")
-  );
 
   return (
     <Card>
@@ -92,15 +64,6 @@ const PairingsTab = ({
                 className="flex items-center gap-1"
               >
                 <Plus size={16} /> Generate Pairings
-              </Button>
-            )}
-            
-            {isOngoing && onProcessRatings && hasResultsToProcess && (
-              <Button
-                variant="outline"
-                onClick={() => setIsRatingDialogOpen(true)}
-              >
-                Process Ratings
               </Button>
             )}
           </div>
@@ -142,17 +105,6 @@ const PairingsTab = ({
           )}
         </div>
       </CardContent>
-      
-      {/* Rating Processor Dialog */}
-      {onProcessRatings && (
-        <TournamentRatingProcessor
-          isOpen={isRatingDialogOpen}
-          onOpenChange={setIsRatingDialogOpen}
-          players={players}
-          matchResults={matchResults}
-          onProcessComplete={onProcessRatings}
-        />
-      )}
     </Card>
   );
 };
