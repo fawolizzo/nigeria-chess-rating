@@ -290,7 +290,7 @@ const OfficerDashboard = () => {
       country: data.country,
       state: data.state,
       club: data.club && data.club.length > 0 ? data.club : undefined,
-      gender: data.gender,
+      gender: data.gender as 'M' | 'F',
       birthYear: parseInt(data.birthYear),
       ratingHistory: [{ 
         date: new Date().toISOString().split('T')[0], 
@@ -298,7 +298,8 @@ const OfficerDashboard = () => {
       }],
       tournamentResults: [],
       status: 'approved',
-      createdBy: currentUser.id
+      createdBy: currentUser.id,
+      gamesPlayed: 0
     };
     
     addPlayer(newPlayer);
@@ -654,7 +655,7 @@ const OfficerDashboard = () => {
                   <div className="text-center py-8">
                     <FileText className="h-10 w-10 mx-auto text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No completed tournaments</h3>
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
                       There are no completed tournaments waiting to be processed.
                     </p>
                   </div>
@@ -1039,4 +1040,3 @@ const OfficerDashboard = () => {
 };
 
 export default OfficerDashboard;
-

@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -18,9 +17,9 @@ export interface Player {
     position: number;
     ratingChange: number;
   }[];
-  status?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'approved' | 'rejected' | 'processed';
   createdBy?: string; // ID of the user who created this player
-  gamesPlayed?: number;  // Adding this property to fix the TypeScript error
+  gamesPlayed?: number;
 }
 
 export interface Tournament {
