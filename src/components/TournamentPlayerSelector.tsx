@@ -23,13 +23,17 @@ interface TournamentPlayerSelectorProps {
   onPlayersAdded: (players: Player[]) => void;
 }
 
+interface ImportPlayerWithTempId extends Partial<Player> {
+  tempId: string;
+}
+
 const TournamentPlayerSelector = ({ 
   tournamentId,
   existingPlayerIds,
   onPlayersAdded 
 }: TournamentPlayerSelectorProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [importedPlayers, setImportedPlayers] = useState<Partial<Player>[]>([]);
+  const [importedPlayers, setImportedPlayers] = useState<ImportPlayerWithTempId[]>([]);
   const [selectedImportIds, setSelectedImportIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("select");
   const { toast } = useToast();
@@ -56,7 +60,7 @@ const TournamentPlayerSelector = ({
     const playersWithIds = players.map(player => ({
       ...player,
       tempId: uuidv4()
-    }));
+    })) as ImportPlayerWithTempId[];
     
     setImportedPlayers(playersWithIds);
     // Switch to the review tab
@@ -74,7 +78,7 @@ const TournamentPlayerSelector = ({
   const submitImportedPlayers = () => {
     // Create players from the selected imports
     const playersToCreate = importedPlayers
-      .filter(player => player.tempId && selectedImportIds.includes(player.tempId))
+      .filter(player => selectedImportIds.includes(player.tempId))
       .map(player => ({
         id: uuidv4(),
         name: player.name || "Unknown Player",
@@ -90,7 +94,7 @@ const TournamentPlayerSelector = ({
           reason: "Initial import"
         }],
         tournamentResults: [],
-        status: "pending",
+        status: "pending" as const,
         gamesPlayed: 0
       } as Player));
     
@@ -176,8 +180,8 @@ const TournamentPlayerSelector = ({
                         >
                           <input
                             type="checkbox"
-                            checked={player.tempId ? selectedImportIds.includes(player.tempId) : false}
-                            onChange={() => player.tempId && handleImportSelection(player.tempId)}
+                            checked={selectedImportIds.includes(player.tempId)}
+                            onChange={() => handleImportSelection(player.tempId)}
                             className="h-4 w-4"
                           />
                           <div>

@@ -21,13 +21,15 @@ interface MultiSelectPlayersProps {
   onOpenChange: (open: boolean) => void;
   onPlayersSelected: (players: Player[]) => void;
   excludeIds?: string[];
+  hideDialog?: boolean; // Add this prop to support hiding the dialog
 }
 
 export const MultiSelectPlayers = ({ 
   isOpen, 
   onOpenChange, 
   onPlayersSelected,
-  excludeIds = []
+  excludeIds = [],
+  hideDialog = false // Default to showing the dialog
 }: MultiSelectPlayersProps) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,14 +47,8 @@ export const MultiSelectPlayers = ({
         const isApproved = player.status === 'approved';
         const isExcluded = excludeIds.includes(player.id);
         
-        console.log(`Player ${player.name}, ID: ${player.id}, Status: ${player.status}, Approved: ${isApproved}, Excluded: ${isExcluded}`);
-        
         return isApproved && !isExcluded;
       });
-      
-      console.log("Total players:", allPlayers.length);
-      console.log("Approved players:", approvedPlayers.length);
-      console.log("Excluded IDs:", excludeIds);
       
       if (approvedPlayers.length === 0) {
         if (allPlayers.length === 0) {
@@ -128,7 +124,51 @@ export const MultiSelectPlayers = ({
   const handleCancel = () => {
     onOpenChange(false);
   };
+  
+  // If hideDialog is true, render without the Dialog wrapper
+  if (hideDialog) {
+    return (
+      <div className="space-y-4">
+        <PlayerSearchInput 
+          searchQuery={searchQuery} 
+          setSearchQuery={setSearchQuery} 
+        />
+        
+        <SelectedPlayersList 
+          selectedPlayers={selectedPlayers}
+          onRemovePlayer={handleSelectPlayer}
+        />
+        
+        <PlayerSelectionList 
+          filteredPlayers={filteredPlayers}
+          selectedPlayers={selectedPlayers}
+          onSelectPlayer={handleSelectPlayer}
+        />
+        
+        {players.length === 0 && (
+          <div className="text-center py-6">
+            <p className="text-gray-500 dark:text-gray-400">
+              No approved players available. Players must be approved by a Rating Officer before they can be added to tournaments.
+            </p>
+          </div>
+        )}
+        
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmSelection} 
+            disabled={selectedPlayers.length === 0}
+          >
+            Add {selectedPlayers.length} Player{selectedPlayers.length !== 1 ? 's' : ''}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
+  // Default to using Dialog wrapper
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">

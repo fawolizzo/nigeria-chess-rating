@@ -50,7 +50,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           gender: gender as ("M" | "F"),
           state: state || undefined,
           city: city || undefined,
-          status: "pending" // All imported players need approval
+          status: "pending" as const // Use const assertion to match the expected union type
         };
       });
       

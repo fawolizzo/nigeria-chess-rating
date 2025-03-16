@@ -14,6 +14,7 @@ interface StateSelectorProps {
   selectedState?: string;
   onStateChange?: (state: string) => void;
   value?: string;
+  onChange?: (state: string) => void; // Add onChange as an alternative to onStateChange
   onValueChange?: (state: string) => void;
   className?: string;
   disabled?: boolean;
@@ -24,6 +25,7 @@ const StateSelector = ({
   selectedState,
   onStateChange,
   value,
+  onChange,
   onValueChange,
   className,
   disabled = false,
@@ -34,10 +36,12 @@ const StateSelector = ({
   // Use the provided value or selectedState prop
   const currentValue = value !== undefined ? value : selectedState;
   
-  // Use the provided onValueChange or onStateChange callback
+  // Use the provided onValueChange, onChange, or onStateChange callback (in that order)
   const handleChange = (state: string) => {
     if (onValueChange) {
       onValueChange(state);
+    } else if (onChange) {
+      onChange(state);
     } else if (onStateChange) {
       onStateChange(state);
     }

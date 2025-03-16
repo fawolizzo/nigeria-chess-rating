@@ -8,7 +8,7 @@ export interface Player {
   country?: string;
   club?: string;
   state?: string;
-  city?: string;  // Add city field
+  city?: string;
   gender: 'M' | 'F';
   birthYear?: number;
   ratingHistory: { date: string; rating: number; lichessRating?: number; reason?: string }[];
@@ -19,11 +19,10 @@ export interface Player {
     ratingChange: number;
   }[];
   status?: 'pending' | 'approved' | 'rejected' | 'processed';
-  createdBy?: string; // ID of the user who created this player
+  createdBy?: string;
   gamesPlayed?: number;
-  lichessId?: string;  // Add lichessId field
-  lichessUrl?: string; // Add lichessUrl field
   federationId?: string;
+  tempId?: string;
 }
 
 export interface Tournament {
@@ -59,11 +58,9 @@ export interface Tournament {
   processedPlayerIds?: string[];
 }
 
-// Empty arrays instead of dummy data
 export const players: Player[] = [];
 export const tournaments: Tournament[] = [];
 
-// Helper functions for players
 export const getPlayerById = (id: string): Player | undefined => {
   return getAllPlayers().find(player => player.id === id);
 };
@@ -101,14 +98,12 @@ export const deletePlayer = (playerId: string): void => {
   const filteredPlayers = allPlayers.filter(player => player.id !== playerId);
   savePlayers(filteredPlayers);
   
-  // Also need to remove player from tournaments
   const allTournaments = getAllTournaments();
   const updatedTournaments = allTournaments.map(tournament => {
     if (tournament.players?.includes(playerId)) {
       return {
         ...tournament,
         players: tournament.players.filter(id => id !== playerId),
-        // Remove player from pairings as well
         pairings: tournament.pairings?.map(pairing => ({
           ...pairing,
           matches: pairing.matches.filter(
@@ -123,7 +118,6 @@ export const deletePlayer = (playerId: string): void => {
   saveTournaments(updatedTournaments);
 };
 
-// Helper functions for tournaments
 export const getTournamentById = (id: string): Tournament | undefined => {
   return getAllTournaments().find(tournament => tournament.id === id);
 };
@@ -148,7 +142,6 @@ export const updateTournament = (updatedTournament: Tournament): void => {
 export const addTournament = (newTournament: Tournament): void => {
   const allTournaments = getAllTournaments();
   
-  // Ensure new tournaments created by organizers have "pending" status
   if (!newTournament.status) {
     newTournament.status = 'pending';
   }

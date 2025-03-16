@@ -12,8 +12,10 @@ import { getCitiesByState } from "@/lib/nigerianStates";
 
 interface CitySelectorProps {
   state: string;
-  selectedCity: string;
-  onCityChange: (city: string) => void;
+  selectedCity?: string;
+  value?: string; // Add value as an alternative to selectedCity
+  onCityChange?: (city: string) => void;
+  onChange?: (city: string) => void; // Add onChange as an alternative to onCityChange
   className?: string;
   disabled?: boolean;
   label?: string;
@@ -22,12 +24,26 @@ interface CitySelectorProps {
 const CitySelector = ({
   state,
   selectedCity,
+  value,
   onCityChange,
+  onChange,
   className,
   disabled = false,
   label
 }: CitySelectorProps) => {
   const [cities, setCities] = useState<string[]>([]);
+  
+  // Use value prop if provided, otherwise use selectedCity
+  const currentValue = value !== undefined ? value : selectedCity;
+  
+  // Use appropriate handler based on provided props
+  const handleChange = (city: string) => {
+    if (onChange) {
+      onChange(city);
+    } else if (onCityChange) {
+      onCityChange(city);
+    }
+  };
   
   useEffect(() => {
     if (state) {
@@ -39,10 +55,10 @@ const CitySelector = ({
   
   // Reset selected city if state changes and selected city isn't in the new list
   useEffect(() => {
-    if (state && selectedCity && !getCitiesByState(state).includes(selectedCity)) {
-      onCityChange('');
+    if (state && currentValue && !getCitiesByState(state).includes(currentValue)) {
+      handleChange('');
     }
-  }, [state, selectedCity, onCityChange]);
+  }, [state, currentValue]);
   
   return (
     <div className="flex flex-col space-y-1.5">
@@ -58,8 +74,8 @@ const CitySelector = ({
         </Select>
       ) : (
         <Select 
-          value={selectedCity} 
-          onValueChange={onCityChange}
+          value={currentValue} 
+          onValueChange={handleChange}
           disabled={disabled || cities.length === 0}
         >
           <SelectTrigger className={className}>
