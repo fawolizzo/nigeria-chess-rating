@@ -22,6 +22,7 @@ interface MultiSelectPlayersProps {
   onPlayersSelected: (players: Player[]) => void;
   excludeIds?: string[];
   hideDialog?: boolean; // Add this prop to support hiding the dialog
+  includePendingPlayers?: boolean; // Add this prop to allow showing pending players
 }
 
 export const MultiSelectPlayers = ({ 
@@ -29,7 +30,8 @@ export const MultiSelectPlayers = ({
   onOpenChange, 
   onPlayersSelected,
   excludeIds = [],
-  hideDialog = false // Default to showing the dialog
+  hideDialog = false, // Default to showing the dialog
+  includePendingPlayers = false // Default to not showing pending players
 }: MultiSelectPlayersProps) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,7 +47,9 @@ export const MultiSelectPlayers = ({
       // Get players with any status but exclude those already in the tournament
       const availablePlayers = allPlayers.filter(player => {
         const isExcluded = excludeIds.includes(player.id);
-        return !isExcluded;
+        // Include or exclude pending players based on the includePendingPlayers prop
+        const statusOk = includePendingPlayers ? true : player.status !== 'pending';
+        return !isExcluded && statusOk;
       });
       
       if (availablePlayers.length === 0) {
@@ -70,7 +74,7 @@ export const MultiSelectPlayers = ({
     if (isOpen) {
       fetchPlayers();
     }
-  }, [excludeIds, isOpen, toast]);
+  }, [excludeIds, isOpen, toast, includePendingPlayers]);
 
   // Reset selections when dialog closes
   useEffect(() => {

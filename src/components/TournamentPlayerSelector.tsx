@@ -1,8 +1,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { Player, addPlayer } from "@/lib/mockData";
+import { Plus, UserPlus, X, Users, AlertTriangle } from "lucide-react";
+import { Player, addPlayer, getAllPlayers } from "@/lib/mockData";
 import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { v4 as uuidv4 } from "uuid";
 import FileUploadButton from "./players/FileUploadButton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface TournamentPlayerSelectorProps {
   tournamentId: string;
@@ -37,21 +38,22 @@ const TournamentPlayerSelector = ({
   const [importedPlayers, setImportedPlayers] = useState<ImportPlayerWithTempId[]>([]);
   const [selectedImportIds, setSelectedImportIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("select");
+  const [pendingPlayersExist, setPendingPlayersExist] = useState(false);
   const { toast } = useToast();
   
   const handlePlayersSelected = (players: Player[]) => {
-    // Verify all players are approved
-    const unapprovedPlayers = players.filter(player => player.status !== 'approved');
+    // Check if any players are pending
+    const pendingPlayers = players.filter(player => player.status === 'pending');
     
-    if (unapprovedPlayers.length > 0) {
+    if (pendingPlayers.length > 0) {
       toast({
-        title: "Cannot add unapproved players",
-        description: "Only players approved by a Rating Officer can be added to tournaments.",
-        variant: "destructive"
+        title: "Some players require approval",
+        description: `${pendingPlayers.length} selected player(s) require approval from a Rating Officer before they can be used in tournaments.`,
+        variant: "warning"
       });
-      return;
     }
     
+    // We'll add all players, but tournament logic will handle pending players appropriately
     onPlayersAdded(players);
     setIsDialogOpen(false);
   };
@@ -101,7 +103,8 @@ const TournamentPlayerSelector = ({
         }],
         tournamentResults: [],
         status: "pending" as const,
-        gamesPlayed: 0
+        gamesPlayed: 0,
+        createdBy: "current_user" // This would be replaced with actual user ID in a real app
       } as Player));
     
     // Add the players to the system
@@ -109,16 +112,33 @@ const TournamentPlayerSelector = ({
       addPlayer(player);
     });
     
-    toast({
-      title: "Players submitted for approval",
-      description: `${playersToCreate.length} players have been imported and submitted for Rating Officer approval.`,
-    });
+    // Check if players were actually added
+    const allPlayers = getAllPlayers();
+    const addedPlayerIds = playersToCreate.map(p => p.id);
+    const addedPlayers = allPlayers.filter(p => addedPlayerIds.includes(p.id));
     
-    // Reset state
-    setImportedPlayers([]);
-    setSelectedImportIds([]);
-    setIsDialogOpen(false);
-    setActiveTab("select");
+    if (addedPlayers.length > 0) {
+      toast({
+        title: "Players created successfully",
+        description: `${addedPlayers.length} players have been imported and are pending approval.`,
+      });
+      
+      // Auto-add these players to the selection if we want them to be immediately added to tournament
+      onPlayersAdded(addedPlayers);
+      
+      // Reset state
+      setImportedPlayers([]);
+      setSelectedImportIds([]);
+      setIsDialogOpen(false);
+      setActiveTab("select");
+      setPendingPlayersExist(true);
+    } else {
+      toast({
+        title: "Error adding players",
+        description: "There was a problem adding the players to the system.",
+        variant: "destructive"
+      });
+    }
   };
   
   const resetImportedPlayers = () => {
@@ -165,6 +185,16 @@ const TournamentPlayerSelector = ({
             </TabsList>
             
             <TabsContent value="select" className="mt-4">
+              {pendingPlayersExist && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2 text-sm">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-yellow-700">
+                    Imported players need approval from a Rating Officer before they can be used in tournaments. 
+                    However, you can still include them in your selection.
+                  </p>
+                </div>
+              )}
+              
               <MultiSelectPlayers
                 isOpen={activeTab === "select"}
                 onOpenChange={(open) => {
@@ -173,6 +203,7 @@ const TournamentPlayerSelector = ({
                 onPlayersSelected={handlePlayersSelected}
                 excludeIds={existingPlayerIds}
                 hideDialog={true}
+                includePendingPlayers={true} // Show pending players too
               />
             </TabsContent>
             
