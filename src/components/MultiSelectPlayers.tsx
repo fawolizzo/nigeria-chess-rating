@@ -122,6 +122,7 @@ export const MultiSelectPlayers = ({
   };
 
   const handleCancel = () => {
+    // Fixed: Explicitly call onOpenChange with false to close the dialog
     onOpenChange(false);
   };
   

@@ -124,19 +124,29 @@ const TournamentPlayerSelector = ({
     setActiveTab("import");
   };
   
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      // Reset everything when dialog is closed
+      setActiveTab("select");
+      setImportedPlayers([]);
+      setSelectedImportIds([]);
+    }
+    setIsDialogOpen(open);
+  };
+  
   return (
     <div className="relative">
       <Button 
         variant="outline" 
         size="sm"
         className="text-sm"
-        onClick={() => setIsDialogOpen(true)}
+        onClick={() => handleDialogClose(true)}
       >
         <Plus className="h-4 w-4 mr-2" />
         Add Existing Player
       </Button>
       
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add Players to Tournament</DialogTitle>
@@ -151,15 +161,16 @@ const TournamentPlayerSelector = ({
               <TabsTrigger value="import">Import Players</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="select">
-              <div className="mt-4">
-                <MultiSelectPlayers
-                  isOpen={true}
-                  onOpenChange={() => {}}
-                  onPlayersSelected={handlePlayersSelected}
-                  excludeIds={existingPlayerIds}
-                />
-              </div>
+            <TabsContent value="select" className="mt-4">
+              <MultiSelectPlayers
+                isOpen={true}
+                onOpenChange={(open) => {
+                  if (!open) handleDialogClose(false);
+                }}
+                onPlayersSelected={handlePlayersSelected}
+                excludeIds={existingPlayerIds}
+                hideDialog={true}
+              />
             </TabsContent>
             
             <TabsContent value="import">
