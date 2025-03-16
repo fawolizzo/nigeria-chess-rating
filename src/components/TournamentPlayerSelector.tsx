@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Upload } from "lucide-react";
 import { Player, addPlayer } from "@/lib/mockData";
 import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
 import { useToast } from "@/components/ui/use-toast";
@@ -139,26 +139,22 @@ const TournamentPlayerSelector = ({
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid grid-cols-2 mb-4">
               <TabsTrigger value="select">Select Players</TabsTrigger>
-              <TabsTrigger value="review">Import Players</TabsTrigger>
+              <TabsTrigger value="import">Import Players</TabsTrigger>
             </TabsList>
             
             <TabsContent value="select">
-              <div className="space-y-4">
-                <FileUploadButton onPlayersImported={handlePlayersImported} />
-                
-                <div className="mt-4">
-                  <MultiSelectPlayers
-                    isOpen={true}
-                    onOpenChange={() => {}}
-                    onPlayersSelected={handlePlayersSelected}
-                    excludeIds={existingPlayerIds}
-                    hideDialog={true}
-                  />
-                </div>
+              <div className="mt-4">
+                <MultiSelectPlayers
+                  isOpen={true}
+                  onOpenChange={() => {}}
+                  onPlayersSelected={handlePlayersSelected}
+                  excludeIds={existingPlayerIds}
+                  hideDialog={true}
+                />
               </div>
             </TabsContent>
             
-            <TabsContent value="review">
+            <TabsContent value="import">
               {importedPlayers.length > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">
@@ -199,7 +195,7 @@ const TournamentPlayerSelector = ({
                     <Button 
                       variant="outline" 
                       onClick={() => {
-                        setActiveTab("select");
+                        setActiveTab("import");
                         setSelectedImportIds([]);
                       }}
                     >
@@ -220,8 +216,16 @@ const TournamentPlayerSelector = ({
                   <p className="text-sm text-muted-foreground mb-4">
                     Import players from a CSV or Excel file first
                   </p>
+                  
+                  <div className="w-full max-w-sm mx-auto mb-6">
+                    <FileUploadButton 
+                      onPlayersImported={handlePlayersImported} 
+                      buttonText="Import Players from CSV/Excel"
+                    />
+                  </div>
+                  
                   <Button variant="outline" onClick={() => setActiveTab("select")}>
-                    Back to Import
+                    Back to Player Selection
                   </Button>
                 </div>
               )}

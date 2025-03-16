@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Upload, X, FileSpreadsheet } from "lucide-react";
+import { Upload, X, FileSpreadsheet, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { read, utils } from "xlsx";
 import { Player } from "@/lib/mockData";
@@ -92,61 +92,59 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
   };
 
   return (
-    <div className="flex flex-col space-y-2">
-      <div className="flex items-center space-x-2">
-        <label className="relative cursor-pointer">
-          <input
-            type="file"
-            className="sr-only"
-            accept=".csv,.xlsx,.xls"
-            onChange={handleFileChange}
-            onClick={(e) => {
-              // Reset the file input value to allow selecting the same file again
-              (e.target as HTMLInputElement).value = "";
-            }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            className="flex items-center gap-1"
-          >
-            <Upload className="h-4 w-4" />
-            {buttonText}
-          </Button>
-        </label>
-        
-        {file && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={processFile}
-              disabled={isLoading}
-            >
-              {isLoading ? "Processing..." : "Process File"}
+    <div className="flex flex-col space-y-4">
+      {!file ? (
+        <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
+          <label className="cursor-pointer w-full flex flex-col items-center">
+            <input
+              type="file"
+              className="sr-only"
+              accept=".csv,.xlsx,.xls"
+              onChange={handleFileChange}
+              onClick={(e) => {
+                // Reset the file input value to allow selecting the same file again
+                (e.target as HTMLInputElement).value = "";
+              }}
+            />
+            <FileUp className="h-10 w-10 text-muted-foreground mb-3" />
+            <span className="text-base font-medium mb-1">Click to upload</span>
+            <span className="text-sm text-muted-foreground mb-3">
+              CSV, XLS or XLSX files supported
+            </span>
+            <Button variant="default" size="sm" className="flex items-center gap-1">
+              <Upload className="h-4 w-4 mr-1" />
+              {buttonText}
             </Button>
-            
+          </label>
+        </div>
+      ) : (
+        <div className="flex flex-col space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+            <FileSpreadsheet className="h-5 w-5 text-blue-500" />
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium">{file.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {Math.round(file.size / 1024)} KB
+              </p>
+            </div>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={clearFile}
               disabled={isLoading}
               className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
             >
               <X className="h-4 w-4" />
             </Button>
-          </>
-        )}
-      </div>
-      
-      {file && (
-        <div className="flex items-center gap-2 text-sm p-2 bg-muted rounded">
-          <FileSpreadsheet className="h-4 w-4 text-blue-500" />
-          <span className="truncate max-w-[200px]">{file.name}</span>
-          <span className="text-xs text-muted-foreground">
-            ({Math.round(file.size / 1024)} KB)
-          </span>
+          </div>
+          
+          <Button
+            className="w-full"
+            onClick={processFile}
+            disabled={isLoading}
+          >
+            {isLoading ? "Processing..." : "Process File"}
+          </Button>
         </div>
       )}
     </div>
