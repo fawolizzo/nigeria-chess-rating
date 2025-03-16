@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -43,6 +42,7 @@ import { getAllPlayers, addPlayer, updatePlayer } from "@/lib/mockData";
 import PairingSystem from "@/components/PairingSystem";
 import ResultRecorder from "@/components/ResultRecorder";
 import StandingsTable from "@/components/StandingsTable";
+import TournamentPlayerSelector from "@/components/TournamentPlayerSelector";
 
 interface Tournament {
   id: string;
@@ -75,7 +75,6 @@ interface Tournament {
   currentRound?: number;
 }
 
-// Make the interface consistent with the one in StandingsTable
 interface PlayerWithScore extends Player {
   score: number;
   tiebreak: number[];
@@ -102,12 +101,9 @@ const TournamentManagement = () => {
   const { currentUser } = useUser();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [registeredPlayers, setRegisteredPlayers] = useState<Player[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("players");
   const [selectedRound, setSelectedRound] = useState(1);
   const [pairingsGenerated, setPairingsGenerated] = useState(false);
@@ -138,7 +134,6 @@ const TournamentManagement = () => {
           if (foundTournament && currentUser?.role === 'tournament_organizer' && foundTournament.organizerId === currentUser.id) {
             setTournament(foundTournament);
             
-            // Load registered players
             if (foundTournament.players && foundTournament.players.length > 0) {
               const players = getAllPlayers().filter(player => foundTournament.players?.includes(player.id));
               setRegisteredPlayers(players);
@@ -204,7 +199,7 @@ const TournamentManagement = () => {
 
     const updatedTournament = {
       ...tournament,
-      status: "ongoing" as const, // Using const assertion to specify the exact type
+      status: "ongoing" as const,
       currentRound: 1,
       pairings: [],
     };
@@ -218,7 +213,7 @@ const TournamentManagement = () => {
 
     const updatedTournament = {
       ...tournament,
-      status: "completed" as const, // Using const assertion for the type
+      status: "completed" as const,
     };
 
     updateTournament(updatedTournament);
@@ -251,28 +246,23 @@ const TournamentManagement = () => {
     }
   };
 
-  const handleAddPlayer = () => {
-    if (!selectedPlayerId || !tournament) return;
+  const handleAddPlayers = (selectedPlayers: Player[]) => {
+    if (!tournament || selectedPlayers.length === 0) return;
 
-    const selectedPlayer = allPlayers.find(player => player.id === selectedPlayerId);
-    if (!selectedPlayer) {
-      toast({
-        title: "Error",
-        description: "Player not found.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    const playerIds = selectedPlayers.map(player => player.id);
+    
     const updatedTournament = {
       ...tournament,
-      players: [...(tournament.players || []), selectedPlayerId],
+      players: [...(tournament.players || []), ...playerIds],
     };
 
     updateTournament(updatedTournament);
-    setRegisteredPlayers(prev => [...prev, selectedPlayer]);
-    setIsAddPlayerOpen(false);
-    setSelectedPlayerId(null);
+    setRegisteredPlayers(prev => [...prev, ...selectedPlayers]);
+    
+    toast({
+      title: "Players added",
+      description: `Successfully added ${selectedPlayers.length} player${selectedPlayers.length !== 1 ? 's' : ''} to the tournament.`,
+    });
   };
 
   const handleRemovePlayer = (playerId: string) => {
@@ -290,13 +280,12 @@ const TournamentManagement = () => {
   const generatePairings = () => {
     if (!tournament) return;
 
-    // Basic Swiss pairing logic (you can replace this with a more sophisticated algorithm)
     const newPairings = {
       roundNumber: tournament.currentRound || 1,
       matches: registeredPlayers.map((player, index) => ({
         whiteId: player.id,
         blackId: registeredPlayers[(index + 1) % registeredPlayers.length].id,
-        result: "*" as const, // Using const assertion to specify the literal type
+        result: "*" as const,
       })),
     };
 
@@ -312,7 +301,6 @@ const TournamentManagement = () => {
   const saveResults = (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {
     if (!tournament) return;
     
-    // Get the current round number
     const roundNumber = selectedRound;
   
     const updatedPairings = tournament.pairings?.map(pairing => {
@@ -371,15 +359,12 @@ const TournamentManagement = () => {
       });
     });
   
-    // Convert the object to an array for sorting
     const standingsArray = Object.values(initialStandings);
   
-    // Sort by score and then tiebreak
     standingsArray.sort((a, b) => {
       if (b.score !== a.score) {
-        return b.score - a.score; // Higher score comes first
+        return b.score - a.score;
       }
-      // Implement tiebreak logic here if needed
       return 0;
     });
   
@@ -392,7 +377,6 @@ const TournamentManagement = () => {
     setIsGeneratingReport(true);
   
     try {
-      // Prepare the data for the report
       const reportData = {
         tournamentName: tournament.name,
         startDate: new Date(tournament.startDate).toLocaleDateString(),
@@ -413,24 +397,19 @@ const TournamentManagement = () => {
         })),
       };
   
-      // Convert the report data to a JSON string
       const reportJSON = JSON.stringify(reportData, null, 2);
   
-      // Create a Blob from the JSON string
       const blob = new Blob([reportJSON], { type: "application/json" });
   
-      // Create a download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${tournament.name.replace(/\s+/g, "_")}_report.json`;
   
-      // Programmatically trigger the download
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
   
-      // Revoke the Blob URL to free up resources
       URL.revokeObjectURL(url);
   
       toast({
@@ -653,14 +632,13 @@ const TournamentManagement = () => {
                           <UserPlus size={16} /> Create Player
                         </Button>
                         
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => setIsAddPlayerOpen(true)}
-                          className="flex items-center gap-1"
-                        >
-                          <Plus size={16} /> Add Existing Player
-                        </Button>
+                        {tournament.players && (
+                          <TournamentPlayerSelector 
+                            tournamentId={tournament.id}
+                            existingPlayerIds={tournament.players}
+                            onPlayersAdded={handleAddPlayers}
+                          />
+                        )}
                       </div>
                     )}
                   </div>
@@ -825,78 +803,6 @@ const TournamentManagement = () => {
         </div>
       </div>
       
-      {/* Dialog for adding existing players */}
-      <Dialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Player to Tournament</DialogTitle>
-            <DialogDescription>
-              Search for existing players to add to the tournament.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="player-search">Search Players</Label>
-              <Input
-                id="player-search"
-                placeholder="Search by name"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {filteredPlayers.length > 0 ? (
-                filteredPlayers.map(player => (
-                  <div 
-                    key={player.id}
-                    className={`p-3 rounded-md border border-gray-200 dark:border-gray-800 flex justify-between items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors
-                      ${selectedPlayerId === player.id ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : ''}
-                    `}
-                    onClick={() => setSelectedPlayerId(player.id)}
-                  >
-                    <div className="flex flex-col">
-                      <div className="font-medium flex items-center gap-1">
-                        {player.title && (
-                          <span className="text-gold-dark dark:text-gold-light">{player.title}</span>
-                        )}
-                        <span>{player.name}</span>
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Rating: {player.rating}
-                      </div>
-                    </div>
-                    
-                    {selectedPlayerId === player.id && (
-                      <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                  {searchQuery ? "No players found matching your search." : "Type to search for players."}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsAddPlayerOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              type="button" 
-              onClick={handleAddPlayer}
-              disabled={!selectedPlayerId}
-            >
-              Add Player
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog for creating new player */}
       <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
