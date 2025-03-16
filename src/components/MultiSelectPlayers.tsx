@@ -23,7 +23,7 @@ interface MultiSelectPlayersProps {
   excludeIds?: string[];
 }
 
-const MultiSelectPlayers = ({ 
+export const MultiSelectPlayers = ({ 
   isOpen, 
   onOpenChange, 
   onPlayersSelected,
@@ -35,14 +35,14 @@ const MultiSelectPlayers = ({
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    // Get all players
+    // Get all approved players
     const allPlayers = getAllPlayers().filter(player => 
       player.status === 'approved' && !excludeIds.includes(player.id)
     );
     
     setPlayers(allPlayers);
     setFilteredPlayers(allPlayers);
-  }, [excludeIds]);
+  }, [excludeIds, isOpen]); // Re-fetch when dialog opens or excludeIds changes
 
   useEffect(() => {
     if (!isOpen) {
@@ -73,13 +73,15 @@ const MultiSelectPlayers = ({
   }, [searchQuery, players]);
 
   const handleSelectPlayer = (player: Player) => {
-    if (selectedPlayers.some(p => p.id === player.id)) {
-      // Remove player if already selected
-      setSelectedPlayers(selectedPlayers.filter(p => p.id !== player.id));
-    } else {
-      // Add player to selection
-      setSelectedPlayers([...selectedPlayers, player]);
-    }
+    setSelectedPlayers(prev => {
+      if (prev.some(p => p.id === player.id)) {
+        // Remove player if already selected
+        return prev.filter(p => p.id !== player.id);
+      } else {
+        // Add player to selection
+        return [...prev, player];
+      }
+    });
   };
 
   const handleConfirmSelection = () => {
@@ -91,6 +93,9 @@ const MultiSelectPlayers = ({
     onOpenChange(false);
     // State will reset in the useEffect when isOpen changes
   };
+
+  console.log("Available players count:", players.length);
+  console.log("Filtered players count:", filteredPlayers.length);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -188,7 +193,7 @@ const MultiSelectPlayers = ({
                             {player.name}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Rating: {player.rating} • {player.state}, {player.country}
+                            Rating: {player.rating} • {player.state || 'N/A'}, {player.country || 'Nigeria'}
                           </div>
                         </div>
                       </div>
