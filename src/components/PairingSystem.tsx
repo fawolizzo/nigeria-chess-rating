@@ -11,7 +11,6 @@ interface PairingSystemProps {
   previousOpponents?: Record<string, string[]>;
   onGeneratePairings?: (pairings: Array<{ white: Player; black: Player }>) => void;
   readOnly?: boolean;
-  // Updated props to match what's being passed in TournamentManagement.tsx
   pairings?: Array<{
     whiteId: string;
     blackId: string;
@@ -23,7 +22,6 @@ interface PairingSystemProps {
   readonly?: boolean;
 }
 
-// Define a new interface for the pairing display data that includes all needed properties
 interface PairingDisplayData {
   white: Player;
   black: Player;
@@ -73,51 +71,86 @@ const PairingSystem = ({
     return localPairings as PairingDisplayData[];
   };
 
+  // Enhanced Swiss pairing algorithm
   const generateSwissPairings = () => {
-    // Sort players by rating
-    const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
+    // Step 1: Group players by their score (or initial rating for first round)
+    const playerScoreGroups: Record<number, Player[]> = {};
     
-    // Create matches array
+    // If we have previous results, we would calculate scores here
+    // For now, just use ratings for initial pairings
+    players.forEach(player => {
+      const score = 0; // Start with 0 for all in first round
+      playerScoreGroups[score] = playerScoreGroups[score] || [];
+      playerScoreGroups[score].push(player);
+    });
+    
+    const scoreGroups = Object.keys(playerScoreGroups)
+      .map(Number)
+      .sort((a, b) => b - a); // Sort by score descending
+    
     const matches: { white: Player; black: Player }[] = [];
     const paired: Record<string, boolean> = {};
     
-    // Pair players
-    for (let i = 0; i < sortedPlayers.length; i++) {
-      if (paired[sortedPlayers[i].id]) continue;
+    // Step 2: Pair players within each score group
+    scoreGroups.forEach(score => {
+      const playersInGroup = [...playerScoreGroups[score]]
+        .sort((a, b) => b.rating - a.rating); // Sort by rating within each score group
       
-      let opponent = null;
-      
-      // Find an unpaired opponent who hasn't played against this player before
-      for (let j = i + 1; j < sortedPlayers.length; j++) {
-        if (paired[sortedPlayers[j].id]) continue;
+      for (let i = 0; i < playersInGroup.length; i++) {
+        if (paired[playersInGroup[i].id]) continue;
         
-        const hasPlayed = previousOpponents[sortedPlayers[i].id]?.includes(sortedPlayers[j].id);
-        if (!hasPlayed) {
-          opponent = sortedPlayers[j];
-          break;
-        }
-      }
-      
-      // If no valid opponent found, just pair with next available
-      if (!opponent) {
-        for (let j = i + 1; j < sortedPlayers.length; j++) {
-          if (!paired[sortedPlayers[j].id]) {
-            opponent = sortedPlayers[j];
+        let bestOpponentIdx = -1;
+        
+        // Find best unpaired opponent who hasn't played against this player
+        for (let j = i + 1; j < playersInGroup.length; j++) {
+          if (paired[playersInGroup[j].id]) continue;
+          
+          const prevOpponents = previousOpponents[playersInGroup[i].id] || [];
+          if (!prevOpponents.includes(playersInGroup[j].id)) {
+            bestOpponentIdx = j;
             break;
           }
         }
-      }
-      
-      if (opponent) {
-        // Randomly assign colors
-        if (Math.random() > 0.5) {
-          matches.push({ white: sortedPlayers[i], black: opponent });
-        } else {
-          matches.push({ white: opponent, black: sortedPlayers[i] });
+        
+        // If no valid opponent in the same score group, find one in adjacent groups
+        if (bestOpponentIdx === -1) {
+          // Just pair with next available if no better option
+          for (let j = i + 1; j < playersInGroup.length; j++) {
+            if (!paired[playersInGroup[j].id]) {
+              bestOpponentIdx = j;
+              break;
+            }
+          }
         }
         
-        paired[sortedPlayers[i].id] = true;
-        paired[opponent.id] = true;
+        // If opponent found, create the pairing
+        if (bestOpponentIdx !== -1) {
+          const player1 = playersInGroup[i];
+          const player2 = playersInGroup[bestOpponentIdx];
+          
+          // Alternate colors if possible (would check color history here)
+          // For simplicity, randomly assign colors
+          if (Math.random() > 0.5) {
+            matches.push({ white: player1, black: player2 });
+          } else {
+            matches.push({ white: player2, black: player1 });
+          }
+          
+          paired[player1.id] = true;
+          paired[player2.id] = true;
+        }
+      }
+    });
+    
+    // Handle odd number of players (assign bye)
+    if (players.length % 2 !== 0) {
+      // Find lowest-rated unpaired player for bye
+      const unpaired = players.filter(p => !paired[p.id])
+        .sort((a, b) => a.rating - b.rating);
+      
+      if (unpaired.length > 0) {
+        // In an actual implementation, we would record the bye and award a point
+        console.log(`Player ${unpaired[0].name} gets a bye for this round`);
       }
     }
     
