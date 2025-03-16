@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayers, updatePlayer, addPlayer, Player } from "@/lib/mockData";
@@ -36,11 +35,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
-import { Check, X, Users, UserPlus, AlertTriangle } from "lucide-react";
+import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useUser as useUserContext } from "@/contexts/UserContext";
+
+interface Tournament {
+  id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  city: string;
+  state: string;
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+  timeControl: string;
+  rounds: number;
+  organizerId: string;
+  registrationOpen?: boolean;
+  participants?: number;
+}
 
 const playerSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
@@ -66,12 +82,12 @@ const OfficerDashboard = () => {
   const navigate = useNavigate();
   const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
+  const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", ""];
 
-  // Form for creating a new player
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
     defaultValues: {
@@ -97,12 +113,18 @@ const OfficerDashboard = () => {
       
       const allPlayers = getAllPlayers();
       
-      // Filter players by status
       const pending = allPlayers.filter((p: Player) => p.status === 'pending');
       const approved = allPlayers.filter((p: Player) => p.status === 'approved' || !p.status);
       
       setPendingPlayers(pending);
       setApprovedPlayers(approved);
+      
+      const savedTournaments = localStorage.getItem('tournaments');
+      if (savedTournaments) {
+        const allTournaments = JSON.parse(savedTournaments);
+        const pending = allTournaments.filter((t: Tournament) => t.status === 'pending');
+        setPendingTournaments(pending);
+      }
       
       setIsLoading(false);
     };
@@ -111,16 +133,13 @@ const OfficerDashboard = () => {
   }, [currentUser, navigate]);
 
   const handleApprovePlayer = (player: Player) => {
-    // Update player status
     const updatedPlayer = {
       ...player,
       status: 'approved' as const
     };
     
-    // Update in localStorage
     updatePlayer(updatedPlayer);
     
-    // Update local state
     setPendingPlayers(prev => prev.filter(p => p.id !== player.id));
     setApprovedPlayers(prev => [...prev, updatedPlayer]);
     
@@ -131,16 +150,13 @@ const OfficerDashboard = () => {
   };
 
   const handleRejectPlayer = (player: Player) => {
-    // Update player status
     const updatedPlayer = {
       ...player,
       status: 'rejected' as const
     };
     
-    // Update in localStorage
     updatePlayer(updatedPlayer);
     
-    // Update local state
     setPendingPlayers(prev => prev.filter(p => p.id !== player.id));
     
     toast({
@@ -149,10 +165,55 @@ const OfficerDashboard = () => {
     });
   };
 
+  const handleApproveTournament = (tournament: Tournament) => {
+    const updatedTournament = {
+      ...tournament,
+      status: 'upcoming' as const
+    };
+    
+    const savedTournaments = localStorage.getItem('tournaments');
+    if (savedTournaments) {
+      const allTournaments = JSON.parse(savedTournaments);
+      const updatedTournaments = allTournaments.map((t: Tournament) => 
+        t.id === tournament.id ? updatedTournament : t
+      );
+      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+    }
+    
+    setPendingTournaments(prev => prev.filter(t => t.id !== tournament.id));
+    
+    toast({
+      title: "Tournament approved",
+      description: `${tournament.name} has been approved.`,
+    });
+  };
+
+  const handleRejectTournament = (tournament: Tournament) => {
+    const updatedTournament = {
+      ...tournament,
+      status: 'rejected' as const
+    };
+    
+    const savedTournaments = localStorage.getItem('tournaments');
+    if (savedTournaments) {
+      const allTournaments = JSON.parse(savedTournaments);
+      const updatedTournaments = allTournaments.map((t: Tournament) => 
+        t.id === tournament.id ? updatedTournament : t
+      );
+      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+    }
+    
+    setPendingTournaments(prev => prev.filter(t => t.id !== tournament.id));
+    
+    toast({
+      title: "Tournament rejected",
+      description: `${tournament.name} has been rejected.`,
+    });
+  };
+
   const handleCreatePlayer = (data: PlayerFormValues) => {
     if (!currentUser) return;
     
-    // Create new player object
     const newPlayer: Player = {
       id: `player_${Date.now()}`,
       name: data.name,
@@ -168,17 +229,14 @@ const OfficerDashboard = () => {
         rating: parseInt(data.rating)
       }],
       tournamentResults: [],
-      status: 'approved', // Players created by rating officers are auto-approved
+      status: 'approved',
       createdBy: currentUser.id
     };
     
-    // Add player to localStorage
     addPlayer(newPlayer);
     
-    // Update local state
     setApprovedPlayers(prev => [...prev, newPlayer]);
     
-    // Reset form and close dialog
     form.reset();
     setIsCreatePlayerOpen(false);
     
@@ -233,8 +291,16 @@ const OfficerDashboard = () => {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="tournaments">
+              Pending Tournaments
+              {pendingTournaments.length > 0 && (
+                <Badge className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                  {pendingTournaments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="players">All Players</TabsTrigger>
-            <TabsTrigger value="tournaments">Tournament Results</TabsTrigger>
+            <TabsTrigger value="results">Tournament Results</TabsTrigger>
           </TabsList>
           
           <TabsContent value="pending" className="space-y-6">
@@ -295,6 +361,94 @@ const OfficerDashboard = () => {
                           >
                             <Check className="h-4 w-4 mr-1" />
                             Approve
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="tournaments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tournaments Pending Approval</CardTitle>
+                <CardDescription>
+                  These tournaments were created by organizers and need your approval
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingTournaments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-10 w-10 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pending tournaments</h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      There are no tournaments waiting for approval at this time.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingTournaments.map(tournament => (
+                      <div key={tournament.id} className="flex flex-col p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium text-lg text-gray-900 dark:text-white">
+                              {tournament.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {tournament.description.substring(0, 100)}
+                              {tournament.description.length > 100 ? '...' : ''}
+                            </p>
+                          </div>
+                          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
+                            Pending Approval
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <span>
+                              {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+                          </div>
+                          <div className="flex items-center text-sm">
+                            <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <span>{tournament.timeControl}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-2 mt-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                            onClick={() => handleRejectTournament(tournament)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:border-green-900/30 dark:hover:bg-green-900/20 dark:hover:text-green-300"
+                            onClick={() => handleApproveTournament(tournament)}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/tournament/${tournament.id}`)}
+                          >
+                            View Details
                           </Button>
                         </div>
                       </div>
@@ -384,7 +538,7 @@ const OfficerDashboard = () => {
             </Card>
           </TabsContent>
           
-          <TabsContent value="tournaments" className="space-y-6">
+          <TabsContent value="results" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Tournament Results</CardTitle>
@@ -404,7 +558,6 @@ const OfficerDashboard = () => {
         </Tabs>
       </div>
       
-      {/* Dialog for creating new player */}
       <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
