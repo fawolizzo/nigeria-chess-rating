@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Players from "./pages/Players";
 import Tournaments from "./pages/Tournaments"; 
+import OfficerDashboard from "./pages/OfficerDashboard";
+import OrganizerDashboard from "./pages/OrganizerDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/players" element={<Players />} />
           <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/officer-dashboard" element={<OfficerDashboard />} />
+          <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
