@@ -11,7 +11,7 @@ export interface Player {
   state?: string;
   gender: 'M' | 'F';
   birthYear?: number;
-  ratingHistory: { date: string; rating: number }[];
+  ratingHistory: { date: string; rating: number; reason?: string }[];
   achievements?: string[];
   tournamentResults: {
     tournamentId: string;

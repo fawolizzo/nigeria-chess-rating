@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayers, updatePlayer, addPlayer, Player } from "@/lib/mockData";
@@ -903,7 +902,6 @@ const OfficerDashboard = () => {
           </DialogContent>
         </Dialog>
         
-        {/* New Dialog for editing players */}
         <Dialog open={isEditPlayerOpen} onOpenChange={setIsEditPlayerOpen}>
           <DialogContent>
             <DialogHeader>
