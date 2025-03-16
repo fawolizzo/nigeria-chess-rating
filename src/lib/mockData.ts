@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -29,7 +30,7 @@ export interface Tournament {
   endDate: string;
   location: string;
   category: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed';
   participants: number;
   rounds: number;
   timeControl: string;

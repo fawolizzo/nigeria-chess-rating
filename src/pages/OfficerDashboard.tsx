@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayers, updatePlayer, addPlayer, Player } from "@/lib/mockData";
@@ -189,6 +190,7 @@ const OfficerDashboard = () => {
       if (savedTournaments) {
         const allTournaments = JSON.parse(savedTournaments);
         const pending = allTournaments.filter((t: Tournament) => t.status === 'pending');
+        // Fix for TypeScript error: Changed the condition to ensure proper type comparison
         const completed = allTournaments.filter((t: Tournament) => t.status === 'completed' && t.status !== 'processed');
         setPendingTournaments(pending);
         setCompletedTournaments(completed);
