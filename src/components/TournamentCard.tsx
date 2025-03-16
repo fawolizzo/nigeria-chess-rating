@@ -119,6 +119,10 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
               variant="default"
               size="sm"
               className="flex-1 bg-black hover:bg-gray-900 text-white dark:bg-gold-dark dark:hover:bg-gold-dark/90"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = `/tournament/${tournament.id}`;
+              }}
             >
               View Details
             </Button>

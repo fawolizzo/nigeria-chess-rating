@@ -1,5 +1,5 @@
-
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, Users, Clock, Award, Plus, MapPin, File, List, LogOut } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
-import { useNavigate } from "react-router-dom";
 
-// Define interface for tournament object
 interface Tournament {
   id: string;
   name: string;
@@ -112,12 +110,10 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, navigate]);
 
-  // Load tournaments from localStorage on initial render
   useEffect(() => {
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const allTournaments = JSON.parse(savedTournaments);
-      // Filter tournaments by current organizer
       if (currentUser) {
         const myTournaments = allTournaments.filter(
           (tournament: Tournament) => tournament.organizerId === currentUser.id
@@ -138,7 +134,6 @@ const OrganizerDashboard = () => {
   };
 
   const handleCreateTournament = (data: TournamentFormValues) => {
-    // Determine final time control (custom or selected)
     const finalTimeControl = isCustomTimeControl ? customTimeControl : data.timeControl;
     
     if (isCustomTimeControl && !customTimeControl) {
@@ -150,7 +145,6 @@ const OrganizerDashboard = () => {
       return;
     }
 
-    // Create new tournament
     const newTournament: Tournament = {
       id: `${Date.now()}`,
       name: data.name,
@@ -160,24 +154,16 @@ const OrganizerDashboard = () => {
       location: data.location,
       city: data.city,
       state: data.state,
-      status: "pending", // Set status to pending for approval
+      status: "pending",
       timeControl: finalTimeControl,
       rounds: data.rounds,
       organizerId: currentUser?.id || ""
     };
     
-    // Get existing tournaments or initialize empty array
     const existingTournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
-    
-    // Add new tournament
     const updatedTournaments = [newTournament, ...existingTournaments];
-    
-    // Save to localStorage
     localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-    
-    // Update state with only the organizer's tournaments
     setTournaments([newTournament, ...tournaments]);
-    
     setIsCreateTournamentOpen(false);
     form.reset();
     setIsCustomTimeControl(false);
@@ -186,6 +172,18 @@ const OrganizerDashboard = () => {
     toast({
       title: "Tournament Created",
       description: `${data.name} has been submitted for approval.`,
+      variant: "default",
+    });
+  };
+
+  const handleViewTournamentDetails = (tournamentId: string) => {
+    navigate(`/tournament/${tournamentId}`);
+  };
+
+  const handleManageTournament = (tournamentId: string) => {
+    toast({
+      title: "Tournament Management",
+      description: "Tournament management features will be implemented in a future update.",
       variant: "default",
     });
   };
@@ -353,11 +351,20 @@ const OrganizerDashboard = () => {
                           </div>
                           
                           <div className="flex space-x-2 mt-4">
-                            <Button size="sm" variant="outline" className="flex-1">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex-1"
+                              onClick={() => handleViewTournamentDetails(tournament.id)}
+                            >
                               <File className="h-4 w-4 mr-2" />
                               Details
                             </Button>
-                            <Button size="sm" className="flex-1">
+                            <Button 
+                              size="sm" 
+                              className="flex-1"
+                              onClick={() => handleManageTournament(tournament.id)}
+                            >
                               <Users className="h-4 w-4 mr-2" />
                               Manage
                             </Button>
