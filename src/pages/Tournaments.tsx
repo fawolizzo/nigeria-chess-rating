@@ -5,18 +5,23 @@ import Navbar from "@/components/Navbar";
 import TournamentCard from "@/components/TournamentCard";
 import SearchBar from "@/components/SearchBar";
 import { useUser } from "@/contexts/UserContext";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, CalendarRange, CalendarSearch, Trophy } from "lucide-react";
-import { Tournament, tournaments } from "@/lib/mockData";
+import { Tournament, getAllTournaments } from "@/lib/mockData";
 
 const Tournaments = () => {
-  const [tournamentList, setTournamentList] = useState<Tournament[]>(tournaments);
+  const [tournamentList, setTournamentList] = useState<Tournament[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredTournaments, setFilteredTournaments] = useState<Tournament[]>(tournamentList);
   const [activeTab, setActiveTab] = useState("all");
   const { currentUser } = useUser();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load tournaments from localStorage instead of using dummy data
+    const tournaments = getAllTournaments();
+    setTournamentList(tournaments);
+  }, []);
 
   useEffect(() => {
     const filtered = tournamentList.filter((tournament) =>
@@ -27,14 +32,15 @@ const Tournaments = () => {
   }, [searchTerm, tournamentList]);
 
   useEffect(() => {
-    let filtered = tournaments;
+    const allTournaments = getAllTournaments();
+    let filtered = allTournaments;
 
     if (activeTab === "upcoming") {
-      filtered = tournaments.filter(
+      filtered = allTournaments.filter(
         (tournament) => tournament.status === "upcoming"
       );
     } else if (activeTab === "completed") {
-      filtered = tournaments.filter(
+      filtered = allTournaments.filter(
         (tournament) => tournament.status === "completed"
       );
     }

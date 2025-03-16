@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,19 +44,6 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
   return (
     <Link to={`/tournament/${tournament.id}`} className="block h-full">
       <div className="group h-full overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-gold hover:border-opacity-50 dark:hover:border-gold-light dark:hover:border-opacity-30">
-        {tournament.coverImage && (
-          <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-800 overflow-hidden">
-            <img
-              src={tournament.coverImage}
-              alt={tournament.name}
-              className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-500"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/placeholder.svg";
-              }}
-            />
-          </div>
-        )}
         <div className="p-6">
           <div className="flex justify-between items-start mb-2">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(tournament.status)}`}>
