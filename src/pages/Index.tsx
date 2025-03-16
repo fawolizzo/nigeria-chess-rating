@@ -130,18 +130,38 @@ const Index = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 py-8 text-center">No upcoming tournaments</p>
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">No upcoming tournaments</p>
+                  <Link 
+                    to="/tournaments" 
+                    className="inline-block mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    View all tournaments
+                  </Link>
+                </div>
               )}
             </div>
           </div>
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Tournaments</h3>
             <div className="grid grid-cols-1 gap-6">
-              {recentTournaments.map(tournament => (
-                <div key={tournament.id} className="animate-fade-up" style={{ animationDelay: "100ms" }}>
-                  <TournamentCard tournament={tournament} />
+              {recentTournaments.length > 0 ? (
+                recentTournaments.map(tournament => (
+                  <div key={tournament.id} className="animate-fade-up" style={{ animationDelay: "100ms" }}>
+                    <TournamentCard tournament={tournament} />
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">No recent tournaments</p>
+                  <Link 
+                    to="/tournaments" 
+                    className="inline-block mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    View all tournaments
+                  </Link>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
