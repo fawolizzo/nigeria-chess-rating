@@ -190,9 +190,7 @@ const OfficerDashboard = () => {
         const allTournaments = JSON.parse(savedTournaments);
         const pending = allTournaments.filter((t: Tournament) => t.status === 'pending');
         // Fix for TypeScript error: Update the filter to properly handle status types
-        const completed = allTournaments.filter((t: Tournament) => 
-          t.status === 'completed'
-        );
+        const completed = allTournaments.filter((t: Tournament) => t.status === 'completed');
         setPendingTournaments(pending);
         setCompletedTournaments(completed);
       }
@@ -788,4 +786,4 @@ const OfficerDashboard = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => navigate(`/player/${
+                                onClick={() => navigate(`/player/${player.id}`)}
