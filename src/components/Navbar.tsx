@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar } from "lucide-react";
@@ -44,14 +43,13 @@ const Navbar = () => {
     });
   };
 
-  // Determine which dashboard link to show based on user role
   const getDashboardLink = () => {
     if (!currentUser) return null;
     
     if (currentUser.role === 'tournament_organizer') {
       return (
         <Button variant="outline" size="sm" asChild>
-          <Link to="/organizer-dashboard" className="flex items-center">
+          <Link to="/organizer/dashboard" className="flex items-center">
             <Calendar className="mr-1 h-4 w-4" />
             <span>Dashboard</span>
           </Link>
@@ -60,7 +58,7 @@ const Navbar = () => {
     } else if (currentUser.role === 'rating_officer') {
       return (
         <Button variant="outline" size="sm" asChild>
-          <Link to="/officer-dashboard" className="flex items-center">
+          <Link to="/officer/dashboard" className="flex items-center">
             <Shield className="mr-1 h-4 w-4" />
             <span>Dashboard</span>
           </Link>
@@ -89,7 +87,6 @@ const Navbar = () => {
             </NavLink>
           </div>
 
-          {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-8">
             <NavLink
               to="/"
@@ -168,7 +165,6 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Mobile menu button */}
           <div className="flex items-center md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -186,7 +182,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu, show/hide based on menu state */}
       <div
         className={`md:hidden transition-all duration-300 ease-in-out ${
           isMenuOpen
@@ -253,7 +248,7 @@ const Navbar = () => {
               <>
                 {currentUser.role === 'tournament_organizer' && (
                   <Link
-                    to="/organizer-dashboard"
+                    to="/organizer/dashboard"
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
                     onClick={() => setIsMenuOpen(false)}
                   >
@@ -266,7 +261,7 @@ const Navbar = () => {
                 
                 {currentUser.role === 'rating_officer' && (
                   <Link
-                    to="/officer-dashboard"
+                    to="/officer/dashboard"
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
                     onClick={() => setIsMenuOpen(false)}
                   >
