@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
@@ -35,6 +35,11 @@ function App() {
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/players" element={<Players />} />
           <Route path="/player/:id" element={<PlayerProfile />} />
+          
+          {/* Redirects for incorrect URLs */}
+          <Route path="/organizer-dashboard" element={<Navigate to="/organizer/dashboard" replace />} />
+          <Route path="/officer-dashboard" element={<Navigate to="/officer/dashboard" replace />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
