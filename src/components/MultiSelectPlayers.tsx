@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getAllPlayers, Player } from "@/lib/mockData";
+import { useToast } from "@/components/ui/use-toast";
 
 interface MultiSelectPlayersProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const MultiSelectPlayers = ({
   onPlayersSelected,
   excludeIds = []
 }: MultiSelectPlayersProps) => {
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
@@ -38,14 +40,35 @@ export const MultiSelectPlayers = ({
     // Get all players that are approved
     const fetchPlayers = () => {
       const allPlayers = getAllPlayers();
+      
+      // Log all players to debug
+      console.log("All players:", allPlayers);
+      
+      // Check each player's status explicitly to help debug
+      allPlayers.forEach(player => {
+        console.log(`Player ${player.name}, ID: ${player.id}, Status: ${player.status}`);
+      });
+      
       // Filter only approved players and exclude those already in the tournament
-      const approvedPlayers = allPlayers.filter(player => 
-        player.status === 'approved' && !excludeIds.includes(player.id)
-      );
+      // Make sure to handle undefined status (consider it not approved)
+      const approvedPlayers = allPlayers.filter(player => {
+        const isApproved = player.status === 'approved';
+        const isExcluded = excludeIds.includes(player.id);
+        return isApproved && !isExcluded;
+      });
       
       console.log("Total players:", allPlayers.length);
       console.log("Approved players:", approvedPlayers.length);
       console.log("Excluded IDs:", excludeIds);
+      
+      if (approvedPlayers.length === 0 && allPlayers.length > 0) {
+        // If we have players but none are approved, show a toast
+        toast({
+          title: "No approved players available",
+          description: "There are players in the system but none with 'approved' status.",
+          variant: "destructive"
+        });
+      }
       
       setPlayers(approvedPlayers);
       setFilteredPlayers(approvedPlayers);
@@ -54,7 +77,7 @@ export const MultiSelectPlayers = ({
     if (isOpen) {
       fetchPlayers();
     }
-  }, [excludeIds, isOpen]); // Re-fetch when dialog opens or excludeIds changes
+  }, [excludeIds, isOpen, toast]); // Re-fetch when dialog opens or excludeIds changes
 
   useEffect(() => {
     if (!isOpen) {
