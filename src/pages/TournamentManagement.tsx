@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft, Users, Plus, X, Check, AlertTriangle, UserPlus, Trophy, Award } from "lucide-react";
+import { ArrowLeft, Users, Plus, X, Check, AlertTriangle, UserPlus, Trophy, Award, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,14 +60,14 @@ interface Tournament {
   participants?: number;
   coverImage?: string;
   category?: string;
-  players?: string[]; // IDs of players in the tournament
+  players?: string[];
   currentRound?: number;
   pairings?: Array<{
     roundNumber: number;
     matches: Array<{
       whiteId: string;
       blackId: string;
-      result?: "1-0" | "0-1" | "1/2-1/2" | "*"; // * means not played yet
+      result?: "1-0" | "0-1" | "1/2-1/2" | "*";
       whiteRatingChange?: number;
       blackRatingChange?: number;
     }>;
@@ -110,6 +110,7 @@ const TournamentManagement = () => {
   const [pairingsGenerated, setPairingsGenerated] = useState(false);
   const [selectedRound, setSelectedRound] = useState<number>(1);
   const [standings, setStandings] = useState<PlayerWithScore[]>([]);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
@@ -831,6 +832,18 @@ const TournamentManagement = () => {
               </>
             )}
             
+            {tournament.status === "completed" && (
+              <Button 
+                variant="outline" 
+                onClick={generateTournamentReport} 
+                disabled={isGeneratingReport}
+                className="flex items-center"
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                {isGeneratingReport ? "Generating..." : "Generate Report"}
+              </Button>
+            )}
+            
             <Button variant="outline" onClick={() => navigate(`/tournament/${id}`)}>
               View Public Page
             </Button>
@@ -1085,7 +1098,7 @@ const TournamentManagement = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Title (Optional)</FormLabel>
-                          <Select value={field.value} onValueChange={field.onChange}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select a title (if any)" />
@@ -1114,7 +1127,7 @@ const TournamentManagement = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Gender</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select gender" />
@@ -1293,27 +1306,29 @@ const TournamentManagement = () => {
                   <div className="mt-8">
                     <h3 className="text-lg font-semibold mb-4">Previous Rounds</h3>
                     
-                    <Tabs defaultValue="1" className="w-full">
-                      <TabsList className="grid grid-cols-4 mb-4">
+                    <div className="overflow-x-auto">
+                      <Tabs defaultValue="1" className="w-full">
+                        <TabsList className="flex flex-nowrap overflow-x-auto mb-4 max-w-full">
+                          {Array.from({ length: tournament.currentRound - 1 }, (_, i) => i + 1).map((round) => (
+                            <TabsTrigger key={round} value={round.toString()} className="flex-shrink-0">
+                              Round {round}
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                        
                         {Array.from({ length: tournament.currentRound - 1 }, (_, i) => i + 1).map((round) => (
-                          <TabsTrigger key={round} value={round.toString()}>
-                            Round {round}
-                          </TabsTrigger>
+                          <TabsContent key={round} value={round.toString()}>
+                            <PairingSystem
+                              players={registeredPlayers}
+                              onGeneratePairings={() => {}}
+                              pairings={tournament.pairings?.find(p => p.roundNumber === round)?.matches || []}
+                              roundNumber={round}
+                              readonly={true}
+                            />
+                          </TabsContent>
                         ))}
-                      </TabsList>
-                      
-                      {Array.from({ length: tournament.currentRound - 1 }, (_, i) => i + 1).map((round) => (
-                        <TabsContent key={round} value={round.toString()}>
-                          <PairingSystem
-                            players={registeredPlayers}
-                            onGeneratePairings={() => {}}
-                            pairings={tournament.pairings?.find(p => p.roundNumber === round)?.matches || []}
-                            roundNumber={round}
-                            readonly={true}
-                          />
-                        </TabsContent>
-                      ))}
-                    </Tabs>
+                      </Tabs>
+                    </div>
                   </div>
                 )}
               </div>
