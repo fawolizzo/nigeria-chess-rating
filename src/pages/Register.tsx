@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -23,6 +22,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Navbar from "@/components/Navbar";
+import { useUser } from "@/contexts/UserContext";
 
 // Nigerian states list
 const nigerianStates = [
@@ -53,6 +53,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register: registerUser } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -78,7 +79,7 @@ const Register = () => {
     setShowAccessCode(role === "rating_officer");
   };
   
-  const onSubmit = (data: RegisterFormData) => {
+  const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
     
@@ -89,25 +90,39 @@ const Register = () => {
       return;
     }
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const success = await registerUser({
+        fullName: data.fullName,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        state: data.state,
+        role: data.role as 'tournament_organizer' | 'rating_officer',
+        password: data.password // In a real app, you'd hash this
+      });
       
-      if (data.role === "tournament_organizer") {
-        setSuccessMessage("Registration successful! Your account is pending approval by a rating officer.");
+      if (success) {
+        if (data.role === "tournament_organizer") {
+          setSuccessMessage("Registration successful! Your account is pending approval by a rating officer.");
+        } else {
+          setSuccessMessage("Rating Officer account created successfully!");
+        }
+        
+        // Reset form after success
+        form.reset();
+        setAccessCode("");
+        
+        // Redirect to login after short delay
+        setTimeout(() => {
+          navigate("/login");
+        }, 3000);
       } else {
-        setSuccessMessage("Rating Officer account created successfully!");
+        setErrorMessage("Registration failed. Please try again.");
       }
-      
-      // Reset form after success
-      form.reset();
-      setAccessCode("");
-      
-      // Redirect to success page or login after short delay
-      setTimeout(() => {
-        navigate("/login");
-      }, 3000);
-    }, 1500);
+    } catch (error) {
+      setErrorMessage(error.message || "Registration failed");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LogIn, Mail, Lock, UserCheck, ChevronDown, Calendar, Shield, Check, AlertCircle } from "lucide-react";
@@ -9,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Navbar from "@/components/Navbar";
+import { useUser } from "@/contexts/UserContext";
 
 // Form validation schema
 const loginSchema = z.object({
@@ -22,6 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -37,32 +38,36 @@ const Login = () => {
   
   const selectedRole = form.watch("role");
   
-  const onSubmit = (data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const success = await login(
+        data.email, 
+        data.password, 
+        data.role as 'tournament_organizer' | 'rating_officer'
+      );
       
-      // For demo purposes, check rating officer access code
-      if (data.role === "rating_officer" && data.password !== "NCR2025") {
-        setErrorMessage("Invalid access code for Rating Officer");
-        return;
+      if (success) {
+        setSuccessMessage("Login successful!");
+        
+        // Redirect based on role
+        setTimeout(() => {
+          if (data.role === "tournament_organizer") {
+            navigate("/organizer-dashboard");
+          } else {
+            navigate("/officer-dashboard");
+          }
+        }, 1000);
+      } else {
+        setErrorMessage("Invalid credentials");
       }
-      
-      // For demo purposes, just login for now
-      setSuccessMessage("Login successful!");
-      
-      // Redirect based on role
-      setTimeout(() => {
-        if (data.role === "tournament_organizer") {
-          navigate("/organizer-dashboard");
-        } else {
-          navigate("/officer-dashboard");
-        }
-      }, 1000);
-    }, 1500);
+    } catch (error) {
+      setErrorMessage(error.message || "Login failed");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

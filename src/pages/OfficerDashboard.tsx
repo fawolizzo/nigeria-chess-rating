@@ -8,64 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-
-// Mock data for pending organizers
-const MOCK_PENDING_ORGANIZERS = [
-  {
-    id: "1",
-    fullName: "John Doe",
-    email: "john.doe@example.com",
-    phoneNumber: "+234 800 1234 567",
-    state: "Lagos",
-    registrationDate: "2023-05-12T10:30:00Z",
-    status: "pending"
-  },
-  {
-    id: "2",
-    fullName: "Jane Smith",
-    email: "jane.smith@example.com",
-    phoneNumber: "+234 800 7654 321",
-    state: "Abuja",
-    registrationDate: "2023-05-15T14:45:00Z",
-    status: "pending"
-  },
-  {
-    id: "3",
-    fullName: "Oluwaseun Adeyemi",
-    email: "oluwa.adeyemi@example.com",
-    phoneNumber: "+234 812 3456 789",
-    state: "Rivers",
-    registrationDate: "2023-05-18T09:15:00Z",
-    status: "pending"
-  }
-];
-
-// Mock data for approved organizers
-const MOCK_APPROVED_ORGANIZERS = [
-  {
-    id: "4",
-    fullName: "Emmanuel Okonkwo",
-    email: "emmanuel.o@example.com",
-    phoneNumber: "+234 803 1111 2222",
-    state: "Enugu",
-    registrationDate: "2023-04-22T10:30:00Z",
-    approvalDate: "2023-04-25T15:20:00Z",
-    status: "approved"
-  },
-  {
-    id: "5",
-    fullName: "Aisha Mohammed",
-    email: "aisha.m@example.com",
-    phoneNumber: "+234 805 3333 4444",
-    state: "Kano",
-    registrationDate: "2023-04-28T11:45:00Z",
-    approvalDate: "2023-05-01T09:10:00Z",
-    status: "approved"
-  }
-];
+import { useUser, User } from "@/contexts/UserContext";
+import { useNavigate } from "react-router-dom";
 
 const OrganizerCard = ({ organizer, onApprove, onReject, isApproved = false }) => {
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
 
   const formatDate = (dateString) => {
@@ -160,7 +106,7 @@ const OrganizerCard = ({ organizer, onApprove, onReject, isApproved = false }) =
               <span className="font-medium text-gray-500 dark:text-gray-400">Registration Date:</span>
               <span className="col-span-2">{formatDate(organizer.registrationDate)}</span>
             </div>
-            {isApproved && (
+            {isApproved && organizer.approvalDate && (
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <span className="font-medium text-gray-500 dark:text-gray-400">Approval Date:</span>
                 <span className="col-span-2">{formatDate(organizer.approvalDate)}</span>
@@ -177,27 +123,32 @@ const OrganizerCard = ({ organizer, onApprove, onReject, isApproved = false }) =
 };
 
 const OfficerDashboard = () => {
-  const [pendingOrganizers, setPendingOrganizers] = useState(MOCK_PENDING_ORGANIZERS);
-  const [approvedOrganizers, setApprovedOrganizers] = useState(MOCK_APPROVED_ORGANIZERS);
+  const { users, approveUser, rejectUser, currentUser } = useUser();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pending");
 
+  // Filter users to get tournament organizers
+  const pendingOrganizers = users.filter(
+    user => user.role === 'tournament_organizer' && user.status === 'pending'
+  );
+  
+  const approvedOrganizers = users.filter(
+    user => user.role === 'tournament_organizer' && user.status === 'approved'
+  );
+
+  useEffect(() => {
+    // Ensure user is logged in and is a rating officer
+    if (!currentUser || currentUser.role !== 'rating_officer') {
+      navigate('/login');
+    }
+  }, [currentUser, navigate]);
+
   const handleApproveOrganizer = (organizerId) => {
-    // Find the organizer to approve
-    const organizer = pendingOrganizers.find(org => org.id === organizerId);
+    approveUser(organizerId);
     
+    // Show success toast
+    const organizer = users.find(org => org.id === organizerId);
     if (organizer) {
-      // Create a copy with approved status and date
-      const approvedOrganizer = {
-        ...organizer,
-        status: "approved",
-        approvalDate: new Date().toISOString()
-      };
-      
-      // Update states
-      setPendingOrganizers(pendingOrganizers.filter(org => org.id !== organizerId));
-      setApprovedOrganizers([approvedOrganizer, ...approvedOrganizers]);
-      
-      // Show success toast
       toast({
         title: "Organizer Approved",
         description: `${organizer.fullName} has been approved as a tournament organizer.`,
@@ -207,16 +158,17 @@ const OfficerDashboard = () => {
   };
 
   const handleRejectOrganizer = (organizerId) => {
-    // Just remove from pending list for now
-    setPendingOrganizers(pendingOrganizers.filter(org => org.id !== organizerId));
+    rejectUser(organizerId);
     
     // Show success toast
-    const organizer = pendingOrganizers.find(org => org.id === organizerId);
-    toast({
-      title: "Organizer Rejected",
-      description: `${organizer.fullName}'s application has been rejected.`,
-      variant: "destructive",
-    });
+    const organizer = users.find(org => org.id === organizerId);
+    if (organizer) {
+      toast({
+        title: "Organizer Rejected",
+        description: `${organizer.fullName}'s application has been rejected.`,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
