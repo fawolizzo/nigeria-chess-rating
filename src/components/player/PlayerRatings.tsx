@@ -3,6 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player } from "@/lib/mockData";
 import { getKFactor } from "@/lib/ratingCalculation";
+import { ExternalLink } from "lucide-react";
 
 interface PlayerRatingsProps {
   player: Player;
@@ -16,10 +17,25 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
   const rapidRating = player.rapidRating || "Not rated";
   const blitzRating = player.blitzRating || "Not rated";
   
+  // Check if player has a Lichess account linked
+  const hasLichessLink = Boolean(player.lichessId || player.lichessUrl);
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Player Ratings</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          <span>Player Ratings</span>
+          {hasLichessLink && (
+            <a 
+              href={player.lichessUrl || `https://lichess.org/@/${player.lichessId}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm flex items-center text-blue-500 hover:text-blue-600 transition-colors"
+            >
+              Lichess Profile <ExternalLink className="ml-1 h-3 w-3" />
+            </a>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -54,6 +70,12 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
             )}
           </div>
         </div>
+        
+        {hasLichessLink && (
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-md text-sm">
+            <p>This player's profile is linked to their Lichess account. Rating changes on Lichess may be imported during the next synchronization.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

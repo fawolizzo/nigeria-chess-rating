@@ -10,38 +10,96 @@ import {
   Tooltip, 
   ResponsiveContainer,
   ReferenceLine,
+  Legend,
 } from "recharts";
 
 interface RatingChartProps {
   player: Player;
   height?: number;
+  showLichessComparison?: boolean;
 }
 
-const RatingChart = ({ player, height = 300 }: RatingChartProps) => {
+const RatingChart = ({ player, height = 300, showLichessComparison = false }: RatingChartProps) => {
+  // Format data for the chart
   const data = useMemo(() => {
-    return player.ratingHistory.map(item => ({
+    const history = [...player.ratingHistory].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    return history.map(item => ({
       date: item.date,
-      rating: item.rating
+      rating: item.rating,
+      // If we have Lichess data, include it
+      lichessRating: item.lichessRating || null,
+      reason: item.reason
     }));
   }, [player.ratingHistory]);
 
   const minRating = useMemo(() => {
-    const min = Math.min(...data.map(d => d.rating));
+    // Find the minimum rating across all data points
+    const ratings = data.map(d => d.rating);
+    if (showLichessComparison) {
+      const lichessRatings = data
+        .filter(d => d.lichessRating !== null)
+        .map(d => d.lichessRating as number);
+      
+      if (lichessRatings.length > 0) {
+        ratings.push(...lichessRatings);
+      }
+    }
+    
+    const min = Math.min(...ratings);
     // Round down to nearest 50
     return Math.floor(min / 50) * 50;
-  }, [data]);
+  }, [data, showLichessComparison]);
 
   const maxRating = useMemo(() => {
-    const max = Math.max(...data.map(d => d.rating));
+    // Find the maximum rating across all data points
+    const ratings = data.map(d => d.rating);
+    if (showLichessComparison) {
+      const lichessRatings = data
+        .filter(d => d.lichessRating !== null)
+        .map(d => d.lichessRating as number);
+      
+      if (lichessRatings.length > 0) {
+        ratings.push(...lichessRatings);
+      }
+    }
+    
+    const max = Math.max(...ratings);
     // Round up to nearest 50
     return Math.ceil(max / 50) * 50;
-  }, [data]);
+  }, [data, showLichessComparison]);
 
   // Format the date for display
   const formatXAxis = (tickItem: string) => {
     const [year, month] = tickItem.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+
+  // Custom tooltip to show reason for rating change
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const dataPoint = data.find(d => d.date === label);
+      
+      return (
+        <div className="bg-white dark:bg-gray-800 p-2 border border-gray-200 dark:border-gray-700 rounded shadow-md">
+          <p className="font-medium">{formatXAxis(label)}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={`rating-${index}`} style={{ color: entry.color }}>
+              {entry.name}: {entry.value}
+            </p>
+          ))}
+          {dataPoint?.reason && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {dataPoint.reason}
+            </p>
+          )}
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -63,22 +121,39 @@ const RatingChart = ({ player, height = 300 }: RatingChartProps) => {
               domain={[minRating, maxRating]} 
               stroke="#9ca3af"
             />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.375rem',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              }}
-              labelFormatter={formatXAxis}
-            />
+            {showLichessComparison && <Legend />}
+            <Tooltip content={<CustomTooltip />} />
+            
+            {/* Nigerian Rating line */}
             <Line 
               type="monotone" 
               dataKey="rating" 
+              name="NCR Rating"
               stroke="#D4AF37" 
               strokeWidth={2}
               dot={{ stroke: '#D4AF37', strokeWidth: 2, r: 4, fill: 'white' }}
               activeDot={{ stroke: '#D4AF37', strokeWidth: 2, r: 6, fill: '#D4AF37' }}
+            />
+            
+            {/* Lichess Rating line (if comparison enabled) */}
+            {showLichessComparison && (
+              <Line 
+                type="monotone" 
+                dataKey="lichessRating" 
+                name="Lichess Rating"
+                stroke="#3689fe" 
+                strokeWidth={2}
+                dot={{ stroke: '#3689fe', strokeWidth: 2, r: 4, fill: 'white' }}
+                activeDot={{ stroke: '#3689fe', strokeWidth: 2, r: 6, fill: '#3689fe' }}
+              />
+            )}
+            
+            {/* Reference line for floor rating */}
+            <ReferenceLine 
+              y={800} 
+              label="Floor Rating" 
+              stroke="#ef4444" 
+              strokeDasharray="3 3" 
             />
           </LineChart>
         </ResponsiveContainer>
