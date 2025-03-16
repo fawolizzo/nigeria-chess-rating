@@ -9,9 +9,9 @@ interface PairingSystemProps {
   players: Player[];
   existingPairings?: Array<{ whiteId: string; blackId: string }>;
   previousOpponents?: Record<string, string[]>;
-  onGeneratePairings: (pairings: Array<{ white: Player; black: Player }>) => void;
+  onGeneratePairings?: (pairings: Array<{ white: Player; black: Player }>) => void;
   readOnly?: boolean;
-  // Adding new props to match what's being passed in TournamentManagement.tsx
+  // Updated props to match what's being passed in TournamentManagement.tsx
   pairings?: Array<{
     whiteId: string;
     blackId: string;
@@ -122,7 +122,9 @@ const PairingSystem = ({
     }
     
     setLocalPairings(matches);
-    onGeneratePairings(matches);
+    if (onGeneratePairings) {
+      onGeneratePairings(matches);
+    }
   };
 
   const pairingsToDisplay = getPairingsToDisplay();
@@ -210,7 +212,7 @@ const PairingSystem = ({
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               No pairings have been generated yet.
             </p>
-            {!readOnly && !readonly && (
+            {!readOnly && !readonly && onGeneratePairings && (
               <Button onClick={generateSwissPairings}>Generate Pairings</Button>
             )}
           </div>

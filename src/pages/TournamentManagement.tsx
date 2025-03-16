@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -1279,17 +1278,17 @@ const TournamentManagement = () => {
                     <div>
                       {tournament.status === "ongoing" && selectedRound === (tournament.currentRound || 1) ? (
                         <ResultRecorder
-                          tournament={tournament}
+                          pairings={tournament.pairings?.find(p => p.roundNumber === selectedRound)?.matches || []}
                           players={registeredPlayers}
                           roundNumber={selectedRound}
                           onSaveResults={saveResults}
                         />
                       ) : (
                         <PairingSystem
-                          tournament={tournament}
                           players={registeredPlayers}
+                          pairings={tournament.pairings?.find(p => p.roundNumber === selectedRound)?.matches || []}
                           roundNumber={selectedRound}
-                          readOnly={true}
+                          readonly={true}
                         />
                       )}
                     </div>
@@ -1309,7 +1308,10 @@ const TournamentManagement = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <StandingsTable standings={standings} />
+                  <StandingsTable 
+                    standings={standings} 
+                    players={registeredPlayers}
+                  />
                 </CardContent>
               </Card>
             )}
