@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -6,7 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import { useUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, CalendarRange, CalendarSearch, Trophy, Trophy2 } from "lucide-react";
+import { CalendarDays, CalendarRange, CalendarSearch, Trophy } from "lucide-react";
 import { Tournament, tournaments } from "@/lib/mockData";
 
 const Tournaments = () => {
@@ -57,7 +58,9 @@ const Tournaments = () => {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Tournaments
           </h1>
-          <SearchBar onSearch={setSearchTerm} />
+          <div>
+            <SearchBar />
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">

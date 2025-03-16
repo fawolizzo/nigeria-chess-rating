@@ -4,7 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { Search, X } from "lucide-react";
 import { players } from "@/lib/mockData";
 
-const SearchBar = () => {
+interface SearchBarProps {
+  onSearch?: (query: string) => void;
+}
+
+const SearchBar = ({ onSearch }: SearchBarProps = {}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<typeof players>([]);
@@ -29,7 +33,11 @@ const SearchBar = () => {
     } else {
       setSearchResults([]);
     }
-  }, [searchQuery]);
+
+    if (onSearch) {
+      onSearch(searchQuery);
+    }
+  }, [searchQuery, onSearch]);
 
   const handleSearchClick = () => {
     setIsOpen(true);
