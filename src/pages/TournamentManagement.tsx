@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -80,7 +79,6 @@ interface PlayerWithScore extends Player {
   opponents: string[];
 }
 
-// Schema for new player form
 const playerSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
   title: z.string().optional(),
@@ -113,7 +111,6 @@ const TournamentManagement = () => {
   const [selectedRound, setSelectedRound] = useState<number>(1);
   const [standings, setStandings] = useState<PlayerWithScore[]>([]);
 
-  // Form for creating a new player
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
     defaultValues: {
@@ -136,7 +133,6 @@ const TournamentManagement = () => {
     const loadTournamentAndPlayers = () => {
       setIsLoading(true);
       
-      // Load tournament data
       const savedTournaments = localStorage.getItem('tournaments');
       if (savedTournaments) {
         const parsedTournaments = JSON.parse(savedTournaments);
@@ -149,30 +145,25 @@ const TournamentManagement = () => {
         
         setTournament(foundTournament);
         
-        // Load all players
         const players = getAllPlayers();
         setAllPlayers(players);
         
-        // If tournament has players, filter for registered ones
         if (foundTournament.players && foundTournament.players.length > 0) {
           const tournamentPlayers = players.filter(
             (player: Player) => foundTournament.players?.includes(player.id)
           );
           setRegisteredPlayers(tournamentPlayers);
           
-          // Calculate standings if tournament is ongoing or completed
           if (foundTournament.status === "ongoing" || foundTournament.status === "completed") {
             const playersWithScores = calculateStandings(tournamentPlayers, foundTournament);
             setStandings(playersWithScores);
           }
         }
         
-        // Set the current round if exists
         if (foundTournament.currentRound) {
           setSelectedRound(foundTournament.currentRound);
         }
         
-        // Check if pairings exist for the current round
         if (foundTournament.pairings && foundTournament.pairings.some(p => p.roundNumber === (foundTournament.currentRound || 1))) {
           setPairingsGenerated(true);
         }
@@ -191,12 +182,10 @@ const TournamentManagement = () => {
     
     const playerScores: Record<string, { score: number, opponents: string[] }> = {};
     
-    // Initialize scores
     players.forEach(player => {
       playerScores[player.id] = { score: 0, opponents: [] };
     });
     
-    // Calculate scores based on pairings
     tournament.pairings.forEach(round => {
       round.matches.forEach(match => {
         if (match.result === "1-0") {
@@ -208,7 +197,6 @@ const TournamentManagement = () => {
           playerScores[match.blackId].score += 0.5;
         }
         
-        // Add opponents for tiebreak calculations
         if (playerScores[match.whiteId]) {
           playerScores[match.whiteId].opponents.push(match.blackId);
         }
@@ -218,7 +206,6 @@ const TournamentManagement = () => {
       });
     });
     
-    // Combine player info with scores
     return players.map(player => ({
       ...player,
       score: playerScores[player.id]?.score || 0,
@@ -229,11 +216,9 @@ const TournamentManagement = () => {
   const handleAddPlayer = () => {
     if (!selectedPlayerId || !tournament) return;
     
-    // Find the selected player
     const playerToAdd = allPlayers.find(p => p.id === selectedPlayerId);
     if (!playerToAdd) return;
 
-    // Check if player status is pending
     if (playerToAdd.status === 'pending') {
       toast({
         title: "Player pending approval",
@@ -243,7 +228,6 @@ const TournamentManagement = () => {
       return;
     }
     
-    // Check if player is already registered
     if (tournament.players?.includes(selectedPlayerId)) {
       toast({
         title: "Player already registered",
@@ -253,14 +237,12 @@ const TournamentManagement = () => {
       return;
     }
     
-    // Update tournament with new player
     const updatedTournament = {
       ...tournament,
       players: [...(tournament.players || []), selectedPlayerId],
       participants: (tournament.participants || 0) + 1
     };
     
-    // Update localStorage
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const parsedTournaments = JSON.parse(savedTournaments);
@@ -284,7 +266,6 @@ const TournamentManagement = () => {
   const handleRemovePlayer = (playerId: string) => {
     if (!tournament) return;
     
-    // Update tournament by removing player
     const updatedPlayers = tournament.players?.filter(id => id !== playerId) || [];
     const updatedTournament = {
       ...tournament,
@@ -292,7 +273,6 @@ const TournamentManagement = () => {
       participants: Math.max((tournament.participants || 0) - 1, 0)
     };
     
-    // Update localStorage
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const parsedTournaments = JSON.parse(savedTournaments);
@@ -323,7 +303,6 @@ const TournamentManagement = () => {
       return;
     }
     
-    // Update tournament status to ongoing - explicitly cast the status to the correct type
     const updatedTournament = {
       ...tournament,
       status: "ongoing" as "upcoming" | "ongoing" | "completed" | "pending" | "rejected",
@@ -332,7 +311,6 @@ const TournamentManagement = () => {
       pairings: [] // Initialize empty pairings
     };
     
-    // Update localStorage
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const parsedTournaments = JSON.parse(savedTournaments);
@@ -356,13 +334,11 @@ const TournamentManagement = () => {
     
     const isCurrentlyOpen = !!tournament.registrationOpen;
     
-    // Toggle registration status
     const updatedTournament = {
       ...tournament,
       registrationOpen: !isCurrentlyOpen
     };
     
-    // Update localStorage
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const parsedTournaments = JSON.parse(savedTournaments);
@@ -385,12 +361,11 @@ const TournamentManagement = () => {
   const handleCreatePlayer = (data: PlayerFormValues) => {
     if (!currentUser) return;
     
-    // Create new player object
     const newPlayer: Player = {
       id: `player_${Date.now()}`,
       name: data.name,
       title: data.title && data.title.length > 0 ? data.title : undefined,
-      rating: 800, // New players start with 800 rating as per requirements
+      rating: 800,
       country: data.country,
       state: data.state,
       club: data.club && data.club.length > 0 ? data.club : undefined,
@@ -398,18 +373,15 @@ const TournamentManagement = () => {
       birthYear: parseInt(data.birthYear),
       ratingHistory: [{ date: new Date().toISOString().split('T')[0], rating: 800 }],
       tournamentResults: [],
-      status: 'pending', // New players need approval
+      status: 'pending',
       createdBy: currentUser.id,
-      gamesPlayed: 0  // Initialize gamesPlayed property
+      gamesPlayed: 0
     };
     
-    // Add player to localStorage
     addPlayer(newPlayer);
     
-    // Update local state
     setAllPlayers(prev => [...prev, newPlayer]);
     
-    // Reset form and close dialog
     form.reset();
     setIsCreatePlayerOpen(false);
     
@@ -422,13 +394,10 @@ const TournamentManagement = () => {
   const generatePairings = () => {
     if (!tournament || !tournament.players) return;
     
-    // Get current round number
     const roundNumber = tournament.currentRound || 1;
     
-    // Get pairings for this round using Swiss pairing algorithm
     const matches = generateSwissPairings(registeredPlayers, tournament, roundNumber);
     
-    // Update tournament with new pairings
     const existingPairings = tournament.pairings || [];
     const newPairings = [
       ...existingPairings.filter(p => p.roundNumber !== roundNumber), 
@@ -437,7 +406,7 @@ const TournamentManagement = () => {
         matches: matches.map(match => ({
           whiteId: match.white.id,
           blackId: match.black.id,
-          result: "*" as "1-0" | "0-1" | "1/2-1/2" | "*"  // Explicitly cast to the allowed type
+          result: "*" as "1-0" | "0-1" | "1/2-1/2" | "*"
         }))
       }
     ];
@@ -447,7 +416,6 @@ const TournamentManagement = () => {
       pairings: newPairings
     };
     
-    // Save to localStorage
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const parsedTournaments = JSON.parse(savedTournaments);
@@ -467,17 +435,13 @@ const TournamentManagement = () => {
   };
 
   const generateSwissPairings = (players: Player[], tournament: Tournament, roundNumber: number) => {
-    // Calculate current standings
     const playersWithScores = calculateStandings(players, tournament);
     
-    // Sort players by score
     const sortedPlayers = [...playersWithScores].sort((a, b) => b.score - a.score);
     
-    // Create matches array
     const matches: { white: Player; black: Player }[] = [];
     const paired: Record<string, boolean> = {};
     
-    // Get previous pairings to avoid repeats
     const previousPairings = new Set<string>();
     tournament.pairings?.forEach(round => {
       round.matches.forEach(match => {
@@ -486,13 +450,11 @@ const TournamentManagement = () => {
       });
     });
     
-    // Pair players
     for (let i = 0; i < sortedPlayers.length; i++) {
       if (paired[sortedPlayers[i].id]) continue;
       
       let opponent = null;
       
-      // Find an unpaired opponent who hasn't played against this player before
       for (let j = i + 1; j < sortedPlayers.length; j++) {
         if (paired[sortedPlayers[j].id]) continue;
         
@@ -503,7 +465,6 @@ const TournamentManagement = () => {
         }
       }
       
-      // If no valid opponent found, just pair with next available
       if (!opponent) {
         for (let j = i + 1; j < sortedPlayers.length; j++) {
           if (!paired[sortedPlayers[j].id]) {
@@ -514,7 +475,6 @@ const TournamentManagement = () => {
       }
       
       if (opponent) {
-        // Randomly assign colors
         if (Math.random() > 0.5) {
           matches.push({ white: sortedPlayers[i], black: opponent });
         } else {
@@ -524,10 +484,8 @@ const TournamentManagement = () => {
         paired[sortedPlayers[i].id] = true;
         paired[opponent.id] = true;
       } else if (!paired[sortedPlayers[i].id]) {
-        // If odd number of players, give bye (full point)
         paired[sortedPlayers[i].id] = true;
         
-        // Handle the bye in the UI - we don't actually create a pairing for a bye
         toast({
           title: "Bye assigned",
           description: `${sortedPlayers[i].name} receives a bye in round ${roundNumber}.`,
@@ -541,27 +499,12 @@ const TournamentManagement = () => {
   const advanceToNextRound = () => {
     if (!tournament) return;
     
-    // Check if all games in current round have results
-    const currentRound = tournament.currentRound || 1;
-    const currentPairings = tournament.pairings?.find(p => p.roundNumber === currentRound);
-    
-    if (currentPairings && currentPairings.matches.some(m => m.result === "*")) {
-      toast({
-        title: "Cannot advance round",
-        description: "All games in the current round must be completed first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (currentRound >= tournament.rounds) {
-      // Last round completed, end tournament
+    if (tournament.currentRound >= tournament.rounds) {
       const updatedTournament = {
         ...tournament,
         status: "completed" as "upcoming" | "ongoing" | "completed" | "pending" | "rejected"
       };
       
-      // Update localStorage
       const savedTournaments = localStorage.getItem('tournaments');
       if (savedTournaments) {
         const parsedTournaments = JSON.parse(savedTournaments);
@@ -578,14 +521,12 @@ const TournamentManagement = () => {
         description: "All rounds have been completed. The tournament is now finished.",
       });
     } else {
-      // Advance to next round
-      const nextRound = currentRound + 1;
+      const nextRound = tournament.currentRound + 1;
       const updatedTournament = {
         ...tournament,
         currentRound: nextRound
       };
       
-      // Update localStorage
       const savedTournaments = localStorage.getItem('tournaments');
       if (savedTournaments) {
         const parsedTournaments = JSON.parse(savedTournaments);
@@ -606,10 +547,11 @@ const TournamentManagement = () => {
     }
   };
 
-  const saveResults = (roundNumber: number, results: Array<{ whiteId: string, blackId: string, result: "1-0" | "0-1" | "1/2-1/2" | "*" }>) => {
+  const saveResults = (results: Array<{ whiteId: string, blackId: string, result: "1-0" | "0-1" | "1/2-1/2" | "*" }>) => {
     if (!tournament) return;
     
-    // Make a deep copy of pairings
+    const roundNumber = tournament.currentRound || 1;
+    
     const updatedPairings = tournament.pairings ? [...tournament.pairings] : [];
     const roundIndex = updatedPairings.findIndex(r => r.roundNumber === roundNumber);
     
@@ -622,7 +564,6 @@ const TournamentManagement = () => {
       return;
     }
     
-    // Update the results
     const updatedRound = { ...updatedPairings[roundIndex] };
     updatedRound.matches = updatedRound.matches.map(match => {
       const result = results.find(r => r.whiteId === match.whiteId && r.blackId === match.blackId);
@@ -634,13 +575,10 @@ const TournamentManagement = () => {
     
     updatedPairings[roundIndex] = updatedRound;
     
-    // Calculate rating changes if all games in the round have results
     let playersNeedingUpdate: Player[] = [];
     if (!updatedRound.matches.some(m => m.result === "*")) {
-      // All games have results, calculate rating changes
       const ratingChanges = calculateRatingChanges(updatedRound.matches, registeredPlayers);
       
-      // Update the matches with rating changes
       updatedRound.matches = updatedRound.matches.map(match => {
         const change = ratingChanges.find(r => r.whiteId === match.whiteId && r.blackId === match.blackId);
         if (change) {
@@ -653,17 +591,14 @@ const TournamentManagement = () => {
         return match;
       });
       
-      // Update player ratings
       playersNeedingUpdate = updatePlayerRatings(ratingChanges, registeredPlayers);
     }
     
-    // Update tournament with new pairings
     const updatedTournament = {
       ...tournament,
       pairings: updatedPairings
     };
     
-    // Save to localStorage
     const savedTournaments = localStorage.getItem('tournaments');
     if (savedTournaments) {
       const parsedTournaments = JSON.parse(savedTournaments);
@@ -675,11 +610,9 @@ const TournamentManagement = () => {
     
     setTournament(updatedTournament);
     
-    // Update player standings
     const updatedStandings = calculateStandings(registeredPlayers, updatedTournament);
     setStandings(updatedStandings);
     
-    // If there were rating changes, update the players
     if (playersNeedingUpdate.length > 0) {
       setRegisteredPlayers(prev => {
         const updatedPlayers = [...prev];
@@ -740,23 +673,19 @@ const TournamentManagement = () => {
         };
       }
       
-      // Calculate actual score
       let whiteScore: number;
       if (match.result === "1-0") whiteScore = 1;
       else if (match.result === "0-1") whiteScore = 0;
       else whiteScore = 0.5;
       
-      // Calculate expected score using Elo formula
       const ratingDiff = black.rating - white.rating;
       const exponent = ratingDiff / 400;
       const whiteExpected = 1 / (1 + Math.pow(10, exponent));
       const blackExpected = 1 - whiteExpected;
       
-      // Determine K factor based on player experience and rating
       const whiteK = determineKFactor(white);
       const blackK = determineKFactor(black);
       
-      // Calculate rating changes
       const whiteRatingChange = Math.round(whiteK * (whiteScore - whiteExpected));
       const blackRatingChange = Math.round(blackK * ((1 - whiteScore) - blackExpected));
       
@@ -770,22 +699,21 @@ const TournamentManagement = () => {
   };
 
   const determineKFactor = (player: Player): number => {
-    // Use optional chaining for gamesPlayed since it's now optional in the interface
     const gamesPlayed = player.gamesPlayed || 0;
     
     if (gamesPlayed < 30) {
-      return 40; // K=40 for new players (< 30 games)
+      return 40;
     }
     
     if (player.rating < 2100) {
-      return 32; // K=32 for players rated below 2100
+      return 32;
     }
     
     if (player.rating >= 2100 && player.rating <= 2399) {
-      return 24; // K=24 for players rated 2100-2399
+      return 24;
     }
     
-    return 16; // K=16 for higher-rated players
+    return 16;
   };
 
   const updatePlayerRatings = (
@@ -799,19 +727,18 @@ const TournamentManagement = () => {
   ): Player[] => {
     const playersToUpdate: Record<string, Player> = {};
     
-    // Collect all players that need updates
     ratingChanges.forEach(change => {
       const white = players.find(p => p.id === change.whiteId);
       const black = players.find(p => p.id === change.blackId);
       
       if (white && change.whiteRatingChange !== 0) {
-        const newRating = Math.max(white.rating + change.whiteRatingChange, 800); // Apply floor rating of 800
+        const newRating = Math.max(white.rating + change.whiteRatingChange, 800);
         const currentDate = new Date().toISOString().split('T')[0];
         
         const updatedWhite = {
           ...white,
           rating: newRating,
-          gamesPlayed: (white.gamesPlayed || 0) + 1,  // Use optional chaining and provide default value
+          gamesPlayed: (white.gamesPlayed || 0) + 1,
           ratingHistory: [
             ...white.ratingHistory,
             { date: currentDate, rating: newRating }
@@ -822,13 +749,13 @@ const TournamentManagement = () => {
       }
       
       if (black && change.blackRatingChange !== 0) {
-        const newRating = Math.max(black.rating + change.blackRatingChange, 800); // Apply floor rating of 800
+        const newRating = Math.max(black.rating + change.blackRatingChange, 800);
         const currentDate = new Date().toISOString().split('T')[0];
         
         const updatedBlack = {
           ...black,
           rating: newRating,
-          gamesPlayed: (black.gamesPlayed || 0) + 1,  // Use optional chaining and provide default value
+          gamesPlayed: (black.gamesPlayed || 0) + 1,
           ratingHistory: [
             ...black.ratingHistory,
             { date: currentDate, rating: newRating }
@@ -839,7 +766,6 @@ const TournamentManagement = () => {
       }
     });
     
-    // Update players in localStorage
     Object.values(playersToUpdate).forEach(player => {
       updatePlayer(player);
     });
@@ -848,12 +774,12 @@ const TournamentManagement = () => {
   };
 
   const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", ""];
-
+  
   const filteredPlayers = allPlayers
     .filter(player => 
       !registeredPlayers.some(rp => rp.id === player.id) &&
       player.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      player.status !== 'pending' && // Only show approved players
+      player.status !== 'pending' &&
       player.status !== 'rejected'
     )
     .slice(0, 10);
@@ -1055,7 +981,6 @@ const TournamentManagement = () => {
               </div>
             )}
 
-            {/* Add Player Dialog */}
             <Dialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen}>
               <DialogContent>
                 <DialogHeader>
@@ -1129,7 +1054,6 @@ const TournamentManagement = () => {
               </DialogContent>
             </Dialog>
 
-            {/* Create Player Dialog */}
             <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
               <DialogContent>
                 <DialogHeader>
@@ -1310,8 +1234,9 @@ const TournamentManagement = () => {
                 
                 <div className="mb-6">
                   <PairingSystem
-                    pairings={tournament.pairings?.find(p => p.roundNumber === selectedRound)?.matches || []}
                     players={registeredPlayers}
+                    onGeneratePairings={() => {}}
+                    pairings={tournament.pairings?.find(p => p.roundNumber === selectedRound)?.matches || []}
                     roundNumber={selectedRound}
                     readonly={true}
                   />
@@ -1380,8 +1305,9 @@ const TournamentManagement = () => {
                       {Array.from({ length: tournament.currentRound - 1 }, (_, i) => i + 1).map((round) => (
                         <TabsContent key={round} value={round.toString()}>
                           <PairingSystem
-                            pairings={tournament.pairings?.find(p => p.roundNumber === round)?.matches || []}
                             players={registeredPlayers}
+                            onGeneratePairings={() => {}}
+                            pairings={tournament.pairings?.find(p => p.roundNumber === round)?.matches || []}
                             roundNumber={round}
                             readonly={true}
                           />
@@ -1411,8 +1337,8 @@ const TournamentManagement = () => {
               <div>
                 <h2 className="text-lg font-semibold mb-4">Current Standings</h2>
                 <StandingsTable 
-                  players={standings} 
-                  allPlayers={registeredPlayers} 
+                  standings={standings} 
+                  players={registeredPlayers} 
                 />
               </div>
             )}

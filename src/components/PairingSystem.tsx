@@ -11,6 +11,16 @@ interface PairingSystemProps {
   previousOpponents?: Record<string, string[]>;
   onGeneratePairings: (pairings: Array<{ white: Player; black: Player }>) => void;
   readOnly?: boolean;
+  // Adding new props to match what's being passed in TournamentManagement.tsx
+  pairings?: Array<{
+    whiteId: string;
+    blackId: string;
+    result?: "1-0" | "0-1" | "1/2-1/2" | "*";
+    whiteRatingChange?: number;
+    blackRatingChange?: number;
+  }>;
+  roundNumber?: number;
+  readonly?: boolean;
 }
 
 const PairingSystem = ({
@@ -19,14 +29,40 @@ const PairingSystem = ({
   previousOpponents = {},
   onGeneratePairings,
   readOnly = false,
+  pairings = [],
+  roundNumber,
+  readonly = false,
 }: PairingSystemProps) => {
-  const [pairings, setPairings] = useState<Array<{ white: Player; black: Player }>>(
+  const [localPairings, setLocalPairings] = useState<Array<{ white: Player; black: Player }>>(
     existingPairings.map(pair => {
       const white = players.find(p => p.id === pair.whiteId)!;
       const black = players.find(p => p.id === pair.blackId)!;
       return { white, black };
     })
   );
+
+  // Function to convert pairings to display format
+  const getPairingsToDisplay = () => {
+    if (pairings && pairings.length > 0) {
+      return pairings.map(pair => {
+        const white = players.find(p => p.id === pair.whiteId);
+        const black = players.find(p => p.id === pair.blackId);
+        
+        if (white && black) {
+          return {
+            white,
+            black,
+            result: pair.result,
+            whiteRatingChange: pair.whiteRatingChange,
+            blackRatingChange: pair.blackRatingChange
+          };
+        }
+        return null;
+      }).filter(Boolean);
+    }
+    
+    return localPairings;
+  };
 
   const generateSwissPairings = () => {
     // Sort players by rating
@@ -76,20 +112,24 @@ const PairingSystem = ({
       }
     }
     
-    setPairings(matches);
+    setLocalPairings(matches);
     onGeneratePairings(matches);
   };
 
+  const pairingsToDisplay = getPairingsToDisplay();
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Swiss Pairing System</CardTitle>
+        <CardTitle>
+          {roundNumber ? `Round ${roundNumber} Pairings` : "Swiss Pairing System"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {pairings.length > 0 ? (
+        {pairingsToDisplay.length > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-2">
-              {pairings.map((pair, index) => (
+              {pairingsToDisplay.map((pair, index) => (
                 <div 
                   key={index} 
                   className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-800 rounded-lg"
@@ -114,6 +154,11 @@ const PairingSystem = ({
                         <span className="text-gray-500 dark:text-gray-400">
                           ({pair.white.rating})
                         </span>
+                        {pair.whiteRatingChange && (
+                          <span className={pair.whiteRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
+                            {pair.whiteRatingChange > 0 ? "+" : ""}{pair.whiteRatingChange}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2 mt-2">
                         <Badge variant="outline" className="bg-black text-white dark:bg-black">
@@ -130,7 +175,21 @@ const PairingSystem = ({
                         <span className="text-gray-500 dark:text-gray-400">
                           ({pair.black.rating})
                         </span>
+                        {pair.blackRatingChange && (
+                          <span className={pair.blackRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
+                            {pair.blackRatingChange > 0 ? "+" : ""}{pair.blackRatingChange}
+                          </span>
+                        )}
                       </div>
+                      {pair.result && pair.result !== "*" && (
+                        <div className="mt-2 text-center">
+                          <Badge variant="secondary">
+                            {pair.result === "1-0" ? "1-0 (White won)" : 
+                             pair.result === "0-1" ? "0-1 (Black won)" : 
+                             "½-½ (Draw)"}
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -142,7 +201,7 @@ const PairingSystem = ({
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               No pairings have been generated yet.
             </p>
-            {!readOnly && (
+            {!readOnly && !readonly && (
               <Button onClick={generateSwissPairings}>Generate Pairings</Button>
             )}
           </div>
