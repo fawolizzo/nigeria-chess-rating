@@ -34,7 +34,7 @@ const Navbar = () => {
           <div className="flex items-center">
             <NavLink to="/" className="flex items-center">
               <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-700 dark:from-white dark:to-gray-300">
-                NCF Ratings
+                NCR Ratings
               </span>
             </NavLink>
           </div>

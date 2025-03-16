@@ -53,11 +53,11 @@ const Index = () => {
       <section className="pt-32 pb-20 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto animate-fade-in">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
-            Nigeria Chess Federation
-            <span className="block text-gold-dark dark:text-gold-light">Rating System</span>
+            Nigeria Chess Rating System
+            <span className="block text-gold-dark dark:text-gold-light">Official Ratings</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            The official rating platform for Nigerian chess players, tracking performance, tournaments, and achievements.
+            The comprehensive rating platform for Nigerian chess players, tracking performance, tournaments, and achievements.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
@@ -153,10 +153,10 @@ const Index = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-6 md:mb-0">
               <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-700 dark:from-white dark:to-gray-300">
-                NCF Ratings
+                NCR Ratings
               </span>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                The official Nigerian Chess Federation rating system.
+                The official Nigerian Chess Rating system.
               </p>
             </div>
             <div className="flex space-x-6">
@@ -175,7 +175,7 @@ const Index = () => {
             </div>
           </div>
           <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} Nigeria Chess Federation. All rights reserved.
+            &copy; {new Date().getFullYear()} Nigeria Chess Rating System. All rights reserved.
           </div>
         </div>
       </footer>
