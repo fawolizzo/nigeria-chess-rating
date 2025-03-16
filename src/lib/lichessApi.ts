@@ -150,7 +150,6 @@ export async function importPlayerFromLichess(username: string) {
       gamesPlayed: classicalGamesPlayed,
       lichessId: playerData.id,
       lichessUrl: `https://lichess.org/@/${playerData.username}`,
-      status: 'active',
       title: playerData.title || null,
       country: playerData.profile?.country || 'NG',
       // Not including gender as it will be added in the LichessPlayerImport component

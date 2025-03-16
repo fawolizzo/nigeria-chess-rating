@@ -45,6 +45,7 @@ const LichessPlayerImport = ({ onPlayerImported }: LichessPlayerImportProps) => 
         state: "Lagos", // Default value, can be changed later
         federationId: "",
         gender: 'M', // Adding default gender since Lichess API doesn't provide this information
+        status: 'pending', // Set the proper status value that conforms to the Player interface
         ratingHistory: [
           {
             date: new Date().toISOString().split('T')[0],
