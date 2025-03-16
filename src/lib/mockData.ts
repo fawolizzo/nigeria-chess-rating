@@ -26,7 +26,7 @@ export interface Tournament {
   endDate: string;
   location: string;
   category: string;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected';
   participants: number;
   rounds: number;
   timeControl: string;
@@ -91,7 +91,6 @@ export const players: Player[] = [
     state: "Oyo",
     gender: "F",
     birthYear: 1996,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2000 },
       { date: "2023-04", rating: 2020 },
@@ -115,7 +114,6 @@ export const players: Player[] = [
     state: "Delta",
     gender: "M",
     birthYear: 1992,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2380 },
       { date: "2023-04", rating: 2390 },
@@ -139,7 +137,6 @@ export const players: Player[] = [
     state: "Kano",
     gender: "F",
     birthYear: 2001,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 1900 },
       { date: "2023-04", rating: 1920 },
@@ -162,7 +159,6 @@ export const players: Player[] = [
     state: "Anambra",
     gender: "M",
     birthYear: 1997,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2100 },
       { date: "2023-04", rating: 2120 },
@@ -185,7 +181,6 @@ export const players: Player[] = [
     state: "Benue",
     gender: "M",
     birthYear: 1999,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 1980 },
       { date: "2023-04", rating: 1995 },
@@ -209,7 +204,6 @@ export const players: Player[] = [
     state: "Bayelsa",
     gender: "F",
     birthYear: 2003,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2030 },
       { date: "2023-04", rating: 2050 },
@@ -232,7 +226,6 @@ export const players: Player[] = [
     state: "Kaduna",
     gender: "M",
     birthYear: 1990,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2160 },
       { date: "2023-04", rating: 2175 },
@@ -256,7 +249,6 @@ export const players: Player[] = [
     state: "Osun",
     gender: "F",
     birthYear: 1995,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2080 },
       { date: "2023-04", rating: 2095 },
