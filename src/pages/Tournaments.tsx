@@ -1,26 +1,65 @@
 
 import { useState, useEffect } from "react";
-import { tournaments } from "@/lib/mockData";
 import TournamentCard from "@/components/TournamentCard";
 import Navbar from "@/components/Navbar";
 import { Search } from "lucide-react";
 
+// Interface for tournament object
+interface Tournament {
+  id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  city: string;
+  state: string;
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+  timeControl: string;
+  rounds: number;
+  organizerId: string;
+}
+
 const Tournaments = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredTournaments, setFilteredTournaments] = useState(tournaments);
+  const [filteredTournaments, setFilteredTournaments] = useState<Tournament[]>([]);
+  const [allTournaments, setAllTournaments] = useState<Tournament[]>([]);
   const [filter, setFilter] = useState<"all" | "upcoming" | "ongoing" | "completed">("all");
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load real tournament data from localStorage
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    const loadTournaments = () => {
+      setIsLoading(true);
+      try {
+        const savedTournaments = localStorage.getItem('tournaments');
+        if (savedTournaments) {
+          const parsedTournaments = JSON.parse(savedTournaments);
+          // Only include approved tournaments (upcoming, ongoing, completed)
+          const publicTournaments = parsedTournaments.filter(
+            (tournament: Tournament) => 
+              tournament.status === "upcoming" || 
+              tournament.status === "ongoing" || 
+              tournament.status === "completed"
+          );
+          setAllTournaments(publicTournaments);
+        } else {
+          setAllTournaments([]);
+        }
+      } catch (error) {
+        console.error("Error loading tournaments:", error);
+        setAllTournaments([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTournaments();
   }, []);
 
+  // Apply filters whenever search query or filter changes
   useEffect(() => {
-    let filtered = tournaments;
+    let filtered = allTournaments;
     
     // Apply status filter
     if (filter !== "all") {
@@ -34,12 +73,14 @@ const Tournaments = () => {
         tournament =>
           tournament.name.toLowerCase().includes(query) ||
           tournament.location.toLowerCase().includes(query) ||
-          tournament.category.toLowerCase().includes(query)
+          tournament.city.toLowerCase().includes(query) ||
+          tournament.state.toLowerCase().includes(query) ||
+          tournament.description.toLowerCase().includes(query)
       );
     }
     
     setFilteredTournaments(filtered);
-  }, [searchQuery, filter]);
+  }, [searchQuery, filter, allTournaments]);
 
   if (isLoading) {
     return (
@@ -75,7 +116,7 @@ const Tournaments = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, location, or category"
+              placeholder="Search by name, location, or description"
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gold focus:border-gold sm:text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
             />
           </div>
@@ -129,14 +170,57 @@ const Tournaments = () => {
             <p className="text-gray-600 dark:text-gray-300">
               {searchQuery 
                 ? `No tournaments found matching "${searchQuery}"` 
-                : `No ${filter} tournaments available`}
+                : `No ${filter !== 'all' ? filter : ''} tournaments available`}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTournaments.map(tournament => (
               <div key={tournament.id} className="animate-fade-up">
-                <TournamentCard tournament={tournament} />
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-200 dark:border-gray-700">
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{tournament.name}</h3>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                        ${tournament.status === 'upcoming' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' : 
+                         tournament.status === 'ongoing' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 
+                         'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'}`}
+                      >
+                        {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium mr-2">Dates:</span>
+                        <span>
+                          {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })} - 
+                          {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium mr-2">Location:</span>
+                        <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium mr-2">Time Control:</span>
+                        <span>{tournament.timeControl}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium mr-2">Rounds:</span>
+                        <span>{tournament.rounds}</span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">
+                      {tournament.description}
+                    </p>
+                    
+                    <button className="w-full bg-black hover:bg-gray-900 text-white dark:bg-gold-dark dark:hover:bg-gold-dark/90 py-2 rounded-md transition-colors">
+                      View Details
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

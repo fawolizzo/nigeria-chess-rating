@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { Calendar, Users, Clock, Award, Plus, MapPin, File, List } from "lucide-react";
+import { Calendar, Users, Clock, Award, Plus, MapPin, File, List, LogOut } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,32 +19,21 @@ import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 
-const MOCK_TOURNAMENTS = [
-  {
-    id: "1",
-    name: "Lagos Chess Classic 2024",
-    startDate: "2024-06-15",
-    endDate: "2024-06-22",
-    location: "Lagos University Sports Center",
-    city: "Lagos",
-    state: "Lagos",
-    status: "upcoming",
-    timeControl: "90min + 30sec increment",
-    rounds: 9
-  },
-  {
-    id: "2",
-    name: "Abuja Chess Championship",
-    startDate: "2024-07-10",
-    endDate: "2024-07-17",
-    location: "Moshood Abiola Stadium",
-    city: "Abuja",
-    state: "FCT - Abuja",
-    status: "upcoming",
-    timeControl: "90min + 30sec increment",
-    rounds: 7
-  },
-];
+// Define interface for tournament object
+interface Tournament {
+  id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  city: string;
+  state: string;
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+  timeControl: string;
+  rounds: number;
+  organizerId: string;
+}
 
 const tournamentSchema = z.object({
   name: z.string().min(5, "Tournament name must be at least 5 characters"),
@@ -91,11 +81,13 @@ const TIME_CONTROLS = [
 ];
 
 const OrganizerDashboard = () => {
-  const { currentUser } = useUser();
+  const { currentUser, logout } = useUser();
   const navigate = useNavigate();
-  const [tournaments, setTournaments] = useState(MOCK_TOURNAMENTS);
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
+  const [customTimeControl, setCustomTimeControl] = useState("");
+  const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
   
   const form = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentSchema),
@@ -120,28 +112,80 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, navigate]);
 
+  // Load tournaments from localStorage on initial render
+  useEffect(() => {
+    const savedTournaments = localStorage.getItem('tournaments');
+    if (savedTournaments) {
+      const allTournaments = JSON.parse(savedTournaments);
+      // Filter tournaments by current organizer
+      if (currentUser) {
+        const myTournaments = allTournaments.filter(
+          (tournament: Tournament) => tournament.organizerId === currentUser.id
+        );
+        setTournaments(myTournaments);
+      }
+    }
+  }, [currentUser]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+      variant: "default",
+    });
+  };
+
   const handleCreateTournament = (data: TournamentFormValues) => {
-    const newTournament = {
-      id: `${tournaments.length + 1}`,
+    // Determine final time control (custom or selected)
+    const finalTimeControl = isCustomTimeControl ? customTimeControl : data.timeControl;
+    
+    if (isCustomTimeControl && !customTimeControl) {
+      toast({
+        title: "Error",
+        description: "Please enter a custom time control",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create new tournament
+    const newTournament: Tournament = {
+      id: `${Date.now()}`,
       name: data.name,
+      description: data.description,
       startDate: data.startDate.toISOString().split('T')[0],
       endDate: data.endDate.toISOString().split('T')[0],
       location: data.location,
       city: data.city,
       state: data.state,
-      status: "upcoming",
-      timeControl: data.timeControl,
-      rounds: data.rounds
+      status: "pending", // Set status to pending for approval
+      timeControl: finalTimeControl,
+      rounds: data.rounds,
+      organizerId: currentUser?.id || ""
     };
     
+    // Get existing tournaments or initialize empty array
+    const existingTournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    
+    // Add new tournament
+    const updatedTournaments = [newTournament, ...existingTournaments];
+    
+    // Save to localStorage
+    localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+    
+    // Update state with only the organizer's tournaments
     setTournaments([newTournament, ...tournaments]);
     
     setIsCreateTournamentOpen(false);
     form.reset();
+    setIsCustomTimeControl(false);
+    setCustomTimeControl("");
     
     toast({
       title: "Tournament Created",
-      description: `${data.name} has been successfully created.`,
+      description: `${data.name} has been submitted for approval.`,
       variant: "default",
     });
   };
@@ -153,19 +197,29 @@ const OrganizerDashboard = () => {
       <div className="max-w-7xl mx-auto pt-28 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Tournament Organizer Dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Welcome, {currentUser?.fullName}!
+            </h1>
             <p className="mt-1 text-gray-600 dark:text-gray-400">
               Manage your tournaments and submissions
             </p>
           </div>
           
-          <Button 
-            onClick={() => setIsCreateTournamentOpen(true)}
-            className="mt-4 sm:mt-0"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Create Tournament
-          </Button>
+          <div className="mt-4 sm:mt-0 flex space-x-4">
+            <Button 
+              onClick={() => setIsCreateTournamentOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Tournament
+            </Button>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -184,13 +238,15 @@ const OrganizerDashboard = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Total Participants</CardTitle>
+              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
               <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">
+                {tournaments.filter(t => t.status === "pending").length}
+              </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Across all tournaments
+                Tournaments waiting for approval
               </p>
             </CardContent>
           </Card>
@@ -202,12 +258,14 @@ const OrganizerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {tournaments.length > 0
-                  ? new Date(tournaments[0].startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })
+                {tournaments.filter(t => t.status === "upcoming").length > 0
+                  ? new Date(tournaments.filter(t => t.status === "upcoming")[0].startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })
                   : "N/A"}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {tournaments.length > 0 ? tournaments[0].name : "No upcoming tournaments"}
+                {tournaments.filter(t => t.status === "upcoming").length > 0 
+                  ? tournaments.filter(t => t.status === "upcoming")[0].name 
+                  : "No upcoming tournaments"}
               </p>
             </CardContent>
           </Card>
@@ -215,100 +273,102 @@ const OrganizerDashboard = () => {
         
         <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="mb-6">
-            <TabsTrigger value="upcoming">Upcoming Tournaments</TabsTrigger>
-            <TabsTrigger value="ongoing">Ongoing Tournaments</TabsTrigger>
-            <TabsTrigger value="completed">Completed Tournaments</TabsTrigger>
+            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            <TabsTrigger value="pending">Pending Approval</TabsTrigger>
+            <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="upcoming" className="space-y-4">
-            {tournaments.filter(t => t.status === "upcoming").length === 0 ? (
-              <div className="text-center py-12">
-                <Award className="h-12 w-12 mx-auto text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No upcoming tournaments</h3>
-                <p className="mt-1 text-gray-500 dark:text-gray-400">
-                  You don't have any upcoming tournaments scheduled.
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsCreateTournamentOpen(true)}
-                  className="mt-4"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Tournament
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {tournaments
-                  .filter(tournament => tournament.status === "upcoming")
-                  .map((tournament) => (
-                    <Card key={tournament.id} className="overflow-hidden">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">{tournament.name}</CardTitle>
-                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                            Upcoming
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center text-sm">
-                            <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>
-                              {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
-                            </span>
+          {["upcoming", "pending", "ongoing", "completed", "rejected"].map((tabValue) => (
+            <TabsContent key={tabValue} value={tabValue} className="space-y-4">
+              {tournaments.filter(t => t.status === tabValue).length === 0 ? (
+                <div className="text-center py-12">
+                  <Award className="h-12 w-12 mx-auto text-gray-400" />
+                  <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+                    No {tabValue} tournaments
+                  </h3>
+                  <p className="mt-1 text-gray-500 dark:text-gray-400">
+                    {tabValue === "pending" 
+                      ? "You don't have any tournaments waiting for approval."
+                      : tabValue === "rejected"
+                        ? "You don't have any rejected tournaments."
+                        : `You don't have any ${tabValue} tournaments scheduled.`
+                    }
+                  </p>
+                  {tabValue === "upcoming" && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsCreateTournamentOpen(true)}
+                      className="mt-4"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Tournament
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {tournaments
+                    .filter(tournament => tournament.status === tabValue)
+                    .map((tournament) => (
+                      <Card key={tournament.id} className="overflow-hidden">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <CardTitle className="text-lg">{tournament.name}</CardTitle>
+                            <Badge className={`
+                              ${tabValue === "upcoming" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
+                               tabValue === "pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" :
+                               tabValue === "ongoing" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" :
+                               tabValue === "completed" ? "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300" :
+                               "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"}
+                            `}>
+                              {tabValue === "pending" ? "Pending Approval" : 
+                               tabValue === "upcoming" ? "Upcoming" :
+                               tabValue === "ongoing" ? "Ongoing" :
+                               tabValue === "completed" ? "Completed" : "Rejected"}
+                            </Badge>
                           </div>
-                          <div className="flex items-center text-sm">
-                            <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center text-sm">
+                              <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <span>
+                                {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-sm">
+                              <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+                            </div>
+                            <div className="flex items-center text-sm">
+                              <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <span>{tournament.timeControl}</span>
+                            </div>
+                            <div className="flex items-center text-sm">
+                              <List className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <span>{tournament.rounds} Rounds</span>
+                            </div>
                           </div>
-                          <div className="flex items-center text-sm">
-                            <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.timeControl}</span>
+                          
+                          <div className="flex space-x-2 mt-4">
+                            <Button size="sm" variant="outline" className="flex-1">
+                              <File className="h-4 w-4 mr-2" />
+                              Details
+                            </Button>
+                            <Button size="sm" className="flex-1">
+                              <Users className="h-4 w-4 mr-2" />
+                              Manage
+                            </Button>
                           </div>
-                          <div className="flex items-center text-sm">
-                            <List className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
-                            <span>{tournament.rounds} Rounds</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex space-x-2 mt-4">
-                          <Button size="sm" variant="outline" className="flex-1">
-                            <File className="h-4 w-4 mr-2" />
-                            Details
-                          </Button>
-                          <Button size="sm" className="flex-1">
-                            <Users className="h-4 w-4 mr-2" />
-                            Manage
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="ongoing" className="space-y-4">
-            <div className="text-center py-12">
-              <Award className="h-12 w-12 mx-auto text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No ongoing tournaments</h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">
-                You don't have any tournaments currently in progress.
-              </p>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="completed" className="space-y-4">
-            <div className="text-center py-12">
-              <Award className="h-12 w-12 mx-auto text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No completed tournaments</h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">
-                You don't have any completed tournaments yet.
-              </p>
-            </div>
-          </TabsContent>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              )}
+            </TabsContent>
+          ))}
         </Tabs>
       </div>
       
@@ -467,30 +527,66 @@ const OrganizerDashboard = () => {
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="timeControl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Time Control</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select time control" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {TIME_CONTROLS.map((timeControl) => (
-                            <SelectItem key={timeControl} value={timeControl}>
-                              {timeControl}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <FormField
+                    control={form.control}
+                    name="timeControl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Time Control</FormLabel>
+                        <div className="space-y-2">
+                          {!isCustomTimeControl ? (
+                            <Select 
+                              onValueChange={(value) => {
+                                if (value === "custom") {
+                                  setIsCustomTimeControl(true);
+                                  field.onChange("");
+                                } else {
+                                  field.onChange(value);
+                                }
+                              }} 
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select time control" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {TIME_CONTROLS.map((timeControl) => (
+                                  <SelectItem key={timeControl} value={timeControl}>
+                                    {timeControl}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="custom">Custom Time Control</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="space-y-2">
+                              <Input 
+                                value={customTimeControl}
+                                onChange={(e) => setCustomTimeControl(e.target.value)}
+                                placeholder="e.g., 60min + 30sec increment"
+                              />
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setIsCustomTimeControl(false);
+                                  setCustomTimeControl("");
+                                }}
+                              >
+                                Use preset time control
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
               
               <DialogFooter className="mt-6">
