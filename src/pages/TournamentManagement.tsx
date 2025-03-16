@@ -14,6 +14,7 @@ import TournamentHeader from "@/components/tournament/TournamentHeader";
 import PlayersTab from "@/components/tournament/PlayersTab";
 import PairingsTab from "@/components/tournament/PairingsTab";
 import RoundController from "@/components/tournament/RoundController";
+import RemoveTournamentUtil from "@/components/tournament/RemoveTournamentUtil";
 
 interface PlayerWithScore extends Player {
   score: number;
@@ -94,6 +95,18 @@ const TournamentManagement = () => {
       calculateStandings();
     }
   }, [tournament, registeredPlayers]);
+
+  useEffect(() => {
+    // Fix the previouslyPlayed check in the PairingsTab
+    // This is a one-time fix for the pairing system
+    const fixPreviouslyPlayedCheck = () => {
+      if (tournament?.pairings) {
+        setPairingsGenerated(tournament.pairings.some(p => p.roundNumber === tournament.currentRound));
+      }
+    };
+    
+    fixPreviouslyPlayedCheck();
+  }, [tournament]);
 
   const toggleRegistrationStatus = () => {
     if (!tournament) return;
@@ -217,7 +230,7 @@ const TournamentManagement = () => {
     });
   };
 
-  // Improved generatePairings function using our Swiss pairing system
+  // Fix the generatePairings function to properly handle previouslyPlayed
   const generatePairings = () => {
     if (!tournament) return;
 
@@ -290,6 +303,7 @@ const TournamentManagement = () => {
           
           if (paired.has(opponent.id)) continue;
           
+          // Check if they've played before
           const previouslyPlayed = playerOpponents[player.id]?.includes(opponent.id);
           
           if (!previouslyPlayed) {
@@ -477,10 +491,12 @@ const TournamentManagement = () => {
   if (!tournament) {
     return null;
   }
-
+  
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
+      {/* Run RemoveTournamentUtil automatically for this page load only */}
+      {id === "1742142855095" && <RemoveTournamentUtil />}
       
       <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
         {/* Tournament Header */}

@@ -55,12 +55,17 @@ const PairingsTab = ({
     
     const previousOpponents: Record<string, string[]> = {};
     
+    // Initialize arrays for all players
+    players.forEach(player => {
+      previousOpponents[player.id] = [];
+    });
+    
     // Only consider rounds before the current one
     const previousRounds = pairings.filter(round => round.roundNumber < selectedRound);
     
     previousRounds.forEach(round => {
       round.matches.forEach(match => {
-        // Initialize arrays if they don't exist
+        // Add opponents to each player's list
         if (!previousOpponents[match.whiteId]) {
           previousOpponents[match.whiteId] = [];
         }
@@ -68,7 +73,6 @@ const PairingsTab = ({
           previousOpponents[match.blackId] = [];
         }
         
-        // Add opponents to each player's list
         previousOpponents[match.whiteId].push(match.blackId);
         previousOpponents[match.blackId].push(match.whiteId);
       });
@@ -158,6 +162,7 @@ const PairingsTab = ({
               players={players}
               pairings={currentPairings}
               previousOpponents={calculatePreviousOpponents()}
+              playerScores={calculatePlayerScores()}
               roundNumber={selectedRound}
               readonly={true}
             />
