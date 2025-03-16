@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar, Users, Clock, Award, Plus, MapPin, File, List } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -54,7 +53,10 @@ const tournamentSchema = z.object({
   location: z.string().min(3, "Location is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
-  rounds: z.string().transform(val => Number(val)),
+  rounds: z.preprocess(
+    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
+    z.number().min(1)
+  ),
   timeControl: z.string().min(2, "Time control is required")
 }).refine(data => {
   return data.endDate >= data.startDate;
@@ -62,6 +64,8 @@ const tournamentSchema = z.object({
   message: "End date must be after start date",
   path: ["endDate"]
 });
+
+type TournamentFormValues = z.infer<typeof tournamentSchema>;
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", 
@@ -93,7 +97,7 @@ const OrganizerDashboard = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
   
-  const form = useForm({
+  const form = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentSchema),
     defaultValues: {
       name: "",
@@ -103,13 +107,12 @@ const OrganizerDashboard = () => {
       location: "",
       city: "",
       state: "",
-      rounds: "9",
+      rounds: 9,
       timeControl: ""
     },
   });
 
   useEffect(() => {
-    // Ensure user is logged in, is a tournament organizer, and is approved
     if (!currentUser || 
         currentUser.role !== 'tournament_organizer' || 
         currentUser.status !== 'approved') {
@@ -117,7 +120,7 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, navigate]);
 
-  const handleCreateTournament = (data: z.infer<typeof tournamentSchema>) => {
+  const handleCreateTournament = (data: TournamentFormValues) => {
     const newTournament = {
       id: `${tournaments.length + 1}`,
       name: data.name,
@@ -443,8 +446,8 @@ const OrganizerDashboard = () => {
                     <FormItem>
                       <FormLabel>Number of Rounds</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value.toString()}
+                        onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                        value={field.value.toString()}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -470,7 +473,7 @@ const OrganizerDashboard = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Time Control</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select time control" />
