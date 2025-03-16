@@ -61,17 +61,6 @@ const PlayerProfile = () => {
           {/* Player Info Card */}
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
-              <div className="aspect-w-1 aspect-h-1 bg-gray-100 dark:bg-gray-800">
-                <img
-                  src={player.profileImage}
-                  alt={player.name}
-                  className="object-cover w-full h-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder.svg";
-                  }}
-                />
-              </div>
               <div className="p-6">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                   {player.title && (

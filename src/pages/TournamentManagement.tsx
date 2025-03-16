@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft, Users, Plus, X, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Users, Plus, X, Check, AlertTriangle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,18 +22,24 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { Badge } from "@/components/ui/badge";
-
-interface Player {
-  id: string;
-  fullName: string;
-  email?: string;
-  rating?: number;
-  state?: string;
-  profileImage?: string;
-}
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Player } from "@/lib/mockData";
+import { getAllPlayers, addPlayer } from "@/lib/mockData";
 
 interface Tournament {
   id: string;
@@ -55,6 +61,22 @@ interface Tournament {
   players?: string[]; // IDs of players in the tournament
 }
 
+// Schema for new player form
+const playerSchema = z.object({
+  name: z.string().min(3, { message: "Name must be at least 3 characters" }),
+  title: z.string().optional(),
+  gender: z.enum(["M", "F"], { message: "Please select a gender" }),
+  state: z.string().min(1, { message: "State is required" }),
+  country: z.string().default("Nigeria"),
+  birthYear: z.string().refine(val => {
+    const year = parseInt(val);
+    return !isNaN(year) && year > 1900 && year <= new Date().getFullYear();
+  }, { message: "Please enter a valid birth year" }),
+  club: z.string().optional(),
+});
+
+type PlayerFormValues = z.infer<typeof playerSchema>;
+
 const TournamentManagement = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -63,10 +85,25 @@ const TournamentManagement = () => {
   const [registeredPlayers, setRegisteredPlayers] = useState<Player[]>([]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
+  const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("players");
+
+  // Form for creating a new player
+  const form = useForm<PlayerFormValues>({
+    resolver: zodResolver(playerSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      gender: "M",
+      state: "",
+      country: "Nigeria",
+      birthYear: "",
+      club: "",
+    },
+  });
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'tournament_organizer') {
@@ -91,18 +128,15 @@ const TournamentManagement = () => {
         setTournament(foundTournament);
         
         // Load all players
-        const savedPlayers = localStorage.getItem('players');
-        if (savedPlayers) {
-          const parsedPlayers = JSON.parse(savedPlayers);
-          setAllPlayers(parsedPlayers);
-          
-          // If tournament has players, filter for registered ones
-          if (foundTournament.players && foundTournament.players.length > 0) {
-            const tournamentPlayers = parsedPlayers.filter(
-              (player: Player) => foundTournament.players?.includes(player.id)
-            );
-            setRegisteredPlayers(tournamentPlayers);
-          }
+        const players = getAllPlayers();
+        setAllPlayers(players);
+        
+        // If tournament has players, filter for registered ones
+        if (foundTournament.players && foundTournament.players.length > 0) {
+          const tournamentPlayers = players.filter(
+            (player: Player) => foundTournament.players?.includes(player.id)
+          );
+          setRegisteredPlayers(tournamentPlayers);
         }
       } else {
         navigate('/organizer-dashboard');
@@ -120,12 +154,22 @@ const TournamentManagement = () => {
     // Find the selected player
     const playerToAdd = allPlayers.find(p => p.id === selectedPlayerId);
     if (!playerToAdd) return;
+
+    // Check if player status is pending
+    if (playerToAdd.status === 'pending') {
+      toast({
+        title: "Player pending approval",
+        description: `${playerToAdd.name} needs to be approved by a rating officer first.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Check if player is already registered
     if (tournament.players?.includes(selectedPlayerId)) {
       toast({
         title: "Player already registered",
-        description: `${playerToAdd.fullName} is already registered for this tournament.`,
+        description: `${playerToAdd.name} is already registered for this tournament.`,
         variant: "destructive",
       });
       return;
@@ -155,7 +199,7 @@ const TournamentManagement = () => {
     
     toast({
       title: "Player added",
-      description: `${playerToAdd.fullName} has been added to the tournament.`,
+      description: `${playerToAdd.name} has been added to the tournament.`,
     });
   };
 
@@ -204,7 +248,7 @@ const TournamentManagement = () => {
     // Update tournament status to ongoing
     const updatedTournament = {
       ...tournament,
-      status: "ongoing",
+      status: "ongoing" as const,
       registrationOpen: false
     };
     
@@ -257,10 +301,50 @@ const TournamentManagement = () => {
     });
   };
 
+  const handleCreatePlayer = (data: PlayerFormValues) => {
+    if (!currentUser) return;
+    
+    // Create new player object
+    const newPlayer: Player = {
+      id: `player_${Date.now()}`,
+      name: data.name,
+      title: data.title && data.title.length > 0 ? data.title : undefined,
+      rating: 0, // New players start with 0 rating
+      country: data.country,
+      state: data.state,
+      club: data.club && data.club.length > 0 ? data.club : undefined,
+      gender: data.gender,
+      birthYear: parseInt(data.birthYear),
+      ratingHistory: [{ date: new Date().toISOString().split('T')[0], rating: 0 }],
+      tournamentResults: [],
+      status: 'pending', // New players need approval
+      createdBy: currentUser.id
+    };
+    
+    // Add player to localStorage
+    addPlayer(newPlayer);
+    
+    // Update local state
+    setAllPlayers(prev => [...prev, newPlayer]);
+    
+    // Reset form and close dialog
+    form.reset();
+    setIsCreatePlayerOpen(false);
+    
+    toast({
+      title: "Player created",
+      description: "The player has been created and is awaiting approval from a rating officer.",
+    });
+  };
+
+  const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", ""];
+
   const filteredPlayers = allPlayers
     .filter(player => 
       !registeredPlayers.some(rp => rp.id === player.id) &&
-      player.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+      player.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      player.status !== 'pending' && // Only show approved players
+      player.status !== 'rejected'
     )
     .slice(0, 10);
 
@@ -353,13 +437,24 @@ const TournamentManagement = () => {
               </h2>
               
               {tournament.status === "upcoming" && (
-                <Button
-                  onClick={() => setIsAddPlayerOpen(true)}
-                  className="flex items-center"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Player
-                </Button>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => setIsCreatePlayerOpen(true)}
+                    className="flex items-center"
+                    variant="outline"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create New Player
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setIsAddPlayerOpen(true)}
+                    className="flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Existing Player
+                  </Button>
+                </div>
               )}
             </div>
             
@@ -377,13 +472,22 @@ const TournamentManagement = () => {
                   </p>
                   
                   {tournament.status === "upcoming" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsAddPlayerOpen(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Player
-                    </Button>
+                    <div className="flex justify-center space-x-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreatePlayerOpen(true)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Create New Player
+                      </Button>
+                      
+                      <Button
+                        onClick={() => setIsAddPlayerOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Existing Player
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -393,31 +497,25 @@ const TournamentManagement = () => {
                   <Card key={player.id} className="overflow-hidden">
                     <CardContent className="p-4">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mr-3">
-                          {player.profileImage ? (
-                            <img 
-                              src={player.profileImage} 
-                              alt={player.fullName}
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = "/placeholder.svg";
-                              }}
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-primary text-primary-foreground">
-                              {player.fullName.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 dark:text-white">
-                            {player.fullName}
+                          <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
+                            {player.title && (
+                              <span className="text-gold-dark dark:text-gold-light mr-1">
+                                {player.title}
+                              </span>
+                            )}
+                            {player.name}
                           </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Rating: {player.rating || "Unrated"}
-                          </p>
+                          <div className="flex flex-col space-y-1">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Rating: {player.rating || "Unrated"}
+                            </p>
+                            {player.state && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {player.state}, {player.country || "Nigeria"}
+                              </p>
+                            )}
+                          </div>
                         </div>
                         
                         {tournament.status === "upcoming" && (
@@ -482,6 +580,7 @@ const TournamentManagement = () => {
         </Tabs>
       </div>
       
+      {/* Dialog for adding existing player */}
       <Dialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -507,7 +606,7 @@ const TournamentManagement = () => {
                 {filteredPlayers.length > 0 ? (
                   filteredPlayers.map(player => (
                     <SelectItem key={player.id} value={player.id}>
-                      {player.fullName} {player.rating ? `(${player.rating})` : "(Unrated)"}
+                      {player.title ? `${player.title} ` : ""}{player.name} {player.rating ? `(${player.rating})` : "(Unrated)"}
                     </SelectItem>
                   ))
                 ) : (
@@ -527,6 +626,145 @@ const TournamentManagement = () => {
               Add Player
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog for creating new player */}
+      <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Player</DialogTitle>
+            <DialogDescription>
+              Create a new player that will need approval from a rating officer.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4 py-2">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Player Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Full Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chess Title (if any)</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a title (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {chessTitles.map(title => (
+                          <SelectItem key={title} value={title}>
+                            {title ? title : "No Title"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      GM (Grandmaster), IM (International Master), etc.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Male</SelectItem>
+                          <SelectItem value="F">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="birthYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Birth Year</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="YYYY" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Input placeholder="State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="club"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chess Club (if any)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Club Name (optional)" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsCreatePlayerOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Create Player
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>

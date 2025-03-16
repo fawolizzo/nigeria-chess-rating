@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -9,7 +8,6 @@ export interface Player {
   state?: string;
   gender: 'M' | 'F';
   birthYear?: number;
-  profileImage?: string;
   ratingHistory: { date: string; rating: number }[];
   achievements?: string[];
   tournamentResults: {
@@ -17,6 +15,8 @@ export interface Player {
     position: number;
     ratingChange: number;
   }[];
+  status?: 'pending' | 'approved' | 'rejected';
+  createdBy?: string; // ID of the user who created this player
 }
 
 export interface Tournament {
@@ -374,4 +374,30 @@ export const getPlayersByTournamentId = (tournamentId: string): Player[] => {
   return players.filter(player => 
     player.tournamentResults.some(result => result.tournamentId === tournamentId)
   );
+};
+
+// Helper function to save players to localStorage
+export const savePlayers = (updatedPlayers: Player[]): void => {
+  localStorage.setItem('players', JSON.stringify(updatedPlayers));
+};
+
+// Helper function to get all players from localStorage
+export const getAllPlayers = (): Player[] => {
+  const savedPlayers = localStorage.getItem('players');
+  return savedPlayers ? JSON.parse(savedPlayers) : players;
+};
+
+// Helper function to update a player in localStorage
+export const updatePlayer = (updatedPlayer: Player): void => {
+  const allPlayers = getAllPlayers();
+  const updatedPlayers = allPlayers.map(player => 
+    player.id === updatedPlayer.id ? updatedPlayer : player
+  );
+  savePlayers(updatedPlayers);
+};
+
+// Helper function to add a new player to localStorage
+export const addPlayer = (newPlayer: Player): void => {
+  const allPlayers = getAllPlayers();
+  savePlayers([...allPlayers, newPlayer]);
 };

@@ -1,548 +1,560 @@
 
 import { useState, useEffect } from "react";
-import { Shield, CheckCircle, XCircle, Eye, Users, LogOut, Calendar } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { toast } from "@/components/ui/use-toast";
-import { useUser, User } from "@/contexts/UserContext";
+import { getAllPlayers, updatePlayer, addPlayer, Player } from "@/lib/mockData";
+import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription,
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/use-toast";
+import { Check, X, Users, UserPlus, AlertTriangle } from "lucide-react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useUser as useUserContext } from "@/contexts/UserContext";
 
-// Define Tournament interface
-interface Tournament {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  city: string;
-  state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
-  timeControl: string;
-  rounds: number;
-  organizerId: string;
-}
+const playerSchema = z.object({
+  name: z.string().min(3, { message: "Name must be at least 3 characters" }),
+  title: z.string().optional(),
+  gender: z.enum(["M", "F"], { message: "Please select a gender" }),
+  state: z.string().min(1, { message: "State is required" }),
+  country: z.string().default("Nigeria"),
+  birthYear: z.string().refine(val => {
+    const year = parseInt(val);
+    return !isNaN(year) && year > 1900 && year <= new Date().getFullYear();
+  }, { message: "Please enter a valid birth year" }),
+  club: z.string().optional(),
+  rating: z.string().refine(val => {
+    const rating = parseInt(val);
+    return !isNaN(rating) && rating >= 0;
+  }, { message: "Please enter a valid rating" }),
+});
 
-const OrganizerCard = ({ organizer, onApprove, onReject, isApproved = false }) => {
-  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-NG', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(date);
-  };
-
-  return (
-    <Card className="mb-4">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{organizer.fullName}</CardTitle>
-            <CardDescription>{organizer.email}</CardDescription>
-          </div>
-          <Badge variant={isApproved ? "default" : "outline"} className={isApproved ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" : ""}>
-            {isApproved ? "Approved" : "Pending"}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pb-2">
-        <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
-          <span>State: {organizer.state}</span>
-          <span>{isApproved ? "Approved on:" : "Applied on:"} {formatDate(isApproved ? organizer.approvalDate : organizer.registrationDate)}</span>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between pt-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setIsViewDetailsOpen(true)}
-          className="text-xs"
-        >
-          <Eye className="mr-1 h-3 w-3" />
-          View Details
-        </Button>
-        
-        {!isApproved && (
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              variant="destructive" 
-              onClick={() => onReject(organizer.id)}
-              className="text-xs"
-            >
-              <XCircle className="mr-1 h-3 w-3" />
-              Reject
-            </Button>
-            <Button 
-              size="sm" 
-              variant="default" 
-              onClick={() => onApprove(organizer.id)}
-              className="text-xs"
-            >
-              <CheckCircle className="mr-1 h-3 w-3" />
-              Approve
-            </Button>
-          </div>
-        )}
-      </CardFooter>
-      
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Organizer Details</DialogTitle>
-            <DialogDescription>
-              Full information about the tournament organizer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Full Name:</span>
-              <span className="col-span-2">{organizer.fullName}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Email:</span>
-              <span className="col-span-2">{organizer.email}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Phone:</span>
-              <span className="col-span-2">{organizer.phoneNumber}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">State:</span>
-              <span className="col-span-2">{organizer.state}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Registration Date:</span>
-              <span className="col-span-2">{formatDate(organizer.registrationDate)}</span>
-            </div>
-            {isApproved && organizer.approvalDate && (
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <span className="font-medium text-gray-500 dark:text-gray-400">Approval Date:</span>
-                <span className="col-span-2">{formatDate(organizer.approvalDate)}</span>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsViewDetailsOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-};
-
-const TournamentCard = ({ tournament, onApprove, onReject }) => {
-  const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
-  const { users } = useUser();
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-NG', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(date);
-  };
-
-  // Find organizer details
-  const organizer = users.find(user => user.id === tournament.organizerId);
-
-  return (
-    <Card className="mb-4">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">{tournament.name}</CardTitle>
-            <CardDescription>
-              {organizer ? `Organized by: ${organizer.fullName}` : 'Unknown organizer'}
-            </CardDescription>
-          </div>
-          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300">
-            Pending Approval
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pb-2">
-        <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-          <div className="flex items-center">
-            <Calendar className="mr-2 h-4 w-4" />
-            <span>{formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}</span>
-          </div>
-          <div className="flex items-center">
-            <Shield className="mr-2 h-4 w-4" />
-            <span>{tournament.rounds} rounds, {tournament.timeControl}</span>
-          </div>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between pt-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setIsViewDetailsOpen(true)}
-          className="text-xs"
-        >
-          <Eye className="mr-1 h-3 w-3" />
-          View Details
-        </Button>
-        
-        <div className="flex gap-2">
-          <Button 
-            size="sm" 
-            variant="destructive" 
-            onClick={() => onReject(tournament.id)}
-            className="text-xs"
-          >
-            <XCircle className="mr-1 h-3 w-3" />
-            Reject
-          </Button>
-          <Button 
-            size="sm" 
-            variant="default" 
-            onClick={() => onApprove(tournament.id)}
-            className="text-xs"
-          >
-            <CheckCircle className="mr-1 h-3 w-3" />
-            Approve
-          </Button>
-        </div>
-      </CardFooter>
-      
-      <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Tournament Details</DialogTitle>
-            <DialogDescription>
-              Full information about the tournament.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Name:</span>
-              <span className="col-span-2">{tournament.name}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Description:</span>
-              <span className="col-span-2">{tournament.description}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Dates:</span>
-              <span className="col-span-2">{formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Location:</span>
-              <span className="col-span-2">{tournament.location}, {tournament.city}, {tournament.state}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Rounds:</span>
-              <span className="col-span-2">{tournament.rounds}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Time Control:</span>
-              <span className="col-span-2">{tournament.timeControl}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Organizer:</span>
-              <span className="col-span-2">{organizer ? organizer.fullName : 'Unknown'}</span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsViewDetailsOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-};
+type PlayerFormValues = z.infer<typeof playerSchema>;
 
 const OfficerDashboard = () => {
-  const { users, approveUser, rejectUser, currentUser, logout } = useUser();
+  const { currentUser } = useUserContext();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("organizers");
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
+  const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
+  const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Filter users to get tournament organizers
-  const pendingOrganizers = users.filter(
-    user => user.role === 'tournament_organizer' && user.status === 'pending'
-  );
-  
-  const approvedOrganizers = users.filter(
-    user => user.role === 'tournament_organizer' && user.status === 'approved'
-  );
+  const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", ""];
 
-  // Load tournaments from localStorage
-  useEffect(() => {
-    const savedTournaments = localStorage.getItem('tournaments');
-    if (savedTournaments) {
-      const parsedTournaments = JSON.parse(savedTournaments);
-      setTournaments(parsedTournaments);
-    }
-  }, []);
-
-  // Get pending tournaments
-  const pendingTournaments = tournaments.filter(t => t.status === "pending");
+  // Form for creating a new player
+  const form = useForm<PlayerFormValues>({
+    resolver: zodResolver(playerSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      gender: "M",
+      state: "",
+      country: "Nigeria",
+      birthYear: "",
+      club: "",
+      rating: "0",
+    },
+  });
 
   useEffect(() => {
-    // Ensure user is logged in and is a rating officer
     if (!currentUser || currentUser.role !== 'rating_officer') {
       navigate('/login');
+      return;
     }
+
+    const loadPlayers = () => {
+      setIsLoading(true);
+      
+      const allPlayers = getAllPlayers();
+      
+      // Filter players by status
+      const pending = allPlayers.filter((p: Player) => p.status === 'pending');
+      const approved = allPlayers.filter((p: Player) => p.status === 'approved' || !p.status);
+      
+      setPendingPlayers(pending);
+      setApprovedPlayers(approved);
+      
+      setIsLoading(false);
+    };
+
+    loadPlayers();
   }, [currentUser, navigate]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleApprovePlayer = (player: Player) => {
+    // Update player status
+    const updatedPlayer = {
+      ...player,
+      status: 'approved' as const
+    };
+    
+    // Update in localStorage
+    updatePlayer(updatedPlayer);
+    
+    // Update local state
+    setPendingPlayers(prev => prev.filter(p => p.id !== player.id));
+    setApprovedPlayers(prev => [...prev, updatedPlayer]);
+    
     toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-      variant: "default",
+      title: "Player approved",
+      description: `${player.name} has been approved.`,
     });
   };
 
-  const handleApproveOrganizer = (organizerId) => {
-    approveUser(organizerId);
+  const handleRejectPlayer = (player: Player) => {
+    // Update player status
+    const updatedPlayer = {
+      ...player,
+      status: 'rejected' as const
+    };
     
-    // Show success toast
-    const organizer = users.find(org => org.id === organizerId);
-    if (organizer) {
-      toast({
-        title: "Organizer Approved",
-        description: `${organizer.fullName} has been approved as a tournament organizer.`,
-        variant: "default",
-      });
-    }
+    // Update in localStorage
+    updatePlayer(updatedPlayer);
+    
+    // Update local state
+    setPendingPlayers(prev => prev.filter(p => p.id !== player.id));
+    
+    toast({
+      title: "Player rejected",
+      description: `${player.name} has been rejected.`,
+    });
   };
 
-  const handleRejectOrganizer = (organizerId) => {
-    rejectUser(organizerId);
+  const handleCreatePlayer = (data: PlayerFormValues) => {
+    if (!currentUser) return;
     
-    // Show success toast
-    const organizer = users.find(org => org.id === organizerId);
-    if (organizer) {
-      toast({
-        title: "Organizer Rejected",
-        description: `${organizer.fullName}'s application has been rejected.`,
-        variant: "destructive",
-      });
-    }
+    // Create new player object
+    const newPlayer: Player = {
+      id: `player_${Date.now()}`,
+      name: data.name,
+      title: data.title && data.title.length > 0 ? data.title : undefined,
+      rating: parseInt(data.rating),
+      country: data.country,
+      state: data.state,
+      club: data.club && data.club.length > 0 ? data.club : undefined,
+      gender: data.gender,
+      birthYear: parseInt(data.birthYear),
+      ratingHistory: [{ 
+        date: new Date().toISOString().split('T')[0], 
+        rating: parseInt(data.rating)
+      }],
+      tournamentResults: [],
+      status: 'approved', // Players created by rating officers are auto-approved
+      createdBy: currentUser.id
+    };
+    
+    // Add player to localStorage
+    addPlayer(newPlayer);
+    
+    // Update local state
+    setApprovedPlayers(prev => [...prev, newPlayer]);
+    
+    // Reset form and close dialog
+    form.reset();
+    setIsCreatePlayerOpen(false);
+    
+    toast({
+      title: "Player created",
+      description: "The player has been created successfully.",
+    });
   };
 
-  const handleApproveTournament = (tournamentId) => {
-    // Update tournaments in state
-    const updatedTournaments = tournaments.map(tournament =>
-      tournament.id === tournamentId
-        ? { ...tournament, status: "upcoming" as const }
-        : tournament
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
+          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
+        </div>
+      </div>
     );
-    
-    setTournaments(updatedTournaments);
-    
-    // Save to localStorage
-    localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-    
-    // Show success toast
-    const tournament = tournaments.find(t => t.id === tournamentId);
-    if (tournament) {
-      toast({
-        title: "Tournament Approved",
-        description: `${tournament.name} has been approved and is now listed as upcoming.`,
-        variant: "default",
-      });
-    }
-  };
-
-  const handleRejectTournament = (tournamentId) => {
-    // Update tournaments in state
-    const updatedTournaments = tournaments.map(tournament =>
-      tournament.id === tournamentId
-        ? { ...tournament, status: "rejected" as const }
-        : tournament
-    );
-    
-    setTournaments(updatedTournaments);
-    
-    // Save to localStorage
-    localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-    
-    // Show success toast
-    const tournament = tournaments.find(t => t.id === tournamentId);
-    if (tournament) {
-      toast({
-        title: "Tournament Rejected",
-        description: `${tournament.name} has been rejected.`,
-        variant: "destructive",
-      });
-    }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto pt-28 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto animate-fade-in">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Welcome, {currentUser?.fullName}!
+              Rating Officer Dashboard
             </h1>
-            <p className="mt-1 text-gray-600 dark:text-gray-400">
-              Manage tournament organizers and tournaments
+            <p className="text-gray-500 dark:text-gray-400">
+              Manage players, approve registrations, and monitor ratings
             </p>
           </div>
-          <div className="mt-4 sm:mt-0 flex items-center gap-4">
-            <div className="flex items-center">
-              <Shield className="mr-2 h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-blue-600 dark:text-blue-400 font-medium">NCR Rating Officer</span>
-            </div>
-            <Button 
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Pending Organizers</CardTitle>
-              <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pendingOrganizers.length}</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Organizers waiting for approval
-              </p>
-            </CardContent>
-          </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Pending Tournaments</CardTitle>
-              <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pendingTournaments.length}</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Tournaments waiting for approval
-              </p>
-            </CardContent>
-          </Card>
+          <Button 
+            onClick={() => setIsCreatePlayerOpen(true)}
+            className="mt-4 md:mt-0 flex items-center"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Create New Player
+          </Button>
         </div>
         
-        <Tabs defaultValue="organizers" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue="pending" className="w-full">
           <TabsList className="mb-6">
-            <TabsTrigger value="organizers" className="relative">
-              Organizers
-              {pendingOrganizers.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                  {pendingOrganizers.length}
-                </span>
+            <TabsTrigger value="pending">
+              Pending Players
+              {pendingPlayers.length > 0 && (
+                <Badge className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                  {pendingPlayers.length}
+                </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="tournaments" className="relative">
-              Tournaments
-              {pendingTournaments.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                  {pendingTournaments.length}
-                </span>
-              )}
-            </TabsTrigger>
+            <TabsTrigger value="players">All Players</TabsTrigger>
+            <TabsTrigger value="tournaments">Tournament Results</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="organizers" className="space-y-4">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4">Pending Approval</h3>
-              {pendingOrganizers.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <CheckCircle className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+          <TabsContent value="pending" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Players Pending Approval</CardTitle>
+                <CardDescription>
+                  These players were created by tournament organizers and need your approval
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingPlayers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="h-10 w-10 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pending players</h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      There are no players waiting for approval at this time.
+                    </p>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No Pending Requests</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    There are no tournament organizers waiting for approval.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  {pendingOrganizers.map((organizer) => (
-                    <OrganizerCard 
-                      key={organizer.id}
-                      organizer={organizer}
-                      onApprove={handleApproveOrganizer}
-                      onReject={handleRejectOrganizer}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Approved Organizers</h3>
-              {approvedOrganizers.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <Users className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+                ) : (
+                  <div className="space-y-4">
+                    {pendingPlayers.map(player => (
+                      <div key={player.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
+                        <div>
+                          <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
+                            {player.title && (
+                              <span className="text-gold-dark dark:text-gold-light mr-1">
+                                {player.title}
+                              </span>
+                            )}
+                            {player.name}
+                          </h3>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {player.state}, {player.country || "Nigeria"} • {player.gender === 'M' ? 'Male' : 'Female'} • Born: {player.birthYear}
+                          </div>
+                          {player.club && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              Club: {player.club}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:border-red-900/30 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                            onClick={() => handleRejectPlayer(player)}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:border-green-900/30 dark:hover:bg-green-900/20 dark:hover:text-green-300"
+                            onClick={() => handleApprovePlayer(player)}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No Approved Organizers</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    There are no approved tournament organizers yet.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  {approvedOrganizers.map((organizer) => (
-                    <OrganizerCard 
-                      key={organizer.id}
-                      organizer={organizer}
-                      isApproved={true}
-                      onApprove={() => {}}
-                      onReject={() => {}}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           
-          <TabsContent value="tournaments" className="space-y-4">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4">Pending Tournament Approval</h3>
-              {pendingTournaments.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                    <CheckCircle className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+          <TabsContent value="players" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Active Players</CardTitle>
+                <CardDescription>
+                  View and manage all approved players
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {approvedPlayers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-10 w-10 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No players found</h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                      There are no approved players in the system.
+                    </p>
+                    <Button
+                      onClick={() => setIsCreatePlayerOpen(true)}
+                      className="flex items-center"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Create New Player
+                    </Button>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No Pending Tournaments</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    There are no tournaments waiting for approval.
+                ) : (
+                  <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-800">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-gray-800/50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Name</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Rating</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">State</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Gender</th>
+                          <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        {approvedPlayers.map(player => (
+                          <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {player.title && (
+                                    <span className="text-gold-dark dark:text-gold-light mr-1">
+                                      {player.title}
+                                    </span>
+                                  )}
+                                  {player.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                              {player.rating || "Unrated"}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                              {player.state || "-"}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                              {player.gender === 'M' ? 'Male' : 'Female'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => navigate(`/player/${player.id}`)}
+                              >
+                                View Profile
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="tournaments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tournament Results</CardTitle>
+                <CardDescription>
+                  View and process tournament results for rating calculations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Tournament result processing will be implemented in a future update.
                   </p>
                 </div>
-              ) : (
-                <div>
-                  {pendingTournaments.map((tournament) => (
-                    <TournamentCard 
-                      key={tournament.id}
-                      tournament={tournament}
-                      onApprove={handleApproveTournament}
-                      onReject={handleRejectTournament}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Dialog for creating new player */}
+      <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create New Player</DialogTitle>
+            <DialogDescription>
+              Create a new player with an official initial rating.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4 py-2">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Player Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Full Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chess Title (if any)</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a title (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {chessTitles.map(title => (
+                            <SelectItem key={title} value={title}>
+                              {title ? title : "No Title"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="rating"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Initial Rating</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Male</SelectItem>
+                          <SelectItem value="F">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="birthYear"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Birth Year</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="YYYY" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Input placeholder="State" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="club"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chess Club (if any)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Club Name (optional)" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsCreatePlayerOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Create Player
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

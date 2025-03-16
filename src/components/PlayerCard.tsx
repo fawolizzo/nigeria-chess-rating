@@ -22,17 +22,6 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
       <div className="relative overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-gold hover:border-opacity-50 dark:hover:border-gold-light dark:hover:border-opacity-30">
         <div className="p-6">
           <div className="flex items-center space-x-4">
-            <div className="relative h-14 w-14 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-              <img
-                src={player.profileImage}
-                alt={player.name}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/placeholder.svg";
-                }}
-              />
-            </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold truncate flex items-center">
                 {player.title && (
