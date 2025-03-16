@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, CheckCircle2, ShieldCheck, Users, BarChart3, UserPlus } from "lucide-react";
+import { ChevronRight, CheckCircle2, ShieldCheck, Users, BarChart3, UserPlus, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OrganizerApprovals from "./OrganizerApprovals";
 import { getAllTournaments, updateTournament } from "@/lib/mockData";
 import TournamentRatingDialog from "./TournamentRatingDialog";
 import PlayerManagement from "./PlayerManagement";
+import ApprovedOrganizers from "./ApprovedOrganizers";
+import ApprovedTournaments from "./ApprovedTournaments";
 
 const OfficerDashboardContent = () => {
   const navigate = useNavigate();
@@ -66,8 +67,14 @@ const OfficerDashboardContent = () => {
         <TabsTrigger value="tournament-reviews" className="flex gap-1 items-center">
           <BarChart3 size={16} /> Tournament Reviews
         </TabsTrigger>
+        <TabsTrigger value="approved-tournaments" className="flex gap-1 items-center">
+          <ThumbsUp size={16} /> Approved Tournaments
+        </TabsTrigger>
         <TabsTrigger value="organizer-approvals" className="flex gap-1 items-center">
           <ShieldCheck size={16} /> Organizer Approvals
+        </TabsTrigger>
+        <TabsTrigger value="approved-organizers" className="flex gap-1 items-center">
+          <CheckCircle2 size={16} /> Approved Organizers
         </TabsTrigger>
         <TabsTrigger value="player-management" className="flex gap-1 items-center">
           <UserPlus size={16} /> Player Management
@@ -186,8 +193,16 @@ const OfficerDashboardContent = () => {
         </div>
       </TabsContent>
       
+      <TabsContent value="approved-tournaments">
+        <ApprovedTournaments refreshTrigger={refreshTrigger} />
+      </TabsContent>
+      
       <TabsContent value="organizer-approvals">
         <OrganizerApprovals />
+      </TabsContent>
+      
+      <TabsContent value="approved-organizers">
+        <ApprovedOrganizers />
       </TabsContent>
       
       <TabsContent value="player-management">

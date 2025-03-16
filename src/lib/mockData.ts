@@ -93,6 +93,33 @@ export const addPlayer = (newPlayer: Player): void => {
   savePlayers([...allPlayers, newPlayer]);
 };
 
+export const deletePlayer = (playerId: string): void => {
+  const allPlayers = getAllPlayers();
+  const filteredPlayers = allPlayers.filter(player => player.id !== playerId);
+  savePlayers(filteredPlayers);
+  
+  // Also need to remove player from tournaments
+  const allTournaments = getAllTournaments();
+  const updatedTournaments = allTournaments.map(tournament => {
+    if (tournament.players?.includes(playerId)) {
+      return {
+        ...tournament,
+        players: tournament.players.filter(id => id !== playerId),
+        // Remove player from pairings as well
+        pairings: tournament.pairings?.map(pairing => ({
+          ...pairing,
+          matches: pairing.matches.filter(
+            match => match.whiteId !== playerId && match.blackId !== playerId
+          )
+        }))
+      };
+    }
+    return tournament;
+  });
+  
+  saveTournaments(updatedTournaments);
+};
+
 // Helper functions for tournaments
 export const getTournamentById = (id: string): Tournament | undefined => {
   return getAllTournaments().find(tournament => tournament.id === id);

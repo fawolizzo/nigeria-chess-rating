@@ -4,17 +4,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAllPlayers, Player } from "@/lib/mockData";
+import { getAllPlayers, Player, deletePlayer } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Search, Pencil } from "lucide-react";
+import { UserPlus, Search, Pencil, Trash2 } from "lucide-react";
 import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 const PlayerManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
@@ -28,6 +41,23 @@ const PlayerManagement: React.FC = () => {
   const handleEditPlayer = (player: Player) => {
     setSelectedPlayer(player);
     setIsEditDialogOpen(true);
+  };
+  
+  const handleDeletePlayer = (player: Player) => {
+    setSelectedPlayer(player);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDeletePlayer = () => {
+    if (selectedPlayer) {
+      deletePlayer(selectedPlayer.id);
+      toast({
+        title: "Player deleted",
+        description: `${selectedPlayer.name} has been removed from the system.`,
+      });
+      setIsDeleteDialogOpen(false);
+      setRefreshTrigger(prev => prev + 1);
+    }
   };
   
   const handleRefresh = () => {
@@ -112,6 +142,14 @@ const PlayerManagement: React.FC = () => {
                           >
                             <Pencil size={14} className="mr-1" /> Edit
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => handleDeletePlayer(player)}
+                          >
+                            <Trash2 size={14} className="mr-1" /> Delete
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -135,6 +173,27 @@ const PlayerManagement: React.FC = () => {
         onOpenChange={setIsEditDialogOpen}
         onSuccess={handleRefresh}
       />
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this player?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the player
+              {selectedPlayer && ` ${selectedPlayer.name}`} and remove their records from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePlayer}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
