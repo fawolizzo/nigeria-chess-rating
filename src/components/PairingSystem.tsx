@@ -9,6 +9,7 @@ interface PairingSystemProps {
   players: Player[];
   existingPairings?: Array<{ whiteId: string; blackId: string }>;
   previousOpponents?: Record<string, string[]>;
+  playerScores?: Record<string, number>;
   onGeneratePairings?: (pairings: Array<{ white: Player; black: Player }>) => void;
   readOnly?: boolean;
   pairings?: Array<{
@@ -34,6 +35,7 @@ const PairingSystem = ({
   players,
   existingPairings = [],
   previousOpponents = {},
+  playerScores = {},
   onGeneratePairings,
   readOnly = false,
   pairings = [],
@@ -79,21 +81,23 @@ const PairingSystem = ({
       return;
     }
 
-    // Step 1: Calculate player scores from previous rounds
-    const playerScores: Record<string, number> = {};
-    const playerOpponents: Record<string, Set<string>> = { ...previousOpponents };
+    // Step 1: Use playerScores from props if provided, otherwise initialize
+    const playerScoringMap = { ...playerScores };
+    const playerOpponentsMap: Record<string, string[]> = {};
     
     // Initialize scores and opponent lists
     players.forEach(player => {
-      playerScores[player.id] = 0;
-      playerOpponents[player.id] = playerOpponents[player.id] || new Set();
+      if (playerScoringMap[player.id] === undefined) {
+        playerScoringMap[player.id] = 0;
+      }
+      playerOpponentsMap[player.id] = previousOpponents[player.id] || [];
     });
     
     // Step 2: Group players by their score
     const scoreGroups: Record<number, Player[]> = {};
     
     players.forEach(player => {
-      const score = playerScores[player.id] || 0;
+      const score = playerScoringMap[player.id] || 0;
       scoreGroups[score] = scoreGroups[score] || [];
       scoreGroups[score].push(player);
     });
@@ -127,8 +131,8 @@ const PairingSystem = ({
           if (paired.has(opponent.id)) continue;
           
           // Check if these players have faced each other before
-          const opponentSet = playerOpponents[player.id] || new Set();
-          if (!opponentSet.has(opponent.id)) {
+          const opponentList = playerOpponentsMap[player.id] || [];
+          if (!opponentList.includes(opponent.id)) {
             // Pair these players
             const isWhite = Math.random() > 0.5; // Random color assignment
             
@@ -153,8 +157,8 @@ const PairingSystem = ({
     const unpaired = players.filter(p => !paired.has(p.id))
       .sort((a, b) => {
         // Sort by score (desc) then by rating (desc)
-        const scoreA = playerScores[a.id] || 0;
-        const scoreB = playerScores[b.id] || 0;
+        const scoreA = playerScoringMap[a.id] || 0;
+        const scoreB = playerScoringMap[b.id] || 0;
         if (scoreB !== scoreA) return scoreB - scoreA;
         return b.rating - a.rating;
       });
@@ -166,9 +170,9 @@ const PairingSystem = ({
         const player2 = unpaired[i + 1];
         
         // Assign colors (could be more sophisticated based on color balance)
-        const isWhite = Math.random() > 0.5; 
+        const isPlayer1White = Math.random() > 0.5; 
         
-        if (isWhite) {
+        if (isPlayer1White) {
           matches.push({ white: player1, black: player2 });
         } else {
           matches.push({ white: player2, black: player1 });

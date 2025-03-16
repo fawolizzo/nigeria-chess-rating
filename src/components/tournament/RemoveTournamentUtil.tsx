@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { getAllTournaments, saveTournaments } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
 
@@ -35,20 +36,23 @@ export const removeTournamentByName = (tournamentName: string) => {
  * Component to execute the removal and show a toast notification
  */
 const RemoveTournamentUtil = () => {
-  const result = removeTournamentByName("Osun rapid");
-  
-  if (result.success) {
-    toast({
-      title: "Tournament Removed",
-      description: `Successfully removed ${result.removed} tournament(s) containing "Osun rapid"`,
-    });
-  } else {
-    toast({
-      title: "Error",
-      description: result.error,
-      variant: "destructive",
-    });
-  }
+  // Use useEffect to avoid calling toast during render
+  useEffect(() => {
+    const result = removeTournamentByName("Osun rapid");
+    
+    if (result.success) {
+      toast({
+        title: "Tournament Removed",
+        description: `Successfully removed ${result.removed} tournament(s) containing "Osun rapid"`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.error,
+        variant: "destructive",
+      });
+    }
+  }, []);
   
   return null;
 };
