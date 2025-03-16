@@ -17,7 +17,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, LineChartIcon } from "lucide-react";
+import { CalendarIcon, LineChartIcon, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ProcessedTournamentDetailsProps {
@@ -104,7 +104,10 @@ const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                        No player data available for this tournament
+                        <div className="flex flex-col items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                          <p>No player data available for this tournament or players have been removed</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
