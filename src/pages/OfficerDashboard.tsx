@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayers, updatePlayer, addPlayer, Player } from "@/lib/mockData";
@@ -35,7 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
-import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock, FileText, FileDown, FileUp, RefreshCw } from "lucide-react";
+import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock, FileText, FileDown, FileUp, RefreshCw, Edit, Eye, Star } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -91,6 +92,8 @@ const OfficerDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("players");
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
+  const [isEditPlayerOpen, setIsEditPlayerOpen] = useState(false);
+  const [playerToEdit, setPlayerToEdit] = useState<Player | null>(null);
   const { currentUser } = useUser();
   const navigate = useNavigate();
 
@@ -109,6 +112,35 @@ const OfficerDashboard = () => {
       rating: "0",
     },
   });
+
+  const editForm = useForm<PlayerFormValues>({
+    resolver: zodResolver(playerSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      gender: "M",
+      state: "",
+      country: "Nigeria",
+      birthYear: "",
+      club: "",
+      rating: "0",
+    },
+  });
+
+  useEffect(() => {
+    if (playerToEdit) {
+      editForm.reset({
+        name: playerToEdit.name,
+        title: playerToEdit.title || "",
+        gender: playerToEdit.gender,
+        state: playerToEdit.state,
+        country: playerToEdit.country,
+        birthYear: playerToEdit.birthYear.toString(),
+        club: playerToEdit.club || "",
+        rating: playerToEdit.rating.toString(),
+      });
+    }
+  }, [playerToEdit, editForm]);
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'rating_officer') {
@@ -173,6 +205,57 @@ const OfficerDashboard = () => {
       title: "Player rejected",
       description: `${updatedPlayer.name} has been rejected.`,
       variant: "destructive",
+    });
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    setPlayerToEdit(player);
+    setIsEditPlayerOpen(true);
+  };
+
+  const handleSavePlayerEdit = (data: PlayerFormValues) => {
+    if (!playerToEdit) return;
+    
+    const isRatingChanged = parseInt(data.rating) !== playerToEdit.rating;
+    
+    const updatedPlayer: Player = {
+      ...playerToEdit,
+      name: data.name,
+      title: data.title && data.title.length > 0 ? data.title : undefined,
+      rating: parseInt(data.rating),
+      country: data.country,
+      state: data.state,
+      club: data.club && data.club.length > 0 ? data.club : undefined,
+      gender: data.gender as 'M' | 'F',
+      birthYear: parseInt(data.birthYear),
+    };
+    
+    // If rating changed, add to rating history
+    if (isRatingChanged) {
+      updatedPlayer.ratingHistory = [
+        ...(updatedPlayer.ratingHistory || []),
+        { 
+          date: new Date().toISOString().split('T')[0], 
+          rating: parseInt(data.rating),
+          reason: "Manual adjustment by rating officer"
+        }
+      ];
+    }
+    
+    updatePlayer(updatedPlayer);
+    
+    // Update local state
+    setApprovedPlayers(prev => 
+      prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
+    );
+    
+    editForm.reset();
+    setIsEditPlayerOpen(false);
+    setPlayerToEdit(null);
+    
+    toast({
+      title: "Player updated",
+      description: `${updatedPlayer.name}'s information has been updated.`,
     });
   };
 
@@ -297,7 +380,7 @@ const OfficerDashboard = () => {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid grid-cols-2">
+          <TabsList className="grid grid-cols-3">
             <TabsTrigger value="players" className="flex items-center">
               <Users className="w-4 h-4 mr-2" />
               Players
@@ -305,6 +388,10 @@ const OfficerDashboard = () => {
             <TabsTrigger value="tournaments" className="flex items-center">
               <Calendar className="w-4 h-4 mr-2" />
               Tournaments
+            </TabsTrigger>
+            <TabsTrigger value="ratings" className="flex items-center">
+              <Star className="w-4 h-4 mr-2" />
+              Ratings
             </TabsTrigger>
           </TabsList>
           
@@ -384,9 +471,20 @@ const OfficerDashboard = () => {
                 {approvedPlayers.map((player) => (
                   <Card key={player.id}>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">
-                        {player.title && `${player.title} `}{player.name}
-                      </CardTitle>
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-base">
+                          {player.title && `${player.title} `}{player.name}
+                        </CardTitle>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEditPlayer(player)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit player</span>
+                        </Button>
+                      </div>
                       <CardDescription>
                         Rating: {player.rating}
                       </CardDescription>
@@ -404,6 +502,12 @@ const OfficerDashboard = () => {
                             <span className="text-gray-500 dark:text-gray-400">Club:</span> {player.club}
                           </div>
                         )}
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Gender:</span> {player.gender === 'M' ? 'Male' : 'Female'}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Birth Year:</span> {player.birthYear}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -506,12 +610,67 @@ const OfficerDashboard = () => {
                         <div>
                           <span className="text-gray-500 dark:text-gray-400">Rounds:</span> {tournament.rounds}
                         </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-500 dark:text-gray-400">Status:</span> 
+                          <Badge className={
+                            tournament.status === "upcoming" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 ml-2" :
+                            tournament.status === "ongoing" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 ml-2" :
+                            tournament.status === "completed" ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 ml-2" :
+                            "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300 ml-2"
+                          }>
+                            {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => navigate(`/tournament/${tournament.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
+          </TabsContent>
+          
+          <TabsContent value="ratings" className="space-y-4 mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rating Management</CardTitle>
+                <CardDescription>
+                  Review and process ratings for tournaments and individual players
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                  <Star className="h-8 w-8 text-gray-500 dark:text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Rating Processing Center
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
+                  This section will allow you to process tournament results and adjust player
+                  ratings based on performance. Future updates will include more advanced rating tools.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                  <Button variant="outline" className="flex items-center justify-center" disabled>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Import Tournament Results
+                  </Button>
+                  <Button variant="outline" className="flex items-center justify-center" disabled>
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Export Rating List
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
@@ -744,6 +903,170 @@ const OfficerDashboard = () => {
           </DialogContent>
         </Dialog>
         
+        {/* New Dialog for editing players */}
+        <Dialog open={isEditPlayerOpen} onOpenChange={setIsEditPlayerOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Player</DialogTitle>
+              <DialogDescription>
+                Update player information
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(handleSavePlayerEdit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter player name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a title (if any)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {chessTitles.map((title) => (
+                            <SelectItem key={title} value={title || " "}>
+                              {title || "No title"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        FIDE/national chess title if applicable
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="M">Male</SelectItem>
+                            <SelectItem value="F">Female</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="birthYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Birth Year</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="YYYY" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={editForm.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter state" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter country" {...field} disabled value="Nigeria" />
+                      </FormControl>
+                      <FormDescription>
+                        Only Nigerian players are supported
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="club"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Club (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter club" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="rating"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rating</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="Enter rating" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Current player rating
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <Button type="button" variant="secondary" onClick={() => setIsEditPlayerOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save Changes</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
