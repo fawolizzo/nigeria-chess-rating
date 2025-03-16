@@ -20,6 +20,7 @@ const TournamentPlayerSelector = ({
 
   const handlePlayersSelected = (selectedPlayers: Player[]) => {
     onPlayersAdded(selectedPlayers);
+    setIsMultiSelectOpen(false);
   };
 
   return (

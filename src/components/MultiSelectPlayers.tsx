@@ -44,6 +44,14 @@ const MultiSelectPlayers = ({
   }, [excludeIds]);
 
   useEffect(() => {
+    if (!isOpen) {
+      // Reset selections when dialog closes
+      setSelectedPlayers([]);
+      setSearchQuery("");
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     // Filter players based on search query
     if (!searchQuery) {
       setFilteredPlayers(players);
@@ -75,15 +83,12 @@ const MultiSelectPlayers = ({
 
   const handleConfirmSelection = () => {
     onPlayersSelected(selectedPlayers);
-    onOpenChange(false);
-    setSelectedPlayers([]);
-    setSearchQuery("");
+    // Don't reset state here as the dialog will close and reset in the useEffect
   };
 
   const handleCancel = () => {
     onOpenChange(false);
-    setSelectedPlayers([]);
-    setSearchQuery("");
+    // State will reset in the useEffect when isOpen changes
   };
 
   return (
@@ -132,7 +137,10 @@ const MultiSelectPlayers = ({
                       variant="ghost"
                       size="icon"
                       className="h-4 w-4 ml-1 hover:bg-transparent"
-                      onClick={() => handleSelectPlayer(player)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering parent click
+                        handleSelectPlayer(player);
+                      }}
                     >
                       <X className="h-3 w-3" />
                     </Button>
