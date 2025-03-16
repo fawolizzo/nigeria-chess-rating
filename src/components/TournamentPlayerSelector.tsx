@@ -16,6 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { v4 as uuidv4 } from "uuid";
 import FileUploadButton from "./players/FileUploadButton";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 interface TournamentPlayerSelectorProps {
   tournamentId: string;
@@ -89,7 +90,7 @@ const TournamentPlayerSelector = ({
         title: player.title,
         rating: player.rating || 800,
         country: "Nigeria",
-        state: player.state,
+        state: player.state?.replace(" NGR", "").trim() || undefined,
         city: player.city,
         gender: player.gender || "M",
         birthYear: player.birthYear,
@@ -183,35 +184,37 @@ const TournamentPlayerSelector = ({
                   </p>
                   
                   <div className="border rounded-md overflow-hidden">
-                    <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 p-2 bg-muted font-medium text-sm">
-                      <div></div>
-                      <div>Player</div>
-                      <div>Rating</div>
-                      <div>Birth Year</div>
-                    </div>
-                    
-                    <div className="max-h-[300px] overflow-y-auto">
-                      {importedPlayers.map((player) => (
-                        <div 
-                          key={player.tempId} 
-                          className="grid grid-cols-[auto_1fr_auto_auto] gap-2 p-2 border-t items-center hover:bg-muted/50"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedImportIds.includes(player.tempId)}
-                            onChange={() => handleImportSelection(player.tempId)}
-                            className="h-4 w-4"
-                          />
-                          <div>
-                            {player.title && <span className="text-gold-dark dark:text-gold-light mr-1">{player.title}</span>}
-                            {player.name || "Unknown"}
-                            {player.state && <span className="text-xs text-muted-foreground ml-2">({player.state})</span>}
-                          </div>
-                          <div>{player.rating || 800}</div>
-                          <div>{player.birthYear || "-"}</div>
-                        </div>
-                      ))}
-                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]"></TableHead>
+                          <TableHead>Player</TableHead>
+                          <TableHead className="w-[80px]">Rating</TableHead>
+                          <TableHead className="w-[100px]">Birth Year</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="max-h-[300px] overflow-y-auto">
+                        {importedPlayers.map((player) => (
+                          <TableRow key={player.tempId}>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={selectedImportIds.includes(player.tempId)}
+                                onChange={() => handleImportSelection(player.tempId)}
+                                className="h-4 w-4"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {player.title && <span className="text-gold-dark dark:text-gold-light mr-1">{player.title}</span>}
+                              {player.name || "Unknown"}
+                              {player.state && <span className="text-xs text-muted-foreground ml-2">({player.state?.replace(" NGR", "")})</span>}
+                            </TableCell>
+                            <TableCell>{player.rating || 800}</TableCell>
+                            <TableCell>{player.birthYear || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                   
                   <DialogFooter className="mt-4">

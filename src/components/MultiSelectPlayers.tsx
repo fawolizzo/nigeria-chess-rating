@@ -37,38 +37,34 @@ export const MultiSelectPlayers = ({
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
 
-  // Fetch approved players
+  // Fetch approved and pending players for display
   useEffect(() => {
     const fetchPlayers = () => {
       const allPlayers = getAllPlayers();
       
-      // Filter only approved players and exclude those already in the tournament
-      const approvedPlayers = allPlayers.filter(player => {
-        const isApproved = player.status === 'approved';
+      // Get players with any status but exclude those already in the tournament
+      const availablePlayers = allPlayers.filter(player => {
         const isExcluded = excludeIds.includes(player.id);
-        
-        return isApproved && !isExcluded;
+        return !isExcluded;
       });
       
-      if (approvedPlayers.length === 0) {
+      if (availablePlayers.length === 0) {
         if (allPlayers.length === 0) {
           toast({
             title: "No players available",
             description: "There are no players in the system yet.",
           });
         } else {
-          const pendingCount = allPlayers.filter(p => p.status === 'pending').length;
-          
           toast({
-            title: "No approved players available",
-            description: `There are ${pendingCount} pending players that need approval from a Rating Officer.`,
+            title: "No available players",
+            description: "All players are already in this tournament.",
             variant: "destructive"
           });
         }
       }
       
-      setPlayers(approvedPlayers);
-      setFilteredPlayers(approvedPlayers);
+      setPlayers(availablePlayers);
+      setFilteredPlayers(availablePlayers);
     };
     
     if (isOpen) {
@@ -148,7 +144,7 @@ export const MultiSelectPlayers = ({
         {players.length === 0 && (
           <div className="text-center py-6">
             <p className="text-gray-500 dark:text-gray-400">
-              No approved players available. Players must be approved by a Rating Officer before they can be added to tournaments.
+              No available players found. Please import players or create new ones.
             </p>
           </div>
         )}
@@ -175,7 +171,7 @@ export const MultiSelectPlayers = ({
         <DialogHeader>
           <DialogTitle>Select Players</DialogTitle>
           <DialogDescription>
-            Select one or more approved players to add to your tournament.
+            Select one or more players to add to your tournament.
           </DialogDescription>
         </DialogHeader>
         
@@ -199,7 +195,7 @@ export const MultiSelectPlayers = ({
           {players.length === 0 && (
             <div className="text-center py-6">
               <p className="text-gray-500 dark:text-gray-400">
-                No approved players available. Players must be approved by a Rating Officer before they can be added to tournaments.
+                No available players found. Please import players or create new ones.
               </p>
             </div>
           )}
