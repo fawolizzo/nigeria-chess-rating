@@ -5,7 +5,7 @@ import { Users, Trophy, Award } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Player, addPlayer, getAllPlayers, updatePlayer, Tournament } from "@/lib/mockData";
+import { Player, addPlayer, getAllPlayers, updatePlayer, Tournament, updateTournament } from "@/lib/mockData";
 import StandingsTable from "@/components/StandingsTable";
 
 // Import our components
@@ -217,25 +217,168 @@ const TournamentManagement = () => {
     });
   };
 
+  // Improved generatePairings function using our Swiss pairing system
   const generatePairings = () => {
     if (!tournament) return;
 
+    // Get previous pairings to calculate current scores and previous opponents
+    const previousPairings = tournament.pairings || [];
+    const currentRound = tournament.currentRound || 1;
+    
+    // Calculate player scores from previous rounds
+    const playerScores: Record<string, number> = {};
+    const playerOpponents: Record<string, string[]> = {};
+    
+    // Initialize
+    registeredPlayers.forEach(player => {
+      playerScores[player.id] = 0;
+      playerOpponents[player.id] = [];
+    });
+    
+    // Calculate scores and track opponents from previous rounds
+    previousPairings.forEach(round => {
+      if (round.roundNumber < currentRound) {
+        round.matches.forEach(match => {
+          // Record opponents
+          playerOpponents[match.whiteId] = [...(playerOpponents[match.whiteId] || []), match.blackId];
+          playerOpponents[match.blackId] = [...(playerOpponents[match.blackId] || []), match.whiteId];
+          
+          // Update scores
+          if (match.result === "1-0") {
+            playerScores[match.whiteId] = (playerScores[match.whiteId] || 0) + 1;
+          } else if (match.result === "0-1") {
+            playerScores[match.blackId] = (playerScores[match.blackId] || 0) + 1;
+          } else if (match.result === "1/2-1/2") {
+            playerScores[match.whiteId] = (playerScores[match.whiteId] || 0) + 0.5;
+            playerScores[match.blackId] = (playerScores[match.blackId] || 0) + 0.5;
+          }
+        });
+      }
+    });
+    
+    // Group players by score
+    const scoreGroups: Record<number, Player[]> = {};
+    registeredPlayers.forEach(player => {
+      const score = playerScores[player.id] || 0;
+      scoreGroups[score] = scoreGroups[score] || [];
+      scoreGroups[score].push(player);
+    });
+    
+    // Sort score groups from highest to lowest
+    const sortedScores = Object.keys(scoreGroups)
+      .map(Number)
+      .sort((a, b) => b - a);
+    
+    // Generate pairings
+    const newMatches: Array<{ whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }> = [];
+    const paired: Set<string> = new Set();
+    
+    // First try to pair within each score group
+    sortedScores.forEach(score => {
+      const playersInGroup = [...scoreGroups[score]].sort((a, b) => b.rating - a.rating);
+      
+      for (let i = 0; i < playersInGroup.length; i++) {
+        const player = playersInGroup[i];
+        
+        if (paired.has(player.id)) continue;
+        
+        // Find best opponent
+        let bestOpponentIdx = -1;
+        
+        for (let j = i + 1; j < playersInGroup.length; j++) {
+          const opponent = playersInGroup[j];
+          
+          if (paired.has(opponent.id)) continue;
+          
+          const previouslyPlayed = playerOpponents[player.id]?.includes(opponent.id);
+          
+          if (!previouslyPlayed) {
+            bestOpponentIdx = j;
+            break;
+          }
+        }
+        
+        if (bestOpponentIdx !== -1) {
+          const opponent = playersInGroup[bestOpponentIdx];
+          
+          // Determine colors (could be more sophisticated)
+          const isPlayerWhite = Math.random() > 0.5;
+          
+          if (isPlayerWhite) {
+            newMatches.push({ 
+              whiteId: player.id, 
+              blackId: opponent.id,
+              result: "*" 
+            });
+          } else {
+            newMatches.push({ 
+              whiteId: opponent.id, 
+              blackId: player.id,
+              result: "*" 
+            });
+          }
+          
+          paired.add(player.id);
+          paired.add(opponent.id);
+        }
+      }
+    });
+    
+    // Pair remaining players across score groups
+    const unpaired = registeredPlayers.filter(p => !paired.has(p.id))
+      .sort((a, b) => {
+        // Sort by score then by rating
+        const scoreA = playerScores[a.id] || 0;
+        const scoreB = playerScores[b.id] || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return b.rating - a.rating;
+      });
+    
+    for (let i = 0; i < unpaired.length; i += 2) {
+      if (i + 1 < unpaired.length) {
+        const player1 = unpaired[i];
+        const player2 = unpaired[i + 1];
+        
+        // Determine colors
+        const isPlayer1White = Math.random() > 0.5;
+        
+        if (isPlayer1White) {
+          newMatches.push({ 
+            whiteId: player1.id, 
+            blackId: player2.id,
+            result: "*" 
+          });
+        } else {
+          newMatches.push({ 
+            whiteId: player2.id, 
+            blackId: player1.id,
+            result: "*" 
+          });
+        }
+      } else if (unpaired.length % 2 !== 0) {
+        // Handle bye for odd number of players
+        console.log(`Player ${unpaired[i].name} gets a bye for this round`);
+        // In a real implementation, record bye and award point
+      }
+    }
+    
     const newPairings = {
-      roundNumber: tournament.currentRound || 1,
-      matches: registeredPlayers.map((player, index) => ({
-        whiteId: player.id,
-        blackId: registeredPlayers[(index + 1) % registeredPlayers.length].id,
-        result: "*" as const,
-      })),
+      roundNumber: currentRound,
+      matches: newMatches
     };
-
+    
     const updatedTournament = {
       ...tournament,
       pairings: [...(tournament.pairings || []), newPairings],
     };
-
+    
     updateTournament(updatedTournament);
     setPairingsGenerated(true);
+    
+    toast({
+      title: "Pairings Generated",
+      description: `Successfully generated pairings for Round ${currentRound} using Swiss system.`,
+    });
   };
 
   const saveResults = (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {

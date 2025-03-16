@@ -71,86 +71,112 @@ const PairingSystem = ({
     return localPairings as PairingDisplayData[];
   };
 
-  // Enhanced Swiss pairing algorithm
+  // Improved Swiss pairing algorithm
   const generateSwissPairings = () => {
-    // Step 1: Group players by their score (or initial rating for first round)
-    const playerScoreGroups: Record<number, Player[]> = {};
+    // Check if we have enough players
+    if (players.length < 2) {
+      console.warn("Not enough players to generate pairings");
+      return;
+    }
+
+    // Step 1: Calculate player scores from previous rounds
+    const playerScores: Record<string, number> = {};
+    const playerOpponents: Record<string, Set<string>> = { ...previousOpponents };
     
-    // If we have previous results, we would calculate scores here
-    // For now, just use ratings for initial pairings
+    // Initialize scores and opponent lists
     players.forEach(player => {
-      const score = 0; // Start with 0 for all in first round
-      playerScoreGroups[score] = playerScoreGroups[score] || [];
-      playerScoreGroups[score].push(player);
+      playerScores[player.id] = 0;
+      playerOpponents[player.id] = playerOpponents[player.id] || new Set();
     });
     
-    const scoreGroups = Object.keys(playerScoreGroups)
-      .map(Number)
-      .sort((a, b) => b - a); // Sort by score descending
+    // Step 2: Group players by their score
+    const scoreGroups: Record<number, Player[]> = {};
     
+    players.forEach(player => {
+      const score = playerScores[player.id] || 0;
+      scoreGroups[score] = scoreGroups[score] || [];
+      scoreGroups[score].push(player);
+    });
+    
+    // Sort score groups from highest to lowest
+    const sortedScoreGroups = Object.entries(scoreGroups)
+      .sort(([scoreA, _], [scoreB, __]) => Number(scoreB) - Number(scoreA))
+      .map(([_, players]) => players);
+    
+    // Step 3: Generate pairings within each score group
     const matches: { white: Player; black: Player }[] = [];
-    const paired: Record<string, boolean> = {};
+    const paired: Set<string> = new Set();
     
-    // Step 2: Pair players within each score group
-    scoreGroups.forEach(score => {
-      const playersInGroup = [...playerScoreGroups[score]]
-        .sort((a, b) => b.rating - a.rating); // Sort by rating within each score group
+    // Try to pair within each score group first
+    sortedScoreGroups.forEach(playersInGroup => {
+      // Sort players by rating within the score group
+      const sortedPlayers = [...playersInGroup].sort((a, b) => b.rating - a.rating);
       
-      for (let i = 0; i < playersInGroup.length; i++) {
-        if (paired[playersInGroup[i].id]) continue;
+      // Try to pair players within this score group
+      for (let i = 0; i < sortedPlayers.length; i++) {
+        const player = sortedPlayers[i];
         
-        let bestOpponentIdx = -1;
+        if (paired.has(player.id)) continue;
         
-        // Find best unpaired opponent who hasn't played against this player
-        for (let j = i + 1; j < playersInGroup.length; j++) {
-          if (paired[playersInGroup[j].id]) continue;
+        let pairingFound = false;
+        
+        // Look for an unpaired opponent who hasn't played this player before
+        for (let j = i + 1; j < sortedPlayers.length; j++) {
+          const opponent = sortedPlayers[j];
           
-          const prevOpponents = previousOpponents[playersInGroup[i].id] || [];
-          if (!prevOpponents.includes(playersInGroup[j].id)) {
-            bestOpponentIdx = j;
+          if (paired.has(opponent.id)) continue;
+          
+          // Check if these players have faced each other before
+          const opponentSet = playerOpponents[player.id] || new Set();
+          if (!opponentSet.has(opponent.id)) {
+            // Pair these players
+            const isWhite = Math.random() > 0.5; // Random color assignment
+            
+            if (isWhite) {
+              matches.push({ white: player, black: opponent });
+            } else {
+              matches.push({ white: opponent, black: player });
+            }
+            
+            paired.add(player.id);
+            paired.add(opponent.id);
+            pairingFound = true;
             break;
           }
         }
         
-        // If no valid opponent in the same score group, find one in adjacent groups
-        if (bestOpponentIdx === -1) {
-          // Just pair with next available if no better option
-          for (let j = i + 1; j < playersInGroup.length; j++) {
-            if (!paired[playersInGroup[j].id]) {
-              bestOpponentIdx = j;
-              break;
-            }
-          }
-        }
-        
-        // If opponent found, create the pairing
-        if (bestOpponentIdx !== -1) {
-          const player1 = playersInGroup[i];
-          const player2 = playersInGroup[bestOpponentIdx];
-          
-          // Alternate colors if possible (would check color history here)
-          // For simplicity, randomly assign colors
-          if (Math.random() > 0.5) {
-            matches.push({ white: player1, black: player2 });
-          } else {
-            matches.push({ white: player2, black: player1 });
-          }
-          
-          paired[player1.id] = true;
-          paired[player2.id] = true;
-        }
+        // If no pairing found in the same score group, we'll handle in the next phase
       }
     });
     
-    // Handle odd number of players (assign bye)
-    if (players.length % 2 !== 0) {
-      // Find lowest-rated unpaired player for bye
-      const unpaired = players.filter(p => !paired[p.id])
-        .sort((a, b) => a.rating - b.rating);
-      
-      if (unpaired.length > 0) {
-        // In an actual implementation, we would record the bye and award a point
-        console.log(`Player ${unpaired[0].name} gets a bye for this round`);
+    // Step 4: Handle unpaired players by pairing across score groups
+    const unpaired = players.filter(p => !paired.has(p.id))
+      .sort((a, b) => {
+        // Sort by score (desc) then by rating (desc)
+        const scoreA = playerScores[a.id] || 0;
+        const scoreB = playerScores[b.id] || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return b.rating - a.rating;
+      });
+    
+    // Pair remaining players
+    for (let i = 0; i < unpaired.length; i += 2) {
+      if (i + 1 < unpaired.length) {
+        const player1 = unpaired[i];
+        const player2 = unpaired[i + 1];
+        
+        // Assign colors (could be more sophisticated based on color balance)
+        const isWhite = Math.random() > 0.5; 
+        
+        if (isWhite) {
+          matches.push({ white: player1, black: player2 });
+        } else {
+          matches.push({ white: player2, black: player1 });
+        }
+      } else if (unpaired.length % 2 !== 0) {
+        // Odd number of players - the last player gets a bye
+        console.log(`Player ${unpaired[i].name} gets a bye for this round`);
+        // In a real implementation, we would record the bye and award a point
       }
     }
     

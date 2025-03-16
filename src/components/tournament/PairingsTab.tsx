@@ -48,6 +48,64 @@ const PairingsTab = ({
   const currentPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
   const isOngoing = tournamentStatus === "ongoing";
   const isCurrentRound = selectedRound === currentRound;
+  
+  // Calculate previous opponents for Swiss pairings
+  const calculatePreviousOpponents = () => {
+    if (!pairings) return {};
+    
+    const previousOpponents: Record<string, string[]> = {};
+    
+    // Only consider rounds before the current one
+    const previousRounds = pairings.filter(round => round.roundNumber < selectedRound);
+    
+    previousRounds.forEach(round => {
+      round.matches.forEach(match => {
+        // Initialize arrays if they don't exist
+        if (!previousOpponents[match.whiteId]) {
+          previousOpponents[match.whiteId] = [];
+        }
+        if (!previousOpponents[match.blackId]) {
+          previousOpponents[match.blackId] = [];
+        }
+        
+        // Add opponents to each player's list
+        previousOpponents[match.whiteId].push(match.blackId);
+        previousOpponents[match.blackId].push(match.whiteId);
+      });
+    });
+    
+    return previousOpponents;
+  };
+  
+  // Calculate player scores for Swiss pairings
+  const calculatePlayerScores = () => {
+    if (!pairings) return {};
+    
+    const scores: Record<string, number> = {};
+    
+    // Initialize scores for all players
+    players.forEach(player => {
+      scores[player.id] = 0;
+    });
+    
+    // Only consider rounds before the current one
+    const previousRounds = pairings.filter(round => round.roundNumber < selectedRound);
+    
+    previousRounds.forEach(round => {
+      round.matches.forEach(match => {
+        if (match.result === "1-0") {
+          scores[match.whiteId] = (scores[match.whiteId] || 0) + 1;
+        } else if (match.result === "0-1") {
+          scores[match.blackId] = (scores[match.blackId] || 0) + 1;
+        } else if (match.result === "1/2-1/2") {
+          scores[match.whiteId] = (scores[match.whiteId] || 0) + 0.5;
+          scores[match.blackId] = (scores[match.blackId] || 0) + 0.5;
+        }
+      });
+    });
+    
+    return scores;
+  };
 
   return (
     <Card>
@@ -99,6 +157,7 @@ const PairingsTab = ({
             <PairingSystem
               players={players}
               pairings={currentPairings}
+              previousOpponents={calculatePreviousOpponents()}
               roundNumber={selectedRound}
               readonly={true}
             />
