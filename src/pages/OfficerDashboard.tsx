@@ -342,8 +342,8 @@ const OfficerDashboard = () => {
           const updatedPlayer = {
             ...player,
             rating: timeControl === 'classical' ? newRating : player.rating,
-            rapidRating: timeControl === 'rapid' ? (player.rapidRating || player.rating) + reportPlayer.ratingChange : player.rapidRating,
-            blitzRating: timeControl === 'blitz' ? (player.blitzRating || player.rating) + reportPlayer.ratingChange : player.blitzRating,
+            rapidRating: timeControl === 'rapid' ? (player.rapidRating || player.rating) + reportPlayer.ratingChange : (player.rapidRating || player.rating),
+            blitzRating: timeControl === 'blitz' ? (player.blitzRating || player.rating) + reportPlayer.ratingChange : (player.blitzRating || player.rating),
             ratingHistory: [
               ...(player.ratingHistory || []),
               { date: new Date().toISOString().split('T')[0], rating: newRating }
@@ -1039,3 +1039,4 @@ const OfficerDashboard = () => {
 };
 
 export default OfficerDashboard;
+

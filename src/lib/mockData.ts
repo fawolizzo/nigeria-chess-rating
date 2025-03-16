@@ -1,8 +1,11 @@
+
 export interface Player {
   id: string;
   name: string;
   title?: string;
   rating: number;
+  rapidRating?: number;
+  blitzRating?: number;
   country?: string;
   club?: string;
   state?: string;
