@@ -35,13 +35,25 @@ export const MultiSelectPlayers = ({
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    // Get all approved players
-    const allPlayers = getAllPlayers().filter(player => 
-      player.status === 'approved' && !excludeIds.includes(player.id)
-    );
+    // Get all players that are approved
+    const fetchPlayers = () => {
+      const allPlayers = getAllPlayers();
+      // Filter only approved players and exclude those already in the tournament
+      const approvedPlayers = allPlayers.filter(player => 
+        player.status === 'approved' && !excludeIds.includes(player.id)
+      );
+      
+      console.log("Total players:", allPlayers.length);
+      console.log("Approved players:", approvedPlayers.length);
+      console.log("Excluded IDs:", excludeIds);
+      
+      setPlayers(approvedPlayers);
+      setFilteredPlayers(approvedPlayers);
+    };
     
-    setPlayers(allPlayers);
-    setFilteredPlayers(allPlayers);
+    if (isOpen) {
+      fetchPlayers();
+    }
   }, [excludeIds, isOpen]); // Re-fetch when dialog opens or excludeIds changes
 
   useEffect(() => {

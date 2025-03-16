@@ -1,18 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronDown, Search } from "lucide-react";
-import { Player, getAllPlayers } from "@/lib/mockData";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
+import { Player } from "@/lib/mockData";
 import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
 
 interface TournamentPlayerSelectorProps {
@@ -47,7 +37,6 @@ const TournamentPlayerSelector = ({
       >
         <Plus className="h-4 w-4 mr-2" />
         Add Existing Player
-        <ChevronDown className="h-4 w-4 ml-2" />
       </Button>
       
       <MultiSelectPlayers 
