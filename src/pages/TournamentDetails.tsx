@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
+import { useUser } from "@/contexts/UserContext";
 
 interface Tournament {
   id: string;
@@ -25,11 +26,13 @@ interface Tournament {
   participants?: number;
   coverImage?: string;
   category?: string;
+  players?: string[]; // IDs of players in the tournament
 }
 
 const TournamentDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useUser();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,11 +45,12 @@ const TournamentDetails = () => {
           const parsedTournaments = JSON.parse(savedTournaments);
           const foundTournament = parsedTournaments.find((t: Tournament) => t.id === id);
           
-          // Only show approved tournaments
+          // Only show approved tournaments or your own tournaments if you're an organizer
           if (foundTournament && 
               (foundTournament.status === "upcoming" || 
                foundTournament.status === "ongoing" || 
-               foundTournament.status === "completed")) {
+               foundTournament.status === "completed" ||
+               (currentUser?.role === 'tournament_organizer' && foundTournament.organizerId === currentUser.id))) {
             setTournament(foundTournament);
           } else {
             navigate("/tournaments");
@@ -65,7 +69,7 @@ const TournamentDetails = () => {
     if (id) {
       loadTournament();
     }
-  }, [id, navigate]);
+  }, [id, navigate, currentUser]);
 
   const handleRegister = () => {
     // In a real app, this would navigate to a registration form
@@ -74,6 +78,12 @@ const TournamentDetails = () => {
       title: "Registration Request Sent",
       description: "Tournament registration feature will be implemented in a future update.",
     });
+  };
+
+  const handleManageTournament = () => {
+    if (currentUser?.role === 'tournament_organizer' && tournament?.organizerId === currentUser.id) {
+      navigate(`/tournament/${id}/manage`);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -109,6 +119,8 @@ const TournamentDetails = () => {
     }
   };
 
+  const isOrganizer = currentUser?.role === 'tournament_organizer' && tournament.organizerId === currentUser.id;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -118,7 +130,7 @@ const TournamentDetails = () => {
           onClick={() => navigate(-1)}
           className="flex items-center mb-8 text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back to Tournaments
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </button>
         
         {/* Hero section */}
@@ -154,13 +166,22 @@ const TournamentDetails = () => {
                 </h1>
               </div>
               
-              {tournament.status === 'upcoming' && tournament.registrationOpen && (
+              {isOrganizer ? (
                 <Button 
-                  onClick={handleRegister}
+                  onClick={handleManageTournament}
                   className="bg-gold hover:bg-gold-dark text-black font-medium"
                 >
-                  Register Now
+                  Manage Tournament
                 </Button>
+              ) : (
+                tournament.status === 'upcoming' && tournament.registrationOpen && (
+                  <Button 
+                    onClick={handleRegister}
+                    className="bg-gold hover:bg-gold-dark text-black font-medium"
+                  >
+                    Register Now
+                  </Button>
+                )
               )}
             </div>
           </div>
@@ -276,7 +297,7 @@ const TournamentDetails = () => {
                     </div>
                   )}
                   
-                  {tournament.registrationOpen && (
+                  {!isOrganizer && tournament.registrationOpen && (
                     <Button 
                       className="w-full bg-gold hover:bg-gold-dark text-black font-medium"
                       onClick={handleRegister}
@@ -303,6 +324,15 @@ const TournamentDetails = () => {
                     This tournament has already been completed.
                   </p>
                 </div>
+              )}
+              
+              {isOrganizer && (
+                <Button 
+                  className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={handleManageTournament}
+                >
+                  Manage Tournament
+                </Button>
               )}
             </div>
             

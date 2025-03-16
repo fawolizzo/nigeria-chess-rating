@@ -181,11 +181,7 @@ const OrganizerDashboard = () => {
   };
 
   const handleManageTournament = (tournamentId: string) => {
-    toast({
-      title: "Tournament Management",
-      description: "Tournament management features will be implemented in a future update.",
-      variant: "default",
-    });
+    navigate(`/tournament/${tournamentId}/manage`);
   };
 
   return (

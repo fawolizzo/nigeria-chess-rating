@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Players from "./pages/Players";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetails from "./pages/TournamentDetails";
+import TournamentManagement from "./pages/TournamentManagement";
 import OfficerDashboard from "./pages/OfficerDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import PlayerProfile from "./pages/PlayerProfile";
@@ -59,6 +60,14 @@ const AppRoutes = () => (
     <Route path="/player/:id" element={<PlayerProfile />} />
     <Route path="/tournaments" element={<Tournaments />} />
     <Route path="/tournament/:id" element={<TournamentDetails />} />
+    <Route 
+      path="/tournament/:id/manage" 
+      element={
+        <OrganizerRoute>
+          <TournamentManagement />
+        </OrganizerRoute>
+      } 
+    />
     <Route 
       path="/officer-dashboard" 
       element={
