@@ -23,6 +23,15 @@ interface PairingSystemProps {
   readonly?: boolean;
 }
 
+// Define a new interface for the pairing display data that includes all needed properties
+interface PairingDisplayData {
+  white: Player;
+  black: Player;
+  result?: "1-0" | "0-1" | "1/2-1/2" | "*";
+  whiteRatingChange?: number;
+  blackRatingChange?: number;
+}
+
 const PairingSystem = ({
   players,
   existingPairings = [],
@@ -42,7 +51,7 @@ const PairingSystem = ({
   );
 
   // Function to convert pairings to display format
-  const getPairingsToDisplay = () => {
+  const getPairingsToDisplay = (): PairingDisplayData[] => {
     if (pairings && pairings.length > 0) {
       return pairings.map(pair => {
         const white = players.find(p => p.id === pair.whiteId);
@@ -58,10 +67,10 @@ const PairingSystem = ({
           };
         }
         return null;
-      }).filter(Boolean);
+      }).filter(Boolean) as PairingDisplayData[];
     }
     
-    return localPairings;
+    return localPairings as PairingDisplayData[];
   };
 
   const generateSwissPairings = () => {
@@ -154,7 +163,7 @@ const PairingSystem = ({
                         <span className="text-gray-500 dark:text-gray-400">
                           ({pair.white.rating})
                         </span>
-                        {pair.whiteRatingChange && (
+                        {pair.whiteRatingChange !== undefined && (
                           <span className={pair.whiteRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
                             {pair.whiteRatingChange > 0 ? "+" : ""}{pair.whiteRatingChange}
                           </span>
@@ -175,7 +184,7 @@ const PairingSystem = ({
                         <span className="text-gray-500 dark:text-gray-400">
                           ({pair.black.rating})
                         </span>
-                        {pair.blackRatingChange && (
+                        {pair.blackRatingChange !== undefined && (
                           <span className={pair.blackRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
                             {pair.blackRatingChange > 0 ? "+" : ""}{pair.blackRatingChange}
                           </span>
