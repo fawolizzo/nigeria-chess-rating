@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
-import { getAllPlayers, updatePlayer, addPlayer, Player } from "@/lib/mockData";
+import { 
+  getAllPlayers, 
+  updatePlayer, 
+  addPlayer, 
+  getAllTournaments,
+  updateTournament,
+  Player 
+} from "@/lib/mockData";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -35,10 +42,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
-import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock, FileText, FileDown, FileUp, RefreshCw, Edit, Eye, Star } from "lucide-react";
+import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock, FileText, FileDown, FileUp, RefreshCw, Edit, Eye, Star, FileSpreadsheet } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import GenerateReportDialog from "@/components/GenerateReportDialog";
 
 interface Tournament {
   id: string;
@@ -49,7 +57,7 @@ interface Tournament {
   location: string;
   city: string;
   state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
   timeControl: string;
   rounds: number;
   organizerId: string;
@@ -93,6 +101,8 @@ const OfficerDashboard = () => {
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
   const [isEditPlayerOpen, setIsEditPlayerOpen] = useState(false);
   const [playerToEdit, setPlayerToEdit] = useState<Player | null>(null);
+  const [selectedTournamentForReport, setSelectedTournamentForReport] = useState<Tournament | null>(null);
+  const [isGenerateReportOpen, setIsGenerateReportOpen] = useState(false);
   const { currentUser } = useUser();
   const navigate = useNavigate();
 
@@ -229,7 +239,6 @@ const OfficerDashboard = () => {
       birthYear: parseInt(data.birthYear),
     };
     
-    // If rating changed, add to rating history
     if (isRatingChanged) {
       updatedPlayer.ratingHistory = [
         ...(updatedPlayer.ratingHistory || []),
@@ -243,7 +252,6 @@ const OfficerDashboard = () => {
     
     updatePlayer(updatedPlayer);
     
-    // Update local state
     setApprovedPlayers(prev => 
       prev.map(p => p.id === updatedPlayer.id ? updatedPlayer : p)
     );
@@ -341,6 +349,21 @@ const OfficerDashboard = () => {
       title: "Player created",
       description: "The player has been created successfully.",
     });
+  };
+
+  const handleGenerateReport = (tournament: Tournament) => {
+    setSelectedTournamentForReport(tournament);
+    setIsGenerateReportOpen(true);
+  };
+
+  const handleReportGenerated = () => {
+    const savedTournaments = localStorage.getItem('tournaments');
+    if (savedTournaments) {
+      setTournaments(JSON.parse(savedTournaments));
+    }
+    
+    const allPlayers = getAllPlayers();
+    setApprovedPlayers(allPlayers.filter(player => player.status === 'approved'));
   };
 
   if (isLoading) {
@@ -578,16 +601,124 @@ const OfficerDashboard = () => {
             
             <Separator className="my-4" />
             
-            <h2 className="text-lg font-semibold">Approved Tournaments</h2>
+            <h2 className="text-lg font-semibold">Completed Tournaments</h2>
             
-            {tournaments.filter(tournament => tournament.status !== 'pending').length === 0 ? (
+            {tournaments.filter(tournament => tournament.status === 'completed').length === 0 ? (
               <div className="text-center py-8">
                 <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
-                <p className="mt-4 text-gray-500 dark:text-gray-400">No approved tournaments yet</p>
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No completed tournaments ready for rating</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {tournaments.filter(tournament => tournament.status !== 'pending').map((tournament) => (
+                {tournaments.filter(tournament => tournament.status === 'completed').map((tournament) => (
+                  <Card key={tournament.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{tournament.name}</CardTitle>
+                      <CardDescription>
+                        {tournament.location}, {tournament.city}, {tournament.state}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Start Date:</span> {new Date(tournament.startDate).toLocaleDateString()}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">End Date:</span> {new Date(tournament.endDate).toLocaleDateString()}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Time Control:</span> {tournament.timeControl}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Rounds:</span> {tournament.rounds}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => navigate(`/tournament/${tournament.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleGenerateReport(tournament)}
+                        >
+                          <FileSpreadsheet className="h-4 w-4 mr-2" />
+                          Generate Report
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <Separator className="my-4" />
+            
+            <h2 className="text-lg font-semibold">Processed Tournaments</h2>
+            
+            {tournaments.filter(tournament => tournament.status === 'processed').length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No processed tournaments yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tournaments.filter(tournament => tournament.status === 'processed').map((tournament) => (
+                  <Card key={tournament.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{tournament.name}</CardTitle>
+                      <CardDescription>
+                        {tournament.location}, {tournament.city}, {tournament.state}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">Start Date:</span> {new Date(tournament.startDate).toLocaleDateString()}
+                        </div>
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400">End Date:</span> {new Date(tournament.endDate).toLocaleDateString()}
+                        </div>
+                        <div className="col-span-2">
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 mt-1">
+                            Processed
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => navigate(`/tournament/${tournament.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <h2 className="text-lg font-semibold mt-6">Other Tournaments</h2>
+            
+            {tournaments.filter(tournament => tournament.status !== 'pending' && tournament.status !== 'completed' && tournament.status !== 'processed').length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto text-gray-400" />
+                <p className="mt-4 text-gray-500 dark:text-gray-400">No other tournaments</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {tournaments.filter(tournament => tournament.status !== 'pending' && tournament.status !== 'completed' && tournament.status !== 'processed').map((tournament) => (
                   <Card key={tournament.id}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base">{tournament.name}</CardTitle>
@@ -1065,6 +1196,13 @@ const OfficerDashboard = () => {
             </Form>
           </DialogContent>
         </Dialog>
+        
+        <GenerateReportDialog 
+          tournament={selectedTournamentForReport}
+          isOpen={isGenerateReportOpen}
+          onOpenChange={setIsGenerateReportOpen}
+          onReportGenerated={handleReportGenerated}
+        />
       </div>
     </div>
   );

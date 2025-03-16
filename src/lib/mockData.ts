@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -370,18 +369,15 @@ export const getPlayersByTournamentId = (tournamentId: string): Player[] => {
   );
 };
 
-// Helper function to save players to localStorage
 export const savePlayers = (updatedPlayers: Player[]): void => {
   localStorage.setItem('players', JSON.stringify(updatedPlayers));
 };
 
-// Helper function to get all players from localStorage
 export const getAllPlayers = (): Player[] => {
   const savedPlayers = localStorage.getItem('players');
   return savedPlayers ? JSON.parse(savedPlayers) : players;
 };
 
-// Helper function to update a player in localStorage
 export const updatePlayer = (updatedPlayer: Player): void => {
   const allPlayers = getAllPlayers();
   const updatedPlayers = allPlayers.map(player => 
@@ -390,8 +386,24 @@ export const updatePlayer = (updatedPlayer: Player): void => {
   savePlayers(updatedPlayers);
 };
 
-// Helper function to add a new player to localStorage
 export const addPlayer = (newPlayer: Player): void => {
   const allPlayers = getAllPlayers();
   savePlayers([...allPlayers, newPlayer]);
+};
+
+export const saveTournaments = (updatedTournaments: Tournament[]): void => {
+  localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+};
+
+export const getAllTournaments = (): Tournament[] => {
+  const savedTournaments = localStorage.getItem('tournaments');
+  return savedTournaments ? JSON.parse(savedTournaments) : tournaments;
+};
+
+export const updateTournament = (updatedTournament: Tournament): void => {
+  const allTournaments = getAllTournaments();
+  const updatedTournaments = allTournaments.map(tournament => 
+    tournament.id === updatedTournament.id ? updatedTournament : tournament
+  );
+  saveTournaments(updatedTournaments);
 };
