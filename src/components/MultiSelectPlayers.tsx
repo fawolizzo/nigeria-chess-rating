@@ -1,8 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { Check, X, Search, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { 
   Dialog, 
   DialogContent, 
@@ -11,11 +8,13 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { getAllPlayers, Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
+
+import PlayerSearchInput from "@/components/players/PlayerSearchInput";
+import SelectedPlayersList from "@/components/players/SelectedPlayersList";
+import PlayerSelectionList from "@/components/players/PlayerSelectionList";
 
 interface MultiSelectPlayersProps {
   isOpen: boolean;
@@ -36,8 +35,8 @@ export const MultiSelectPlayers = ({
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
 
+  // Fetch approved players
   useEffect(() => {
-    // Get all players that are approved
     const fetchPlayers = () => {
       const allPlayers = getAllPlayers();
       
@@ -77,18 +76,18 @@ export const MultiSelectPlayers = ({
     if (isOpen) {
       fetchPlayers();
     }
-  }, [excludeIds, isOpen, toast]); // Re-fetch when dialog opens or excludeIds changes
+  }, [excludeIds, isOpen, toast]);
 
+  // Reset selections when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      // Reset selections when dialog closes
       setSelectedPlayers([]);
       setSearchQuery("");
     }
   }, [isOpen]);
 
+  // Filter players based on search query
   useEffect(() => {
-    // Filter players based on search query
     if (!searchQuery) {
       setFilteredPlayers(players);
       return;
@@ -121,12 +120,10 @@ export const MultiSelectPlayers = ({
 
   const handleConfirmSelection = () => {
     onPlayersSelected(selectedPlayers);
-    // Don't reset state here as the dialog will close and reset in the useEffect
   };
 
   const handleCancel = () => {
     onOpenChange(false);
-    // State will reset in the useEffect when isOpen changes
   };
 
   console.log("Available players count:", players.length);
@@ -143,105 +140,21 @@ export const MultiSelectPlayers = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="Search players by name, title, rating..."
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                onClick={() => setSearchQuery("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          <PlayerSearchInput 
+            searchQuery={searchQuery} 
+            setSearchQuery={setSearchQuery} 
+          />
           
-          {selectedPlayers.length > 0 && (
-            <div>
-              <div className="text-sm font-medium mb-2">Selected Players ({selectedPlayers.length})</div>
-              <div className="flex flex-wrap gap-2">
-                {selectedPlayers.map(player => (
-                  <Badge 
-                    key={player.id} 
-                    variant="secondary"
-                    className="flex items-center gap-1 py-1"
-                  >
-                    {player.title && `${player.title} `}{player.name}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4 ml-1 hover:bg-transparent"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering parent click
-                        handleSelectPlayer(player);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+          <SelectedPlayersList 
+            selectedPlayers={selectedPlayers}
+            onRemovePlayer={handleSelectPlayer}
+          />
           
-          <ScrollArea className="h-72 rounded-md border">
-            {filteredPlayers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full py-8">
-                <div className="text-gray-500 dark:text-gray-400 text-center">
-                  No players found
-                </div>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                {filteredPlayers.map(player => {
-                  const isSelected = selectedPlayers.some(p => p.id === player.id);
-                  
-                  return (
-                    <div
-                      key={player.id}
-                      className={`flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${
-                        isSelected ? "bg-blue-50 dark:bg-blue-900/20" : ""
-                      }`}
-                      onClick={() => handleSelectPlayer(player)}
-                    >
-                      <div className="flex items-center">
-                        <Checkbox 
-                          checked={isSelected}
-                          onCheckedChange={() => handleSelectPlayer(player)}
-                          className="mr-3"
-                          id={`player-${player.id}`}
-                        />
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {player.title && (
-                              <span className="text-gold-dark dark:text-gold-light mr-1">
-                                {player.title}
-                              </span>
-                            )}
-                            {player.name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Rating: {player.rating} • {player.state || 'N/A'}, {player.country || 'Nigeria'}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {isSelected && (
-                        <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
+          <PlayerSelectionList 
+            filteredPlayers={filteredPlayers}
+            selectedPlayers={selectedPlayers}
+            onSelectPlayer={handleSelectPlayer}
+          />
         </div>
         
         <DialogFooter>

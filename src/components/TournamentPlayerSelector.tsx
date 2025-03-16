@@ -18,22 +18,13 @@ const TournamentPlayerSelector = ({
 }: TournamentPlayerSelectorProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const handleOpenDialog = () => {
-    setIsDialogOpen(true);
-  };
-  
-  const handlePlayersAdded = (players: Player[]) => {
-    onPlayersAdded(players);
-    setIsDialogOpen(false);
-  };
-
   return (
     <div className="relative">
       <Button 
         variant="outline" 
         size="sm"
         className="text-sm"
-        onClick={handleOpenDialog}
+        onClick={() => setIsDialogOpen(true)}
       >
         <Plus className="h-4 w-4 mr-2" />
         Add Existing Player
@@ -42,7 +33,7 @@ const TournamentPlayerSelector = ({
       <MultiSelectPlayers 
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onPlayersSelected={handlePlayersAdded}
+        onPlayersSelected={onPlayersAdded}
         excludeIds={existingPlayerIds}
       />
     </div>
