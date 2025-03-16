@@ -303,7 +303,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
                           field.onChange(value);
                         }}
                       />
-                    </Control>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
