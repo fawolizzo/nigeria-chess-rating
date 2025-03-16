@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle } from "lucide-react";
-import { Player, Tournament, updatePlayer, updateTournament, getPlayersByTournamentId } from "@/lib/mockData";
+import { Player, Tournament, updatePlayer, updateTournament, getPlayersByTournamentId, getAllPlayers } from "@/lib/mockData";
 import { calculatePostRoundRatings } from "@/lib/ratingCalculation";
 
 interface TournamentRatingDialogProps {
@@ -31,6 +31,9 @@ const TournamentRatingDialog = ({
       // Get all players that participated in this tournament
       const tournamentPlayers = getPlayersByTournamentId(tournament.id);
       
+      // Get all players to ensure we have a complete dataset
+      const allPlayers = getAllPlayers();
+      
       // Process each round of matches if tournament has pairings
       if (tournament.pairings && tournament.pairings.length > 0) {
         // Process each round and calculate rating changes
@@ -38,11 +41,22 @@ const TournamentRatingDialog = ({
           // For each match in the round, calculate rating changes
           const processedMatches = calculatePostRoundRatings(
             round.matches.map(match => {
-              const whitePlayer = tournamentPlayers.find(p => p.id === match.whiteId);
-              const blackPlayer = tournamentPlayers.find(p => p.id === match.blackId);
+              // Look in both tournament players and all players
+              let whitePlayer = tournamentPlayers.find(p => p.id === match.whiteId);
+              let blackPlayer = tournamentPlayers.find(p => p.id === match.blackId);
+              
+              // If not found in tournament players, try all players
+              if (!whitePlayer) {
+                whitePlayer = allPlayers.find(p => p.id === match.whiteId);
+              }
+              
+              if (!blackPlayer) {
+                blackPlayer = allPlayers.find(p => p.id === match.blackId);
+              }
               
               if (!whitePlayer || !blackPlayer) {
-                throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}`);
+                console.error(`Player not found: ${match.whiteId} or ${match.blackId}`);
+                throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}. Please ensure all players exist in the system.`);
               }
               
               return {
@@ -87,9 +101,9 @@ const TournamentRatingDialog = ({
           });
         });
         
-        // Apply updates to players
+        // Apply updates to players - use allPlayers to ensure we can update any player
         Object.entries(playerUpdates).forEach(([playerId, update]) => {
-          const player = tournamentPlayers.find(p => p.id === playerId);
+          const player = allPlayers.find(p => p.id === playerId);
           if (player) {
             const updatedPlayer = {
               ...player,
@@ -130,7 +144,7 @@ const TournamentRatingDialog = ({
       
       toast({
         title: "Error Processing Ratings",
-        description: "An error occurred while processing the ratings. Please try again.",
+        description: error instanceof Error ? error.message : "An error occurred while processing the ratings. Please try again.",
         variant: "destructive"
       });
     } finally {
