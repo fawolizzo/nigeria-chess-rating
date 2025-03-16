@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -43,6 +44,7 @@ const LichessPlayerImport = ({ onPlayerImported }: LichessPlayerImportProps) => 
         ...lichessPlayerData,
         state: "Lagos", // Default value, can be changed later
         federationId: "",
+        gender: 'M', // Adding default gender since Lichess API doesn't provide this information
         ratingHistory: [
           {
             date: new Date().toISOString().split('T')[0],

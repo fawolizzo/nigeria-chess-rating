@@ -1,3 +1,4 @@
+
 /**
  * Lichess API Integration for Nigerian Chess Rating System
  * API Documentation: https://lichess.org/api
@@ -152,7 +153,8 @@ export async function importPlayerFromLichess(username: string) {
       status: 'active',
       title: playerData.title || null,
       country: playerData.profile?.country || 'NG',
-      // Other fields would need to be manually entered or have defaults
+      // Not including gender as it will be added in the LichessPlayerImport component
+      // since Lichess API doesn't provide this information
     };
   } catch (error) {
     console.error("Error importing player from Lichess:", error);
