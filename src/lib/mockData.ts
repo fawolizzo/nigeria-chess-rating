@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -55,106 +56,9 @@ export interface Tournament {
   processedPlayerIds?: string[];
 }
 
+// Empty arrays instead of dummy data
 export const players: Player[] = [];
-
-export const tournaments: Tournament[] = [
-  {
-    id: "t001",
-    name: "Nigerian National Championship 2023",
-    startDate: "2023-12-10",
-    endDate: "2023-12-18",
-    location: "Abuja, Nigeria",
-    city: "Abuja",
-    state: "FCT",
-    category: "National",
-    status: "completed",
-    participants: 64,
-    rounds: 9,
-    timeControl: "90min + 30sec increment",
-    coverImage: "/placeholder.svg",
-    description: "The premier national chess championship of Nigeria, featuring the country's top players competing for the title of National Champion.",
-  },
-  {
-    id: "t002",
-    name: "Lagos International Chess Classic",
-    startDate: "2023-09-05",
-    endDate: "2023-09-12",
-    location: "Lagos, Nigeria",
-    city: "Lagos",
-    state: "Lagos",
-    category: "International",
-    status: "completed",
-    participants: 120,
-    rounds: 9,
-    timeControl: "90min + 30sec increment",
-    coverImage: "/placeholder.svg",
-    description: "A prestigious international tournament held in Lagos, attracting players from across Africa and beyond.",
-  },
-  {
-    id: "t003",
-    name: "Nigerian Women's Championship",
-    startDate: "2023-10-15",
-    endDate: "2023-10-22",
-    location: "Enugu, Nigeria",
-    city: "Enugu",
-    state: "Enugu",
-    category: "National",
-    status: "completed",
-    participants: 32,
-    rounds: 7,
-    timeControl: "90min + 30sec increment",
-    coverImage: "/placeholder.svg",
-    description: "The national championship for female chess players in Nigeria, promoting women's chess and identifying talent.",
-  },
-  {
-    id: "t004",
-    name: "Chevron Open Chess Tournament",
-    startDate: "2024-01-20",
-    endDate: "2024-01-28",
-    location: "Port Harcourt, Nigeria",
-    city: "Port Harcourt",
-    state: "Rivers",
-    category: "Open",
-    status: "completed",
-    participants: 86,
-    rounds: 9,
-    timeControl: "90min + 30sec increment",
-    coverImage: "/placeholder.svg",
-    description: "A prestigious open tournament sponsored by Chevron, featuring both titled players and amateurs.",
-  },
-  {
-    id: "t005",
-    name: "Nigerian Junior Chess Championship",
-    startDate: "2024-04-05",
-    endDate: "2024-04-10",
-    location: "Ibadan, Nigeria",
-    city: "Ibadan",
-    state: "Oyo",
-    category: "Junior",
-    status: "upcoming",
-    participants: 48,
-    rounds: 7,
-    timeControl: "90min + 30sec increment",
-    coverImage: "/placeholder.svg",
-    description: "The national championship for junior chess players under 20 years of age, showcasing the future of Nigerian chess.",
-  },
-  {
-    id: "t006",
-    name: "NNPC Grand Chess Tour",
-    startDate: "2024-05-15",
-    endDate: "2024-05-23",
-    location: "Multiple Cities, Nigeria",
-    city: "Multiple Cities",
-    state: "Multiple Cities",
-    category: "National Circuit",
-    status: "upcoming",
-    participants: 100,
-    rounds: 9,
-    timeControl: "90min + 30sec increment",
-    coverImage: "/placeholder.svg",
-    description: "A prestigious national circuit sponsored by NNPC, featuring rounds in multiple cities across Nigeria.",
-  },
-];
+export const tournaments: Tournament[] = [];
 
 export const getPlayerById = (id: string): Player | undefined => {
   return players.find(player => player.id === id);

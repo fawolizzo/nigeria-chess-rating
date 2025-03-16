@@ -18,9 +18,9 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
   const getStatusClass = (status: Tournament['status']) => {
     switch (status) {
       case 'upcoming':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+        return 'bg-blue-100 text-nigeria-green dark:bg-blue-900/20 dark:text-nigeria-green-light';
       case 'ongoing':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+        return 'bg-green-100 text-nigeria-green dark:bg-green-900/20 dark:text-nigeria-green-light';
       case 'completed':
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
       case 'pending':
@@ -43,7 +43,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
 
   return (
     <Link to={`/tournament/${tournament.id}`} className="block h-full">
-      <div className="group h-full overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-gold hover:border-opacity-50 dark:hover:border-gold-light dark:hover:border-opacity-30">
+      <div className="group h-full overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-nigeria-green hover:border-opacity-50 dark:hover:border-nigeria-green-light dark:hover:border-opacity-30">
         <div className="p-6">
           <div className="flex justify-between items-start mb-2">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(tournament.status)}`}>
@@ -55,7 +55,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
               </span>
             )}
           </div>
-          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-gold-dark dark:group-hover:text-gold-light transition-colors">
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-nigeria-green dark:group-hover:text-nigeria-green-light transition-colors">
             {tournament.name}
           </h3>
           <div className="mb-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
@@ -93,7 +93,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
             <Button
               variant="default"
               size="sm"
-              className="flex-1 bg-black hover:bg-gray-900 text-white dark:bg-gold-dark dark:hover:bg-gold-dark/90"
+              className="flex-1 bg-nigeria-green hover:bg-nigeria-green-dark text-white dark:bg-nigeria-green-light dark:hover:bg-nigeria-green"
               onClick={(e) => {
                 e.preventDefault();
                 window.location.href = `/tournament/${tournament.id}`;
@@ -106,7 +106,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 border-gold text-gold-dark hover:bg-gold/10 dark:border-gold-light dark:text-gold-light"
+                className="flex-1 border-nigeria-yellow text-nigeria-green hover:bg-nigeria-yellow/10 dark:border-nigeria-yellow dark:text-nigeria-green-light"
                 onClick={handleRegisterClick}
               >
                 Register

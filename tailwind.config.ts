@@ -71,6 +71,14 @@ export default {
 				chess: {
 					light: '#F0D9B5',
 					dark: '#B58863',
+				},
+				// Nigerian flag colors
+				nigeria: {
+					green: '#008751',      // Nigerian green
+					'green-light': '#00A86B', // Lighter shade for dark mode
+					'green-dark': '#006741', // Darker shade for gradients
+					white: '#FFFFFF',      // White from the flag
+					yellow: '#F7C445'      // Yellow for buttons and accents
 				}
 			},
 			borderRadius: {

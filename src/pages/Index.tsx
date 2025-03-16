@@ -20,19 +20,14 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Get top players and upcoming tournaments
+  // Get top players
   const topPlayers = players
     .sort((a, b) => b.rating - a.rating)
     .slice(0, 4);
 
-  const upcomingTournaments = tournaments
-    .filter(t => t.status === "upcoming")
-    .slice(0, 2);
-
-  const recentTournaments = tournaments
-    .filter(t => t.status === "completed")
-    .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())
-    .slice(0, 2);
+  // We've removed the tournament dummy data
+  const upcomingTournaments = [];
+  const recentTournaments = [];
 
   if (isLoading) {
     return (
@@ -54,7 +49,7 @@ const Index = () => {
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
             Nigeria Chess Rating System
-            <span className="block text-gold-dark dark:text-gold-light">Official Ratings</span>
+            <span className="block text-nigeria-green dark:text-nigeria-green-light">Official Ratings</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
             The comprehensive rating platform for Nigerian chess players, tracking performance, tournaments, and achievements.
@@ -62,13 +57,13 @@ const Index = () => {
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               to="/players"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-black dark:bg-gold-dark hover:bg-gray-900 dark:hover:bg-gold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black dark:focus:ring-gold transition-colors duration-200"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-nigeria-green dark:bg-nigeria-green-light hover:bg-nigeria-green/90 dark:hover:bg-nigeria-green-light/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nigeria-green dark:focus:ring-nigeria-green-light transition-colors duration-200"
             >
               Browse Players
             </Link>
             <Link
               to="/tournaments"
-              className="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-700 text-base font-medium rounded-md shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition-colors duration-200"
+              className="inline-flex items-center px-6 py-3 border border-nigeria-green dark:border-nigeria-green-light text-base font-medium rounded-md shadow-sm text-nigeria-green dark:text-nigeria-green-light bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nigeria-green dark:focus:ring-nigeria-green-light transition-colors duration-200"
             >
               View Tournaments
             </Link>
@@ -80,23 +75,35 @@ const Index = () => {
       <section className="py-16 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto">
         <div className="mb-8 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-gold-dark dark:text-gold-light" />
+            <Trophy className="h-6 w-6 text-nigeria-green dark:text-nigeria-green-light" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Top Rated Players</h2>
           </div>
           <Link
             to="/players"
-            className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
+            className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light transition-colors"
           >
             View all <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {topPlayers.map(player => (
-            <div key={player.id} className="animate-fade-up">
-              <PlayerCard player={player} />
+          {topPlayers.length > 0 ? (
+            topPlayers.map(player => (
+              <div key={player.id} className="animate-fade-up">
+                <PlayerCard player={player} />
+              </div>
+            ))
+          ) : (
+            <div className="col-span-4 bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">No player data available</p>
+              <Link 
+                to="/players" 
+                className="inline-block mt-4 text-sm text-nigeria-green dark:text-nigeria-green-light hover:underline"
+              >
+                Browse players
+              </Link>
             </div>
-          ))}
+          )}
         </div>
         
         <div className="animate-fade-up" style={{ animationDelay: "200ms" }}>
@@ -108,12 +115,12 @@ const Index = () => {
       <section className="py-16 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto">
         <div className="mb-8 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Award className="h-6 w-6 text-gold-dark dark:text-gold-light" />
+            <Award className="h-6 w-6 text-nigeria-green dark:text-nigeria-green-light" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tournaments</h2>
           </div>
           <Link
             to="/tournaments"
-            className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
+            className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light transition-colors"
           >
             View all <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
@@ -134,7 +141,7 @@ const Index = () => {
                   <p className="text-gray-500 dark:text-gray-400">No upcoming tournaments</p>
                   <Link 
                     to="/tournaments" 
-                    className="inline-block mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    className="inline-block mt-4 text-sm text-nigeria-green dark:text-nigeria-green-light hover:underline"
                   >
                     View all tournaments
                   </Link>
@@ -156,7 +163,7 @@ const Index = () => {
                   <p className="text-gray-500 dark:text-gray-400">No recent tournaments</p>
                   <Link 
                     to="/tournaments" 
-                    className="inline-block mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    className="inline-block mt-4 text-sm text-nigeria-green dark:text-nigeria-green-light hover:underline"
                   >
                     View all tournaments
                   </Link>
@@ -172,7 +179,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-6 md:mb-0">
-              <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-black to-gray-700 dark:from-white dark:to-gray-300">
+              <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green to-nigeria-green-dark dark:from-nigeria-green-light dark:to-white">
                 NCR Ratings
               </span>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -180,16 +187,16 @@ const Index = () => {
               </p>
             </div>
             <div className="flex space-x-6">
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
                 About
               </a>
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
                 Contact
               </a>
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
                 Privacy
               </a>
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
                 Terms
               </a>
             </div>
