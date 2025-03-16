@@ -51,7 +51,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     resolver: zodResolver(playerSchema),
     defaultValues: {
       name: "",
-      title: "",
+      title: "none",
       rating: 800,
       rapidRating: undefined,
       blitzRating: undefined,
@@ -66,7 +66,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     if (player) {
       form.reset({
         name: player.name,
-        title: player.title || "",
+        title: player.title || "none",
         rating: player.rating,
         rapidRating: player.rapidRating,
         blitzRating: player.blitzRating,
@@ -84,7 +84,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       const updatedPlayer: Player = {
         ...player,
         name: data.name,
-        title: data.title || undefined,
+        title: data.title === "none" ? undefined : data.title,
         rating: data.rating,
         rapidRating: data.rapidRating,
         blitzRating: data.blitzRating,

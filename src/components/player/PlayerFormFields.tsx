@@ -1,6 +1,6 @@
 
 import React from "react";
-import { useForm, FormState, Control } from "react-hook-form";
+import { Control, FormState } from "react-hook-form";
 import {
   FormField,
   FormItem,
@@ -17,7 +17,7 @@ interface PlayerFormFieldsProps {
   formState: FormState<any>;
 }
 
-const chessTitles = ["", "CM", "FM", "IM", "GM", "WCM", "WFM", "WIM", "WGM"];
+const chessTitles = ["CM", "FM", "IM", "GM", "WCM", "WFM", "WIM", "WGM"];
 
 const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
   return (
@@ -54,8 +54,9 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem key="none" value="none">None</SelectItem>
                   {chessTitles.map(title => (
-                    <SelectItem key={title} value={title}>{title || "None"}</SelectItem>
+                    <SelectItem key={title} value={title}>{title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

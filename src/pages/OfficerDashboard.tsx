@@ -34,12 +34,15 @@ const OfficerDashboard: React.FC = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       
-      <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
+      <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Rating Officer Dashboard</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Rating Officer Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Manage tournaments, players and rating calculations</p>
+          </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
           <OfficerDashboardContent />
         </div>
       </div>

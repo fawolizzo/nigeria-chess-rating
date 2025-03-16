@@ -50,7 +50,7 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
     resolver: zodResolver(playerSchema),
     defaultValues: {
       name: "",
-      title: "",
+      title: "none",
       rating: 800,
       rapidRating: undefined,
       blitzRating: undefined,
@@ -67,7 +67,7 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
       const newPlayer: Player = {
         id: uuidv4(),
         name: data.name,
-        title: data.title || undefined,
+        title: data.title === "none" ? undefined : data.title,
         rating: data.rating,
         rapidRating: data.rapidRating,
         blitzRating: data.blitzRating,
