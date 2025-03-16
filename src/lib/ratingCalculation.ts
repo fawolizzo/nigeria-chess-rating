@@ -2,21 +2,23 @@
 /**
  * Nigerian Chess Rating System calculation utilities
  * Implements the modified Elo rating system with variable K-factors:
- * - K=40 for new players (< 30 games)
- * - K=32 for players rated below 2100
+ * - K=40 for new players (< 30 games) with rating below 2300
+ * - K=32 for players rated below 2100 (with 30+ games)
  * - K=24 for players rated 2100-2399
  * - K=16 for higher-rated players
  */
 
 const FLOOR_RATING = 800;
 const MIN_GAMES_FOR_ESTABLISHED = 30;
+const MAX_RATING_FOR_K40 = 2300;
 
 /**
  * Determines the appropriate K-factor based on player's rating and experience
  */
 export const getKFactor = (rating: number, gamesPlayed: number): number => {
-  if (gamesPlayed < MIN_GAMES_FOR_ESTABLISHED) {
-    return 40; // New player
+  // New players with under 30 games BUT only if they're under 2300 rating
+  if (gamesPlayed < MIN_GAMES_FOR_ESTABLISHED && rating < MAX_RATING_FOR_K40) {
+    return 40; // New player with rating under 2300
   } else if (rating < 2100) {
     return 32; // Below 2100
   } else if (rating < 2400) {

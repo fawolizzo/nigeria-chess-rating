@@ -1,96 +1,122 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { getTournamentById, getPlayersByTournamentId, Tournament, Player } from "@/lib/mockData";
 import Navbar from "@/components/Navbar";
-import { Users, Trophy, Award } from "lucide-react";
-import { useUser } from "@/contexts/UserContext";
+import { Calendar, MapPin, Users, Info, Trophy, Award } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getTournamentById, getPlayersByTournamentId, Tournament } from "@/lib/mockData";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import StandingsTable from "@/components/StandingsTable";
-import TournamentRatingDialog from "@/components/officer/TournamentRatingDialog";
 import PairingSystem from "@/components/PairingSystem";
-import TournamentHeader from "@/components/tournament/TournamentHeader";
+import { useUser } from "@/contexts/UserContext";
+import TournamentRatingDialog from "@/components/officer/TournamentRatingDialog";
 
-const TournamentDetails: React.FC = () => {
+interface PlayerWithScore extends Player {
+  score: number;
+  tiebreak: number[];
+}
+
+const TournamentDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useUser();
   const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("participants");
-  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [standings, setStandings] = useState<PlayerWithScore[]>([]);
   const [selectedRound, setSelectedRound] = useState(1);
-  
-  const isOfficer = currentUser?.role === 'rating_officer';
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+
   useEffect(() => {
-    if (!id) return;
-    
-    const loadTournament = async () => {
-      setIsLoading(true);
-      try {
-        const foundTournament = getTournamentById(id);
-        if (foundTournament) {
-          setTournament(foundTournament);
-          
-          // Get tournament participants
-          const players = getPlayersByTournamentId(id);
-          
-          // Calculate player scores if tournament has pairings
-          if (foundTournament.pairings && foundTournament.pairings.length > 0) {
-            const playersWithScores = players.map(player => {
-              let score = 0;
-              
-              foundTournament.pairings?.forEach(round => {
-                round.matches.forEach(match => {
-                  if (match.whiteId === player.id && match.result === "1-0") {
-                    score += 1;
-                  } else if (match.blackId === player.id && match.result === "0-1") {
-                    score += 1;
-                  } else if ((match.whiteId === player.id || match.blackId === player.id) && match.result === "1/2-1/2") {
-                    score += 0.5;
-                  }
-                });
-              });
-              
-              return {
-                ...player,
-                score
-              };
-            });
-            
-            // Sort by score
-            playersWithScores.sort((a, b) => b.score - a.score);
-            setParticipants(playersWithScores);
-          } else {
-            setParticipants(players);
-          }
-          
-        } else {
-          navigate("/tournaments");
+    if (id) {
+      const fetchedTournament = getTournamentById(id);
+      if (fetchedTournament) {
+        setTournament(fetchedTournament);
+        
+        // Get all players for this tournament
+        const tournamentPlayers = getPlayersByTournamentId(id);
+        setPlayers(tournamentPlayers);
+        
+        // Calculate standings if tournament is ongoing or completed
+        if (fetchedTournament.status === "ongoing" || fetchedTournament.status === "completed" || fetchedTournament.status === "processed") {
+          calculateStandings(fetchedTournament, tournamentPlayers);
         }
-      } catch (error) {
-        console.error("Error loading tournament:", error);
+      } else {
         navigate("/tournaments");
-      } finally {
-        setIsLoading(false);
       }
-    };
+    }
+    setIsLoading(false);
+  }, [id, navigate]);
+
+  const getStatusBadgeColor = (status: Tournament["status"]) => {
+    switch (status) {
+      case "upcoming": return "bg-blue-500";
+      case "ongoing": return "bg-green-500";
+      case "completed": return "bg-amber-500";
+      case "processed": return "bg-purple-500";
+      case "pending": return "bg-gray-500";
+      case "rejected": return "bg-red-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const calculateStandings = (tournament: Tournament, playerList: Player[]) => {
+    if (!tournament.pairings || tournament.pairings.length === 0) {
+      setStandings(playerList.map(p => ({ ...p, score: 0, tiebreak: [0, 0] })));
+      return;
+    }
     
-    loadTournament();
-  }, [id, navigate, isRatingDialogOpen]);
-  
+    const playerScores: Record<string, { score: number, tiebreak: number[] }> = {};
+    
+    // Initialize player scores
+    playerList.forEach(player => {
+      playerScores[player.id] = { score: 0, tiebreak: [0, 0] };
+    });
+    
+    // Calculate scores from match results
+    tournament.pairings.forEach(round => {
+      round.matches.forEach(match => {
+        if (match.result === "1-0") {
+          playerScores[match.whiteId].score += 1;
+        } else if (match.result === "0-1") {
+          playerScores[match.blackId].score += 1;
+        } else if (match.result === "1/2-1/2") {
+          playerScores[match.whiteId].score += 0.5;
+          playerScores[match.blackId].score += 0.5;
+        }
+      });
+    });
+    
+    // Create standings with players and scores
+    const calculatedStandings = playerList.map(player => ({
+      ...player,
+      score: playerScores[player.id]?.score || 0,
+      tiebreak: playerScores[player.id]?.tiebreak || [0, 0],
+    }));
+    
+    // Sort by score (descending)
+    calculatedStandings.sort((a, b) => b.score - a.score);
+    
+    setStandings(calculatedStandings);
+  };
+
   const handleProcessRatings = () => {
-    setIsRatingDialogOpen(true);
+    if (currentUser?.role === "rating_officer" && tournament?.status === "completed") {
+      setIsRatingDialogOpen(true);
+    }
   };
-  
-  const handleProcessed = () => {
-    // Refresh the tournament data
-    const updatedTournament = getTournamentById(id || "");
-    setTournament(updatedTournament || null);
+
+  const handleRatingProcessed = () => {
+    // Reload tournament data after processing
+    if (id) {
+      const updatedTournament = getTournamentById(id);
+      if (updatedTournament) {
+        setTournament(updatedTournament);
+      }
+    }
   };
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
@@ -101,16 +127,9 @@ const TournamentDetails: React.FC = () => {
       </div>
     );
   }
-  
+
   if (!tournament) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold">Tournament not found</h1>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -118,140 +137,223 @@ const TournamentDetails: React.FC = () => {
       <Navbar />
       
       <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
-        <TournamentHeader 
-          tournament={tournament}
-          onToggleRegistration={() => {}}
-          onStartTournament={() => {}}
-          onCompleteTournament={() => {}}
-          canStartTournament={false}
-          isOfficer={isOfficer}
-          onProcessRatings={isOfficer && tournament.status === "completed" ? handleProcessRatings : undefined}
-        />
-        
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 mb-6">
-          <div className="mb-4">
-            <h3 className="text-lg font-medium">Tournament Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-3">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
-                <p>{tournament.location}, {tournament.city}, {tournament.state}</p>
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-bold">{tournament.name}</h1>
+              
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Badge className={getStatusBadgeColor(tournament.status)}>
+                  {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
+                </Badge>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Calendar size={14} /> {tournament.startDate} to {tournament.endDate}
+                </Badge>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <MapPin size={14} /> {tournament.location}
+                </Badge>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Users size={14} /> {tournament.participants} participants
+                </Badge>
+                <Badge variant="outline">{tournament.timeControl}</Badge>
               </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Time Control</p>
-                <p>{tournament.timeControl}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Rounds</p>
-                <p>{tournament.rounds}</p>
-              </div>
+              
+              {tournament.description && (
+                <p className="mt-4 text-gray-600 dark:text-gray-400 max-w-3xl">
+                  {tournament.description}
+                </p>
+              )}
             </div>
+            
+            {currentUser?.role === "rating_officer" && tournament.status === "completed" && (
+              <div className="flex-shrink-0">
+                <button
+                  onClick={handleProcessRatings}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
+                >
+                  <Trophy size={16} />
+                  Process Ratings
+                </button>
+              </div>
+            )}
           </div>
-          
-          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+        </div>
+        
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
+          <Tabs defaultValue={tournament.status === "upcoming" ? "info" : "standings"}>
             <TabsList className="mb-6">
-              <TabsTrigger value="participants" className="flex gap-1 items-center">
-                <Users size={16} />
-                Participants
+              <TabsTrigger value="info" className="flex gap-1 items-center">
+                <Info size={16} /> Information
               </TabsTrigger>
               
-              {tournament.pairings && tournament.pairings.length > 0 && (
+              {(tournament.status === "ongoing" || tournament.status === "completed" || tournament.status === "processed") && (
                 <>
-                  <TabsTrigger value="pairings" className="flex gap-1 items-center">
-                    <Trophy size={16} />
-                    Pairings
+                  <TabsTrigger value="standings" className="flex gap-1 items-center">
+                    <Award size={16} /> Standings
                   </TabsTrigger>
                   
-                  <TabsTrigger value="standings" className="flex gap-1 items-center">
-                    <Award size={16} />
-                    Standings
+                  <TabsTrigger value="pairings" className="flex gap-1 items-center">
+                    <Trophy size={16} /> Pairings
                   </TabsTrigger>
                 </>
               )}
+              
+              <TabsTrigger value="players" className="flex gap-1 items-center">
+                <Users size={16} /> Players
+              </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="participants">
-              <div className="rounded-md border overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rating</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">State</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                    {participants.map((player) => (
-                      <tr key={player.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {player.title && <span className="mr-1 text-blue-600 dark:text-blue-400">{player.title}</span>}
-                                {player.name}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {player.rating}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {player.state || "N/A"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
-            
-            {tournament.pairings && tournament.pairings.length > 0 && (
-              <>
-                <TabsContent value="pairings">
-                  <div className="mb-4">
-                    <div className="flex gap-1 flex-wrap">
-                      {tournament.pairings.map((round) => (
-                        <button
-                          key={round.roundNumber}
-                          className={`px-3 py-1 text-sm rounded-md ${
-                            selectedRound === round.roundNumber
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                          }`}
-                          onClick={() => setSelectedRound(round.roundNumber)}
-                        >
-                          Round {round.roundNumber}
-                        </button>
-                      ))}
+            <TabsContent value="info">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tournament Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Dates</h3>
+                        <p className="mt-1">
+                          {tournament.startDate} to {tournament.endDate}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Location</h3>
+                        <p className="mt-1">{tournament.location}</p>
+                        {tournament.city && tournament.state && (
+                          <p className="text-sm text-gray-500">
+                            {tournament.city}, {tournament.state}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Category</h3>
+                        <p className="mt-1">{tournament.category}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Time Control</h3>
+                        <p className="mt-1">{tournament.timeControl}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Rounds</h3>
+                        <p className="mt-1">{tournament.rounds}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Participants</h3>
+                        <p className="mt-1">{tournament.participants}</p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <PairingSystem
-                    players={participants}
-                    pairings={tournament.pairings.find(p => p.roundNumber === selectedRound)?.matches || []}
-                    roundNumber={selectedRound}
-                    readonly={true}
-                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {(tournament.status === "ongoing" || tournament.status === "completed" || tournament.status === "processed") && (
+              <>
+                <TabsContent value="standings">
+                  <StandingsTable standings={standings} players={players} />
                 </TabsContent>
                 
-                <TabsContent value="standings">
-                  <StandingsTable
-                    standings={participants}
-                    players={participants}
-                  />
+                <TabsContent value="pairings">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Round {selectedRound} Pairings</CardTitle>
+                      
+                      {tournament.rounds > 1 && (
+                        <div className="flex gap-1 mt-4 flex-wrap">
+                          {Array.from({ length: tournament.rounds }, (_, i) => i + 1).map(round => (
+                            <button
+                              key={round}
+                              className={`min-w-[40px] px-3 py-1 rounded-md ${
+                                selectedRound === round 
+                                  ? "bg-primary text-primary-foreground" 
+                                  : "bg-secondary text-secondary-foreground"
+                              }`}
+                              onClick={() => setSelectedRound(round)}
+                            >
+                              {round}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      {tournament.pairings && tournament.pairings.length > 0 ? (
+                        <PairingSystem
+                          players={players}
+                          pairings={tournament.pairings.find(p => p.roundNumber === selectedRound)?.matches || []}
+                          roundNumber={selectedRound}
+                          readonly={true}
+                        />
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          No pairings available for this round.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               </>
             )}
+            
+            <TabsContent value="players">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Participating Players</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {players.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {players.map(player => (
+                        <div 
+                          key={player.id} 
+                          className="border rounded-md p-4 hover:border-primary cursor-pointer"
+                          onClick={() => navigate(`/player/${player.id}`)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center text-lg font-bold text-purple-600 dark:text-purple-300">
+                              {player.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-medium flex items-center gap-1">
+                                {player.title && (
+                                  <span className="text-amber-500">{player.title}</span>
+                                )}
+                                {player.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Rating: {player.rating} • {player.country || "Nigeria"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No players available for this tournament.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
       
-      {isOfficer && (
+      {tournament && (
         <TournamentRatingDialog
           tournament={tournament}
           isOpen={isRatingDialogOpen}
           onOpenChange={setIsRatingDialogOpen}
-          onProcessed={handleProcessed}
+          onProcessed={handleRatingProcessed}
         />
       )}
     </div>

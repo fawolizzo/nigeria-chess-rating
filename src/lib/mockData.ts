@@ -38,6 +38,19 @@ export interface Tournament {
   coverImage?: string;
   description?: string;
   registrationOpen?: boolean;
+  organizerId?: string;
+  players?: string[];
+  pairings?: Array<{
+    roundNumber: number;
+    matches: Array<{
+      whiteId: string;
+      blackId: string;
+      result?: "1-0" | "0-1" | "1/2-1/2" | "*";
+      whiteRatingChange?: number;
+      blackRatingChange?: number;
+    }>;
+  }>;
+  currentRound?: number;
 }
 
 export const players: Player[] = [
@@ -422,3 +435,4 @@ export const updateTournament = (updatedTournament: Tournament): void => {
   );
   saveTournaments(updatedTournaments);
 };
+

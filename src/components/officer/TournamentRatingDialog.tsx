@@ -164,7 +164,7 @@ const TournamentRatingDialog = ({
               <div className="font-medium">Rating System Parameters:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                 <li>Floor rating of 800 for new players</li>
-                <li>K=40 for new players (less than 30 games)</li>
+                <li>K=40 for new players (less than 30 games) under 2300 rating</li>
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>
                 <li>K=16 for higher-rated players</li>
