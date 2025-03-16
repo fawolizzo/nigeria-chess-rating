@@ -785,6 +785,125 @@ const TournamentManagement = () => {
     )
     .slice(0, 10);
 
+  const generateTournamentReport = () => {
+    if (!tournament || !registeredPlayers.length) {
+      toast({
+        title: "Cannot generate report",
+        description: "No tournament data or players available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingReport(true);
+
+    try {
+      const reportData = {
+        tournament: {
+          id: tournament.id,
+          name: tournament.name,
+          description: tournament.description,
+          startDate: tournament.startDate,
+          endDate: tournament.endDate,
+          location: tournament.location,
+          city: tournament.city,
+          state: tournament.state,
+          timeControl: tournament.timeControl,
+          rounds: tournament.rounds,
+          category: tournament.category,
+          organizerId: tournament.organizerId,
+          dateGenerated: new Date().toISOString(),
+        },
+        players: registeredPlayers.map(player => ({
+          id: player.id,
+          name: player.name,
+          title: player.title || "",
+          rating: player.rating,
+          ratingChange: 0,
+          gender: player.gender,
+          country: player.country,
+          state: player.state,
+          club: player.club || ""
+        })),
+        standings: standings.map((player, index) => ({
+          position: index + 1,
+          playerId: player.id,
+          name: player.name,
+          score: player.score,
+          initialRating: player.rating,
+        })),
+        rounds: tournament.pairings?.map(round => ({
+          roundNumber: round.roundNumber,
+          matches: round.matches.map(match => {
+            const whitePlayer = registeredPlayers.find(p => p.id === match.whiteId);
+            const blackPlayer = registeredPlayers.find(p => p.id === match.blackId);
+            
+            return {
+              whiteId: match.whiteId,
+              whiteName: whitePlayer?.name || "Unknown",
+              whiteRating: whitePlayer?.rating || 0,
+              blackId: match.blackId,
+              blackName: blackPlayer?.name || "Unknown",
+              blackRating: blackPlayer?.rating || 0,
+              result: match.result || "*",
+              whiteRatingChange: match.whiteRatingChange || 0,
+              blackRatingChange: match.blackRatingChange || 0,
+            };
+          })
+        })) || [],
+      };
+
+      if (tournament.pairings) {
+        const playerRatingChanges: Record<string, number> = {};
+        
+        tournament.pairings.forEach(round => {
+          round.matches.forEach(match => {
+            if (match.whiteRatingChange) {
+              playerRatingChanges[match.whiteId] = (playerRatingChanges[match.whiteId] || 0) + match.whiteRatingChange;
+            }
+            if (match.blackRatingChange) {
+              playerRatingChanges[match.blackId] = (playerRatingChanges[match.blackId] || 0) + match.blackRatingChange;
+            }
+          });
+        });
+        
+        reportData.players = reportData.players.map(player => ({
+          ...player,
+          ratingChange: playerRatingChanges[player.id] || 0
+        }));
+      }
+
+      const jsonData = JSON.stringify(reportData, null, 2);
+      const blob = new Blob([jsonData], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${tournament.name.replace(/\s+/g, "_")}_report_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      toast({
+        title: "Report Generated",
+        description: "Tournament report has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Report Generation Failed",
+        description: "There was an error generating the tournament report.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
