@@ -45,7 +45,6 @@ export const players: Player[] = [
     club: "Chess in Slums Africa",
     gender: "M",
     birthYear: 1994,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2250 },
       { date: "2023-04", rating: 2265 },
@@ -69,7 +68,6 @@ export const players: Player[] = [
     state: "Edo",
     gender: "M",
     birthYear: 1986,
-    profileImage: "/placeholder.svg",
     ratingHistory: [
       { date: "2023-01", rating: 2320 },
       { date: "2023-04", rating: 2330 },

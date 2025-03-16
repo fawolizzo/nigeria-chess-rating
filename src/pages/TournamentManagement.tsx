@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -245,10 +244,10 @@ const TournamentManagement = () => {
       return;
     }
     
-    // Update tournament status to ongoing
+    // Update tournament status to ongoing - explicitly cast the status to the correct type
     const updatedTournament = {
       ...tournament,
-      status: "ongoing" as const,
+      status: "ongoing" as "upcoming" | "ongoing" | "completed" | "pending" | "rejected",
       registrationOpen: false
     };
     
