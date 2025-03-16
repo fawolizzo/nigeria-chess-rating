@@ -2,12 +2,14 @@
 import { Link } from "react-router-dom";
 import { Tournament } from "@/lib/mockData";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TournamentCardProps {
   tournament: Tournament;
+  onRegister?: (tournamentId: string) => void;
 }
 
-const TournamentCard = ({ tournament }: TournamentCardProps) => {
+const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
@@ -27,31 +29,39 @@ const TournamentCard = ({ tournament }: TournamentCardProps) => {
     }
   };
 
+  const handleRegisterClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation to details page
+    if (onRegister) {
+      onRegister(tournament.id);
+    }
+  };
+
   return (
-    <Link
-      to={`/tournament/${tournament.id}`}
-      className="block"
-    >
+    <Link to={`/tournament/${tournament.id}`} className="block h-full">
       <div className="group h-full overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-gold hover:border-opacity-50 dark:hover:border-gold-light dark:hover:border-opacity-30">
-        <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-800 overflow-hidden">
-          <img
-            src={tournament.coverImage}
-            alt={tournament.name}
-            className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = "/placeholder.svg";
-            }}
-          />
-        </div>
+        {tournament.coverImage && (
+          <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+            <img
+              src={tournament.coverImage}
+              alt={tournament.name}
+              className="object-cover w-full h-full transform group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/placeholder.svg";
+              }}
+            />
+          </div>
+        )}
         <div className="p-6">
           <div className="flex justify-between items-start mb-2">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(tournament.status)}`}>
               {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {tournament.category}
-            </span>
+            {tournament.category && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {tournament.category}
+              </span>
+            )}
           </div>
           <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white group-hover:text-gold-dark dark:group-hover:text-gold-light transition-colors">
             {tournament.name}
@@ -63,18 +73,45 @@ const TournamentCard = ({ tournament }: TournamentCardProps) => {
             </div>
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" />
-              <span>{tournament.location}</span>
+              <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+            </div>
+            {tournament.participants !== undefined && (
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" />
+                <span>{tournament.participants} players</span>
+              </div>
+            )}
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" />
+              <span>{tournament.timeControl}, {tournament.rounds} rounds</span>
             </div>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center text-gray-600 dark:text-gray-300">
-              <Users className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-              <span>{tournament.participants} players</span>
-            </div>
-            <div className="flex items-center text-gray-600 dark:text-gray-300">
-              <Clock className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-              <span>{tournament.rounds} rounds</span>
-            </div>
+          
+          {tournament.description && (
+            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+              {tournament.description}
+            </p>
+          )}
+          
+          <div className="flex space-x-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1 bg-black hover:bg-gray-900 text-white dark:bg-gold-dark dark:hover:bg-gold-dark/90"
+            >
+              View Details
+            </Button>
+            
+            {tournament.status === 'upcoming' && tournament.registrationOpen && onRegister && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 border-gold text-gold-dark hover:bg-gold/10 dark:border-gold-light dark:text-gold-light"
+                onClick={handleRegisterClick}
+              >
+                Register
+              </Button>
+            )}
           </div>
         </div>
       </div>
