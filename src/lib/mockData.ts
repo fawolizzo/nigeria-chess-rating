@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -28,8 +29,8 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   location: string;
-  city?: string;
-  state?: string;
+  city: string; // Changed from optional to required
+  state: string; // Changed from optional to required
   category: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed';
   participants: number;

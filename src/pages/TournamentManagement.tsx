@@ -5,7 +5,7 @@ import { Users, Trophy, Award } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Player, addPlayer, getAllPlayers, updatePlayer } from "@/lib/mockData";
+import { Player, addPlayer, getAllPlayers, updatePlayer, Tournament } from "@/lib/mockData";
 import StandingsTable from "@/components/StandingsTable";
 
 // Import our components
@@ -14,37 +14,6 @@ import TournamentHeader from "@/components/tournament/TournamentHeader";
 import PlayersTab from "@/components/tournament/PlayersTab";
 import PairingsTab from "@/components/tournament/PairingsTab";
 import RoundController from "@/components/tournament/RoundController";
-
-interface Tournament {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  city: string;
-  state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
-  timeControl: string;
-  rounds: number;
-  organizerId: string;
-  registrationOpen?: boolean;
-  participants?: number;
-  coverImage?: string;
-  category?: string;
-  players?: string[];
-  pairings?: {
-    roundNumber: number;
-    matches: {
-      whiteId: string;
-      blackId: string;
-      result?: "1-0" | "0-1" | "1/2-1/2" | "*";
-      whiteRatingChange?: number;
-      blackRatingChange?: number;
-    }[];
-  }[];
-  currentRound?: number;
-}
 
 interface PlayerWithScore extends Player {
   score: number;
