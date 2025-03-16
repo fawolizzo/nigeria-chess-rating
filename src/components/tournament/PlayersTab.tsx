@@ -76,6 +76,7 @@ const PlayersTab = ({
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     Rating: {player.rating}
+                    {player.state && <span className="ml-2">• {player.state}</span>}
                   </div>
                 </div>
                 
