@@ -35,7 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
-import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock } from "lucide-react";
+import { Check, X, Users, UserPlus, AlertTriangle, Calendar, MapPin, Clock, FileText, FileDown, FileUp, RefreshCw } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,12 +50,73 @@ interface Tournament {
   location: string;
   city: string;
   state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
   timeControl: string;
   rounds: number;
   organizerId: string;
   registrationOpen?: boolean;
   participants?: number;
+  category?: string;
+  pairings?: Array<{
+    roundNumber: number;
+    matches: Array<{
+      whiteId: string;
+      blackId: string;
+      result?: string;
+      whiteRatingChange?: number;
+      blackRatingChange?: number;
+    }>;
+  }>;
+}
+
+interface TournamentReport {
+  tournament: {
+    id: string;
+    name: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    location: string;
+    city: string;
+    state: string;
+    timeControl: string;
+    rounds: number;
+    category: string;
+    organizerId: string;
+    dateGenerated: string;
+  };
+  players: Array<{
+    id: string;
+    name: string;
+    title: string;
+    rating: number;
+    ratingChange: number;
+    gender: string;
+    country: string;
+    state: string;
+    club: string;
+  }>;
+  standings: Array<{
+    position: number;
+    playerId: string;
+    name: string;
+    score: number;
+    initialRating: number;
+  }>;
+  rounds: Array<{
+    roundNumber: number;
+    matches: Array<{
+      whiteId: string;
+      whiteName: string;
+      whiteRating: number;
+      blackId: string;
+      blackName: string;
+      blackRating: number;
+      result: string;
+      whiteRatingChange: number;
+      blackRatingChange: number;
+    }>;
+  }>;
 }
 
 const playerSchema = z.object({
@@ -83,8 +144,13 @@ const OfficerDashboard = () => {
   const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
   const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
+  const [completedTournaments, setCompletedTournaments] = useState<Tournament[]>([]);
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
+  const [isProcessingReport, setIsProcessingReport] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [fileUploadKey, setFileUploadKey] = useState(Date.now());
 
   const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", ""];
 
@@ -108,7 +174,7 @@ const OfficerDashboard = () => {
       return;
     }
 
-    const loadPlayers = () => {
+    const loadData = () => {
       setIsLoading(true);
       
       const allPlayers = getAllPlayers();
@@ -123,13 +189,15 @@ const OfficerDashboard = () => {
       if (savedTournaments) {
         const allTournaments = JSON.parse(savedTournaments);
         const pending = allTournaments.filter((t: Tournament) => t.status === 'pending');
+        const completed = allTournaments.filter((t: Tournament) => t.status === 'completed' && t.status !== 'processed');
         setPendingTournaments(pending);
+        setCompletedTournaments(completed);
       }
       
       setIsLoading(false);
     };
 
-    loadPlayers();
+    loadData();
   }, [currentUser, navigate]);
 
   const handleApprovePlayer = (player: Player) => {
@@ -246,6 +314,112 @@ const OfficerDashboard = () => {
     });
   };
 
+  const handleProcessTournament = (tournament: Tournament) => {
+    setSelectedTournament(tournament);
+    setReportDialogOpen(true);
+  };
+
+  const processReportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingReport(true);
+    
+    try {
+      const fileContent = await readFileAsText(file);
+      const reportData: TournamentReport = JSON.parse(fileContent);
+      
+      const allPlayers = getAllPlayers();
+      const updatedPlayers: Player[] = [];
+      
+      for (const reportPlayer of reportData.players) {
+        const player = allPlayers.find(p => p.id === reportPlayer.id);
+        
+        if (player) {
+          const newRating = player.rating + reportPlayer.ratingChange;
+          const timeControl = getTimeControlCategory(reportData.tournament.timeControl);
+          
+          const updatedPlayer = {
+            ...player,
+            rating: timeControl === 'classical' ? newRating : player.rating,
+            rapidRating: timeControl === 'rapid' ? (player.rapidRating || player.rating) + reportPlayer.ratingChange : player.rapidRating,
+            blitzRating: timeControl === 'blitz' ? (player.blitzRating || player.rating) + reportPlayer.ratingChange : player.blitzRating,
+            ratingHistory: [
+              ...(player.ratingHistory || []),
+              { date: new Date().toISOString().split('T')[0], rating: newRating }
+            ],
+            tournamentResults: [
+              ...(player.tournamentResults || []),
+              {
+                tournamentId: reportData.tournament.id,
+                position: reportData.standings.find(s => s.playerId === player.id)?.position || 0,
+                ratingChange: reportPlayer.ratingChange
+              }
+            ]
+          };
+          
+          updatePlayer(updatedPlayer);
+          updatedPlayers.push(updatedPlayer);
+        }
+      }
+      
+      const savedTournaments = localStorage.getItem('tournaments');
+      if (savedTournaments) {
+        const allTournaments = JSON.parse(savedTournaments);
+        const updatedTournaments = allTournaments.map((t: Tournament) => 
+          t.id === reportData.tournament.id 
+            ? { ...t, status: 'processed' as const } 
+            : t
+        );
+        localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+        
+        setCompletedTournaments(prev => prev.filter(t => t.id !== reportData.tournament.id));
+      }
+      
+      setFileUploadKey(Date.now());
+      setReportDialogOpen(false);
+      
+      toast({
+        title: "Tournament Processed",
+        description: `Successfully processed "${reportData.tournament.name}" and updated ${updatedPlayers.length} player ratings.`,
+      });
+    } catch (error) {
+      console.error("Error processing report:", error);
+      toast({
+        title: "Processing Failed",
+        description: "There was an error processing the tournament report file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingReport(false);
+    }
+  };
+  
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => resolve(event.target?.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsText(file);
+    });
+  };
+  
+  const getTimeControlCategory = (timeControl: string): 'classical' | 'rapid' | 'blitz' => {
+    const totalMinutes = parseTimeControl(timeControl);
+    
+    if (totalMinutes >= 60) return 'classical';
+    if (totalMinutes >= 10) return 'rapid';
+    return 'blitz';
+  };
+  
+  const parseTimeControl = (timeControl: string): number => {
+    const parts = timeControl.split('+');
+    const baseMinutes = parseInt(parts[0]) || 0;
+    const increment = parts.length > 1 ? parseInt(parts[1]) || 0 : 0;
+    
+    return baseMinutes + (increment * 60 / 60);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
@@ -296,6 +470,14 @@ const OfficerDashboard = () => {
               {pendingTournaments.length > 0 && (
                 <Badge className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                   {pendingTournaments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="completed">
+              Completed Tournaments
+              {completedTournaments.length > 0 && (
+                <Badge className="ml-2 bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                  {completedTournaments.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -442,6 +624,85 @@ const OfficerDashboard = () => {
                           >
                             <Check className="h-4 w-4 mr-1" />
                             Approve
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/tournament/${tournament.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="completed" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Completed Tournaments</CardTitle>
+                <CardDescription>
+                  Process completed tournaments to update player ratings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {completedTournaments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-10 w-10 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No completed tournaments</h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      There are no completed tournaments waiting to be processed.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {completedTournaments.map(tournament => (
+                      <div key={tournament.id} className="flex flex-col p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-medium text-lg text-gray-900 dark:text-white">
+                              {tournament.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {tournament.description.substring(0, 100)}
+                              {tournament.description.length > 100 ? '...' : ''}
+                            </p>
+                          </div>
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                            Completed
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <span>
+                              {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm">
+                            <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+                          </div>
+                          <div className="flex items-center text-sm">
+                            <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                            <span>{tournament.timeControl}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-2 mt-4">
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="flex items-center"
+                            onClick={() => handleProcessTournament(tournament)}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-1" />
+                            Process Tournament
                           </Button>
                           <Button
                             variant="ghost"
@@ -706,6 +967,71 @@ const OfficerDashboard = () => {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Process Tournament</DialogTitle>
+            <DialogDescription>
+              Upload the tournament report file to process results and update player ratings.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Please upload the tournament report file generated by the tournament organizer.
+              This will update player ratings and record tournament results.
+            </p>
+            
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center">
+              <FileUp className="h-8 w-8 mx-auto text-gray-400 mb-4" />
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                Drag and drop file here, or click to browse
+              </p>
+              <input
+                key={fileUploadKey}
+                type="file"
+                className="hidden"
+                id="report-file"
+                accept=".json"
+                onChange={processReportFile}
+                disabled={isProcessingReport}
+              />
+              <label htmlFor="report-file">
+                <Button 
+                  variant="outline" 
+                  className="mt-2" 
+                  disabled={isProcessingReport}
+                  onClick={() => document.getElementById('report-file')?.click()}
+                >
+                  {isProcessingReport ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Select File
+                    </>
+                  )}
+                </Button>
+              </label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setReportDialogOpen(false)}
+              disabled={isProcessingReport}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

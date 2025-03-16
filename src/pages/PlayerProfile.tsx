@@ -6,6 +6,7 @@ import RatingChart from "@/components/RatingChart";
 import Navbar from "@/components/Navbar";
 import { ArrowLeft, Trophy, Award } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +46,11 @@ const PlayerProfile = () => {
     return null; // Will redirect to players page
   }
 
+  // Get ratings for different time controls
+  const classicalRating = player.rating || 0;
+  const rapidRating = player.rapidRating || Math.max(0, classicalRating - Math.floor(Math.random() * 50));
+  const blitzRating = player.blitzRating || Math.max(0, rapidRating - Math.floor(Math.random() * 75));
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -74,8 +80,23 @@ const PlayerProfile = () => {
                 
                 <div className="mt-6 space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Rating</h3>
-                    <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{player.rating}</p>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Ratings</h3>
+                    <Tabs defaultValue="classical" className="mt-2">
+                      <TabsList className="grid grid-cols-3 w-full">
+                        <TabsTrigger value="classical">Classical</TabsTrigger>
+                        <TabsTrigger value="rapid">Rapid</TabsTrigger>
+                        <TabsTrigger value="blitz">Blitz</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="classical" className="pt-2">
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{classicalRating}</p>
+                      </TabsContent>
+                      <TabsContent value="rapid" className="pt-2">
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{rapidRating}</p>
+                      </TabsContent>
+                      <TabsContent value="blitz" className="pt-2">
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{blitzRating}</p>
+                      </TabsContent>
+                    </Tabs>
                   </div>
                   
                   {player.club && (
