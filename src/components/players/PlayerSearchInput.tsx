@@ -6,17 +6,19 @@ import { Button } from "@/components/ui/button";
 interface PlayerSearchInputProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  placeholder?: string;
 }
 
 export const PlayerSearchInput = ({
   searchQuery,
   setSearchQuery,
+  placeholder = "Search players by name, title, rating..."
 }: PlayerSearchInputProps) => {
   return (
     <div className="relative">
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
       <Input
-        placeholder="Search players by name, title, rating..."
+        placeholder={placeholder}
         className="pl-10"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}

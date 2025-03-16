@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Player } from "@/lib/mockData";
 import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
+import { useToast } from "@/components/ui/use-toast";
 
 interface TournamentPlayerSelectorProps {
   tournamentId: string;
@@ -17,6 +18,24 @@ const TournamentPlayerSelector = ({
   onPlayersAdded 
 }: TournamentPlayerSelectorProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
+  
+  const handlePlayersAdded = (players: Player[]) => {
+    // Verify all players are approved
+    const unapprovedPlayers = players.filter(player => player.status !== 'approved');
+    
+    if (unapprovedPlayers.length > 0) {
+      toast({
+        title: "Cannot add unapproved players",
+        description: "Only players approved by a Rating Officer can be added to tournaments.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    onPlayersAdded(players);
+    setIsDialogOpen(false);
+  };
   
   return (
     <div className="relative">
@@ -33,7 +52,7 @@ const TournamentPlayerSelector = ({
       <MultiSelectPlayers 
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onPlayersSelected={onPlayersAdded}
+        onPlayersSelected={handlePlayersAdded}
         excludeIds={existingPlayerIds}
       />
     </div>

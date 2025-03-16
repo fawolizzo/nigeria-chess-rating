@@ -40,19 +40,13 @@ export const MultiSelectPlayers = ({
     const fetchPlayers = () => {
       const allPlayers = getAllPlayers();
       
-      // Log all players to debug
-      console.log("All players:", allPlayers);
-      
-      // Check each player's status explicitly to help debug
-      allPlayers.forEach(player => {
-        console.log(`Player ${player.name}, ID: ${player.id}, Status: ${player.status}`);
-      });
-      
       // Filter only approved players and exclude those already in the tournament
-      // Make sure to handle undefined status (consider it not approved)
       const approvedPlayers = allPlayers.filter(player => {
         const isApproved = player.status === 'approved';
         const isExcluded = excludeIds.includes(player.id);
+        
+        console.log(`Player ${player.name}, ID: ${player.id}, Status: ${player.status}, Approved: ${isApproved}, Excluded: ${isExcluded}`);
+        
         return isApproved && !isExcluded;
       });
       
@@ -60,13 +54,21 @@ export const MultiSelectPlayers = ({
       console.log("Approved players:", approvedPlayers.length);
       console.log("Excluded IDs:", excludeIds);
       
-      if (approvedPlayers.length === 0 && allPlayers.length > 0) {
-        // If we have players but none are approved, show a toast
-        toast({
-          title: "No approved players available",
-          description: "There are players in the system but none with 'approved' status.",
-          variant: "destructive"
-        });
+      if (approvedPlayers.length === 0) {
+        if (allPlayers.length === 0) {
+          toast({
+            title: "No players available",
+            description: "There are no players in the system yet.",
+          });
+        } else {
+          const pendingCount = allPlayers.filter(p => p.status === 'pending').length;
+          
+          toast({
+            title: "No approved players available",
+            description: `There are ${pendingCount} pending players that need approval from a Rating Officer.`,
+            variant: "destructive"
+          });
+        }
       }
       
       setPlayers(approvedPlayers);
@@ -120,14 +122,12 @@ export const MultiSelectPlayers = ({
 
   const handleConfirmSelection = () => {
     onPlayersSelected(selectedPlayers);
+    onOpenChange(false);
   };
 
   const handleCancel = () => {
     onOpenChange(false);
   };
-
-  console.log("Available players count:", players.length);
-  console.log("Filtered players count:", filteredPlayers.length);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -135,7 +135,7 @@ export const MultiSelectPlayers = ({
         <DialogHeader>
           <DialogTitle>Select Players</DialogTitle>
           <DialogDescription>
-            Select one or more players to add to your tournament.
+            Select one or more approved players to add to your tournament.
           </DialogDescription>
         </DialogHeader>
         
@@ -155,6 +155,14 @@ export const MultiSelectPlayers = ({
             selectedPlayers={selectedPlayers}
             onSelectPlayer={handleSelectPlayer}
           />
+          
+          {players.length === 0 && (
+            <div className="text-center py-6">
+              <p className="text-gray-500 dark:text-gray-400">
+                No approved players available. Players must be approved by a Rating Officer before they can be added to tournaments.
+              </p>
+            </div>
+          )}
         </div>
         
         <DialogFooter>

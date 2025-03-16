@@ -10,16 +10,14 @@ import {
   Tooltip, 
   ResponsiveContainer,
   ReferenceLine,
-  Legend,
 } from "recharts";
 
 interface RatingChartProps {
   player: Player;
   height?: number;
-  showLichessComparison?: boolean;
 }
 
-const RatingChart = ({ player, height = 300, showLichessComparison = false }: RatingChartProps) => {
+const RatingChart = ({ player, height = 300 }: RatingChartProps) => {
   // Format data for the chart
   const data = useMemo(() => {
     const history = [...player.ratingHistory].sort((a, b) => 
@@ -29,8 +27,6 @@ const RatingChart = ({ player, height = 300, showLichessComparison = false }: Ra
     return history.map(item => ({
       date: item.date,
       rating: item.rating,
-      // If we have Lichess data, include it
-      lichessRating: item.lichessRating || null,
       reason: item.reason
     }));
   }, [player.ratingHistory]);
@@ -38,38 +34,20 @@ const RatingChart = ({ player, height = 300, showLichessComparison = false }: Ra
   const minRating = useMemo(() => {
     // Find the minimum rating across all data points
     const ratings = data.map(d => d.rating);
-    if (showLichessComparison) {
-      const lichessRatings = data
-        .filter(d => d.lichessRating !== null)
-        .map(d => d.lichessRating as number);
-      
-      if (lichessRatings.length > 0) {
-        ratings.push(...lichessRatings);
-      }
-    }
     
     const min = Math.min(...ratings);
     // Round down to nearest 50
     return Math.floor(min / 50) * 50;
-  }, [data, showLichessComparison]);
+  }, [data]);
 
   const maxRating = useMemo(() => {
     // Find the maximum rating across all data points
     const ratings = data.map(d => d.rating);
-    if (showLichessComparison) {
-      const lichessRatings = data
-        .filter(d => d.lichessRating !== null)
-        .map(d => d.lichessRating as number);
-      
-      if (lichessRatings.length > 0) {
-        ratings.push(...lichessRatings);
-      }
-    }
     
     const max = Math.max(...ratings);
     // Round up to nearest 50
     return Math.ceil(max / 50) * 50;
-  }, [data, showLichessComparison]);
+  }, [data]);
 
   // Format the date for display
   const formatXAxis = (tickItem: string) => {
@@ -121,7 +99,6 @@ const RatingChart = ({ player, height = 300, showLichessComparison = false }: Ra
               domain={[minRating, maxRating]} 
               stroke="#9ca3af"
             />
-            {showLichessComparison && <Legend />}
             <Tooltip content={<CustomTooltip />} />
             
             {/* Nigerian Rating line */}
@@ -134,19 +111,6 @@ const RatingChart = ({ player, height = 300, showLichessComparison = false }: Ra
               dot={{ stroke: '#D4AF37', strokeWidth: 2, r: 4, fill: 'white' }}
               activeDot={{ stroke: '#D4AF37', strokeWidth: 2, r: 6, fill: '#D4AF37' }}
             />
-            
-            {/* Lichess Rating line (if comparison enabled) */}
-            {showLichessComparison && (
-              <Line 
-                type="monotone" 
-                dataKey="lichessRating" 
-                name="Lichess Rating"
-                stroke="#3689fe" 
-                strokeWidth={2}
-                dot={{ stroke: '#3689fe', strokeWidth: 2, r: 4, fill: 'white' }}
-                activeDot={{ stroke: '#3689fe', strokeWidth: 2, r: 6, fill: '#3689fe' }}
-              />
-            )}
             
             {/* Reference line for floor rating */}
             <ReferenceLine 
