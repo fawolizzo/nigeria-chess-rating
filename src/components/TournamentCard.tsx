@@ -1,8 +1,25 @@
 
 import { Link } from "react-router-dom";
-import { Tournament } from "@/lib/mockData";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export interface Tournament {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  city?: string;
+  state?: string;
+  category?: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  participants?: number;
+  rounds: number;
+  timeControl: string;
+  coverImage?: string;
+  description?: string;
+  registrationOpen?: boolean;
+}
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -73,7 +90,11 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
             </div>
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500" />
-              <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
+              <span>
+                {tournament.location}
+                {tournament.city && `, ${tournament.city}`}
+                {tournament.state && `, ${tournament.state}`}
+              </span>
             </div>
             {tournament.participants !== undefined && (
               <div className="flex items-center">

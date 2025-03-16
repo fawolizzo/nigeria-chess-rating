@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import TournamentCard from "@/components/TournamentCard";
 import Navbar from "@/components/Navbar";
@@ -11,23 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Interface for tournament object
-interface Tournament {
-  id: string;
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  city: string;
-  state: string;
-  status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
-  timeControl: string;
-  rounds: number;
-  organizerId: string;
-  registrationOpen?: boolean;
-}
+import { Tournament } from "@/components/TournamentCard";
 
 const Tournaments = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,8 +39,10 @@ const Tournaments = () => {
           setAllTournaments(publicTournaments);
           
           // Extract unique states for filtering
-          const states = [...new Set(publicTournaments.map((t: Tournament) => t.state))];
-          setAvailableStates(states.sort());
+          const states = [...new Set(publicTournaments.map((t: Tournament) => t.state))]
+            .filter((state): state is string => state !== undefined && state !== null)
+            .sort();
+          setAvailableStates(states);
         } else {
           setAllTournaments([]);
         }
