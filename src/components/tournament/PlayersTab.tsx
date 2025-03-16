@@ -114,13 +114,11 @@ const PlayersTab = ({
                   <UserPlus size={16} /> Create Player
                 </Button>
                 
-                <Button
-                  variant="default"
-                  onClick={onCreatePlayer}
-                  className="flex items-center gap-1 justify-center"
-                >
-                  <Plus size={16} /> Add Existing Player
-                </Button>
+                <TournamentPlayerSelector 
+                  tournamentId={tournamentId}
+                  existingPlayerIds={playerIds || []}
+                  onPlayersAdded={onAddPlayers}
+                />
               </div>
             )}
           </div>
