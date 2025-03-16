@@ -17,6 +17,7 @@ export interface Player {
   }[];
   status?: 'pending' | 'approved' | 'rejected';
   createdBy?: string; // ID of the user who created this player
+  gamesPlayed?: number;  // Adding this property to fix the TypeScript error
 }
 
 export interface Tournament {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -400,7 +399,7 @@ const TournamentManagement = () => {
       tournamentResults: [],
       status: 'pending', // New players need approval
       createdBy: currentUser.id,
-      gamesPlayed: 0
+      gamesPlayed: 0  // Initialize gamesPlayed property
     };
     
     // Add player to localStorage
@@ -430,14 +429,17 @@ const TournamentManagement = () => {
     
     // Update tournament with new pairings
     const existingPairings = tournament.pairings || [];
-    const newPairings = [...existingPairings.filter(p => p.roundNumber !== roundNumber), {
-      roundNumber,
-      matches: matches.map(match => ({
-        whiteId: match.white.id,
-        blackId: match.black.id,
-        result: "*" // not played yet
-      }))
-    }];
+    const newPairings = [
+      ...existingPairings.filter(p => p.roundNumber !== roundNumber), 
+      {
+        roundNumber,
+        matches: matches.map(match => ({
+          whiteId: match.white.id,
+          blackId: match.black.id,
+          result: "*" as "1-0" | "0-1" | "1/2-1/2" | "*"  // Explicitly cast to the allowed type
+        }))
+      }
+    ];
     
     const updatedTournament = {
       ...tournament,
@@ -767,6 +769,7 @@ const TournamentManagement = () => {
   };
 
   const determineKFactor = (player: Player): number => {
+    // Use optional chaining for gamesPlayed since it's now optional in the interface
     const gamesPlayed = player.gamesPlayed || 0;
     
     if (gamesPlayed < 30) {
@@ -807,7 +810,7 @@ const TournamentManagement = () => {
         const updatedWhite = {
           ...white,
           rating: newRating,
-          gamesPlayed: (white.gamesPlayed || 0) + 1,
+          gamesPlayed: (white.gamesPlayed || 0) + 1,  // Use optional chaining and provide default value
           ratingHistory: [
             ...white.ratingHistory,
             { date: currentDate, rating: newRating }
@@ -824,7 +827,7 @@ const TournamentManagement = () => {
         const updatedBlack = {
           ...black,
           rating: newRating,
-          gamesPlayed: (black.gamesPlayed || 0) + 1,
+          gamesPlayed: (black.gamesPlayed || 0) + 1,  // Use optional chaining and provide default value
           ratingHistory: [
             ...black.ratingHistory,
             { date: currentDate, rating: newRating }
@@ -907,470 +910,4 @@ const TournamentManagement = () => {
           </div>
         </div>
         
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            {tournament.name}
-          </h1>
-          <div className="flex items-center mt-2">
-            <Badge className={`
-              ${tournament.status === "upcoming" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
-               tournament.status === "ongoing" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" :
-               tournament.status === "completed" ? "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300" :
-               "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300"}
-            `}>
-              {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
-            </Badge>
-            
-            {tournament.registrationOpen && (
-              <Badge variant="outline" className="ml-2 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                Registration Open
-              </Badge>
-            )}
-            
-            {tournament.status === "ongoing" && (
-              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
-                Round {tournament.currentRound || 1} of {tournament.rounds}
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        <Tabs defaultValue="players" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="players">Players</TabsTrigger>
-            <TabsTrigger value="rounds">Rounds</TabsTrigger>
-            <TabsTrigger value="standings">Standings</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="players" className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Registered Players ({registeredPlayers.length})
-              </h2>
-              
-              {tournament.status === "upcoming" && (
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={() => setIsCreatePlayerOpen(true)}
-                    className="flex items-center"
-                    variant="outline"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Create New Player
-                  </Button>
-                  
-                  <Button
-                    onClick={() => setIsAddPlayerOpen(true)}
-                    className="flex items-center"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Existing Player
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {registeredPlayers.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center py-10">
-                  <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No players registered
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4">
-                    {tournament.status === "upcoming" 
-                      ? "Start adding players to your tournament." 
-                      : "This tournament doesn't have any registered players."}
-                  </p>
-                  
-                  {tournament.status === "upcoming" && (
-                    <div className="flex justify-center space-x-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsCreatePlayerOpen(true)}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Create New Player
-                      </Button>
-                      
-                      <Button
-                        onClick={() => setIsAddPlayerOpen(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Existing Player
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {registeredPlayers.map(player => (
-                  <Card key={player.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex items-center">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 dark:text-white flex items-center">
-                            {player.title && (
-                              <span className="text-gold-dark dark:text-gold-light mr-1">
-                                {player.title}
-                              </span>
-                            )}
-                            {player.name}
-                          </h3>
-                          <div className="flex flex-col space-y-1">
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Rating: {player.rating || "Unrated"}
-                            </p>
-                            {player.state && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {player.state}, {player.country || "Nigeria"}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {tournament.status === "upcoming" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-gray-500 hover:text-red-500"
-                            onClick={() => handleRemovePlayer(player.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="rounds" className="space-y-4">
-            {tournament.status === "upcoming" ? (
-              <Card>
-                <CardContent className="pt-6 text-center py-10">
-                  <AlertTriangle className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Tournament not started
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-                    You need to start the tournament to generate rounds and record results.
-                    Make sure you have at least 2 players registered.
-                  </p>
-                  
-                  <Button
-                    onClick={startTournament}
-                    disabled={!tournament.players?.length || tournament.players.length < 2}
-                  >
-                    Start Tournament
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-4">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Round {selectedRound}
-                    </h2>
-                    <Select value={selectedRound.toString()} onValueChange={(value) => setSelectedRound(parseInt(value))}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select round" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: tournament.currentRound || 1 }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            Round {i + 1}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    {!pairingsGenerated && tournament.status === "ongoing" && selectedRound === (tournament.currentRound || 1) && (
-                      <Button onClick={generatePairings}>
-                        Generate Pairings
-                      </Button>
-                    )}
-                    
-                    {tournament.status === "ongoing" && 
-                     pairingsGenerated && 
-                     selectedRound === (tournament.currentRound || 1) && 
-                     (tournament.currentRound || 1) < tournament.rounds && (
-                      <Button variant="outline" onClick={advanceToNextRound}>
-                        Advance to Next Round
-                      </Button>
-                    )}
-                    
-                    {tournament.status === "ongoing" && 
-                     pairingsGenerated && 
-                     selectedRound === (tournament.currentRound || 1) && 
-                     (tournament.currentRound || 1) >= tournament.rounds && (
-                      <Button variant="outline" onClick={advanceToNextRound}>
-                        Complete Tournament
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Display pairings and allow result entry */}
-                {tournament.pairings?.find(p => p.roundNumber === selectedRound) ? (
-                  <ResultRecorder
-                    round={tournament.pairings.find(p => p.roundNumber === selectedRound)!}
-                    players={registeredPlayers}
-                    onSaveResults={(results) => saveResults(selectedRound, results)}
-                    readOnly={selectedRound !== (tournament.currentRound || 1) || tournament.status === "completed"}
-                  />
-                ) : (
-                  <Card>
-                    <CardContent className="pt-6 text-center py-10">
-                      <AlertTriangle className="h-12 w-12 mx-auto text-yellow-500 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                        No pairings generated
-                      </h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        Generate pairings for this round to start recording results.
-                      </p>
-                      
-                      {tournament.status === "ongoing" && selectedRound === (tournament.currentRound || 1) && (
-                        <Button onClick={generatePairings}>
-                          Generate Pairings
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="standings" className="space-y-4">
-            {(tournament.status === "ongoing" || tournament.status === "completed") ? (
-              <StandingsTable
-                standings={standings}
-                players={registeredPlayers}
-              />
-            ) : (
-              <Card>
-                <CardContent className="pt-6 text-center py-10">
-                  <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No standings available
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4">
-                    Standings will be available once the tournament has started and games have been played.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-gray-500 dark:text-gray-400">
-                  Tournament settings will be implemented in a future update.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      {/* Dialog for adding existing player */}
-      <Dialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Player to Tournament</DialogTitle>
-            <DialogDescription>
-              Search and select a player to add to your tournament.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <Input
-              placeholder="Search players by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="mb-4"
-            />
-            
-            <Select onValueChange={setSelectedPlayerId} value={selectedPlayerId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a player" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredPlayers.length > 0 ? (
-                  filteredPlayers.map(player => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.title ? `${player.title} ` : ""}{player.name} {player.rating ? `(${player.rating})` : "(Unrated)"}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="px-2 py-6 text-center">
-                    <p className="text-sm text-gray-500">No matching players found</p>
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPlayerOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddPlayer} disabled={!selectedPlayerId}>
-              Add Player
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Dialog for creating new player */}
-      <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create New Player</DialogTitle>
-            <DialogDescription>
-              Create a new player that will need approval from a rating officer.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4 py-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Player Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chess Title (if any)</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a title (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {chessTitles.map(title => (
-                          <SelectItem key={title || "no-title"} value={title}>
-                            {title ? title : "No Title"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      GM (Grandmaster), IM (International Master), etc.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="M">Male</SelectItem>
-                          <SelectItem value="F">Female</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="birthYear"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Birth Year</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="YYYY" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input placeholder="State" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="club"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chess Club (if any)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Club Name (optional)" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsCreatePlayerOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Create Player
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-export default TournamentManagement;
+        <div className="
