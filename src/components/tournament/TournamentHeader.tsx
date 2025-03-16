@@ -14,7 +14,7 @@ interface TournamentHeaderProps {
     location: string;
     city: string;
     state: string;
-    status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected";
+    status: "upcoming" | "ongoing" | "completed" | "pending" | "rejected" | "processed";
     timeControl: string;
     rounds: number;
     registrationOpen?: boolean;

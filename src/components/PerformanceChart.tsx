@@ -14,7 +14,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
   const chartData = player.ratingHistory.map(entry => ({
     date: entry.date,
     rating: entry.rating,
-    event: entry.tournament || entry.reason || "",
+    event: entry.reason || "",
   }));
 
   // Calculate statistics
