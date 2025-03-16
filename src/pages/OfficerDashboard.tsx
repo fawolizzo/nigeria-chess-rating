@@ -337,7 +337,7 @@ const OfficerDashboard = () => {
     // Update tournaments in state
     const updatedTournaments = tournaments.map(tournament =>
       tournament.id === tournamentId
-        ? { ...tournament, status: "upcoming" }
+        ? { ...tournament, status: "upcoming" as const }
         : tournament
     );
     
@@ -361,7 +361,7 @@ const OfficerDashboard = () => {
     // Update tournaments in state
     const updatedTournaments = tournaments.map(tournament =>
       tournament.id === tournamentId
-        ? { ...tournament, status: "rejected" }
+        ? { ...tournament, status: "rejected" as const }
         : tournament
     );
     
