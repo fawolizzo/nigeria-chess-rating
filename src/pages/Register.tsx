@@ -48,6 +48,9 @@ const registerSchema = z.object({
   path: ["confirmPassword"]
 });
 
+// Define the form data type based on the schema
+type RegisterFormData = z.infer<typeof registerSchema>;
+
 const Register = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +59,7 @@ const Register = () => {
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   
-  const form = useForm({
+  const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       fullName: "",
@@ -75,7 +78,7 @@ const Register = () => {
     setShowAccessCode(role === "rating_officer");
   };
   
-  const onSubmit = (data: z.infer<typeof registerSchema>) => {
+  const onSubmit = (data: RegisterFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
     

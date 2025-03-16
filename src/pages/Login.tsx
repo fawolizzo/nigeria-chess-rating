@@ -17,13 +17,16 @@ const loginSchema = z.object({
   role: z.enum(["tournament_organizer", "rating_officer"]),
 });
 
+// Define the form data type based on the schema
+type LoginFormData = z.infer<typeof loginSchema>;
+
 const Login = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   
-  const form = useForm({
+  const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
@@ -34,7 +37,7 @@ const Login = () => {
   
   const selectedRole = form.watch("role");
   
-  const onSubmit = (data: z.infer<typeof loginSchema>) => {
+  const onSubmit = (data: LoginFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
     

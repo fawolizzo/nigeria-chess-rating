@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
-import { ChessBoard, Medal, Award, Map, TrendingUp, Calendar, Users, Shield } from "lucide-react";
+import { Medal, Award, Map, TrendingUp, Calendar, Users, Shield } from "lucide-react";
 
 const About = () => {
   const [isLoading, setIsLoading] = useState(true);
