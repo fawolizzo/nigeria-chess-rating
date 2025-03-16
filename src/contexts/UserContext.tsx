@@ -11,6 +11,7 @@ export interface User {
   status: 'pending' | 'approved' | 'rejected';
   registrationDate: string;
   approvalDate?: string;
+  password?: string; // Add password field as optional
   // We are not storing actual passwords in the user object,
   // but for demo purposes, we'll use a registration field
   // This would be handled differently in a real app
