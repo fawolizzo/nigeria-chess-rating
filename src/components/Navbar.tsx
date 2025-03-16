@@ -1,12 +1,24 @@
 
 import { useState, useEffect } from "react";
-import { NavLink, Link } from "react-router-dom";
-import { Menu, X, ChevronDown, UserPlus, LogIn } from "lucide-react";
+import { NavLink, Link, useNavigate } from "react-router-dom";
+import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/contexts/UserContext";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+import { toast } from "@/components/ui/use-toast";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { currentUser, logout } = useUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,6 +33,43 @@ const Navbar = () => {
       document.removeEventListener("scroll", handleScroll);
     };
   }, [scrolled]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+      variant: "default",
+    });
+  };
+
+  // Determine which dashboard link to show based on user role
+  const getDashboardLink = () => {
+    if (!currentUser) return null;
+    
+    if (currentUser.role === 'tournament_organizer') {
+      return (
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/organizer-dashboard" className="flex items-center">
+            <Calendar className="mr-1 h-4 w-4" />
+            <span>Dashboard</span>
+          </Link>
+        </Button>
+      );
+    } else if (currentUser.role === 'rating_officer') {
+      return (
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/officer-dashboard" className="flex items-center">
+            <Shield className="mr-1 h-4 w-4" />
+            <span>Dashboard</span>
+          </Link>
+        </Button>
+      );
+    }
+    
+    return null;
+  };
 
   return (
     <nav
@@ -92,18 +141,30 @@ const Navbar = () => {
             </NavLink>
             
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/login" className="flex items-center">
-                  <LogIn className="mr-1 h-4 w-4" />
-                  <span>Sign In</span>
-                </Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link to="/register" className="flex items-center">
-                  <UserPlus className="mr-1 h-4 w-4" />
-                  <span>Register</span>
-                </Link>
-              </Button>
+              {currentUser ? (
+                <>
+                  {getDashboardLink()}
+                  <Button variant="default" size="sm" onClick={handleLogout}>
+                    <LogOut className="mr-1 h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/login" className="flex items-center">
+                      <LogIn className="mr-1 h-4 w-4" />
+                      <span>Sign In</span>
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link to="/register" className="flex items-center">
+                      <UserPlus className="mr-1 h-4 w-4" />
+                      <span>Register</span>
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -188,26 +249,71 @@ const Navbar = () => {
           </NavLink>
           
           <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700">
-            <Link
-              to="/login"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <div className="flex items-center">
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign In
-              </div>
-            </Link>
-            <Link
-              to="/register"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <div className="flex items-center">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Register
-              </div>
-            </Link>
+            {currentUser ? (
+              <>
+                {currentUser.role === 'tournament_organizer' && (
+                  <Link
+                    to="/organizer-dashboard"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="flex items-center">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </div>
+                  </Link>
+                )}
+                
+                {currentUser.role === 'rating_officer' && (
+                  <Link
+                    to="/officer-dashboard"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <div className="flex items-center">
+                      <Shield className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </div>
+                  </Link>
+                )}
+                
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+                >
+                  <div className="flex items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </div>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <div className="flex items-center">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign In
+                  </div>
+                </Link>
+                <Link
+                  to="/register"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <div className="flex items-center">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Register
+                  </div>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
