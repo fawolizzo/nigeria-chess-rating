@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Medal, Award, Map, TrendingUp, Calendar, Users, Shield } from "lucide-react";
@@ -119,7 +120,7 @@ const About = () => {
           </div>
           
           <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
-            <ChessBoard className="text-gold-dark dark:text-gold-light w-10 h-10 mb-4" />
+            <Medal className="text-gold-dark dark:text-gold-light w-10 h-10 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Performance Tracking</h3>
             <p className="text-gray-700 dark:text-gray-300">
               Visual representation of rating progression, detailed tournament history, and real-time rating calculation.
