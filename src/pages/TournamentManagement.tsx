@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -17,8 +16,9 @@ import PairingsTab from "@/components/tournament/PairingsTab";
 import RoundController from "@/components/tournament/RoundController";
 import RemoveTournamentUtil from "@/components/tournament/RemoveTournamentUtil";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { generateSwissPairings, initializeStandingsByRating } from "@/lib/swissPairingService";
+import { generateSwissPairings, initializeStandingsByRating, PlayerStanding } from "@/lib/swissPairingService";
 
+// Update the PlayerWithScore interface to extend from Player
 interface PlayerWithScore extends Player {
   score: number;
   tiebreak: number[];
@@ -95,12 +95,25 @@ const TournamentManagement = () => {
     if (tournament?.status === "upcoming" || tournament?.status === "ongoing") {
       // Generate initial standings based on player ratings
       const approvedPlayers = registeredPlayers.filter(p => p.status === 'approved');
-      const ratedStandings = initializeStandingsByRating(approvedPlayers).map(player => ({
-        ...player,
-        score: 0,
-        tiebreak: [0, 0]
-      }));
-      setStandings(ratedStandings);
+      const initialStandings = initializeStandingsByRating(approvedPlayers);
+      
+      // Convert PlayerStanding to PlayerWithScore
+      const standingsWithScores: PlayerWithScore[] = initialStandings.map(standing => {
+        // Find the corresponding player
+        const player = registeredPlayers.find(p => p.id === standing.playerId);
+        if (!player) {
+          throw new Error(`Player with ID ${standing.playerId} not found`);
+        }
+        
+        return {
+          ...player,
+          score: 0,
+          tiebreak: [0, 0],
+          opponents: []
+        };
+      });
+      
+      setStandings(standingsWithScores);
     } else if (tournament?.status === "completed") {
       calculateStandings();
     }
