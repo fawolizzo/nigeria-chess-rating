@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Player } from "@/lib/mockData";
+import { toast } from "@/components/ui/use-toast";
 
 interface PairingSystemProps {
   players: Player[];
@@ -73,11 +74,15 @@ const PairingSystem = ({
     return localPairings as PairingDisplayData[];
   };
 
-  // Improved Swiss pairing algorithm
+  // Improved Swiss pairing algorithm with stricter prevention of repeat pairings
   const generateSwissPairings = () => {
     // Check if we have enough players
     if (players.length < 2) {
-      console.warn("Not enough players to generate pairings");
+      toast({
+        title: "Not Enough Players",
+        description: "At least 2 players are required to generate pairings.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -112,82 +117,136 @@ const PairingSystem = ({
     const paired: Set<string> = new Set();
     
     // Try to pair within each score group first
-    sortedScoreGroups.forEach(playersInGroup => {
+    for (const playersInGroup of sortedScoreGroups) {
       // Sort players by rating within the score group
       const sortedPlayers = [...playersInGroup].sort((a, b) => b.rating - a.rating);
       
-      // Try to pair players within this score group
       for (let i = 0; i < sortedPlayers.length; i++) {
         const player = sortedPlayers[i];
         
         if (paired.has(player.id)) continue;
         
-        let pairingFound = false;
+        // Find best opponent who hasn't been paired already and hasn't played this player before
+        let bestOpponentIdx = -1;
         
-        // Look for an unpaired opponent who hasn't played this player before
-        for (let j = i + 1; j < sortedPlayers.length; j++) {
+        for (let j = 0; j < sortedPlayers.length; j++) {
+          // Skip self or already paired players
+          if (i === j || paired.has(sortedPlayers[j].id)) continue;
+          
           const opponent = sortedPlayers[j];
-          
-          if (paired.has(opponent.id)) continue;
-          
-          // Check if these players have faced each other before
           const opponentList = playerOpponentsMap[player.id] || [];
-          if (!opponentList.includes(opponent.id)) {
-            // Pair these players
-            const isWhite = Math.random() > 0.5; // Random color assignment
-            
-            if (isWhite) {
-              matches.push({ white: player, black: opponent });
-            } else {
-              matches.push({ white: opponent, black: player });
-            }
-            
-            paired.add(player.id);
-            paired.add(opponent.id);
-            pairingFound = true;
-            break;
-          }
+          
+          // Skip if they've already played
+          if (opponentList.includes(opponent.id)) continue;
+          
+          bestOpponentIdx = j;
+          break;
         }
         
-        // If no pairing found in the same score group, we'll handle in the next phase
+        // If we found a valid opponent in the same score group
+        if (bestOpponentIdx !== -1) {
+          const opponent = sortedPlayers[bestOpponentIdx];
+          
+          // Determine colors (could be more sophisticated with color balancing)
+          const isWhite = Math.random() > 0.5; 
+          
+          if (isWhite) {
+            matches.push({ white: player, black: opponent });
+          } else {
+            matches.push({ white: opponent, black: player });
+          }
+          
+          paired.add(player.id);
+          paired.add(opponent.id);
+        }
       }
+    }
+    
+    // Step 4: For remaining unpaired players, try pairing across score groups
+    // First, collect all unpaired players
+    const unpaired = players.filter(p => !paired.has(p.id));
+    
+    // Sort unpaired players by score and then by rating
+    unpaired.sort((a, b) => {
+      const scoreA = playerScoringMap[a.id] || 0;
+      const scoreB = playerScoringMap[b.id] || 0;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return b.rating - a.rating;
     });
     
-    // Step 4: Handle unpaired players by pairing across score groups
-    const unpaired = players.filter(p => !paired.has(p.id))
-      .sort((a, b) => {
-        // Sort by score (desc) then by rating (desc)
-        const scoreA = playerScoringMap[a.id] || 0;
-        const scoreB = playerScoringMap[b.id] || 0;
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        return b.rating - a.rating;
-      });
-    
-    // Pair remaining players
-    for (let i = 0; i < unpaired.length; i += 2) {
-      if (i + 1 < unpaired.length) {
-        const player1 = unpaired[i];
-        const player2 = unpaired[i + 1];
+    // Try to pair them while avoiding repeat matchups
+    for (let i = 0; i < unpaired.length; i++) {
+      if (paired.has(unpaired[i].id)) continue;
+      
+      const player = unpaired[i];
+      const playerOpponents = playerOpponentsMap[player.id] || [];
+      
+      // Look for a valid opponent
+      for (let j = i + 1; j < unpaired.length; j++) {
+        if (paired.has(unpaired[j].id)) continue;
         
-        // Assign colors (could be more sophisticated based on color balance)
-        const isPlayer1White = Math.random() > 0.5; 
+        const opponent = unpaired[j];
         
-        if (isPlayer1White) {
-          matches.push({ white: player1, black: player2 });
+        // Skip if they've already played
+        if (playerOpponents.includes(opponent.id)) continue;
+        
+        // Found a valid pairing
+        const isWhite = Math.random() > 0.5;
+        
+        if (isWhite) {
+          matches.push({ white: player, black: opponent });
         } else {
-          matches.push({ white: player2, black: player1 });
+          matches.push({ white: opponent, black: player });
         }
-      } else if (unpaired.length % 2 !== 0) {
-        // Odd number of players - the last player gets a bye
-        console.log(`Player ${unpaired[i].name} gets a bye for this round`);
-        // In a real implementation, we would record the bye and award a point
+        
+        paired.add(player.id);
+        paired.add(opponent.id);
+        break;
       }
+    }
+    
+    // Handle any remaining unpaired players (should only happen in odd-numbered tournaments)
+    const stillUnpaired = players.filter(p => !paired.has(p.id));
+    
+    if (stillUnpaired.length > 1) {
+      // We have multiple unpaired players who must have played each other before
+      // In this case, we reluctantly allow repeat pairings
+      toast({
+        title: "Repeat Pairings Required",
+        description: "Some players have already played all possible opponents. Repeat pairings were created.",
+        variant: "warning",
+      });
+      
+      for (let i = 0; i < stillUnpaired.length; i += 2) {
+        if (i + 1 < stillUnpaired.length) {
+          const isWhite = Math.random() > 0.5;
+          
+          if (isWhite) {
+            matches.push({ white: stillUnpaired[i], black: stillUnpaired[i + 1] });
+          } else {
+            matches.push({ white: stillUnpaired[i + 1], black: stillUnpaired[i] });
+          }
+        } else if (stillUnpaired.length % 2 !== 0) {
+          // Odd number of players - the last player gets a bye
+          console.log(`Player ${stillUnpaired[i].name} gets a bye for this round`);
+          // In a real implementation, we would record the bye and award a point
+        }
+      }
+    } else if (stillUnpaired.length === 1) {
+      // Only one player left unpaired - they get a bye
+      console.log(`Player ${stillUnpaired[0].name} gets a bye for this round`);
+      // In a real implementation, we would record the bye and award a point
     }
     
     setLocalPairings(matches);
     if (onGeneratePairings) {
       onGeneratePairings(matches);
     }
+    
+    toast({
+      title: "Pairings Generated",
+      description: `Successfully generated ${matches.length} pairings using the Swiss system.`,
+    });
   };
 
   const pairingsToDisplay = getPairingsToDisplay();

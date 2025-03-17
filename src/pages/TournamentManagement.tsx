@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -466,6 +465,11 @@ const TournamentManagement = () => {
     updateTournament(updatedTournament);
     setTournament(updatedTournament);
     calculateStandings();
+    
+    toast({
+      title: "Results Saved",
+      description: `Round ${roundNumber} results have been saved successfully.`,
+    });
   };
 
   const advanceToNextRound = () => {

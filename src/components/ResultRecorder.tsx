@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
+import { toast } from "@/components/ui/use-toast";
 
 interface ResultRecorderProps {
   pairings: Array<{ 
@@ -54,6 +55,13 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
   const handleSave = () => {
     // Pass results to parent component
     onSaveResults(results);
+    
+    // Add toast notification to provide feedback
+    toast({
+      title: "Results Saved",
+      description: `Round ${roundNumber} results have been successfully saved.`,
+      variant: "default",
+    });
   };
 
   const getPlayerById = (id: string) => {
