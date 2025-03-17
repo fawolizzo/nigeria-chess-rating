@@ -18,20 +18,23 @@
     --primary: 160 100% 26.7%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Softer secondary color with golden hue */
+    --secondary: 42 85% 90%;
+    --secondary-foreground: 42 50% 25%;
 
+    /* Softer muted colors */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    /* Warmer accent color */
+    --accent: 42 80% 92%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Subtle Nigerian green for borders */
-    --border: 160 70% 90%;
+    /* Refined border colors */
+    --border: 160 60% 92%;
     --input: 214.3 31.8% 91.4%;
     /* Nigerian green for focus rings */
     --ring: 160 100% 26.7%;
@@ -47,11 +50,18 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     
-    /* Nigerian colors */
+    /* Enhanced Nigerian colors */
     --nigeria-white: 0 0% 100%;
     --nigeria-white-dim: 0 0% 91%;
     --nigeria-green: 160 100% 26.7%;
+    --nigeria-green-light: 160 85% 40%;
+    --nigeria-green-dark: 160 100% 20%;
     --nigeria-yellow: 42 91% 62.7%;
+    --nigeria-yellow-light: 42 91% 75%;
+    --nigeria-yellow-dark: 42 91% 50%;
+    --nigeria-accent: 25 95% 65%;
+    --nigeria-accent-light: 25 95% 75%;
+    --nigeria-accent-dark: 25 95% 55%;
   }
 
   .dark {
@@ -68,19 +78,22 @@
     --primary: 160 70% 40%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    /* Adjusted secondary for dark mode */
+    --secondary: 42 50% 40%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
+    /* Warmer accent in dark mode */
+    --accent: 42 30% 25%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
+    /* Enhanced borders for dark mode */
+    --border: 160 30% 22%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
     
@@ -93,11 +106,18 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     
-    /* Nigerian colors in dark mode - slightly adjusted for better visibility */
+    /* Enhanced Nigerian colors in dark mode */
     --nigeria-white: 0 0% 95%;
     --nigeria-white-dim: 0 0% 85%;
     --nigeria-green: 160 80% 35%;
+    --nigeria-green-light: 160 75% 45%;
+    --nigeria-green-dark: 160 85% 25%;
     --nigeria-yellow: 42 80% 65%;
+    --nigeria-yellow-light: 42 75% 75%;
+    --nigeria-yellow-dark: 42 85% 55%;
+    --nigeria-accent: 25 70% 50%;
+    --nigeria-accent-light: 25 70% 60%;
+    --nigeria-accent-dark: 25 70% 40%;
   }
 }
 
@@ -118,19 +138,59 @@
 }
 
 @layer components {
+  /* Enhanced button styles */
   .nigeria-button {
-    @apply bg-nigeria-green text-white hover:bg-nigeria-green-dark transition-colors;
+    @apply bg-nigeria-green text-white hover:bg-nigeria-green-dark transition-colors shadow-sm;
   }
   
+  /* Enhanced card styles */
   .nigeria-card {
-    @apply border-nigeria-green/30 overflow-hidden;
+    @apply border-nigeria-green/30 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300;
   }
   
   .nigeria-card-header {
     @apply bg-gradient-to-r from-nigeria-green/10 to-transparent;
   }
   
+  /* Enhanced input styles */
   .nigeria-input {
-    @apply border-nigeria-green/30 focus:border-nigeria-green focus:ring-nigeria-green/20;
+    @apply border-nigeria-green/30 focus:border-nigeria-green focus:ring-nigeria-green/20 transition-all duration-200;
+  }
+
+  /* Enhanced tab styles */
+  .nigeria-tab {
+    @apply text-gray-600 hover:text-nigeria-green data-[state=active]:text-nigeria-green data-[state=active]:border-b-2 data-[state=active]:border-nigeria-green transition-colors;
+  }
+  
+  /* Enhanced badge styles */
+  .nigeria-badge {
+    @apply bg-nigeria-green/10 text-nigeria-green-dark border border-nigeria-green/20 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+
+  /* Enhanced section styles */
+  .nigeria-section {
+    @apply border border-nigeria-green/10 rounded-lg p-6 bg-white dark:bg-gray-900 shadow-sm;
+  }
+  
+  /* Enhanced heading styles */
+  .nigeria-heading {
+    @apply text-nigeria-green dark:text-nigeria-green-light font-bold;
+  }
+  
+  /* Enhanced table styles */
+  .nigeria-table {
+    @apply w-full border-collapse;
+  }
+  
+  .nigeria-table th {
+    @apply bg-nigeria-green/5 text-nigeria-green-dark dark:text-nigeria-green-light border-b border-nigeria-green/20 px-4 py-2 text-left;
+  }
+  
+  .nigeria-table td {
+    @apply border-b border-nigeria-green/10 px-4 py-2;
+  }
+  
+  .nigeria-table tr:hover {
+    @apply bg-nigeria-green/5;
   }
 }

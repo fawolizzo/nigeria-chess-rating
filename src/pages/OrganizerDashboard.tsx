@@ -236,6 +236,11 @@ const OrganizerDashboard = () => {
   // Get the next upcoming tournament
   const nextTournament = getUpcomingTournaments()[0];
 
+  // Function to filter tournaments by status (fixes the completed tournaments issue)
+  const filterTournamentsByStatus = (status: Tournament['status']) => {
+    return tournaments.filter(tournament => tournament.status === status);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -254,6 +259,7 @@ const OrganizerDashboard = () => {
           <div className="mt-4 sm:mt-0 flex space-x-4">
             <Button 
               onClick={() => setIsCreateTournamentOpen(true)}
+              className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
             >
               <Plus className="mr-2 h-4 w-4" />
               Create Tournament
@@ -261,6 +267,7 @@ const OrganizerDashboard = () => {
             <Button 
               onClick={handleLogout}
               variant="outline"
+              className="border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout
@@ -269,10 +276,10 @@ const OrganizerDashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <Card className="border-nigeria-green/10 shadow-card hover:shadow-card-hover transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 bg-gradient-nigeria-subtle">
               <CardTitle className="text-sm font-medium">Total Tournaments</CardTitle>
-              <Calendar className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Calendar className="h-4 w-4 text-nigeria-green dark:text-nigeria-green-light" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{tournaments.length}</div>
@@ -282,14 +289,14 @@ const OrganizerDashboard = () => {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <Card className="border-nigeria-yellow/10 shadow-card hover:shadow-card-hover transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 bg-gradient-to-r from-nigeria-yellow/5 to-transparent">
               <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-              <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Users className="h-4 w-4 text-nigeria-yellow-dark dark:text-nigeria-yellow" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {tournaments.filter(t => t.status === "pending").length}
+                {filterTournamentsByStatus("pending").length}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Tournaments waiting for approval
@@ -297,10 +304,10 @@ const OrganizerDashboard = () => {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <Card className="border-nigeria-accent/10 shadow-card hover:shadow-card-hover transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 bg-gradient-to-r from-nigeria-accent/5 to-transparent">
               <CardTitle className="text-sm font-medium">Next Tournament</CardTitle>
-              <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <Clock className="h-4 w-4 text-nigeria-accent-dark dark:text-nigeria-accent-light" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -318,18 +325,18 @@ const OrganizerDashboard = () => {
         </div>
         
         <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="pending">Pending Approval</TabsTrigger>
-            <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+          <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+            <TabsTrigger value="upcoming" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Upcoming</TabsTrigger>
+            <TabsTrigger value="pending" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Pending Approval</TabsTrigger>
+            <TabsTrigger value="ongoing" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Ongoing</TabsTrigger>
+            <TabsTrigger value="completed" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Completed</TabsTrigger>
+            <TabsTrigger value="rejected" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Rejected</TabsTrigger>
           </TabsList>
           
           {["upcoming", "pending", "ongoing", "completed", "rejected"].map((tabValue) => (
             <TabsContent key={tabValue} value={tabValue} className="space-y-4">
-              {tournaments.filter(t => t.status === tabValue).length === 0 ? (
-                <div className="text-center py-12">
+              {filterTournamentsByStatus(tabValue as Tournament['status']).length === 0 ? (
+                <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
                   <Award className="h-12 w-12 mx-auto text-gray-400" />
                   <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
                     No {tabValue} tournaments
@@ -346,7 +353,7 @@ const OrganizerDashboard = () => {
                     <Button 
                       variant="outline" 
                       onClick={() => setIsCreateTournamentOpen(true)}
-                      className="mt-4"
+                      className="mt-4 border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create Tournament
@@ -355,19 +362,19 @@ const OrganizerDashboard = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {tournaments
-                    .filter(tournament => tournament.status === tabValue)
+                  {filterTournamentsByStatus(tabValue as Tournament['status'])
                     .map((tournament) => (
-                      <Card key={tournament.id} className="overflow-hidden">
-                        <CardHeader className="pb-2">
+                      <Card key={tournament.id} className="overflow-hidden border-gray-200 dark:border-gray-800 shadow-card hover:shadow-card-hover transition-shadow">
+                        <CardHeader className="pb-2 bg-gradient-nigeria-subtle">
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-lg">{tournament.name}</CardTitle>
                             <Badge className={`
-                              ${tabValue === "upcoming" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
-                               tabValue === "pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" :
-                               tabValue === "ongoing" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" :
-                               tabValue === "completed" ? "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300" :
-                               "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300"}
+                              ${tabValue === "upcoming" ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30" :
+                               tabValue === "pending" ? "bg-nigeria-yellow/10 text-nigeria-yellow-dark border-nigeria-yellow/20 dark:bg-nigeria-yellow/20 dark:text-nigeria-yellow dark:border-nigeria-yellow/30" :
+                               tabValue === "ongoing" ? "bg-nigeria-green/10 text-nigeria-green border-nigeria-green/20 dark:bg-nigeria-green/20 dark:text-nigeria-green-light dark:border-nigeria-green/30" :
+                               tabValue === "completed" ? "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700" :
+                               "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/30"}
+                              border
                             `}>
                               {tabValue === "pending" ? "Pending Approval" : 
                                tabValue === "upcoming" ? "Upcoming" :
@@ -376,24 +383,24 @@ const OrganizerDashboard = () => {
                             </Badge>
                           </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-4">
                           <div className="space-y-3">
                             <div className="flex items-center text-sm">
-                              <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <Calendar className="h-4 w-4 mr-2 text-nigeria-green/70 dark:text-nigeria-green-light/70" />
                               <span>
                                 {formatDisplayDate(tournament.startDate)} - {formatDisplayDate(tournament.endDate)}
                               </span>
                             </div>
                             <div className="flex items-center text-sm">
-                              <MapPin className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <MapPin className="h-4 w-4 mr-2 text-nigeria-accent/70 dark:text-nigeria-accent-light/70" />
                               <span>{tournament.location}, {tournament.city}, {tournament.state}</span>
                             </div>
                             <div className="flex items-center text-sm">
-                              <Clock className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <Clock className="h-4 w-4 mr-2 text-blue-500/70 dark:text-blue-400/70" />
                               <span>{tournament.timeControl}</span>
                             </div>
                             <div className="flex items-center text-sm">
-                              <List className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                              <List className="h-4 w-4 mr-2 text-nigeria-yellow/70 dark:text-nigeria-yellow-light/70" />
                               <span>{tournament.rounds} Rounds</span>
                             </div>
                           </div>
@@ -402,7 +409,7 @@ const OrganizerDashboard = () => {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              className="flex-1"
+                              className="flex-1 border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5"
                               onClick={() => handleViewTournamentDetails(tournament.id)}
                             >
                               <File className="h-4 w-4 mr-2" />
@@ -410,7 +417,7 @@ const OrganizerDashboard = () => {
                             </Button>
                             <Button 
                               size="sm" 
-                              className="flex-1"
+                              className="flex-1 bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                               onClick={() => handleManageTournament(tournament.id)}
                             >
                               <Users className="h-4 w-4 mr-2" />

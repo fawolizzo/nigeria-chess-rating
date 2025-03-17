@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -72,17 +73,20 @@ export default {
 					dark: '#B58863',
 				},
 				nigeria: {
-					green: '#008751',      // Nigerian green
-					'green-light': '#00A86B', // Lighter shade for dark mode
-					'green-dark': '#006741', // Darker shade for gradients
-					white: '#FFFFFF',      // White from the flag
-					'off-white': '#F5F5F5', // Slight off-white for backgrounds
-					'white-dim': '#E8E8E8', // Dimmed white for borders
-					yellow: '#F7C445',     // Yellow for buttons and accents
-					'yellow-light': '#FFDE59', // Lighter yellow for hover states
-					'yellow-dark': '#DFA920', // Darker yellow for active states
-					black: '#000000',      // Black for text
-					'black-soft': '#333333' // Soft black for secondary text
+					green: 'hsl(var(--nigeria-green))',
+					'green-light': 'hsl(var(--nigeria-green-light))',
+					'green-dark': 'hsl(var(--nigeria-green-dark))',
+					white: 'hsl(var(--nigeria-white))',
+					'off-white': '#F5F5F5',
+					'white-dim': 'hsl(var(--nigeria-white-dim))',
+					yellow: 'hsl(var(--nigeria-yellow))',
+					'yellow-light': 'hsl(var(--nigeria-yellow-light))',
+					'yellow-dark': 'hsl(var(--nigeria-yellow-dark))',
+					accent: 'hsl(var(--nigeria-accent))',
+					'accent-light': 'hsl(var(--nigeria-accent-light))',
+					'accent-dark': 'hsl(var(--nigeria-accent-dark))',
+					black: '#000000',
+					'black-soft': '#333333'
 				}
 			},
 			borderRadius: {
@@ -128,6 +132,10 @@ export default {
 					'100%': {
 						transform: 'translateX(0)'
 					}
+				},
+				'pulse-gentle': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.8' }
 				}
 			},
 			animation: {
@@ -135,7 +143,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.5s ease-out',
 				'fade-up': 'fade-up 0.5s ease-out',
-				'slide-in': 'slide-in 0.5s ease-out'
+				'slide-in': 'slide-in 0.5s ease-out',
+				'pulse-gentle': 'pulse-gentle 2s infinite ease-in-out'
 			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
@@ -148,6 +157,13 @@ export default {
 			boxShadow: {
 				'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
 				'neo': '5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff',
+				'card': '0 2px 10px rgba(0, 135, 81, 0.08)',
+				'card-hover': '0 4px 15px rgba(0, 135, 81, 0.15)',
+			},
+			backgroundImage: {
+				'gradient-nigeria': 'linear-gradient(135deg, hsl(var(--nigeria-green-light)) 0%, hsl(var(--nigeria-green)) 100%)',
+				'gradient-nigeria-subtle': 'linear-gradient(135deg, hsl(var(--nigeria-green-light)/0.05) 0%, hsl(var(--nigeria-green)/0.1) 100%)',
+				'gradient-gold': 'linear-gradient(135deg, hsl(var(--nigeria-yellow-light)) 0%, hsl(var(--nigeria-yellow)) 100%)',
 			}
 		}
 	},
