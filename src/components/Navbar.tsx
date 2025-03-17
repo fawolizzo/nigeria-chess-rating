@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
-import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar } from "lucide-react";
+import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
 import {
@@ -12,8 +13,13 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { toast } from "@/components/ui/use-toast";
+import { Badge } from "@/components/ui/badge";
 
-const Navbar = () => {
+interface NavbarProps {
+  notificationCount?: number;
+}
+
+const Navbar = ({ notificationCount = 0 }: NavbarProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { currentUser, logout } = useUser();
@@ -58,9 +64,14 @@ const Navbar = () => {
     } else if (currentUser.role === 'rating_officer') {
       return (
         <Button variant="outline" size="sm" asChild>
-          <Link to="/officer/dashboard" className="flex items-center">
+          <Link to="/officer/dashboard" className="flex items-center relative">
             <Shield className="mr-1 h-4 w-4" />
             <span>Dashboard</span>
+            {notificationCount > 0 && (
+              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-red-500">
+                {notificationCount}
+              </Badge>
+            )}
           </Link>
         </Button>
       );
@@ -166,6 +177,14 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center md:hidden">
+            {currentUser && currentUser.role === 'rating_officer' && notificationCount > 0 && (
+              <div className="mr-2 relative">
+                <Bell className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-red-500">
+                  {notificationCount}
+                </Badge>
+              </div>
+            )}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-black dark:hover:text-white focus:outline-none"
@@ -265,9 +284,14 @@ const Navbar = () => {
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center relative">
                       <Shield className="mr-2 h-4 w-4" />
                       Dashboard
+                      {notificationCount > 0 && (
+                        <Badge className="ml-2 bg-red-500">
+                          {notificationCount}
+                        </Badge>
+                      )}
                     </div>
                   </Link>
                 )}
