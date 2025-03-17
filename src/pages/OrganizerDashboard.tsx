@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Users, Clock, Award, Plus, MapPin, File, List, LogOut } from "lucide-react";
@@ -17,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
+import { format, isValid, parseISO, isBefore, startOfDay } from "date-fns";
 
 interface Tournament {
   id: string;
@@ -33,11 +35,23 @@ interface Tournament {
   organizerId: string;
 }
 
+// Create a function to validate that a date is not in the past
+const isNotInPast = (date: Date) => {
+  const today = startOfDay(new Date());
+  return !isBefore(date, today);
+};
+
 const tournamentSchema = z.object({
   name: z.string().min(5, "Tournament name must be at least 5 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  startDate: z.date(),
-  endDate: z.date(),
+  startDate: z.date()
+    .refine(isNotInPast, {
+      message: "Start date cannot be in the past",
+    }),
+  endDate: z.date()
+    .refine(isNotInPast, {
+      message: "End date cannot be in the past",
+    }),
   location: z.string().min(3, "Location is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
@@ -77,6 +91,20 @@ const TIME_CONTROLS = [
   "Classical: 90min + 30sec increment",
   "Classical: 120min + 30sec increment"
 ];
+
+// Helper function to format dates consistently
+const formatDisplayDate = (dateString: string): string => {
+  try {
+    const date = parseISO(dateString);
+    if (isValid(date)) {
+      return format(date, "d MMM yyyy");
+    }
+    return dateString;
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return dateString;
+  }
+};
 
 const OrganizerDashboard = () => {
   const { currentUser, logout } = useUser();
@@ -145,15 +173,26 @@ const OrganizerDashboard = () => {
       return;
     }
 
-    const startDate = new Date(data.startDate);
-    const endDate = new Date(data.endDate);
+    // Double check date is not in the past
+    const today = startOfDay(new Date());
+    const startDate = startOfDay(new Date(data.startDate));
+    const endDate = startOfDay(new Date(data.endDate));
+    
+    if (isBefore(startDate, today) || isBefore(endDate, today)) {
+      toast({
+        title: "Error",
+        description: "Tournament dates cannot be in the past",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const newTournament: Tournament = {
       id: `${Date.now()}`,
       name: data.name,
       description: data.description,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
       location: data.location,
       city: data.city,
       state: data.state,
@@ -186,6 +225,16 @@ const OrganizerDashboard = () => {
   const handleManageTournament = (tournamentId: string) => {
     navigate(`/tournament/${tournamentId}/manage`);
   };
+
+  // Function to get upcoming tournaments sorted by date
+  const getUpcomingTournaments = () => {
+    return tournaments
+      .filter(t => t.status === "upcoming")
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  };
+
+  // Get the next upcoming tournament
+  const nextTournament = getUpcomingTournaments()[0];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -255,13 +304,13 @@ const OrganizerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {tournaments.filter(t => t.status === "upcoming").length > 0
-                  ? new Date(tournaments.filter(t => t.status === "upcoming")[0].startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })
+                {nextTournament
+                  ? formatDisplayDate(nextTournament.startDate)
                   : "N/A"}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {tournaments.filter(t => t.status === "upcoming").length > 0 
-                  ? tournaments.filter(t => t.status === "upcoming")[0].name 
+                {nextTournament
+                  ? nextTournament.name 
                   : "No upcoming tournaments"}
               </p>
             </CardContent>
@@ -332,7 +381,7 @@ const OrganizerDashboard = () => {
                             <div className="flex items-center text-sm">
                               <Calendar className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                               <span>
-                                {new Date(tournament.startDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })} - {new Date(tournament.endDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}
+                                {formatDisplayDate(tournament.startDate)} - {formatDisplayDate(tournament.endDate)}
                               </span>
                             </div>
                             <div className="flex items-center text-sm">

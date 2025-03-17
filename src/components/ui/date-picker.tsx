@@ -15,9 +15,19 @@ import {
 interface DatePickerProps {
   date?: Date
   setDate: (date: Date | undefined) => void
+  minDate?: Date
 }
 
-export function DatePicker({ date, setDate }: DatePickerProps) {
+export function DatePicker({ date, setDate, minDate }: DatePickerProps) {
+  // Set default minimum date to today if not provided
+  const defaultMinDate = React.useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  }, []);
+
+  const effectiveMinDate = minDate || defaultMinDate;
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -38,6 +48,7 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
           selected={date}
           onSelect={setDate}
           initialFocus
+          disabled={(date) => date < effectiveMinDate}
           className={cn("p-3 pointer-events-auto")}
         />
       </PopoverContent>
