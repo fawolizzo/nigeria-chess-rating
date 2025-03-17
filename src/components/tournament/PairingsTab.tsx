@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
 import PairingSystem from "@/components/PairingSystem";
 import ResultRecorder from "@/components/ResultRecorder";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PairingsTabProps {
   tournamentStatus: string;
@@ -48,6 +49,7 @@ const PairingsTab = ({
   const currentPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
   const isOngoing = tournamentStatus === "ongoing";
   const isCurrentRound = selectedRound === currentRound;
+  const { toast } = useToast();
   
   // Calculate previous opponents for Swiss pairings
   const calculatePreviousOpponents = () => {

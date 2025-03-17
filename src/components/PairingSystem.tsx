@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Player } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
+import { generateSwissPairings } from "@/lib/swissPairingService";
 
 interface PairingSystemProps {
   players: Player[];
@@ -32,6 +33,15 @@ interface PairingDisplayData {
   blackRatingChange?: number;
 }
 
+interface Round {
+  roundNumber: number;
+  matches: Array<{
+    whiteId: string;
+    blackId: string;
+    result?: "1-0" | "0-1" | "1/2-1/2" | "*";
+  }>;
+}
+
 const PairingSystem = ({
   players,
   existingPairings = [],
@@ -40,7 +50,7 @@ const PairingSystem = ({
   onGeneratePairings,
   readOnly = false,
   pairings = [],
-  roundNumber,
+  roundNumber = 1,
   readonly = false,
 }: PairingSystemProps) => {
   const [localPairings, setLocalPairings] = useState<Array<{ white: Player; black: Player }>>(
@@ -74,8 +84,8 @@ const PairingSystem = ({
     return localPairings as PairingDisplayData[];
   };
 
-  // Improved Swiss pairing algorithm with stricter prevention of repeat pairings
-  const generateSwissPairings = () => {
+  // Generate Swiss pairings using our improved algorithm
+  const generatePairings = () => {
     // Check if we have enough players
     if (players.length < 2) {
       toast({
@@ -86,166 +96,66 @@ const PairingSystem = ({
       return;
     }
 
-    // Step 1: Use playerScores from props if provided, otherwise initialize
-    const playerScoringMap = { ...playerScores };
-    const playerOpponentsMap: Record<string, string[]> = {};
+    // Reconstruct previous rounds data from previousOpponents and playerScores
+    const previousRounds: Round[] = [];
     
-    // Initialize scores and opponent lists
-    players.forEach(player => {
-      if (playerScoringMap[player.id] === undefined) {
-        playerScoringMap[player.id] = 0;
-      }
-      playerOpponentsMap[player.id] = previousOpponents[player.id] || [];
-    });
-    
-    // Step 2: Group players by their score
-    const scoreGroups: Record<number, Player[]> = {};
-    
-    players.forEach(player => {
-      const score = playerScoringMap[player.id] || 0;
-      scoreGroups[score] = scoreGroups[score] || [];
-      scoreGroups[score].push(player);
-    });
-    
-    // Sort score groups from highest to lowest
-    const sortedScoreGroups = Object.entries(scoreGroups)
-      .sort(([scoreA, _], [scoreB, __]) => Number(scoreB) - Number(scoreA))
-      .map(([_, players]) => players);
-    
-    // Step 3: Generate pairings within each score group
-    const matches: { white: Player; black: Player }[] = [];
-    const paired: Set<string> = new Set();
-    
-    // Try to pair within each score group first
-    for (const playersInGroup of sortedScoreGroups) {
-      // Sort players by rating within the score group
-      const sortedPlayers = [...playersInGroup].sort((a, b) => b.rating - a.rating);
-      
-      for (let i = 0; i < sortedPlayers.length; i++) {
-        const player = sortedPlayers[i];
-        
-        if (paired.has(player.id)) continue;
-        
-        // Find best opponent who hasn't been paired already and hasn't played this player before
-        let bestOpponentIdx = -1;
-        
-        for (let j = 0; j < sortedPlayers.length; j++) {
-          // Skip self or already paired players
-          if (i === j || paired.has(sortedPlayers[j].id)) continue;
-          
-          const opponent = sortedPlayers[j];
-          const opponentList = playerOpponentsMap[player.id] || [];
-          
-          // Skip if they've already played
-          if (opponentList.includes(opponent.id)) continue;
-          
-          bestOpponentIdx = j;
-          break;
+    // Convert the opponents map to a structure we can use
+    Object.entries(previousOpponents).forEach(([playerId, opponentIds]) => {
+      opponentIds.forEach((opponentId, index) => {
+        // Create a round record if it doesn't exist yet
+        if (!previousRounds[index]) {
+          previousRounds[index] = {
+            roundNumber: index + 1,
+            matches: []
+          };
         }
         
-        // If we found a valid opponent in the same score group
-        if (bestOpponentIdx !== -1) {
-          const opponent = sortedPlayers[bestOpponentIdx];
+        // Only add each match once (when processing the white player)
+        const isWhitePlayer = true; // This is a simplification, we would need actual color data
+        if (isWhitePlayer) {
+          // Try to find an existing match (to avoid duplicates)
+          const matchExists = previousRounds[index].matches.some(
+            m => (m.whiteId === playerId && m.blackId === opponentId) || 
+                 (m.whiteId === opponentId && m.blackId === playerId)
+          );
           
-          // Determine colors (could be more sophisticated with color balancing)
-          const isWhite = Math.random() > 0.5; 
-          
-          if (isWhite) {
-            matches.push({ white: player, black: opponent });
-          } else {
-            matches.push({ white: opponent, black: player });
+          if (!matchExists) {
+            const whiteScore = playerScores[playerId] || 0;
+            const blackScore = playerScores[opponentId] || 0;
+            
+            let result: "1-0" | "0-1" | "1/2-1/2" | "*" = "*";
+            // Try to infer the result from scores (simplified)
+            // This is a very naive approach and would need to be improved
+            
+            previousRounds[index].matches.push({
+              whiteId: playerId,
+              blackId: opponentId,
+              result
+            });
           }
-          
-          paired.add(player.id);
-          paired.add(opponent.id);
         }
-      }
-    }
-    
-    // Step 4: For remaining unpaired players, try pairing across score groups
-    // First, collect all unpaired players
-    const unpaired = players.filter(p => !paired.has(p.id));
-    
-    // Sort unpaired players by score and then by rating
-    unpaired.sort((a, b) => {
-      const scoreA = playerScoringMap[a.id] || 0;
-      const scoreB = playerScoringMap[b.id] || 0;
-      if (scoreB !== scoreA) return scoreB - scoreA;
-      return b.rating - a.rating;
-    });
-    
-    // Try to pair them while avoiding repeat matchups
-    for (let i = 0; i < unpaired.length; i++) {
-      if (paired.has(unpaired[i].id)) continue;
-      
-      const player = unpaired[i];
-      const playerOpponents = playerOpponentsMap[player.id] || [];
-      
-      // Look for a valid opponent
-      for (let j = i + 1; j < unpaired.length; j++) {
-        if (paired.has(unpaired[j].id)) continue;
-        
-        const opponent = unpaired[j];
-        
-        // Skip if they've already played
-        if (playerOpponents.includes(opponent.id)) continue;
-        
-        // Found a valid pairing
-        const isWhite = Math.random() > 0.5;
-        
-        if (isWhite) {
-          matches.push({ white: player, black: opponent });
-        } else {
-          matches.push({ white: opponent, black: player });
-        }
-        
-        paired.add(player.id);
-        paired.add(opponent.id);
-        break;
-      }
-    }
-    
-    // Handle any remaining unpaired players (should only happen in odd-numbered tournaments)
-    const stillUnpaired = players.filter(p => !paired.has(p.id));
-    
-    if (stillUnpaired.length > 1) {
-      // We have multiple unpaired players who must have played each other before
-      // In this case, we reluctantly allow repeat pairings
-      toast({
-        title: "Repeat Pairings Required",
-        description: "Some players have already played all possible opponents. Repeat pairings were created.",
-        variant: "warning",
       });
-      
-      for (let i = 0; i < stillUnpaired.length; i += 2) {
-        if (i + 1 < stillUnpaired.length) {
-          const isWhite = Math.random() > 0.5;
-          
-          if (isWhite) {
-            matches.push({ white: stillUnpaired[i], black: stillUnpaired[i + 1] });
-          } else {
-            matches.push({ white: stillUnpaired[i + 1], black: stillUnpaired[i] });
-          }
-        } else if (stillUnpaired.length % 2 !== 0) {
-          // Odd number of players - the last player gets a bye
-          console.log(`Player ${stillUnpaired[i].name} gets a bye for this round`);
-          // In a real implementation, we would record the bye and award a point
-        }
-      }
-    } else if (stillUnpaired.length === 1) {
-      // Only one player left unpaired - they get a bye
-      console.log(`Player ${stillUnpaired[0].name} gets a bye for this round`);
-      // In a real implementation, we would record the bye and award a point
-    }
+    });
     
-    setLocalPairings(matches);
+    // Use our new Swiss pairing algorithm
+    const generatedPairings = generateSwissPairings(players, previousRounds, roundNumber);
+    
+    // Convert to the expected format
+    const formattedPairings = generatedPairings.map(pairing => {
+      const white = players.find(p => p.id === pairing.whiteId)!;
+      const black = players.find(p => p.id === pairing.blackId)!;
+      return { white, black };
+    });
+    
+    setLocalPairings(formattedPairings);
+    
     if (onGeneratePairings) {
-      onGeneratePairings(matches);
+      onGeneratePairings(formattedPairings);
     }
     
     toast({
       title: "Pairings Generated",
-      description: `Successfully generated ${matches.length} pairings using the Swiss system.`,
+      description: `Successfully generated ${formattedPairings.length} pairings using the Swiss system.`,
     });
   };
 
@@ -335,7 +245,7 @@ const PairingSystem = ({
               No pairings have been generated yet.
             </p>
             {!readOnly && !readonly && onGeneratePairings && (
-              <Button onClick={generateSwissPairings}>Generate Pairings</Button>
+              <Button onClick={generatePairings}>Generate Pairings</Button>
             )}
           </div>
         )}
