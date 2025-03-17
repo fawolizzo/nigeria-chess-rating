@@ -96,7 +96,7 @@ const PairingSystem = ({
       return;
     }
 
-    // Reconstruct previous rounds data from previousOpponents and playerScores
+    // Reconstruct previous rounds data
     const previousRounds: Round[] = [];
     
     // Convert the opponents map to a structure we can use
@@ -110,34 +110,26 @@ const PairingSystem = ({
           };
         }
         
-        // Only add each match once (when processing the white player)
-        const isWhitePlayer = true; // This is a simplification, we would need actual color data
-        if (isWhitePlayer) {
-          // Try to find an existing match (to avoid duplicates)
-          const matchExists = previousRounds[index].matches.some(
-            m => (m.whiteId === playerId && m.blackId === opponentId) || 
-                 (m.whiteId === opponentId && m.blackId === playerId)
-          );
+        // Only add each match once
+        const matchExists = previousRounds[index].matches.some(
+          m => (m.whiteId === playerId && m.blackId === opponentId) || 
+               (m.whiteId === opponentId && m.blackId === playerId)
+        );
+        
+        if (!matchExists) {
+          // Determine result if possible (simplified)
+          let result: "1-0" | "0-1" | "1/2-1/2" | "*" = "*";
           
-          if (!matchExists) {
-            const whiteScore = playerScores[playerId] || 0;
-            const blackScore = playerScores[opponentId] || 0;
-            
-            let result: "1-0" | "0-1" | "1/2-1/2" | "*" = "*";
-            // Try to infer the result from scores (simplified)
-            // This is a very naive approach and would need to be improved
-            
-            previousRounds[index].matches.push({
-              whiteId: playerId,
-              blackId: opponentId,
-              result
-            });
-          }
+          previousRounds[index].matches.push({
+            whiteId: playerId,
+            blackId: opponentId,
+            result
+          });
         }
       });
     });
     
-    // Use our new Swiss pairing algorithm
+    // Use our improved Swiss pairing algorithm
     const generatedPairings = generateSwissPairings(players, previousRounds, roundNumber);
     
     // Convert to the expected format
