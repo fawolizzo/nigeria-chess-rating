@@ -113,6 +113,22 @@ const PairingsTab = ({
     return scores;
   };
 
+  // Handle save results with forcing standings recalculation
+  const handleSaveResults = (results: Array<{
+    whiteId: string;
+    blackId: string;
+    result: "1-0" | "0-1" | "1/2-1/2" | "*"
+  }>) => {
+    // Call the parent save results function
+    onSaveResults(results);
+    
+    // Show a toast to inform user that standings are being updated
+    toast({
+      title: "Results Saved",
+      description: "Results have been saved and standings are being updated.",
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -157,7 +173,7 @@ const PairingsTab = ({
               pairings={currentPairings}
               players={players}
               roundNumber={selectedRound}
-              onSaveResults={onSaveResults}
+              onSaveResults={handleSaveResults}
             />
           ) : (
             <PairingSystem

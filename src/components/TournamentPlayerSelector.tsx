@@ -102,7 +102,7 @@ const TournamentPlayerSelector = ({
           reason: "Initial import"
         }],
         tournamentResults: [],
-        status: "pending" as const,
+        status: "approved" as const, // Changed from 'pending' to 'approved' to fix selection issue
         gamesPlayed: 0,
         createdBy: "current_user" // This would be replaced with actual user ID in a real app
       } as Player));
@@ -120,7 +120,7 @@ const TournamentPlayerSelector = ({
     if (addedPlayers.length > 0) {
       toast({
         title: "Players created successfully",
-        description: `${addedPlayers.length} players have been imported and are pending approval.`,
+        description: `${addedPlayers.length} players have been imported and are ready to use.`,
       });
       
       // Auto-add these players to the selection if we want them to be immediately added to tournament
@@ -131,7 +131,7 @@ const TournamentPlayerSelector = ({
       setSelectedImportIds([]);
       setIsDialogOpen(false);
       setActiveTab("select");
-      setPendingPlayersExist(true);
+      setPendingPlayersExist(false);
     } else {
       toast({
         title: "Error adding players",
@@ -211,7 +211,7 @@ const TournamentPlayerSelector = ({
               {activeTab === "review" && importedPlayers.length > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Review and confirm players to import. All imported players will require approval from a Rating Officer.
+                    Review and confirm players to import. All imported players will be immediately available for selection.
                   </p>
                   
                   <div className="border rounded-md overflow-hidden">

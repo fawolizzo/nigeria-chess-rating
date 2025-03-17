@@ -38,6 +38,9 @@ export const generateSwissPairings = (
     return [];
   }
 
+  console.log(`Generating pairings for round ${currentRound} with ${players.length} players`);
+  console.log(`Previous rounds: ${previousRounds.length}`);
+
   // 1. Create player structures with scores and previous opponent data
   const playerData: Record<string, PlayerWithScore> = {};
   
@@ -77,6 +80,11 @@ export const generateSwissPairings = (
     });
   });
 
+  // Log opponent info for debugging
+  Object.entries(playerData).forEach(([id, data]) => {
+    console.log(`Player ${data.player.name} (${id}) has played against: ${data.previousOpponents.join(", ")}`);
+  });
+
   // 2. Sort players into score groups
   const scoreGroups: Record<string, PlayerWithScore[]> = {};
   
@@ -100,6 +108,7 @@ export const generateSwissPairings = (
   // Process each score group in order
   for (const scoreKey of sortedScoreKeys) {
     let playersInGroup = scoreGroups[scoreKey];
+    console.log(`Processing score group ${scoreKey} with ${playersInGroup.length} players`);
     
     // Sort players by rating within score group (descending)
     playersInGroup.sort((a, b) => b.player.rating - a.player.rating);
@@ -114,24 +123,37 @@ export const generateSwissPairings = (
       
       // Find best opponent for player1
       let bestOpponentIdx = -1;
-      let lowestRematches = Infinity;
+      let bestOpponentScore = -Infinity;
       
       // Prioritize: 1. No rematches 2. Best color balance 3. Closest rating
       for (let i = 1; i < playersInGroup.length; i++) {
         const player2 = playersInGroup[i];
         if (paired.has(player2.player.id)) continue;
         
-        // Check if they've played before
+        // Check if they've played before - critical to avoid rematches
         const hasPlayed = player1.previousOpponents.includes(player2.player.id);
         
-        // Prioritize avoiding rematches first
-        if (!hasPlayed) {
+        if (hasPlayed) {
+          // Skip this opponent if they've played before
+          console.log(`Skipping pairing: ${player1.player.name} vs ${player2.player.name} - already played`);
+          continue;
+        }
+        
+        // Calculate pairing score based on color balance and rating difference
+        // Negative score means worse pairing
+        let pairingScore = 0;
+        
+        // Color balance is important - players shouldn't have too many whites or blacks
+        const colorBalanceScore = -Math.abs(player1.colorBalance + player2.colorBalance);
+        pairingScore += colorBalanceScore * 10; // Weigh color balance heavily
+        
+        // Rating difference - try to pair players with similar ratings
+        const ratingDiffScore = -Math.abs(player1.player.rating - player2.player.rating) / 100;
+        pairingScore += ratingDiffScore;
+        
+        if (pairingScore > bestOpponentScore) {
+          bestOpponentScore = pairingScore;
           bestOpponentIdx = i;
-          break;
-        } else if (hasPlayed && lowestRematches > 0) {
-          // If all potential opponents have been played before, at least pick one
-          bestOpponentIdx = i;
-          lowestRematches = 0; // We already found a rematch
         }
       }
       
@@ -163,6 +185,8 @@ export const generateSwissPairings = (
           }
         }
         
+        console.log(`Pairing: ${playerData[whiteId].player.name} (White) vs ${playerData[blackId].player.name} (Black)`);
+        
         pairings.push({ whiteId, blackId, result: "*" });
         paired.add(player1.player.id);
         paired.add(player2.player.id);
@@ -172,28 +196,51 @@ export const generateSwissPairings = (
           p => p.player.id !== player1.player.id && p.player.id !== player2.player.id
         );
       } else {
-        // If we couldn't find a valid opponent, move to the next player
+        // If we couldn't find a valid opponent within the score group,
+        // move this player to the next score group
+        console.log(`Couldn't find a valid opponent for ${player1.player.name} in the same score group`);
+        
+        // Move to the next player
         playersInGroup = playersInGroup.slice(1);
       }
     }
   }
   
-  // 5. Handle remaining unpaired players (cross-score pairings)
-  const unpaired = players
+  // Handle remaining unpaired players (cross-score pairings)
+  const unpairedIds = players
     .filter(p => !paired.has(p.id))
-    .map(p => playerData[p.id])
-    .sort((a, b) => {
+    .map(p => p.id);
+  
+  console.log(`Unpaired players: ${unpairedIds.length}`);
+  
+  if (unpairedIds.length >= 2) {
+    // Create a simplified approach for remaining players
+    const unpairedData = unpairedIds.map(id => playerData[id]).sort((a, b) => {
       // Sort by score (descending)
       if (b.score !== a.score) return b.score - a.score;
       // Then by rating (descending)
       return b.player.rating - a.player.rating;
     });
-  
-  // Try to pair remaining players
-  for (let i = 0; i < unpaired.length; i += 2) {
-    if (i + 1 < unpaired.length) {
-      const player1 = unpaired[i];
-      const player2 = unpaired[i + 1];
+    
+    while (unpairedData.length >= 2) {
+      const player1 = unpairedData[0];
+      
+      // Find an opponent that hasn't played against player1 yet
+      let opponentIdx = -1;
+      for (let i = 1; i < unpairedData.length; i++) {
+        if (!player1.previousOpponents.includes(unpairedData[i].player.id)) {
+          opponentIdx = i;
+          break;
+        }
+      }
+      
+      // If no valid opponent found, take the next best option
+      if (opponentIdx === -1) {
+        opponentIdx = 1;
+        console.log(`WARN: Forced to pair ${player1.player.name} with a previous opponent`);
+      }
+      
+      const player2 = unpairedData[opponentIdx];
       
       // Determine colors
       let whiteId, blackId;
@@ -206,13 +253,22 @@ export const generateSwissPairings = (
       }
       
       pairings.push({ whiteId, blackId, result: "*" });
-    } else if (unpaired.length % 2 !== 0) {
-      // Handle bye for odd number of players
-      // In a real implementation, record the bye and award a point
-      console.log(`Player ${unpaired[i].player.name} gets a bye for round ${currentRound}`);
+      console.log(`Pairing (cross-score): ${playerData[whiteId].player.name} (White) vs ${playerData[blackId].player.name} (Black)`);
+      
+      // Remove paired players
+      unpairedData.splice(opponentIdx, 1);
+      unpairedData.splice(0, 1);
     }
   }
   
+  // Handle byes if there's an odd number of players
+  if (unpairedIds.length % 2 !== 0 && unpairedIds.length > 0) {
+    const byePlayerId = unpairedIds[0];
+    console.log(`Player ${playerData[byePlayerId].player.name} gets a bye for round ${currentRound}`);
+    // In a real implementation, you would record the bye and award points
+  }
+  
+  console.log(`Generated ${pairings.length} pairings for round ${currentRound}`);
   return pairings;
 };
 
