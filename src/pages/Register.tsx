@@ -23,6 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
+import { toast } from "@/components/ui/use-toast";
 
 // Nigerian states list
 const nigerianStates = [
@@ -53,7 +54,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register: registerUser } = useUser();
+  const { register: registerUser, getRatingOfficerEmails } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -103,6 +104,20 @@ const Register = () => {
       if (success) {
         if (data.role === "tournament_organizer") {
           setSuccessMessage("Registration successful! Your account is pending approval by a rating officer.");
+          toast({
+            title: "Registration successful!",
+            description: "A confirmation email has been sent to your email address.",
+          });
+
+          // Show different toast if there are rating officers to notify
+          const ratingOfficerEmails = getRatingOfficerEmails();
+          if (ratingOfficerEmails.length > 0) {
+            toast({
+              title: "Rating officers notified",
+              description: "Rating officers have been notified about your registration.",
+              variant: "default",
+            });
+          }
         } else {
           setSuccessMessage("Rating Officer account created successfully!");
         }
