@@ -222,9 +222,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUsers(prevUsers => 
       prevUsers.map(user => {
         if (user.id === userId) {
-          const updatedUser = { 
+          // Create a new user object with the correct type for status
+          const updatedUser: User = { 
             ...user, 
-            status: 'approved', 
+            status: 'approved' as const, 
             approvalDate: new Date().toISOString() 
           };
           
@@ -260,7 +261,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUsers(prevUsers => 
       prevUsers.map(user => {
         if (user.id === userId) {
-          const updatedUser = { ...user, status: 'rejected' };
+          // Create a new user object with the correct type for status
+          const updatedUser: User = { 
+            ...user, 
+            status: 'rejected' as const 
+          };
           
           // Send rejection email to the organizer
           const rejectionEmailHtml = `
