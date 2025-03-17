@@ -28,6 +28,9 @@ const playerSchema = z.object({
   gender: z.enum(["M", "F"]),
   state: z.string().optional(),
   birthYear: z.coerce.number().optional(),
+  gamesPlayed: z.coerce.number().optional(),
+  rapidGamesPlayed: z.coerce.number().optional(),
+  blitzGamesPlayed: z.coerce.number().optional(),
 });
 
 type PlayerFormValues = z.infer<typeof playerSchema>;
@@ -60,6 +63,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       gender: "M",
       state: "",
       birthYear: undefined,
+      gamesPlayed: undefined,
+      rapidGamesPlayed: undefined,
+      blitzGamesPlayed: undefined,
     },
   });
 
@@ -75,6 +81,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         gender: player.gender,
         state: player.state || "",
         birthYear: player.birthYear,
+        gamesPlayed: player.gamesPlayed,
+        rapidGamesPlayed: player.rapidGamesPlayed,
+        blitzGamesPlayed: player.blitzGamesPlayed,
       });
     }
   }, [player, form]);
@@ -93,6 +102,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         gender: data.gender,
         state: data.state,
         birthYear: data.birthYear,
+        gamesPlayed: data.gamesPlayed,
+        rapidGamesPlayed: data.rapidGamesPlayed,
+        blitzGamesPlayed: data.blitzGamesPlayed,
       };
       
       // Only add to history if rating changed
@@ -102,6 +114,38 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
           {
             date: new Date().toISOString(),
             rating: data.rating,
+            reason: "Manual adjustment"
+          }
+        ];
+      }
+      
+      // Add to rapid rating history if changed
+      if (data.rapidRating !== player.rapidRating && data.rapidRating !== undefined) {
+        if (!updatedPlayer.rapidRatingHistory) {
+          updatedPlayer.rapidRatingHistory = [];
+        }
+        
+        updatedPlayer.rapidRatingHistory = [
+          ...updatedPlayer.rapidRatingHistory,
+          {
+            date: new Date().toISOString(),
+            rating: data.rapidRating,
+            reason: "Manual adjustment"
+          }
+        ];
+      }
+      
+      // Add to blitz rating history if changed
+      if (data.blitzRating !== player.blitzRating && data.blitzRating !== undefined) {
+        if (!updatedPlayer.blitzRatingHistory) {
+          updatedPlayer.blitzRatingHistory = [];
+        }
+        
+        updatedPlayer.blitzRatingHistory = [
+          ...updatedPlayer.blitzRatingHistory,
+          {
+            date: new Date().toISOString(),
+            rating: data.blitzRating,
             reason: "Manual adjustment"
           }
         ];

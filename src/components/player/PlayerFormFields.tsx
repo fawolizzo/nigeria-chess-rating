@@ -109,14 +109,15 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
         
         <FormField
           control={control}
-          name="birthYear"
+          name="gamesPlayed"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Birth Year (Optional)</FormLabel>
+              <FormLabel>Games Played (Classical)</FormLabel>
               <FormControl>
                 <Input 
                   type="number" 
-                  placeholder="YYYY" 
+                  min={0}
+                  placeholder="Number of games" 
                   {...field}
                   value={field.value || ""}
                   onChange={(e) => {
@@ -158,6 +159,32 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
         
         <FormField
           control={control}
+          name="rapidGamesPlayed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Games Played (Rapid)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min={0}
+                  placeholder="Number of games" 
+                  {...field}
+                  value={field.value || ""}
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    field.onChange(value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={control}
           name="blitzRating"
           render={({ field }) => (
             <FormItem>
@@ -179,24 +206,73 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             </FormItem>
           )}
         />
+        
+        <FormField
+          control={control}
+          name="blitzGamesPlayed"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Games Played (Blitz)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min={0}
+                  placeholder="Number of games" 
+                  {...field}
+                  value={field.value || ""}
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    field.onChange(value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
       
-      <FormField
-        control={control}
-        name="state"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>State (Optional)</FormLabel>
-            <FormControl>
-              <StateSelector
-                value={field.value || ""}
-                onValueChange={field.onChange}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={control}
+          name="birthYear"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Birth Year (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  placeholder="YYYY" 
+                  {...field}
+                  value={field.value || ""}
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    field.onChange(value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={control}
+          name="state"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>State (Optional)</FormLabel>
+              <FormControl>
+                <StateSelector
+                  value={field.value || ""}
+                  onValueChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
     </>
   );
 };

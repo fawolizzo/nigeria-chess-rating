@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -12,6 +13,8 @@ export interface Player {
   gender: 'M' | 'F';
   birthYear?: number;
   ratingHistory: { date: string; rating: number; lichessRating?: number; reason?: string }[];
+  rapidRatingHistory?: { date: string; rating: number; reason?: string }[];
+  blitzRatingHistory?: { date: string; rating: number; reason?: string }[];
   achievements?: string[];
   tournamentResults: {
     tournamentId: string;
@@ -21,6 +24,8 @@ export interface Player {
   status?: 'pending' | 'approved' | 'rejected' | 'processed';
   createdBy?: string;
   gamesPlayed?: number;
+  rapidGamesPlayed?: number;
+  blitzGamesPlayed?: number;
   federationId?: string;
   tempId?: string;
 }
@@ -82,6 +87,24 @@ export const getAllPlayers = (): Player[] => {
 
 export const updatePlayer = (updatedPlayer: Player): void => {
   const allPlayers = getAllPlayers();
+  
+  // Ensure rating histories exist
+  if (!updatedPlayer.rapidRatingHistory && updatedPlayer.rapidRating) {
+    updatedPlayer.rapidRatingHistory = [{
+      date: new Date().toISOString(),
+      rating: updatedPlayer.rapidRating,
+      reason: "Manual update"
+    }];
+  }
+  
+  if (!updatedPlayer.blitzRatingHistory && updatedPlayer.blitzRating) {
+    updatedPlayer.blitzRatingHistory = [{
+      date: new Date().toISOString(),
+      rating: updatedPlayer.blitzRating,
+      reason: "Manual update"
+    }];
+  }
+  
   const updatedPlayers = allPlayers.map(player => 
     player.id === updatedPlayer.id ? updatedPlayer : player
   );

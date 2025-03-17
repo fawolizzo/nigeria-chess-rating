@@ -33,6 +33,33 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
   };
   
   const ratingChange = calculateRecentChange();
+
+  // Calculate rapid rating change if history available 
+  const calculateRecentRapidChange = () => {
+    if (player.rapidRatingHistory && player.rapidRatingHistory.length >= 2) {
+      const sortedHistory = [...player.rapidRatingHistory].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      return sortedHistory[0].rating - sortedHistory[1].rating;
+    }
+    return 0;
+  };
+  
+  // Calculate blitz rating change if history available
+  const calculateRecentBlitzChange = () => {
+    if (player.blitzRatingHistory && player.blitzRatingHistory.length >= 2) {
+      const sortedHistory = [...player.blitzRatingHistory].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      return sortedHistory[0].rating - sortedHistory[1].rating;
+    }
+    return 0;
+  };
+  
+  const rapidRatingChange = player.rapidRating ? calculateRecentRapidChange() : 0;
+  const blitzRatingChange = player.blitzRating ? calculateRecentBlitzChange() : 0;
   
   return (
     <Card>
@@ -66,20 +93,44 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
           
           <div className="p-4 border rounded-md bg-white dark:bg-gray-800">
             <div className="text-lg font-semibold">Rapid</div>
-            <div className="text-3xl font-bold mt-1">{rapidRating}</div>
+            <div className="text-3xl font-bold mt-1 flex items-center">
+              {rapidRating}
+              {typeof rapidRating === 'number' && rapidRatingChange !== 0 && (
+                <span className={`ml-2 text-sm ${rapidRatingChange > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {rapidRatingChange > 0 ? (
+                    <TrendingUp className="h-4 w-4 inline" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 inline" />
+                  )}
+                  {Math.abs(rapidRatingChange)}
+                </span>
+              )}
+            </div>
             {player.rapidRating && (
               <div className="text-sm text-gray-500 mt-1">
-                K-factor: {getKFactor(player.rapidRating, player.gamesPlayed || 0)}
+                K-factor: {getKFactor(player.rapidRating, player.rapidGamesPlayed || 0)}
               </div>
             )}
           </div>
           
           <div className="p-4 border rounded-md bg-white dark:bg-gray-800">
             <div className="text-lg font-semibold">Blitz</div>
-            <div className="text-3xl font-bold mt-1">{blitzRating}</div>
+            <div className="text-3xl font-bold mt-1 flex items-center">
+              {blitzRating}
+              {typeof blitzRating === 'number' && blitzRatingChange !== 0 && (
+                <span className={`ml-2 text-sm ${blitzRatingChange > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {blitzRatingChange > 0 ? (
+                    <TrendingUp className="h-4 w-4 inline" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 inline" />
+                  )}
+                  {Math.abs(blitzRatingChange)}
+                </span>
+              )}
+            </div>
             {player.blitzRating && (
               <div className="text-sm text-gray-500 mt-1">
-                K-factor: {getKFactor(player.blitzRating, player.gamesPlayed || 0)}
+                K-factor: {getKFactor(player.blitzRating, player.blitzGamesPlayed || 0)}
               </div>
             )}
           </div>
