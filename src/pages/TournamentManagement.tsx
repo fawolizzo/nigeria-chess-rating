@@ -166,10 +166,11 @@ const TournamentManagement = () => {
     const pendingPlayers = registeredPlayers.filter(p => p.status === 'pending');
     if (pendingPlayers.length > 0) {
       toast({
-        title: "Pending Players",
-        description: `You have ${pendingPlayers.length} players pending approval. They will be excluded from pairings until approved.`,
-        variant: "warning"
+        title: "Cannot Start Tournament",
+        description: `You have ${pendingPlayers.length} players pending approval. All players must be approved by a Rating Officer before the tournament can start.`,
+        variant: "destructive"
       });
+      return;
     }
     
     // Only count approved players for the tournament
@@ -193,6 +194,11 @@ const TournamentManagement = () => {
     updateTournament(updatedTournament);
     setTournament(updatedTournament);
     setActiveTab("pairings");
+    
+    toast({
+      title: "Tournament Started",
+      description: "The tournament has been started successfully with all approved players.",
+    });
   };
 
   const completeTournament = () => {
@@ -216,31 +222,81 @@ const TournamentManagement = () => {
   const handleAddPlayers = (selectedPlayers: Player[]) => {
     if (!tournament || selectedPlayers.length === 0) return;
 
-    const playerIds = selectedPlayers.map(player => player.id);
+    // Check for duplicate players
+    const duplicatePlayers = selectedPlayers.filter(player => 
+      tournament.players?.includes(player.id)
+    );
     
-    const updatedTournament = {
-      ...tournament,
-      players: [...(tournament.players || []), ...playerIds],
-    };
+    if (duplicatePlayers.length > 0) {
+      const duplicateNames = duplicatePlayers.map(p => p.name).join(", ");
+      toast({
+        title: "Duplicate Players",
+        description: `${duplicatePlayers.length === 1 ? 'This player is' : 'These players are'} already in the tournament: ${duplicateNames}`,
+        variant: "destructive"
+      });
+      
+      // Filter out duplicates and only add new players
+      const newPlayers = selectedPlayers.filter(player => 
+        !tournament.players?.includes(player.id)
+      );
+      
+      if (newPlayers.length === 0) return;
+      
+      // Proceed with only the new players
+      const playerIds = newPlayers.map(player => player.id);
+      
+      const updatedTournament = {
+        ...tournament,
+        players: [...(tournament.players || []), ...playerIds],
+      };
 
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setRegisteredPlayers(prev => [...prev, ...selectedPlayers]);
-    
-    // Check if any of the added players are pending
-    const pendingAddedPlayers = selectedPlayers.filter(p => p.status === 'pending');
-    if (pendingAddedPlayers.length > 0) {
-      setHasPendingPlayers(true);
-      toast({
-        title: "Players Added with Pending Status",
-        description: `${pendingAddedPlayers.length} player(s) require Rating Officer approval before they can participate.`,
-        variant: "warning"
-      });
+      updateTournament(updatedTournament);
+      setTournament(updatedTournament);
+      setRegisteredPlayers(prev => [...prev, ...newPlayers]);
+      
+      // Check if any of the added players are pending
+      const pendingAddedPlayers = newPlayers.filter(p => p.status === 'pending');
+      if (pendingAddedPlayers.length > 0) {
+        setHasPendingPlayers(true);
+        toast({
+          title: "Players Added with Pending Status",
+          description: `${pendingAddedPlayers.length} player(s) require Rating Officer approval before they can participate.`,
+          variant: "warning"
+        });
+      } else {
+        toast({
+          title: "Players added",
+          description: `Successfully added ${newPlayers.length} player${newPlayers.length !== 1 ? 's' : ''} to the tournament.`,
+        });
+      }
     } else {
-      toast({
-        title: "Players added",
-        description: `Successfully added ${selectedPlayers.length} player${selectedPlayers.length !== 1 ? 's' : ''} to the tournament.`,
-      });
+      // No duplicates, proceed normally
+      const playerIds = selectedPlayers.map(player => player.id);
+      
+      const updatedTournament = {
+        ...tournament,
+        players: [...(tournament.players || []), ...playerIds],
+      };
+
+      updateTournament(updatedTournament);
+      setTournament(updatedTournament);
+      setRegisteredPlayers(prev => [...prev, ...selectedPlayers]);
+      
+      // Check if any of the added players are pending
+      const pendingAddedPlayers = selectedPlayers.filter(p => p.status === 'pending');
+      if (pendingAddedPlayers.length > 0) {
+        setHasPendingPlayers(true);
+        toast({
+          title: "Players Added with Pending Status",
+          description: `${pendingAddedPlayers.length} player(s) require Rating Officer approval before they can participate.`,
+          variant: "warning"
+        });
+      } else {
+        toast({
+          title: "Players added",
+          description: `Successfully added ${selectedPlayers.length} player${selectedPlayers.length !== 1 ? 's' : ''} to the tournament.`,
+        });
+      }
     }
   };
 
@@ -285,8 +341,8 @@ const TournamentManagement = () => {
     if (newPlayer.status === 'pending') {
       setHasPendingPlayers(true);
       toast({
-        title: "Player Created",
-        description: "The player has been created and will require Rating Officer approval.",
+        title: "Player Created with Pending Status",
+        description: "The player has been created and will require Rating Officer approval before they can participate in the tournament.",
         variant: "warning"
       });
     } else {
@@ -297,7 +353,6 @@ const TournamentManagement = () => {
     }
   };
 
-  // Use our improved Swiss pairing algorithm
   const generatePairings = () => {
     if (!tournament) return;
 

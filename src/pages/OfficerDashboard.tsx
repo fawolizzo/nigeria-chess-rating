@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
-import { getAllTournaments } from "@/lib/mockData";
+import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
 
 const OfficerDashboard: React.FC = () => {
   const { currentUser, isLoading } = useUser();
@@ -16,10 +16,16 @@ const OfficerDashboard: React.FC = () => {
       navigate("/login");
     }
     
-    // Load pending tournament count
+    // Load pending tournaments count
     const allTournaments = getAllTournaments();
     const pendingTournaments = allTournaments.filter(t => t.status === "pending");
-    setPendingCount(pendingTournaments.length);
+    
+    // Load pending players count
+    const allPlayers = getAllPlayers();
+    const pendingPlayers = allPlayers.filter(p => p.status === "pending");
+    
+    // Set total pending count (tournaments + players)
+    setPendingCount(pendingTournaments.length + pendingPlayers.length);
   }, [currentUser, isLoading, navigate]);
   
   if (isLoading) {

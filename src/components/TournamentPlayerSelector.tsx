@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, UserPlus, X, Users, AlertTriangle } from "lucide-react";
@@ -61,7 +62,7 @@ const TournamentPlayerSelector = ({
     console.log("Players imported:", players);
     
     // For players that have complete necessary fields, add them directly to the system
-    // and make them available for selection
+    // but set status to pending so the Rating Officer needs to approve them
     const playersToCreate = players
       .filter(p => p.name && p.id)
       .map(player => ({
@@ -80,7 +81,7 @@ const TournamentPlayerSelector = ({
           reason: "Initial import"
         }],
         tournamentResults: [],
-        status: "approved" as const,
+        status: "pending" as const, // IMPORTANT: All imported players must be set to pending
         gamesPlayed: 0,
         createdBy: "current_user" // This would be replaced with actual user ID in a real app
       } as Player));
@@ -91,8 +92,9 @@ const TournamentPlayerSelector = ({
     });
     
     toast({
-      title: "Players created successfully",
-      description: `${playersToCreate.length} players have been imported and are ready to use.`,
+      title: "Players imported successfully",
+      description: `${playersToCreate.length} players have been imported and will require Rating Officer approval before they can be used in tournaments.`,
+      variant: "warning"
     });
     
     // For review purposes, convert them to have tempId
@@ -103,6 +105,7 @@ const TournamentPlayerSelector = ({
     
     setImportedPlayers(playersWithTempIds);
     setSelectedImportIds(playersWithTempIds.map(p => p.tempId)); // Auto-select all
+    setPendingPlayersExist(true);
     
     // Switch to the review tab to show what we imported
     setActiveTab("review");
@@ -172,8 +175,8 @@ const TournamentPlayerSelector = ({
                 <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2 text-sm">
                   <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                   <p className="text-yellow-700">
-                    Imported players need approval from a Rating Officer before they can be used in tournaments. 
-                    However, you can still include them in your selection.
+                    Imported players need approval from a Rating Officer before they can participate in tournaments. 
+                    You can include them in your selection, but the tournament cannot start until all players are approved.
                   </p>
                 </div>
               )}
@@ -194,7 +197,7 @@ const TournamentPlayerSelector = ({
               {activeTab === "review" && importedPlayers.length > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Review and confirm players to import. All imported players will be immediately available for selection.
+                    Review imported players. All players will require Rating Officer approval before they can participate in tournaments.
                   </p>
                   
                   <div className="border rounded-md overflow-hidden">
