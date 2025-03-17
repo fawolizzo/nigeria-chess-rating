@@ -1,7 +1,9 @@
+
 // Utility function to calculate K-factor for Elo calculation
 export const getKFactor = (rating: number, gamesPlayed: number): number => {
-  // New players (< 30 games) get K=40 if rated below 2300
-  if (gamesPlayed < 30 && rating < 2300) {
+  // New or provisional players (fewer than 10 rated games)
+  // High-rated new players aren't treated as new players (no K=40)
+  if (gamesPlayed < 10 && rating < 2000) {
     return 40;
   }
   
@@ -15,7 +17,7 @@ export const getKFactor = (rating: number, gamesPlayed: number): number => {
     return 24;
   }
   
-  // Higher rated players get K=16
+  // Higher rated players (2400+) get K=16
   return 16;
 };
 
@@ -36,10 +38,14 @@ interface RatingCalculationResult {
   blackRatingChange: number;
 }
 
+// Calculate the expected score using the Elo formula:
+// E = 1 / (1 + 10^((OpponentRating - PlayerRating)/400))
 const calculateExpectedScore = (ratingA: number, ratingB: number): number => {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
 };
 
+// Calculate rating change using:
+// New Rating = Current Rating + K × (Score - E)
 const calculateRatingChange = (
   score: number,
   expectedScore: number,

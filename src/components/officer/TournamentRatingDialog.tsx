@@ -90,8 +90,8 @@ const TournamentRatingDialog = ({
               }
               
               // Add rating changes
-              playerUpdates[match.whiteId].ratingChange += match.whiteRatingChange;
-              playerUpdates[match.blackId].ratingChange += match.blackRatingChange;
+              playerUpdates[match.whiteId].ratingChange += match.whiteRatingChange || 0;
+              playerUpdates[match.blackId].ratingChange += match.blackRatingChange || 0;
             }
           });
         });
@@ -225,11 +225,10 @@ const TournamentRatingDialog = ({
             <div className="flex flex-col gap-2">
               <div className="font-medium">Rating System Parameters:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                <li>Floor rating of 800 for new players</li>
-                <li>K=40 for new players (less than 30 games) under 2300 rating</li>
+                <li>K=40 for new players (less than 10 games) under 2000 rating</li>
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>
-                <li>K=16 for higher-rated players</li>
+                <li>K=16 for higher-rated players (2400+)</li>
               </ul>
             </div>
           </div>

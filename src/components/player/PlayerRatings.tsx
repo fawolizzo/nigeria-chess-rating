@@ -28,8 +28,8 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
             <div className="text-3xl font-bold mt-1">{player.rating}</div>
             <div className="text-sm text-gray-500 mt-1">K-factor: {classicalKFactor}</div>
             <div className="text-sm text-gray-500">
-              {player.gamesPlayed && player.gamesPlayed < 30 ? 
-                `${30 - player.gamesPlayed} more games until established` : 
+              {player.gamesPlayed !== undefined && player.gamesPlayed < 10 ? 
+                `${10 - player.gamesPlayed} more games until established` : 
                 "Established rating"}
             </div>
           </div>
