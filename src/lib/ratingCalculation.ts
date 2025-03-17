@@ -22,6 +22,18 @@ export function calculateRatingChange(playerRating: number, opponentRating: numb
   return ratingChange;
 }
 
+// Utility function to get K-factor based on rating and games played
+export function getKFactor(playerRating: number, gamesPlayed: number): number {
+  if (gamesPlayed < 30) {
+    return 40; // Higher K-factor for new players
+  } else if (playerRating >= 2100 && playerRating < 2400) {
+    return 24; // Lower K-factor for higher-rated players
+  } else if (playerRating >= 2400) {
+    return 16; // Even lower K-factor for masters
+  }
+  return 32; // Default K-factor
+}
+
 // Calculate post-round ratings for all players in a round
 export function calculatePostRoundRatings(
   matches: Array<{

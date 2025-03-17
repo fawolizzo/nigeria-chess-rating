@@ -36,12 +36,14 @@ type PlayerFormValues = z.infer<typeof playerSchema>;
 interface CreatePlayerDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onPlayerCreated?: () => void;
   onSuccess?: () => void;
 }
 
 const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({ 
   isOpen, 
   onOpenChange,
+  onPlayerCreated,
   onSuccess
 }) => {
   const { toast } = useToast();
@@ -94,6 +96,10 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
       
       form.reset();
       onOpenChange(false);
+      
+      if (onPlayerCreated) {
+        onPlayerCreated();
+      }
       
       if (onSuccess) {
         onSuccess();

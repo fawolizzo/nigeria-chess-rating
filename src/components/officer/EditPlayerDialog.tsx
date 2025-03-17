@@ -36,6 +36,7 @@ interface EditPlayerDialogProps {
   player: Player | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onPlayerEdited?: () => void;
   onSuccess?: () => void;
 }
 
@@ -43,6 +44,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   player,
   isOpen, 
   onOpenChange,
+  onPlayerEdited,
   onSuccess
 }) => {
   const { toast } = useToast();
@@ -113,6 +115,10 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       });
       
       onOpenChange(false);
+      
+      if (onPlayerEdited) {
+        onPlayerEdited();
+      }
       
       if (onSuccess) {
         onSuccess();

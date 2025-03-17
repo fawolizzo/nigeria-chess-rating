@@ -22,12 +22,22 @@ import { useNavigate } from "react-router-dom";
 
 interface ProcessedTournamentDetailsProps {
   tournament: Tournament;
-  players: Player[];
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ tournament, players }) => {
+const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ 
+  tournament, 
+  isOpen, 
+  onOpenChange 
+}) => {
   const navigate = useNavigate();
   const processingDate = tournament.processingDate ? new Date(tournament.processingDate) : null;
+
+  // Get players who participated in this tournament
+  const players = tournament.players
+    ? tournament.players.map(playerId => getPlayerById(playerId)).filter(Boolean) as Player[]
+    : [];
 
   // Sort players by their position in this tournament
   const sortedPlayers = [...players].sort((a, b) => {
