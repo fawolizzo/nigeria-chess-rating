@@ -11,16 +11,20 @@ import RankingTable from "@/components/RankingTable";
 import { getAllPlayers, Player } from "@/lib/mockData";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { nigerianStates } from "@/lib/nigerianStates";
+import { getAllStates } from "@/lib/nigerianStates";
 
 const Players = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedState, setSelectedState] = useState<string>("all");
   const [displayCount, setDisplayCount] = useState(10);
+  const [nigerianStatesList, setNigerianStatesList] = useState<string[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Load states
+    setNigerianStatesList(getAllStates());
+    
     const fetchedPlayers = getAllPlayers();
     
     // Filter out only approved players for public display
@@ -141,7 +145,7 @@ const Players = () => {
                     <SelectContent>
                       <SelectItem value="all">All States</SelectItem>
                       <Separator className="my-1" />
-                      {nigerianStates.map(state => (
+                      {nigerianStatesList.map(state => (
                         <SelectItem key={state} value={state}>
                           {state}
                         </SelectItem>
