@@ -28,31 +28,26 @@ const TournamentRatingDialog = ({
     setIsProcessing(true);
     
     try {
-      // Get all players that participated in this tournament
-      const tournamentPlayers = getPlayersByTournamentId(tournament.id);
-      
       // Get all players to ensure we have a complete dataset
       const allPlayers = getAllPlayers();
       
       // Process each round of matches if tournament has pairings
       if (tournament.pairings && tournament.pairings.length > 0) {
+        // Track all players that participated in the tournament
+        const participantIds: Record<string, boolean> = {};
+        
         // Process each round and calculate rating changes
         const processedRounds = tournament.pairings.map(round => {
           // For each match in the round, calculate rating changes
           const processedMatches = calculatePostRoundRatings(
             round.matches.map(match => {
-              // Look in both tournament players and all players
-              let whitePlayer = tournamentPlayers.find(p => p.id === match.whiteId);
-              let blackPlayer = tournamentPlayers.find(p => p.id === match.blackId);
+              // Add players to participants
+              participantIds[match.whiteId] = true;
+              participantIds[match.blackId] = true;
               
-              // If not found in tournament players, try all players
-              if (!whitePlayer) {
-                whitePlayer = allPlayers.find(p => p.id === match.whiteId);
-              }
-              
-              if (!blackPlayer) {
-                blackPlayer = allPlayers.find(p => p.id === match.blackId);
-              }
+              // Find players
+              let whitePlayer = allPlayers.find(p => p.id === match.whiteId);
+              let blackPlayer = allPlayers.find(p => p.id === match.blackId);
               
               if (!whitePlayer || !blackPlayer) {
                 console.error(`Player not found: ${match.whiteId} or ${match.blackId}`);
@@ -101,23 +96,25 @@ const TournamentRatingDialog = ({
           });
         });
         
-        // Apply updates to players - use allPlayers to ensure we can update any player
+        // Apply updates to players
         Object.entries(playerUpdates).forEach(([playerId, update]) => {
           const player = allPlayers.find(p => p.id === playerId);
           if (player) {
             // Calculate final position based on score
-            // This is a simplified approach - in a real system you might have tiebreakers
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
+            
+            // Get the new rating value after the change
+            const newRating = player.rating + update.ratingChange;
             
             const updatedPlayer = {
               ...player,
-              rating: player.rating + update.ratingChange,
+              rating: newRating,
               gamesPlayed: (player.gamesPlayed || 0) + 1,
               ratingHistory: [
                 ...(player.ratingHistory || []),
                 {
                   date: new Date().toISOString().split('T')[0],
-                  rating: player.rating + update.ratingChange,
+                  rating: newRating,
                   reason: `Tournament: ${tournament.name}`
                 }
               ],
@@ -136,30 +133,24 @@ const TournamentRatingDialog = ({
             updatePlayer(updatedPlayer);
           }
         });
+        
+        // Mark tournament as processed and store the processing details
+        const updatedTournament = {
+          ...tournament,
+          status: 'processed' as Tournament['status'],
+          processingDate: new Date().toISOString(),
+          processedPlayerIds: Object.keys(participantIds)
+        };
+        updateTournament(updatedTournament);
+        
+        toast({
+          title: "Ratings Processed",
+          description: `All player ratings have been updated for ${tournament.name}`,
+        });
+        
+        onOpenChange(false);
+        onProcessed();
       }
-      
-      // Mark tournament as processed and store the processing details
-      const updatedTournament = {
-        ...tournament,
-        status: 'processed' as Tournament['status'],
-        processingDate: new Date().toISOString(),
-        processedPlayerIds: Object.keys(tournament.pairings?.reduce((acc, round) => {
-          round.matches.forEach(match => {
-            acc[match.whiteId] = true;
-            acc[match.blackId] = true;
-          });
-          return acc;
-        }, {} as Record<string, boolean>) || {})
-      };
-      updateTournament(updatedTournament);
-      
-      toast({
-        title: "Ratings Processed",
-        description: `All player ratings have been updated for ${tournament.name}`,
-      });
-      
-      onOpenChange(false);
-      onProcessed();
     } catch (error) {
       console.error("Error processing ratings:", error);
       
@@ -180,13 +171,21 @@ const TournamentRatingDialog = ({
     
     processedRounds.forEach(round => {
       round.matches.forEach((match: any) => {
+        // Initialize player scores if not already done
+        if (!playerScores[match.whiteId]) {
+          playerScores[match.whiteId] = 0;
+        }
+        if (!playerScores[match.blackId]) {
+          playerScores[match.blackId] = 0;
+        }
+        
         if (match.result === "1-0") {
-          playerScores[match.whiteId] = (playerScores[match.whiteId] || 0) + 1;
+          playerScores[match.whiteId] += 1;
         } else if (match.result === "0-1") {
-          playerScores[match.blackId] = (playerScores[match.blackId] || 0) + 1;
+          playerScores[match.blackId] += 1;
         } else if (match.result === "1/2-1/2") {
-          playerScores[match.whiteId] = (playerScores[match.whiteId] || 0) + 0.5;
-          playerScores[match.blackId] = (playerScores[match.blackId] || 0) + 0.5;
+          playerScores[match.whiteId] += 0.5;
+          playerScores[match.blackId] += 0.5;
         }
       });
     });

@@ -1,133 +1,200 @@
 
-import React from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Player, Tournament, getPlayerById } from "@/lib/mockData";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Tournament, getAllPlayers, Player } from "@/lib/mockData";
+import { Tabs, TabsContent, TabsItem, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, LineChartIcon, AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 
 interface ProcessedTournamentDetailsProps {
-  tournament: Tournament;
+  tournament: Tournament | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ 
+const ProcessedTournamentDetails = ({ 
   tournament, 
   isOpen, 
   onOpenChange 
-}) => {
-  const navigate = useNavigate();
-  const processingDate = tournament.processingDate ? new Date(tournament.processingDate) : null;
-
-  // Get players who participated in this tournament
-  const players = tournament.players
-    ? tournament.players.map(playerId => getPlayerById(playerId)).filter(Boolean) as Player[]
-    : [];
-
-  // Sort players by their position in this tournament
-  const sortedPlayers = [...players].sort((a, b) => {
-    const aResult = a.tournamentResults.find(r => r.tournamentId === tournament.id);
-    const bResult = b.tournamentResults.find(r => r.tournamentId === tournament.id);
+}: ProcessedTournamentDetailsProps) => {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    if (tournament && isOpen) {
+      // Fetch all players
+      const allPlayers = getAllPlayers();
+      
+      // Filter players who participated in this tournament
+      const tournamentPlayerIds = tournament.processedPlayerIds || [];
+      const tournamentPlayers = allPlayers.filter(player => 
+        tournamentPlayerIds.includes(player.id)
+      );
+      
+      setPlayers(tournamentPlayers);
+      setLoading(false);
+    }
+  }, [tournament, isOpen]);
+  
+  if (!tournament) return null;
+  
+  // Find player rating change for this tournament
+  const getPlayerRatingChange = (playerId: string) => {
+    const player = players.find(p => p.id === playerId);
+    if (!player) return 0;
     
-    if (!aResult) return 1;
-    if (!bResult) return -1;
+    const tournamentResult = player.tournamentResults.find(
+      result => result.tournamentId === tournament.id
+    );
     
-    return aResult.position - bResult.position;
-  });
-
+    return tournamentResult?.ratingChange || 0;
+  };
+  
+  // Get player's position in tournament
+  const getPlayerPosition = (playerId: string) => {
+    const player = players.find(p => p.id === playerId);
+    if (!player) return "-";
+    
+    const tournamentResult = player.tournamentResults.find(
+      result => result.tournamentId === tournament.id
+    );
+    
+    return tournamentResult?.position || "-";
+  };
+  
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Processed Tournament Results</CardTitle>
-            <CardDescription>
-              This tournament was processed {processingDate ? processingDate.toLocaleDateString() : "recently"}
-            </CardDescription>
-          </div>
-          <Badge className="bg-purple-500">Processed</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarIcon size={16} />
-            <span>Processed on: {processingDate ? processingDate.toLocaleString() : "N/A"}</span>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-medium mb-3">Rating Changes</h3>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Rating Before</TableHead>
-                    <TableHead>Rating Change</TableHead>
-                    <TableHead>Rating After</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedPlayers.length > 0 ? (
-                    sortedPlayers.map(player => {
-                      const result = player.tournamentResults.find(r => r.tournamentId === tournament.id);
-                      if (!result) return null;
-                      
-                      // Find player's rating before this tournament by looking at rating history
-                      const currentRating = player.rating;
-                      const ratingChange = result.ratingChange;
-                      const previousRating = currentRating - ratingChange;
-                      
-                      return (
-                        <TableRow key={player.id} className="cursor-pointer hover:bg-muted" onClick={() => navigate(`/player/${player.id}`)}>
-                          <TableCell>{result.position}</TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-1">
-                              {player.title && <span className="text-amber-500">{player.title}</span>}
-                              {player.name}
-                            </div>
-                          </TableCell>
-                          <TableCell>{previousRating}</TableCell>
-                          <TableCell className={ratingChange >= 0 ? "text-green-500" : "text-red-500"}>
-                            {ratingChange > 0 ? "+" : ""}{ratingChange}
-                          </TableCell>
-                          <TableCell className="font-medium">{currentRating}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                          <p>No player data available for this tournament or players have been removed</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{tournament.name} - Results</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="standings" className="mt-4">
+          <TabsList>
+            <TabsTrigger value="standings">Final Standings</TabsTrigger>
+            <TabsTrigger value="details">Tournament Details</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="standings" className="space-y-4">
+            {loading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Final Standings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Player</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Rating Change</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {players
+                        .sort((a, b) => {
+                          const posA = Number(getPlayerPosition(a.id)) || 999;
+                          const posB = Number(getPlayerPosition(b.id)) || 999;
+                          return posA - posB;
+                        })
+                        .map(player => {
+                          const ratingChange = getPlayerRatingChange(player.id);
+                          
+                          return (
+                            <TableRow key={player.id}>
+                              <TableCell>{getPlayerPosition(player.id)}</TableCell>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {player.title && (
+                                    <span className="text-gold-dark dark:text-gold-light mr-1">
+                                      {player.title}
+                                    </span>
+                                  )}
+                                  {player.name}
+                                </div>
+                              </TableCell>
+                              <TableCell>{player.rating}</TableCell>
+                              <TableCell>
+                                {ratingChange !== 0 ? (
+                                  <Badge className={`flex items-center gap-1 ${
+                                    ratingChange > 0 
+                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                  }`}>
+                                    {ratingChange > 0 ? (
+                                      <ArrowUp className="h-3 w-3" />
+                                    ) : ratingChange < 0 ? (
+                                      <ArrowDown className="h-3 w-3" />
+                                    ) : (
+                                      <Minus className="h-3 w-3" />
+                                    )}
+                                    {Math.abs(ratingChange)}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
+                                    <Minus className="h-3 w-3 mr-1" />
+                                    0
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="details">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tournament Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Dates</h3>
+                    <p>{new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Location</h3>
+                    <p>{tournament.location}, {tournament.city}, {tournament.state}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Time Control</h3>
+                    <p>{tournament.timeControl}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Rounds</h3>
+                    <p>{tournament.rounds}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Processed On</h3>
+                    <p>{tournament.processingDate ? new Date(tournament.processingDate).toLocaleString() : "N/A"}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Participants</h3>
+                    <p>{players.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

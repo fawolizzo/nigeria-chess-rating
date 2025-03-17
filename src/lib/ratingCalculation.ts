@@ -1,59 +1,55 @@
-
-// Calculate rating change using Nigerian Chess Rating System formula
-export function calculateRatingChange(playerRating: number, opponentRating: number, result: number, gamesPlayed: number): number {
-  // Determine K-factor based on player experience and rating
-  let kFactor = 32; // Default K-factor
-  
-  if (gamesPlayed < 30) {
-    kFactor = 40; // Higher K-factor for new players
-  } else if (playerRating >= 2100 && playerRating < 2400) {
-    kFactor = 24; // Lower K-factor for higher-rated players
-  } else if (playerRating >= 2400) {
-    kFactor = 16; // Even lower K-factor for masters
+// Utility function to calculate K-factor for Elo calculation
+export const getKFactor = (rating: number, gamesPlayed: number): number => {
+  // New players (< 30 games) get K=40 if rated below 2300
+  if (gamesPlayed < 30 && rating < 2300) {
+    return 40;
   }
   
-  // Calculate expected score
-  const ratingDiff = opponentRating - playerRating;
-  const expectedScore = 1 / (1 + Math.pow(10, ratingDiff / 400));
-  
-  // Calculate rating change
-  const ratingChange = Math.round(kFactor * (result - expectedScore));
-  
-  return ratingChange;
-}
-
-// Utility function to get K-factor based on rating and games played
-export function getKFactor(playerRating: number, gamesPlayed: number): number {
-  if (gamesPlayed < 30) {
-    return 40; // Higher K-factor for new players
-  } else if (playerRating >= 2100 && playerRating < 2400) {
-    return 24; // Lower K-factor for higher-rated players
-  } else if (playerRating >= 2400) {
-    return 16; // Even lower K-factor for masters
+  // Players below 2100 get K=32
+  if (rating < 2100) {
+    return 32;
   }
-  return 32; // Default K-factor
-}
+  
+  // Players 2100-2399 get K=24
+  if (rating >= 2100 && rating <= 2399) {
+    return 24;
+  }
+  
+  // Higher rated players get K=16
+  return 16;
+};
 
-// Calculate post-round ratings for all players in a round
-export function calculatePostRoundRatings(
-  matches: Array<{
-    whiteId: string;
-    blackId: string;
-    whiteRating: number;
-    blackRating: number;
-    whiteGamesPlayed: number;
-    blackGamesPlayed: number;
-    result: "1-0" | "0-1" | "1/2-1/2" | "*";
-  }>
-): Array<{
+interface Match {
   whiteId: string;
   blackId: string;
+  whiteRating: number;
+  blackRating: number;
+  whiteGamesPlayed: number;
+  blackGamesPlayed: number;
   result: "1-0" | "0-1" | "1/2-1/2" | "*";
+  whiteRatingChange?: number;
+  blackRatingChange?: number;
+}
+
+interface RatingCalculationResult {
   whiteRatingChange: number;
   blackRatingChange: number;
-}> {
+}
+
+const calculateExpectedScore = (ratingA: number, ratingB: number): number => {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+};
+
+const calculateRatingChange = (
+  score: number,
+  expectedScore: number,
+  kFactor: number
+): number => {
+  return Math.round(kFactor * (score - expectedScore));
+};
+
+export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
   return matches.map(match => {
-    // Skip unfinished games
     if (match.result === "*") {
       return {
         ...match,
@@ -61,40 +57,50 @@ export function calculatePostRoundRatings(
         blackRatingChange: 0
       };
     }
-    
-    // Convert result to numerical values
-    let whiteResult = 0.5; // Default for draw
-    let blackResult = 0.5;
-    
-    if (match.result === "1-0") {
-      whiteResult = 1;
-      blackResult = 0;
-    } else if (match.result === "0-1") {
-      whiteResult = 0;
-      blackResult = 1;
+
+    const {
+      whiteRating,
+      blackRating,
+      whiteGamesPlayed,
+      blackGamesPlayed,
+      result
+    } = match;
+
+    const kFactorWhite = getKFactor(whiteRating, whiteGamesPlayed);
+    const kFactorBlack = getKFactor(blackRating, blackGamesPlayed);
+
+    const expectedScoreWhite = calculateExpectedScore(whiteRating, blackRating);
+    const expectedScoreBlack = calculateExpectedScore(blackRating, whiteRating);
+
+    let scoreWhite = 0;
+    let scoreBlack = 0;
+
+    if (result === "1-0") {
+      scoreWhite = 1;
+      scoreBlack = 0;
+    } else if (result === "0-1") {
+      scoreWhite = 0;
+      scoreBlack = 1;
+    } else {
+      scoreWhite = 0.5;
+      scoreBlack = 0.5;
     }
-    
-    // Calculate rating changes
+
     const whiteRatingChange = calculateRatingChange(
-      match.whiteRating,
-      match.blackRating,
-      whiteResult,
-      match.whiteGamesPlayed
+      scoreWhite,
+      expectedScoreWhite,
+      kFactorWhite
     );
-    
     const blackRatingChange = calculateRatingChange(
-      match.blackRating,
-      match.whiteRating,
-      blackResult,
-      match.blackGamesPlayed
+      scoreBlack,
+      expectedScoreBlack,
+      kFactorBlack
     );
-    
+
     return {
-      whiteId: match.whiteId,
-      blackId: match.blackId,
-      result: match.result,
+      ...match,
       whiteRatingChange,
       blackRatingChange
     };
   });
-}
+};

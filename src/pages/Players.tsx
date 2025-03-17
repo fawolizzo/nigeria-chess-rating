@@ -1,118 +1,186 @@
 
 import { useState, useEffect } from "react";
-import { players } from "@/lib/mockData";
-import RankingTable from "@/components/RankingTable";
-import PlayerCard from "@/components/PlayerCard";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, ChevronRight } from "lucide-react";
+import RankingTable from "@/components/RankingTable";
+import { getAllPlayers, Player } from "@/lib/mockData";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { nigerianStates } from "@/lib/nigerianStates";
 
 const Players = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredPlayers, setFilteredPlayers] = useState(players);
-  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [isLoading, setIsLoading] = useState(true);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedState, setSelectedState] = useState<string>("all");
+  const [displayCount, setDisplayCount] = useState(10);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    const fetchedPlayers = getAllPlayers();
+    
+    // Filter out only approved players for public display
+    const approvedPlayers = fetchedPlayers.filter(player => 
+      player.status === 'approved'
+    );
+    
+    // Sort by rating (highest first)
+    const sortedPlayers = [...approvedPlayers].sort((a, b) => b.rating - a.rating);
+    
+    setPlayers(sortedPlayers);
   }, []);
 
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredPlayers(players);
-    } else {
-      const query = searchQuery.toLowerCase();
-      const filtered = players.filter(
-        player =>
-          player.name.toLowerCase().includes(query) ||
-          (player.title?.toLowerCase().includes(query) || false) ||
-          (player.state?.toLowerCase().includes(query) || false)
-      );
-      setFilteredPlayers(filtered);
-    }
-  }, [searchQuery]);
+  const filteredPlayers = players.filter(player => {
+    // Filter by search query
+    const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (player.title && player.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Filter by state if selected
+    const matchesState = selectedState === "all" || player.state === selectedState;
+    
+    return matchesSearch && matchesState;
+  });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  const handleViewPlayerProfile = (playerId: string) => {
+    navigate(`/player/${playerId}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       
-      <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto animate-fade-in">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Nigerian Chess Players
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">
-            Browse all rated chess players in Nigeria
-          </p>
-        </div>
+      <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">Player Rankings</h1>
+        <p className="text-muted-foreground mb-8">View the official Nigerian Chess Rating rankings</p>
         
-        <div className="mb-8 flex flex-col sm:flex-row justify-between gap-4">
-          <div className="relative max-w-md w-full">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, title, or state"
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-gold focus:border-gold sm:text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-            />
-          </div>
+        <Tabs defaultValue="rankings" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="rankings">National Rankings</TabsTrigger>
+            <TabsTrigger value="states">State Rankings</TabsTrigger>
+          </TabsList>
           
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setViewMode("table")}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                viewMode === "table"
-                  ? "bg-black dark:bg-gold-dark text-white"
-                  : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
-              }`}
-            >
-              Table View
-            </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`px-4 py-2 text-sm font-medium rounded-md ${
-                viewMode === "grid"
-                  ? "bg-black dark:bg-gold-dark text-white"
-                  : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
-              }`}
-            >
-              Grid View
-            </button>
-          </div>
-        </div>
-        
-        {filteredPlayers.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
-            <p className="text-gray-600 dark:text-gray-300">No players found matching "{searchQuery}"</p>
-          </div>
-        ) : viewMode === "table" ? (
-          <RankingTable players={filteredPlayers} itemsPerPage={20} />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredPlayers.map(player => (
-              <div key={player.id} className="animate-fade-up">
-                <PlayerCard player={player} />
-              </div>
-            ))}
-          </div>
-        )}
+          <TabsContent value="rankings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Players</CardTitle>
+                <CardDescription>
+                  Find players by name or title
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search players..."
+                    className="pl-9"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold mb-4">Top Players</h2>
+              
+              {filteredPlayers.length > 0 ? (
+                <>
+                  <RankingTable 
+                    players={filteredPlayers.slice(0, displayCount)} 
+                    itemsPerPage={displayCount}
+                  />
+                  
+                  {filteredPlayers.length > displayCount && (
+                    <div className="mt-4 text-center">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setDisplayCount(displayCount + 10)}
+                      >
+                        Load More
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-10 border rounded-lg">
+                  <Search className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                  <h3 className="text-lg font-medium mb-1">No Players Found</h3>
+                  <p className="text-muted-foreground">
+                    {searchQuery 
+                      ? "Try adjusting your search criteria" 
+                      : "No rated players are available at this time"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="states" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>State Rankings</CardTitle>
+                <CardDescription>
+                  View player rankings by state
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Select 
+                    value={selectedState} 
+                    onValueChange={setSelectedState}
+                  >
+                    <SelectTrigger className="w-[250px]">
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All States</SelectItem>
+                      <Separator className="my-1" />
+                      {nigerianStates.map(state => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {selectedState !== "all" ? (
+                  <div className="mt-4">
+                    <h3 className="text-lg font-medium mb-4">
+                      {selectedState} State Rankings
+                    </h3>
+                    
+                    {filteredPlayers.length > 0 ? (
+                      <RankingTable 
+                        players={filteredPlayers.slice(0, displayCount)} 
+                      />
+                    ) : (
+                      <div className="text-center py-10 border rounded-lg">
+                        <h3 className="text-lg font-medium mb-1">No Players Found</h3>
+                        <p className="text-muted-foreground">
+                          No rated players are available for {selectedState} state
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 border rounded-lg">
+                    <h3 className="text-lg font-medium mb-1">Select a State</h3>
+                    <p className="text-muted-foreground">
+                      Please select a specific state to view rankings
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
