@@ -13,11 +13,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import TournamentRatingDialog from "./TournamentRatingDialog";
 import ProcessedTournamentDetails from "./ProcessedTournamentDetails";
+import PendingTournamentApprovals from "./PendingTournamentApprovals";
 
 const OfficerDashboardContent = () => {
   const [activeTab, setActiveTab] = useState("organizers");
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [completedTournaments, setCompletedTournaments] = useState<any[]>([]);
+  const [pendingTournaments, setPendingTournaments] = useState<any[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<any>(null);
@@ -42,6 +44,11 @@ const OfficerDashboardContent = () => {
       (t) => t.status === "completed"
     );
     
+    // Filter pending tournaments that need approval/rejection
+    const pending = allTournaments.filter(
+      (t) => t.status === "pending"
+    );
+    
     // Filter processed tournaments
     const processed = allTournaments.filter(
       (t) => t.status === "processed"
@@ -49,6 +56,7 @@ const OfficerDashboardContent = () => {
     
     setTournaments(allTournaments);
     setCompletedTournaments(completed);
+    setPendingTournaments(pending);
   };
 
   const handleProcessTournament = (tournamentId: string) => {
@@ -81,6 +89,11 @@ const OfficerDashboardContent = () => {
     }
   };
 
+  const handleTournamentApprovalUpdate = () => {
+    // Reload tournaments to reflect approval/rejection changes
+    loadTournaments();
+  };
+
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid grid-cols-4 mb-8">
@@ -91,6 +104,11 @@ const OfficerDashboardContent = () => {
         <TabsTrigger value="tournaments" className="flex items-center gap-2">
           <Calendar className="h-4 w-4" />
           <span>Tournaments</span>
+          {pendingTournaments.length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+              {pendingTournaments.length}
+            </span>
+          )}
         </TabsTrigger>
         <TabsTrigger value="players" className="flex items-center gap-2 relative">
           <Users className="h-4 w-4" />
@@ -124,6 +142,27 @@ const OfficerDashboardContent = () => {
               </Button>
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Pending Tournament Approvals Section */}
+        {pendingTournaments.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                Pending Tournament Approvals
+              </CardTitle>
+              <CardDescription>
+                {pendingTournaments.length} tournament(s) waiting for your approval/rejection
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PendingTournamentApprovals 
+                tournaments={pendingTournaments}
+                onApprovalUpdate={handleTournamentApprovalUpdate}
+              />
+            </CardContent>
+          </Card>
         )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

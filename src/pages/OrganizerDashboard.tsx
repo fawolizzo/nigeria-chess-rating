@@ -145,12 +145,15 @@ const OrganizerDashboard = () => {
       return;
     }
 
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+    
     const newTournament: Tournament = {
       id: `${Date.now()}`,
       name: data.name,
       description: data.description,
-      startDate: data.startDate.toISOString().split('T')[0],
-      endDate: data.endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
       location: data.location,
       city: data.city,
       state: data.state,

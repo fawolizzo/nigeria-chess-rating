@@ -77,26 +77,16 @@ const TournamentRatingProcessor = ({
         
         return {
           roundNumber: round.roundNumber,
-          matches: processedMatches
-        };
-      });
-      
-      // Ensure all matches have whiteRatingChange and blackRatingChange
-      const fullyProcessedRounds = processedRounds.map(round => {
-        return {
-          roundNumber: round.roundNumber,
-          matches: round.matches.map(match => {
-            return {
-              ...match,
-              whiteRatingChange: match.whiteRatingChange ?? 0,
-              blackRatingChange: match.blackRatingChange ?? 0
-            };
-          })
+          matches: processedMatches.map(match => ({
+            ...match,
+            whiteRatingChange: match.whiteRatingChange ?? 0,
+            blackRatingChange: match.blackRatingChange ?? 0
+          }))
         };
       });
       
       // Call the callback with processed results
-      onProcessComplete(fullyProcessedRounds);
+      onProcessComplete(processedRounds);
       
       toast({
         title: "Ratings processed successfully",
