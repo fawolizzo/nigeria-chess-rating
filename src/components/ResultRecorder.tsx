@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ResultRecorderProps {
   pairings: Array<{ 
@@ -33,6 +33,7 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
       result: pair.result || "*"
     }))
   );
+  const { toast } = useToast();
 
   useEffect(() => {
     // Update results when pairings change
@@ -69,9 +70,9 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Round {roundNumber} Results</CardTitle>
+    <Card className="border-nigeria-green/30">
+      <CardHeader className="bg-gradient-to-r from-nigeria-green/5 to-transparent">
+        <CardTitle className="text-nigeria-green-dark">Round {roundNumber} Results</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -85,7 +86,7 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
                   if (!whitePlayer || !blackPlayer) return null;
                   
                   return (
-                    <div key={index} className="border rounded-md p-4">
+                    <div key={index} className="border border-nigeria-green/20 rounded-md p-4 hover:bg-nigeria-green/5 transition-colors">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div className="flex-1 mb-3 md:mb-0">
                           <div className="flex flex-col md:flex-row md:items-center gap-2">
@@ -130,7 +131,7 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
                               handleResultChange(index, value as "1-0" | "0-1" | "1/2-1/2" | "*")
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="border-nigeria-green/30 focus:ring-nigeria-green/30">
                               <SelectValue placeholder="Select result" />
                             </SelectTrigger>
                             <SelectContent>
@@ -148,7 +149,12 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
               </div>
               
               <div className="flex justify-end mt-4">
-                <Button onClick={handleSave}>Save Results</Button>
+                <Button 
+                  onClick={handleSave}
+                  className="bg-nigeria-green hover:bg-nigeria-green-dark"
+                >
+                  Save Results
+                </Button>
               </div>
             </>
           ) : (

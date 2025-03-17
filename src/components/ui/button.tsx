@@ -21,6 +21,13 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         warning:
           "bg-yellow-500 text-white hover:bg-yellow-600",
+        // Nigerian themed variants
+        "nigeria-primary": 
+          "bg-nigeria-green text-white hover:bg-nigeria-green-dark",
+        "nigeria-secondary":
+          "bg-nigeria-yellow text-nigeria-black hover:bg-nigeria-yellow-dark",
+        "nigeria-outline":
+          "border border-nigeria-green text-nigeria-green bg-transparent hover:bg-nigeria-green/10",
       },
       size: {
         default: "h-10 px-4 py-2",

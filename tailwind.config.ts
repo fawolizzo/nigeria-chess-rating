@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -72,13 +71,18 @@ export default {
 					light: '#F0D9B5',
 					dark: '#B58863',
 				},
-				// Nigerian flag colors
 				nigeria: {
 					green: '#008751',      // Nigerian green
 					'green-light': '#00A86B', // Lighter shade for dark mode
 					'green-dark': '#006741', // Darker shade for gradients
 					white: '#FFFFFF',      // White from the flag
-					yellow: '#F7C445'      // Yellow for buttons and accents
+					'off-white': '#F5F5F5', // Slight off-white for backgrounds
+					'white-dim': '#E8E8E8', // Dimmed white for borders
+					yellow: '#F7C445',     // Yellow for buttons and accents
+					'yellow-light': '#FFDE59', // Lighter yellow for hover states
+					'yellow-dark': '#DFA920', // Darker yellow for active states
+					black: '#000000',      // Black for text
+					'black-soft': '#333333' // Soft black for secondary text
 				}
 			},
 			borderRadius: {

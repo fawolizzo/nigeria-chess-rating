@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,10 +130,10 @@ const PairingsTab = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-nigeria-green">
+      <CardHeader className="bg-gradient-to-r from-nigeria-green/10 to-transparent">
         <div className="flex justify-between items-center">
-          <CardTitle>Round {selectedRound} Pairings</CardTitle>
+          <CardTitle className="text-nigeria-green-dark">Round {selectedRound} Pairings</CardTitle>
           
           <div className="flex gap-2">
             {isOngoing && 
@@ -141,7 +141,7 @@ const PairingsTab = ({
               !pairingsGenerated && (
               <Button 
                 onClick={onGeneratePairings}
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 bg-nigeria-green hover:bg-nigeria-green-dark"
               >
                 <Plus size={16} /> Generate Pairings
               </Button>
@@ -156,7 +156,11 @@ const PairingsTab = ({
                 key={round}
                 variant={selectedRound === round ? "default" : "outline"}
                 size="sm"
-                className="min-w-[40px]"
+                className={`min-w-[40px] ${
+                  selectedRound === round 
+                    ? "bg-nigeria-green hover:bg-nigeria-green-dark" 
+                    : "text-nigeria-green border-nigeria-green/50 hover:bg-nigeria-green/10"
+                }`}
                 onClick={() => onRoundSelect(round)}
               >
                 {round}

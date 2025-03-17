@@ -1,73 +1,71 @@
 
-// Implementation of a Swiss pairing system inspired by Lichess algorithms
-// This service avoids repeat pairings and properly handles color allocation
-
 import { Player } from "./mockData";
 
-interface PlayerWithScore {
-  player: Player;
-  score: number;
-  colorBalance: number; // positive = more whites, negative = more blacks
-  previousOpponents: string[];
-  hasForfeited?: boolean;
-}
-
-type MatchResult = "1-0" | "0-1" | "1/2-1/2" | "*";
-
-interface Match {
+interface PairingMatch {
   whiteId: string;
   blackId: string;
-  result?: MatchResult;
+  result?: "1-0" | "0-1" | "1/2-1/2" | "*";
 }
 
-interface Round {
-  roundNumber: number;
-  matches: Match[];
+interface PlayerWithScore {
+  id: string;
+  score: number;
+  rating: number;
+  colorHistory: string[];
+  colorBalance: number; // positive = white bias, negative = black bias
+  opponentIds: string[];
 }
 
-/**
- * Generate pairings for a Swiss tournament round
- */
-export const generateSwissPairings = (
+export function generateSwissPairings(
   players: Player[],
-  previousRounds: Round[] = [],
-  currentRound: number
-): Match[] => {
-  // If we don't have enough players, return empty array
+  previousRounds: Array<{ 
+    roundNumber: number; 
+    matches: PairingMatch[] 
+  }> = [],
+  currentRound: number = 1
+): PairingMatch[] {
+  console.log(`Generating pairings for round ${currentRound} with ${players.length} players`);
+  console.log(`Previous rounds: ${previousRounds.length}`);
+
   if (players.length < 2) {
     return [];
   }
 
-  console.log(`Generating pairings for round ${currentRound} with ${players.length} players`);
-  console.log(`Previous rounds: ${previousRounds.length}`);
-
-  // 1. Create player structures with scores and previous opponent data
+  // Initialize player data with scores and previous opponents
   const playerData: Record<string, PlayerWithScore> = {};
   
-  // Initialize player data
-  players.forEach((player) => {
+  players.forEach(player => {
     playerData[player.id] = {
-      player,
+      id: player.id,
       score: 0,
-      colorBalance: 0, // 0 = equal white/black, positive = more whites
-      previousOpponents: [],
+      rating: player.rating,
+      colorHistory: [],
+      colorBalance: 0,
+      opponentIds: []
     };
+    console.log(`Player ${player.name} (${player.id}) initialized`);
   });
 
-  // Calculate scores and collect data from previous rounds
-  previousRounds.forEach((round) => {
-    round.matches.forEach((match) => {
-      // Track previous opponents
-      if (playerData[match.whiteId]) {
-        playerData[match.whiteId].previousOpponents.push(match.blackId);
-        playerData[match.whiteId].colorBalance += 1; // Played as white
+  // Process previous rounds to calculate scores, color history, and tracked opponents
+  previousRounds.forEach(round => {
+    round.matches.forEach(match => {
+      if (!playerData[match.whiteId] || !playerData[match.blackId]) {
+        console.warn(`Match with invalid player IDs: ${match.whiteId} vs ${match.blackId}`);
+        return;
       }
-      
-      if (playerData[match.blackId]) {
-        playerData[match.blackId].previousOpponents.push(match.whiteId);
-        playerData[match.blackId].colorBalance -= 1; // Played as black
-      }
-      
+
+      // Track opponents
+      playerData[match.whiteId].opponentIds.push(match.blackId);
+      playerData[match.blackId].opponentIds.push(match.whiteId);
+
+      // Track color history
+      playerData[match.whiteId].colorHistory.push("W");
+      playerData[match.blackId].colorHistory.push("B");
+
+      // Update color balance
+      playerData[match.whiteId].colorBalance += 1;
+      playerData[match.blackId].colorBalance -= 1;
+
       // Calculate scores
       if (match.result === "1-0") {
         playerData[match.whiteId].score += 1;
@@ -80,218 +78,252 @@ export const generateSwissPairings = (
     });
   });
 
-  // Log opponent info for debugging
-  Object.entries(playerData).forEach(([id, data]) => {
-    console.log(`Player ${data.player.name} (${id}) has played against: ${data.previousOpponents.join(", ")}`);
+  // For debugging: log each player's opponents
+  Object.values(playerData).forEach(player => {
+    console.log(`Player ${players.find(p => p.id === player.id)?.name} (${player.id}) has played against: ${player.opponentIds.join(', ')}`);
   });
 
-  // 2. Sort players into score groups
-  const scoreGroups: Record<string, PlayerWithScore[]> = {};
+  // Group players by score
+  const scoreGroups: Record<string, string[]> = {};
   
-  Object.values(playerData).forEach((player) => {
-    const scoreKey = player.score.toString();
-    if (!scoreGroups[scoreKey]) {
-      scoreGroups[scoreKey] = [];
+  Object.values(playerData).forEach(player => {
+    const score = player.score.toString();
+    if (!scoreGroups[score]) {
+      scoreGroups[score] = [];
     }
-    scoreGroups[scoreKey].push(player);
+    scoreGroups[score].push(player.id);
   });
 
-  // 3. Sort score groups from highest to lowest
-  const sortedScoreKeys = Object.keys(scoreGroups)
-    .map(Number)
+  // Sort score groups in descending order
+  const sortedScores = Object.keys(scoreGroups)
+    .map(score => parseFloat(score))
     .sort((a, b) => b - a);
 
-  // 4. Assign pairings starting from the highest score group
-  const pairings: Match[] = [];
-  const paired: Set<string> = new Set();
+  const pairings: PairingMatch[] = [];
+  const pairedPlayers = new Set<string>();
 
-  // Process each score group in order
-  for (const scoreKey of sortedScoreKeys) {
-    let playersInGroup = scoreGroups[scoreKey];
-    console.log(`Processing score group ${scoreKey} with ${playersInGroup.length} players`);
+  // First attempt: try to pair within score groups
+  sortedScores.forEach(score => {
+    const playersInGroup = scoreGroups[score.toString()];
+    console.log(`Processing score group ${score} with ${playersInGroup.length} players`);
     
-    // Sort players by rating within score group (descending)
-    playersInGroup.sort((a, b) => b.player.rating - a.player.rating);
+    // Sort players by rating within each score group
+    playersInGroup.sort((a, b) => playerData[b].rating - playerData[a].rating);
     
-    // Try to find pairings within the score group
-    while (playersInGroup.length >= 2) {
-      const player1 = playersInGroup[0];
-      if (paired.has(player1.player.id)) {
-        playersInGroup = playersInGroup.slice(1);
-        continue;
-      }
+    // Try to pair players within the same score group first
+    for (let i = 0; i < playersInGroup.length; i++) {
+      const playerId = playersInGroup[i];
       
-      // Find best opponent for player1
-      let bestOpponentIdx = -1;
-      let bestOpponentScore = -Infinity;
+      // Skip if already paired
+      if (pairedPlayers.has(playerId)) continue;
       
-      // Prioritize: 1. No rematches 2. Best color balance 3. Closest rating
-      for (let i = 1; i < playersInGroup.length; i++) {
-        const player2 = playersInGroup[i];
-        if (paired.has(player2.player.id)) continue;
+      // Try to find a valid opponent in the same score group
+      let foundOpponent = false;
+      
+      for (let j = i + 1; j < playersInGroup.length; j++) {
+        const opponentId = playersInGroup[j];
         
-        // Check if they've played before - critical to avoid rematches
-        const hasPlayed = player1.previousOpponents.includes(player2.player.id);
+        // Skip if already paired or is a previous opponent
+        if (pairedPlayers.has(opponentId)) continue;
         
-        if (hasPlayed) {
-          // Skip this opponent if they've played before
-          console.log(`Skipping pairing: ${player1.player.name} vs ${player2.player.name} - already played`);
+        // Check if they've played before
+        if (playerData[playerId].opponentIds.includes(opponentId)) {
+          console.log(`Skipping pairing: ${players.find(p => p.id === playerId)?.name} vs ${players.find(p => p.id === opponentId)?.name} - already played`);
           continue;
         }
         
-        // Calculate pairing score based on color balance and rating difference
-        // Negative score means worse pairing
-        let pairingScore = 0;
-        
-        // Color balance is important - players shouldn't have too many whites or blacks
-        const colorBalanceScore = -Math.abs(player1.colorBalance + player2.colorBalance);
-        pairingScore += colorBalanceScore * 10; // Weigh color balance heavily
-        
-        // Rating difference - try to pair players with similar ratings
-        const ratingDiffScore = -Math.abs(player1.player.rating - player2.player.rating) / 100;
-        pairingScore += ratingDiffScore;
-        
-        if (pairingScore > bestOpponentScore) {
-          bestOpponentScore = pairingScore;
-          bestOpponentIdx = i;
-        }
-      }
-      
-      // If we found a valid opponent
-      if (bestOpponentIdx !== -1) {
-        const player2 = playersInGroup[bestOpponentIdx];
+        // Found a valid opponent
+        foundOpponent = true;
+        pairedPlayers.add(playerId);
+        pairedPlayers.add(opponentId);
         
         // Determine colors based on color balance
-        const colorBalance1 = player1.colorBalance;
-        const colorBalance2 = player2.colorBalance;
+        const player1ColorBalance = playerData[playerId].colorBalance;
+        const player2ColorBalance = playerData[opponentId].colorBalance;
         
-        let whiteId, blackId;
+        let whiteId: string, blackId: string;
         
-        // Player with more blacks (negative balance) should get white
-        if (colorBalance1 < colorBalance2) {
-          whiteId = player1.player.id;
-          blackId = player2.player.id;
-        } else if (colorBalance2 < colorBalance1) {
-          whiteId = player2.player.id;
-          blackId = player1.player.id;
+        if (player1ColorBalance < player2ColorBalance) {
+          // Player 1 should get white to balance colors
+          whiteId = playerId;
+          blackId = opponentId;
+        } else if (player2ColorBalance < player1ColorBalance) {
+          // Player 2 should get white to balance colors
+          whiteId = opponentId;
+          blackId = playerId;
         } else {
-          // If color balance is equal, assign randomly
-          if (Math.random() > 0.5) {
-            whiteId = player1.player.id;
-            blackId = player2.player.id;
+          // If color balance is the same, alternate from previous color or assign randomly
+          const player1LastColor = playerData[playerId].colorHistory[playerData[playerId].colorHistory.length - 1];
+          if (player1LastColor === "W") {
+            whiteId = opponentId;
+            blackId = playerId;
           } else {
-            whiteId = player2.player.id;
-            blackId = player1.player.id;
+            whiteId = playerId;
+            blackId = opponentId;
           }
         }
         
-        console.log(`Pairing: ${playerData[whiteId].player.name} (White) vs ${playerData[blackId].player.name} (Black)`);
-        
-        pairings.push({ whiteId, blackId, result: "*" });
-        paired.add(player1.player.id);
-        paired.add(player2.player.id);
-        
-        // Remove paired players from the pool
-        playersInGroup = playersInGroup.filter(
-          p => p.player.id !== player1.player.id && p.player.id !== player2.player.id
-        );
-      } else {
-        // If we couldn't find a valid opponent within the score group,
-        // move this player to the next score group
-        console.log(`Couldn't find a valid opponent for ${player1.player.name} in the same score group`);
-        
-        // Move to the next player
-        playersInGroup = playersInGroup.slice(1);
+        pairings.push({ whiteId, blackId });
+        break;
+      }
+      
+      if (!foundOpponent) {
+        console.log(`Couldn't find a valid opponent for ${players.find(p => p.id === playerId)?.name} in the same score group`);
       }
     }
-  }
-  
-  // Handle remaining unpaired players (cross-score pairings)
-  const unpairedIds = players
-    .filter(p => !paired.has(p.id))
-    .map(p => p.id);
-  
-  console.log(`Unpaired players: ${unpairedIds.length}`);
-  
-  if (unpairedIds.length >= 2) {
-    // Create a simplified approach for remaining players
-    const unpairedData = unpairedIds.map(id => playerData[id]).sort((a, b) => {
-      // Sort by score (descending)
-      if (b.score !== a.score) return b.score - a.score;
-      // Then by rating (descending)
-      return b.player.rating - a.player.rating;
-    });
+  });
+
+  // Second attempt: handle remaining unpaired players (cross-score pairings)
+  const unpairedPlayers = players
+    .filter(player => !pairedPlayers.has(player.id))
+    .sort((a, b) => {
+      // Sort by score (descending) then rating (descending)
+      const scoreA = playerData[a.id].score;
+      const scoreB = playerData[b.id].score;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return b.rating - a.rating;
+    })
+    .map(player => player.id);
+
+  console.log(`Unpaired players: ${unpairedPlayers.length}`);
+
+  // Pair remaining players with closest score and rating
+  while (unpairedPlayers.length >= 2) {
+    const playerId = unpairedPlayers.shift()!;
+    let bestOpponentIndex = -1;
+    let minPenalty = Infinity;
     
-    while (unpairedData.length >= 2) {
-      const player1 = unpairedData[0];
+    // Find the best opponent with the lowest penalty
+    for (let i = 0; i < unpairedPlayers.length; i++) {
+      const opponentId = unpairedPlayers[i];
       
-      // Find an opponent that hasn't played against player1 yet
-      let opponentIdx = -1;
-      for (let i = 1; i < unpairedData.length; i++) {
-        if (!player1.previousOpponents.includes(unpairedData[i].player.id)) {
-          opponentIdx = i;
-          break;
-        }
+      // Initialize penalty (lower is better)
+      let penalty = 0;
+      
+      // Huge penalty if they've played before, but don't make it impossible
+      // as we might need to pair them if no other options exist
+      if (playerData[playerId].opponentIds.includes(opponentId)) {
+        penalty += 1000;
       }
       
-      // If no valid opponent found, take the next best option
-      if (opponentIdx === -1) {
-        opponentIdx = 1;
-        console.log(`WARN: Forced to pair ${player1.player.name} with a previous opponent`);
+      // Penalty for score difference (weighted heavily)
+      const scoreDiff = Math.abs(playerData[playerId].score - playerData[opponentId].score);
+      penalty += scoreDiff * 100;
+      
+      // Penalty for rating difference (normalized)
+      const ratingDiff = Math.abs(playerData[playerId].rating - playerData[opponentId].rating) / 100;
+      penalty += ratingDiff;
+      
+      if (penalty < minPenalty) {
+        minPenalty = penalty;
+        bestOpponentIndex = i;
       }
+    }
+    
+    if (bestOpponentIndex >= 0) {
+      const opponentId = unpairedPlayers.splice(bestOpponentIndex, 1)[0];
       
-      const player2 = unpairedData[opponentIdx];
+      // Determine colors based on color balance
+      const player1ColorBalance = playerData[playerId].colorBalance;
+      const player2ColorBalance = playerData[opponentId].colorBalance;
       
-      // Determine colors
-      let whiteId, blackId;
-      if (player1.colorBalance < player2.colorBalance) {
-        whiteId = player1.player.id;
-        blackId = player2.player.id;
+      let whiteId: string, blackId: string;
+      
+      if (player1ColorBalance < player2ColorBalance) {
+        whiteId = playerId;
+        blackId = opponentId;
       } else {
-        whiteId = player2.player.id;
-        blackId = player1.player.id;
+        whiteId = opponentId;
+        blackId = playerId;
       }
       
-      pairings.push({ whiteId, blackId, result: "*" });
-      console.log(`Pairing (cross-score): ${playerData[whiteId].player.name} (White) vs ${playerData[blackId].player.name} (Black)`);
+      // Log if this is a repeat pairing (unusual but might be necessary in later rounds)
+      if (playerData[playerId].opponentIds.includes(opponentId)) {
+        console.log(`WARN: Forced to pair ${players.find(p => p.id === playerId)?.name} with a previous opponent`);
+      }
       
-      // Remove paired players
-      unpairedData.splice(opponentIdx, 1);
-      unpairedData.splice(0, 1);
+      console.log(`Pairing (cross-score): ${players.find(p => p.id === whiteId)?.name} (White) vs ${players.find(p => p.id === blackId)?.name} (Black)`);
+      pairings.push({ whiteId, blackId });
     }
   }
-  
-  // Handle byes if there's an odd number of players
-  if (unpairedIds.length % 2 !== 0 && unpairedIds.length > 0) {
-    const byePlayerId = unpairedIds[0];
-    console.log(`Player ${playerData[byePlayerId].player.name} gets a bye for round ${currentRound}`);
-    // In a real implementation, you would record the bye and award points
+
+  // Handle the case with an odd number of players (one player gets a bye)
+  if (unpairedPlayers.length === 1) {
+    const byePlayerId = unpairedPlayers[0];
+    // In a real implementation, you might want to add a "bye" mechanism
+    console.log(`Player ${players.find(p => p.id === byePlayerId)?.name} gets a bye`);
   }
-  
+
   console.log(`Generated ${pairings.length} pairings for round ${currentRound}`);
   return pairings;
-};
+}
 
-/**
- * Initialize standings based on player ratings
- * Used when showing initial standings before first round
- */
-export const initializeStandingsByRating = (players: Player[]) => {
-  return [...players].sort((a, b) => b.rating - a.rating);
-};
+// Helper function to calculate standings
+export function calculateStandings(
+  players: Player[],
+  pairings: Array<{ roundNumber: number; matches: PairingMatch[] }> = []
+): Array<{ playerId: string; playerName: string; rating: number; score: number; games: number }> {
+  const standings: Record<string, { 
+    playerId: string;
+    playerName: string;
+    rating: number;
+    score: number;
+    games: number;
+  }> = {};
+  
+  // Initialize standings for all players
+  players.forEach(player => {
+    standings[player.id] = {
+      playerId: player.id,
+      playerName: player.name,
+      rating: player.rating,
+      score: 0,
+      games: 0
+    };
+  });
+  
+  // Calculate scores from pairings
+  pairings.forEach(round => {
+    round.matches.forEach(match => {
+      // Skip if result is not recorded
+      if (match.result === "*") return;
+      
+      if (match.result === "1-0") {
+        standings[match.whiteId].score += 1;
+      } else if (match.result === "0-1") {
+        standings[match.blackId].score += 1;
+      } else if (match.result === "1/2-1/2") {
+        standings[match.whiteId].score += 0.5;
+        standings[match.blackId].score += 0.5;
+      }
+      
+      standings[match.whiteId].games += 1;
+      standings[match.blackId].games += 1;
+    });
+  });
+  
+  // Convert to array and sort by score (descending), then rating (descending)
+  return Object.values(standings).sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return b.rating - a.rating;
+  });
+}
 
-/**
- * Check if a player has played against another in previous rounds
- */
-export const hasPlayedBefore = (
-  player1Id: string,
-  player2Id: string,
-  previousRounds: Round[]
-): boolean => {
-  return previousRounds.some(round => 
-    round.matches.some(match => 
-      (match.whiteId === player1Id && match.blackId === player2Id) ||
-      (match.whiteId === player2Id && match.blackId === player1Id)
-    )
-  );
-};
+// Helper function to get initial standings based on ratings
+export function getInitialStandings(players: Player[]): Array<{
+  playerId: string;
+  playerName: string;
+  rating: number;
+  score: number;
+  games: number;
+}> {
+  return players
+    .map(player => ({
+      playerId: player.id,
+      playerName: player.name,
+      rating: player.rating,
+      score: 0,
+      games: 0
+    }))
+    .sort((a, b) => b.rating - a.rating);
+}

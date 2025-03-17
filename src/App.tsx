@@ -23,26 +23,28 @@ function App() {
   return (
     <UserProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/organizer/dashboard" element={<OrganizerDashboard />} />
-          <Route path="/officer/dashboard" element={<OfficerDashboard />} />
-          <Route path="/tournament/:id/manage" element={<TournamentManagement />} />
-          <Route path="/tournament/:id" element={<TournamentDetails />} />
-          <Route path="/tournaments" element={<Tournaments />} />
-          <Route path="/players" element={<Players />} />
-          <Route path="/player/:id" element={<PlayerProfile />} />
-          
-          {/* Redirects for incorrect URLs */}
-          <Route path="/organizer-dashboard" element={<Navigate to="/organizer/dashboard" replace />} />
-          <Route path="/officer-dashboard" element={<Navigate to="/officer/dashboard" replace />} />
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
+        <div className="bg-gradient-to-br from-nigeria-white to-nigeria-white-dim min-h-screen">
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/organizer/dashboard" element={<OrganizerDashboard />} />
+            <Route path="/officer/dashboard" element={<OfficerDashboard />} />
+            <Route path="/tournament/:id/manage" element={<TournamentManagement />} />
+            <Route path="/tournament/:id" element={<TournamentDetails />} />
+            <Route path="/tournaments" element={<Tournaments />} />
+            <Route path="/players" element={<Players />} />
+            <Route path="/player/:id" element={<PlayerProfile />} />
+            
+            {/* Redirects for incorrect URLs */}
+            <Route path="/organizer-dashboard" element={<Navigate to="/organizer/dashboard" replace />} />
+            <Route path="/officer-dashboard" element={<Navigate to="/officer/dashboard" replace />} />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </div>
       </Router>
     </UserProvider>
   );
