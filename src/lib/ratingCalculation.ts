@@ -1,86 +1,37 @@
 
-/**
- * Nigerian Chess Rating System calculation utilities
- * Implements the modified Elo rating system with variable K-factors:
- * - K=40 for new players (< 30 games) with rating below 2300
- * - K=32 for players rated below 2100 (with 30+ games)
- * - K=24 for players rated 2100-2399
- * - K=16 for higher-rated players
- */
-
-const FLOOR_RATING = 800;
-const MIN_GAMES_FOR_ESTABLISHED = 30;
-const MAX_RATING_FOR_K40 = 2300;
-
-/**
- * Determines the appropriate K-factor based on player's rating and experience
- */
-export const getKFactor = (rating: number, gamesPlayed: number): number => {
-  // New players with under 30 games BUT only if they're under 2300 rating
-  if (gamesPlayed < MIN_GAMES_FOR_ESTABLISHED && rating < MAX_RATING_FOR_K40) {
-    return 40; // New player with rating under 2300
-  } else if (rating < 2100) {
-    return 32; // Below 2100
-  } else if (rating < 2400) {
-    return 24; // 2100-2399
-  } else {
-    return 16; // 2400 and above
-  }
-};
-
-/**
- * Calculates the expected score based on rating difference
- */
-export const calculateExpectedScore = (playerRating: number, opponentRating: number): number => {
-  return 1 / (1 + Math.pow(10, (opponentRating - playerRating) / 400));
-};
-
-/**
- * Calculates the rating change after a match
- */
-export const calculateRatingChange = (
-  playerRating: number,
-  opponentRating: number,
-  actualScore: number, // 1 for win, 0.5 for draw, 0 for loss
-  gamesPlayed: number
-): number => {
-  const kFactor = getKFactor(playerRating, gamesPlayed);
-  const expectedScore = calculateExpectedScore(playerRating, opponentRating);
-  const ratingChange = Math.round(kFactor * (actualScore - expectedScore));
+// Calculate rating change using Nigerian Chess Rating System formula
+export function calculateRatingChange(playerRating: number, opponentRating: number, result: number, gamesPlayed: number): number {
+  // Determine K-factor based on player experience and rating
+  let kFactor = 32; // Default K-factor
   
-  // Apply floor rating for new ratings
-  const newRating = playerRating + ratingChange;
-  if (newRating < FLOOR_RATING) {
-    return FLOOR_RATING - playerRating; // Return change that would set rating to floor
+  if (gamesPlayed < 30) {
+    kFactor = 40; // Higher K-factor for new players
+  } else if (playerRating >= 2100 && playerRating < 2400) {
+    kFactor = 24; // Lower K-factor for higher-rated players
+  } else if (playerRating >= 2400) {
+    kFactor = 16; // Even lower K-factor for masters
   }
+  
+  // Calculate expected score
+  const ratingDiff = opponentRating - playerRating;
+  const expectedScore = 1 / (1 + Math.pow(10, ratingDiff / 400));
+  
+  // Calculate rating change
+  const ratingChange = Math.round(kFactor * (result - expectedScore));
   
   return ratingChange;
-};
+}
 
-/**
- * Converts match result to actual score for rating calculation
- */
-export const resultToScore = (result: "1-0" | "0-1" | "1/2-1/2" | "*"): number => {
-  switch (result) {
-    case "1-0": return 1;  // White win
-    case "0-1": return 0;  // Black win
-    case "1/2-1/2": return 0.5;  // Draw
-    default: return 0;  // Not played or unknown result
-  }
-};
-
-/**
- * Updates ratings after a tournament round
- */
-export const calculatePostRoundRatings = (
-  pairings: Array<{
+// Calculate post-round ratings for all players in a round
+export function calculatePostRoundRatings(
+  matches: Array<{
     whiteId: string;
     blackId: string;
-    result: "1-0" | "0-1" | "1/2-1/2" | "*";
     whiteRating: number;
     blackRating: number;
     whiteGamesPlayed: number;
     blackGamesPlayed: number;
+    result: "1-0" | "0-1" | "1/2-1/2" | "*";
   }>
 ): Array<{
   whiteId: string;
@@ -88,42 +39,50 @@ export const calculatePostRoundRatings = (
   result: "1-0" | "0-1" | "1/2-1/2" | "*";
   whiteRatingChange: number;
   blackRatingChange: number;
-}> => {
-  return pairings.map(pairing => {
-    // Skip games without results
-    if (pairing.result === "*") {
+}> {
+  return matches.map(match => {
+    // Skip unfinished games
+    if (match.result === "*") {
       return {
-        ...pairing,
+        ...match,
         whiteRatingChange: 0,
         blackRatingChange: 0
       };
     }
-
-    // Calculate scores from results
-    const whiteScore = resultToScore(pairing.result);
-    const blackScore = 1 - whiteScore;  // Inverse of white score
+    
+    // Convert result to numerical values
+    let whiteResult = 0.5; // Default for draw
+    let blackResult = 0.5;
+    
+    if (match.result === "1-0") {
+      whiteResult = 1;
+      blackResult = 0;
+    } else if (match.result === "0-1") {
+      whiteResult = 0;
+      blackResult = 1;
+    }
     
     // Calculate rating changes
     const whiteRatingChange = calculateRatingChange(
-      pairing.whiteRating,
-      pairing.blackRating,
-      whiteScore,
-      pairing.whiteGamesPlayed
+      match.whiteRating,
+      match.blackRating,
+      whiteResult,
+      match.whiteGamesPlayed
     );
     
     const blackRatingChange = calculateRatingChange(
-      pairing.blackRating,
-      pairing.whiteRating,
-      blackScore,
-      pairing.blackGamesPlayed
+      match.blackRating,
+      match.whiteRating,
+      blackResult,
+      match.blackGamesPlayed
     );
     
     return {
-      whiteId: pairing.whiteId,
-      blackId: pairing.blackId,
-      result: pairing.result,
+      whiteId: match.whiteId,
+      blackId: match.blackId,
+      result: match.result,
       whiteRatingChange,
       blackRatingChange
     };
   });
-};
+}

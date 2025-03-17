@@ -1,379 +1,283 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useUser } from "@/contexts/UserContext";
-import { getAllPlayers, getAllTournaments, Player, Tournament, updatePlayer, updateTournament } from "@/lib/mockData";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, User, Users, Award } from "lucide-react";
 import OrganizerApprovals from "./OrganizerApprovals";
+import ApprovedOrganizers from "./ApprovedOrganizers";
 import PlayerManagement from "./PlayerManagement";
-import { useToast } from "@/components/ui/use-toast";
+import { getAllTournaments, getTournamentById } from "@/lib/mockData";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, Calendar, CheckCircle, ChevronsUpDown, CircleAlert, Users } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
+import TournamentRatingDialog from "./TournamentRatingDialog";
+import ProcessedTournamentDetails from "./ProcessedTournamentDetails";
 
-const OfficerDashboardContent: React.FC = () => {
-  const { toast } = useToast();
-  const { users, currentUser, approveUser, rejectUser } = useUser();
-  const [pendingOrganizers, setPendingOrganizers] = useState([]);
-  const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
-  const [pendingTournaments, setPendingTournaments] = useState<Tournament[]>([]);
-  const [activeTab, setActiveTab] = useState("overview");
-  
-  // Load pending data
+const OfficerDashboardContent = () => {
+  const [activeTab, setActiveTab] = useState("organizers");
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [completedTournaments, setCompletedTournaments] = useState<any[]>([]);
+  const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
+  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState<any>(null);
+  const [selectedProcessedTournament, setSelectedProcessedTournament] = useState<any>(null);
+  const navigate = useNavigate();
+
   useEffect(() => {
-    // Get pending organizers
-    const organizers = users.filter(user => 
-      user.role === "tournament_organizer" && user.status === "pending"
-    );
-    setPendingOrganizers(organizers);
+    // Load tournament data
+    loadTournaments();
     
-    // Get pending players
-    const players = getAllPlayers().filter(player => player.status === "pending");
-    setPendingPlayers(players);
+    // Load pending players
+    const players = JSON.parse(localStorage.getItem('players') || '[]');
+    const pendingPlayersList = players.filter((player: any) => player.status === 'pending');
+    setPendingPlayers(pendingPlayersList);
+  }, []);
+
+  const loadTournaments = () => {
+    const allTournaments = getAllTournaments();
     
-    // Get pending tournaments
-    const tournaments = getAllTournaments().filter(tournament => 
-      tournament.status === "completed" && !tournament.processingDate
+    // Filter completed tournaments that need rating processing
+    const completed = allTournaments.filter(
+      (t) => t.status === "completed"
     );
-    setPendingTournaments(tournaments);
-  }, [users]);
-  
-  const handleApprovePlayer = (playerId: string) => {
-    const player = getAllPlayers().find(p => p.id === playerId);
-    if (player) {
-      const updatedPlayer = {
-        ...player,
-        status: "approved" as const
-      };
-      updatePlayer(updatedPlayer);
-      
-      toast({
-        title: "Player approved",
-        description: `${player.name} has been approved and can now participate in tournaments.`
-      });
-      
-      // Refresh the pending players list
-      const players = getAllPlayers().filter(player => player.status === "pending");
-      setPendingPlayers(players);
+    
+    // Filter processed tournaments
+    const processed = allTournaments.filter(
+      (t) => t.status === "processed"
+    );
+    
+    setTournaments(allTournaments);
+    setCompletedTournaments(completed);
+  };
+
+  const handleProcessTournament = (tournamentId: string) => {
+    const tournament = getTournamentById(tournamentId);
+    if (tournament) {
+      setSelectedTournament(tournament);
+      setIsRatingDialogOpen(true);
     }
   };
-  
-  const handleRejectPlayer = (playerId: string) => {
-    const player = getAllPlayers().find(p => p.id === playerId);
-    if (player) {
-      const updatedPlayer = {
-        ...player,
-        status: "rejected" as const
-      };
-      updatePlayer(updatedPlayer);
-      
-      toast({
-        title: "Player rejected",
-        description: `${player.name} has been rejected.`
-      });
-      
-      // Refresh the pending players list
-      const players = getAllPlayers().filter(player => player.status === "pending");
-      setPendingPlayers(players);
+
+  const handleProcessingComplete = () => {
+    // Reload tournaments to reflect changes
+    loadTournaments();
+  };
+
+  const handleViewProcessedTournament = (tournamentId: string) => {
+    const tournament = getTournamentById(tournamentId);
+    if (tournament) {
+      setSelectedProcessedTournament(tournament);
     }
   };
-  
+
+  const handleViewTournamentDetails = (tournamentId: string) => {
+    navigate(`/tournament/${tournamentId}`);
+  };
+
+  const handleApprovePendingPlayers = () => {
+    if (pendingPlayers.length > 0) {
+      setActiveTab("players");
+    }
+  };
+
   return (
-    <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mb-8 p-1">
-        <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
-        <TabsTrigger value="organizers" className="text-xs md:text-sm">Organizers</TabsTrigger>
-        <TabsTrigger value="players" className="text-xs md:text-sm">
-          Players
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid grid-cols-4 mb-8">
+        <TabsTrigger value="organizers" className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          <span>Organizers</span>
+        </TabsTrigger>
+        <TabsTrigger value="tournaments" className="flex items-center gap-2">
+          <Calendar className="h-4 w-4" />
+          <span>Tournaments</span>
+        </TabsTrigger>
+        <TabsTrigger value="players" className="flex items-center gap-2 relative">
+          <Users className="h-4 w-4" />
+          <span>Players</span>
           {pendingPlayers.length > 0 && (
-            <Badge className="ml-1 bg-red-500 text-white text-xs">{pendingPlayers.length}</Badge>
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+              {pendingPlayers.length}
+            </span>
           )}
         </TabsTrigger>
-        <TabsTrigger value="tournaments" className="text-xs md:text-sm">Tournaments</TabsTrigger>
-        <TabsTrigger value="reports" className="text-xs md:text-sm">Reports</TabsTrigger>
+        <TabsTrigger value="reports" className="flex items-center gap-2">
+          <ChevronsUpDown className="h-4 w-4" />
+          <span>Reports</span>
+        </TabsTrigger>
       </TabsList>
       
-      <TabsContent value="overview" className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Pending Approvals Card */}
-          <Card className={pendingPlayers.length > 0 ? "border-yellow-300 dark:border-yellow-800" : ""}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Player Approvals
-              </CardTitle>
-              <CardDescription>
-                {pendingPlayers.length} player(s) pending approval
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingPlayers.length > 0 ? (
-                <div className="space-y-3">
-                  {pendingPlayers.slice(0, 3).map(player => (
-                    <div key={player.id} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                      <div>
-                        <p className="font-medium">
-                          {player.title && <span className="text-gold-dark dark:text-gold-light mr-1">{player.title}</span>}
-                          {player.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Rating: {player.rating} • {player.state || "Nigeria"}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-600">Pending</Badge>
-                    </div>
-                  ))}
-                  
-                  {pendingPlayers.length > 3 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      +{pendingPlayers.length - 3} more pending player(s)
-                    </p>
-                  )}
-                  
-                  <Button
-                    className="w-full mt-2" 
-                    variant="outline"
-                    onClick={() => setActiveTab("players")}
-                  >
-                    Manage Player Approvals
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
-                  <p className="text-muted-foreground text-center">No players pending approval</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Pending Tournaments Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                Tournament Processing
-              </CardTitle>
-              <CardDescription>
-                {pendingTournaments.length} tournament(s) to process
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingTournaments.length > 0 ? (
-                <div className="space-y-3">
-                  {pendingTournaments.slice(0, 3).map(tournament => (
-                    <div key={tournament.id} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                      <div>
-                        <p className="font-medium">{tournament.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {tournament.participants} players • {tournament.state}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-600">Completed</Badge>
-                    </div>
-                  ))}
-                  
-                  {pendingTournaments.length > 3 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      +{pendingTournaments.length - 3} more tournament(s)
-                    </p>
-                  )}
-                  
-                  <Button
-                    className="w-full mt-2" 
-                    variant="outline"
-                    onClick={() => setActiveTab("tournaments")}
-                  >
-                    View Tournaments
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
-                  <p className="text-muted-foreground text-center">No tournaments pending processing</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          
-          {/* Pending Organizers Card */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Organizer Approvals
-              </CardTitle>
-              <CardDescription>
-                {pendingOrganizers.length} organizer(s) pending approval
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingOrganizers.length > 0 ? (
-                <div className="space-y-3">
-                  {pendingOrganizers.slice(0, 3).map(organizer => (
-                    <div key={organizer.id} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                      <div>
-                        <p className="font-medium">{organizer.fullName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {organizer.state || "Nigeria"}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-600">Pending</Badge>
-                    </div>
-                  ))}
-                  
-                  {pendingOrganizers.length > 3 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      +{pendingOrganizers.length - 3} more organizer(s)
-                    </p>
-                  )}
-                  
-                  <Button
-                    className="w-full mt-2" 
-                    variant="outline"
-                    onClick={() => setActiveTab("organizers")}
-                  >
-                    Manage Organizer Approvals
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
-                  <p className="text-muted-foreground text-center">No organizers pending approval</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest events and activities in the system</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* This would be populated with actual activity in a real application */}
-              <div className="border-l-4 border-blue-500 pl-4 py-1">
-                <p className="font-medium">System Initialized</p>
-                <p className="text-sm text-muted-foreground">Nigerian Chess Rating system is now active.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-      
-      <TabsContent value="organizers">
+      <TabsContent value="organizers" className="space-y-8">
         <OrganizerApprovals />
+        <ApprovedOrganizers />
       </TabsContent>
-      
-      <TabsContent value="players">
-        {pendingPlayers.length > 0 ? (
-          <Card className="border-yellow-300 dark:border-yellow-800">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-yellow-500" />
-                    Players Pending Approval
-                  </CardTitle>
-                  <CardDescription>{pendingPlayers.length} players waiting for approval</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {pendingPlayers.map(player => (
-                  <div key={player.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-medium text-lg">
-                          {player.title && <span className="text-gold-dark dark:text-gold-light mr-1">{player.title}</span>}
-                          {player.name}
-                        </h3>
-                        <div className="flex gap-3 text-sm text-muted-foreground">
-                          <span>Rating: {player.rating}</span>
-                          {player.state && <span>• {player.state}</span>}
-                          <span>• {player.gender === 'M' ? 'Male' : 'Female'}</span>
-                          {player.birthYear && <span>• Born: {player.birthYear}</span>}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800">
-                        Pending
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex justify-end gap-2 mt-4">
-                      <Button
-                        variant="outline"
-                        className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                        onClick={() => handleRejectPlayer(player.id)}
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApprovePlayer(player.id)}
-                      >
-                        Approve
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Player Approvals</CardTitle>
-              <CardDescription>No players waiting for approval</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-8">
-                <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-                <p className="text-lg font-medium text-center mb-2">All player applications have been processed</p>
-                <p className="text-muted-foreground text-center max-w-md">
-                  When tournament organizers register new players, they will appear here for your approval.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+
+      <TabsContent value="tournaments" className="space-y-8">
+        {pendingPlayers.length > 0 && (
+          <Alert variant="warning">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Pending Player Approvals</AlertTitle>
+            <AlertDescription className="flex justify-between items-center">
+              <span>There are {pendingPlayers.length} player(s) waiting for your approval before they can participate in tournaments.</span>
+              <Button variant="outline" size="sm" onClick={handleApprovePendingPlayers}>
+                Review Players
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
         
-        <div className="mt-8">
-          <PlayerManagement />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Tournaments to Process */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CircleAlert className="h-5 w-5 text-yellow-500" />
+                Awaiting Rating Processing
+              </CardTitle>
+              <CardDescription>
+                {completedTournaments.length} tournament(s) completed and ready for rating calculation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {completedTournaments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No tournaments waiting for processing
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-4">
+                    {completedTournaments.map((tournament) => (
+                      <div
+                        key={tournament.id}
+                        className="border border-border rounded-lg p-4 hover:bg-accent/5 transition-colors"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-medium">{tournament.name}</h3>
+                        </div>
+                        <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                          <div>Location: {tournament.location}, {tournament.city}, {tournament.state}</div>
+                          <div>Rounds: {tournament.rounds}</div>
+                          <div>Organizer: {tournament.organizerId}</div>
+                        </div>
+                        <div className="flex justify-between mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewTournamentDetails(tournament.id)}
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleProcessTournament(tournament.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Process Ratings
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Processed Tournaments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                Processed Tournaments
+              </CardTitle>
+              <CardDescription>
+                Tournaments with ratings calculated and applied
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {tournaments.filter(t => t.status === "processed").length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No processed tournaments
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-4">
+                    {tournaments
+                      .filter(t => t.status === "processed")
+                      .map((tournament) => (
+                        <div
+                          key={tournament.id}
+                          className="border border-border rounded-lg p-4 hover:bg-accent/5 transition-colors"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-medium">{tournament.name}</h3>
+                          </div>
+                          <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
+                            <div>Location: {tournament.location}, {tournament.city}, {tournament.state}</div>
+                            <div>Processed on: {new Date(tournament.processingDate).toLocaleDateString()}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewProcessedTournament(tournament.id)}
+                          >
+                            View Results
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
-      
-      <TabsContent value="tournaments">
-        <Card>
-          <CardHeader>
-            <CardTitle>Tournament Management</CardTitle>
-            <CardDescription>Process completed tournaments and update player ratings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center py-10">
-              Tournament management interface would be shown here.
-            </p>
-          </CardContent>
-        </Card>
+
+      <TabsContent value="players">
+        <PlayerManagement onPlayerApproval={() => {
+          // Refresh the pending players count
+          const players = JSON.parse(localStorage.getItem('players') || '[]');
+          const pendingPlayersList = players.filter((player: any) => player.status === 'pending');
+          setPendingPlayers(pendingPlayersList);
+        }} />
       </TabsContent>
-      
+
       <TabsContent value="reports">
-        <Card>
-          <CardHeader>
-            <CardTitle>Reports & Statistics</CardTitle>
-            <CardDescription>View system-wide statistics and generate reports</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center py-10">
-              Reports and statistics would be shown here.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Rating Reports</CardTitle>
+              <CardDescription>
+                Generate and view reports for player ratings and tournament statistics
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                Report functionality coming soon
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
+
+      {/* Rating Dialog */}
+      <TournamentRatingDialog
+        tournament={selectedTournament}
+        isOpen={isRatingDialogOpen}
+        onOpenChange={setIsRatingDialogOpen}
+        onProcessed={handleProcessingComplete}
+      />
+
+      {/* Processed Tournament Details Dialog */}
+      {selectedProcessedTournament && (
+        <ProcessedTournamentDetails
+          tournament={selectedProcessedTournament}
+          isOpen={!!selectedProcessedTournament}
+          onOpenChange={() => setSelectedProcessedTournament(null)}
+        />
+      )}
     </Tabs>
   );
 };
