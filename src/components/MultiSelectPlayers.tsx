@@ -131,22 +131,29 @@ export const MultiSelectPlayers = ({
   // If hideDialog is true, render without the Dialog wrapper
   if (hideDialog) {
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col h-full">
+        {/* Search input */}
         <PlayerSearchInput 
           searchQuery={searchQuery} 
           setSearchQuery={setSearchQuery} 
         />
         
-        <SelectedPlayersList 
-          selectedPlayers={selectedPlayers}
-          onRemovePlayer={handleSelectPlayer}
-        />
+        {/* Selected players - now with max height */}
+        <div className="mt-4">
+          <SelectedPlayersList 
+            selectedPlayers={selectedPlayers}
+            onRemovePlayer={handleSelectPlayer}
+          />
+        </div>
         
-        <PlayerSelectionList 
-          filteredPlayers={filteredPlayers}
-          selectedPlayers={selectedPlayers}
-          onSelectPlayer={handleSelectPlayer}
-        />
+        {/* Player selection list - with flex-grow to take remaining space */}
+        <div className="mt-4 flex-grow">
+          <PlayerSelectionList 
+            filteredPlayers={filteredPlayers}
+            selectedPlayers={selectedPlayers}
+            onSelectPlayer={handleSelectPlayer}
+          />
+        </div>
         
         {players.length === 0 && (
           <div className="text-center py-6">
@@ -156,7 +163,8 @@ export const MultiSelectPlayers = ({
           </div>
         )}
         
-        <div className="flex justify-end gap-2">
+        {/* Fixed position footer for buttons */}
+        <div className="mt-6 pt-4 border-t sticky bottom-0 bg-white dark:bg-gray-900 flex justify-end gap-2">
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
@@ -174,7 +182,7 @@ export const MultiSelectPlayers = ({
   // Default to using Dialog wrapper
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Select Players</DialogTitle>
           <DialogDescription>
@@ -182,22 +190,26 @@ export const MultiSelectPlayers = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 flex-grow overflow-hidden flex flex-col">
           <PlayerSearchInput 
             searchQuery={searchQuery} 
             setSearchQuery={setSearchQuery} 
           />
           
-          <SelectedPlayersList 
-            selectedPlayers={selectedPlayers}
-            onRemovePlayer={handleSelectPlayer}
-          />
+          <div className="flex-shrink-0">
+            <SelectedPlayersList 
+              selectedPlayers={selectedPlayers}
+              onRemovePlayer={handleSelectPlayer}
+            />
+          </div>
           
-          <PlayerSelectionList 
-            filteredPlayers={filteredPlayers}
-            selectedPlayers={selectedPlayers}
-            onSelectPlayer={handleSelectPlayer}
-          />
+          <div className="flex-grow overflow-hidden">
+            <PlayerSelectionList 
+              filteredPlayers={filteredPlayers}
+              selectedPlayers={selectedPlayers}
+              onSelectPlayer={handleSelectPlayer}
+            />
+          </div>
           
           {players.length === 0 && (
             <div className="text-center py-6">
@@ -208,7 +220,7 @@ export const MultiSelectPlayers = ({
           )}
         </div>
         
-        <DialogFooter>
+        <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-white dark:bg-gray-900">
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>

@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SelectedPlayersListProps {
   selectedPlayers: Player[];
@@ -20,28 +21,31 @@ export const SelectedPlayersList = ({
   return (
     <div>
       <div className="text-sm font-medium mb-2">Selected Players ({selectedPlayers.length})</div>
-      <div className="flex flex-wrap gap-2">
-        {selectedPlayers.map(player => (
-          <Badge 
-            key={player.id} 
-            variant="secondary"
-            className="flex items-center gap-1 py-1"
-          >
-            {player.title && `${player.title} `}{player.name}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-4 w-4 ml-1 hover:bg-transparent"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemovePlayer(player);
-              }}
+      {/* Add ScrollArea for selected players and limit the max height */}
+      <ScrollArea className={`${selectedPlayers.length > 10 ? 'h-32' : ''}`}>
+        <div className="flex flex-wrap gap-2">
+          {selectedPlayers.map(player => (
+            <Badge 
+              key={player.id} 
+              variant="secondary"
+              className="flex items-center gap-1 py-1"
             >
-              <X className="h-3 w-3" />
-            </Button>
-          </Badge>
-        ))}
-      </div>
+              {player.title && `${player.title} `}{player.name}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 ml-1 hover:bg-transparent"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemovePlayer(player);
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 };
