@@ -27,6 +27,7 @@ const TournamentDetails = () => {
   const [selectedRound, setSelectedRound] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [isProcessedDetailsOpen, setIsProcessedDetailsOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -193,8 +194,12 @@ const TournamentDetails = () => {
           </div>
         </div>
         
-        {tournament.status === 'processed' && currentUser?.role === "rating_officer" && (
-          <ProcessedTournamentDetails tournament={tournament} players={players} />
+        {tournament?.status === 'processed' && currentUser?.role === "rating_officer" && (
+          <ProcessedTournamentDetails 
+            tournament={tournament} 
+            isOpen={isProcessedDetailsOpen} 
+            onOpenChange={setIsProcessedDetailsOpen} 
+          />
         )}
         
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
