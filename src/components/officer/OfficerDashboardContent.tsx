@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import TournamentRatingDialog from "./TournamentRatingDialog";
 import ProcessedTournamentDetails from "./ProcessedTournamentDetails";
 import PendingTournamentApprovals from "./PendingTournamentApprovals";
+import { useToast } from "@/components/ui/use-toast";
 
 const OfficerDashboardContent = () => {
   const [activeTab, setActiveTab] = useState("organizers");
@@ -25,6 +26,7 @@ const OfficerDashboardContent = () => {
   const [selectedTournament, setSelectedTournament] = useState<any>(null);
   const [selectedProcessedTournament, setSelectedProcessedTournament] = useState<any>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load tournament data
@@ -35,6 +37,20 @@ const OfficerDashboardContent = () => {
     const pendingPlayersList = players.filter((player: any) => player.status === 'pending');
     setPendingPlayers(pendingPlayersList);
   }, []);
+
+  // Show toast notification for pending items when dashboard loads
+  useEffect(() => {
+    if (pendingTournaments.length > 0) {
+      toast({
+        title: "Pending Tournament Approvals",
+        description: `${pendingTournaments.length} tournament(s) waiting for your approval.`,
+        variant: "default",
+      });
+      
+      // Auto-switch to tournaments tab if there are pending tournaments
+      setActiveTab("tournaments");
+    }
+  }, [pendingTournaments.length, toast]);
 
   const loadTournaments = () => {
     const allTournaments = getAllTournaments();
@@ -101,11 +117,11 @@ const OfficerDashboardContent = () => {
           <Users className="h-4 w-4" />
           <span>Organizers</span>
         </TabsTrigger>
-        <TabsTrigger value="tournaments" className="flex items-center gap-2">
+        <TabsTrigger value="tournaments" className="flex items-center gap-2 relative">
           <Calendar className="h-4 w-4" />
           <span>Tournaments</span>
           {pendingTournaments.length > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
               {pendingTournaments.length}
             </span>
           )}
@@ -114,7 +130,7 @@ const OfficerDashboardContent = () => {
           <Users className="h-4 w-4" />
           <span>Players</span>
           {pendingPlayers.length > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
               {pendingPlayers.length}
             </span>
           )}
@@ -146,7 +162,7 @@ const OfficerDashboardContent = () => {
 
         {/* Pending Tournament Approvals Section */}
         {pendingTournaments.length > 0 && (
-          <Card>
+          <Card className="border-2 border-yellow-200 dark:border-yellow-800 bg-yellow-50/30 dark:bg-yellow-900/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-yellow-500" />

@@ -1,18 +1,25 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
+import { getAllTournaments } from "@/lib/mockData";
 
 const OfficerDashboard: React.FC = () => {
   const { currentUser, isLoading } = useUser();
   const navigate = useNavigate();
+  const [pendingCount, setPendingCount] = useState(0);
   
   useEffect(() => {
     if (!isLoading && (!currentUser || currentUser.role !== "rating_officer")) {
       navigate("/login");
     }
+    
+    // Load pending tournament count
+    const allTournaments = getAllTournaments();
+    const pendingTournaments = allTournaments.filter(t => t.status === "pending");
+    setPendingCount(pendingTournaments.length);
   }, [currentUser, isLoading, navigate]);
   
   if (isLoading) {
@@ -32,7 +39,7 @@ const OfficerDashboard: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
+      <Navbar notificationCount={pendingCount} />
       
       <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">

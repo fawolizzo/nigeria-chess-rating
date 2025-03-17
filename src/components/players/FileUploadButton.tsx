@@ -192,12 +192,19 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
             }
           }
           
-          // Create the player object
+          // Create the player object with required id for selection list compatibility
           const player: Partial<Player> = {
+            // Add a temporary ID for the player selection component
+            id: `temp_${i}_${Date.now()}`,
             name: String(name).trim(),
             rating,
             gender,
-            birthYear
+            birthYear,
+            // Set state if available from the file
+            state: 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : undefined,
+            country: 'Nigeria',
+            // We need to set status for the MultiSelectPlayers component
+            status: 'approved'
           };
           
           // Add title if it exists and isn't empty
