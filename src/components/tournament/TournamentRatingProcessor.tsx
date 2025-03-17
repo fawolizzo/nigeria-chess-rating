@@ -38,6 +38,7 @@ interface TournamentRatingProcessorProps {
       }>;
     }>
   ) => void;
+  tournamentType?: 'classical' | 'rapid' | 'blitz';
 }
 
 const TournamentRatingProcessor = ({
@@ -45,7 +46,8 @@ const TournamentRatingProcessor = ({
   onOpenChange,
   players,
   matchResults,
-  onProcessComplete
+  onProcessComplete,
+  tournamentType = 'classical'
 }: TournamentRatingProcessorProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -65,10 +67,20 @@ const TournamentRatingProcessor = ({
               throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}`);
             }
             
+            // Use the appropriate rating based on tournament type
+            const getPlayerRating = (player: Player) => {
+              if (tournamentType === 'rapid') {
+                return player.rapidRating || player.rating;
+              } else if (tournamentType === 'blitz') {
+                return player.blitzRating || player.rating;
+              }
+              return player.rating;
+            };
+            
             return {
               ...match,
-              whiteRating: whitePlayer.rating,
-              blackRating: blackPlayer.rating,
+              whiteRating: getPlayerRating(whitePlayer),
+              blackRating: getPlayerRating(blackPlayer),
               whiteGamesPlayed: whitePlayer.gamesPlayed || 0,
               blackGamesPlayed: blackPlayer.gamesPlayed || 0
             };
@@ -90,7 +102,7 @@ const TournamentRatingProcessor = ({
       
       toast({
         title: "Ratings processed successfully",
-        description: "All match results have been processed and ratings updated.",
+        description: `All match results have been processed and ${tournamentType} ratings updated.`,
       });
       
       onOpenChange(false);
@@ -113,7 +125,7 @@ const TournamentRatingProcessor = ({
         <DialogHeader>
           <DialogTitle>Process Tournament Ratings</DialogTitle>
           <DialogDescription>
-            This will calculate rating changes for all completed matches using the Nigerian Chess Rating System.
+            This will calculate {tournamentType} rating changes for all completed matches using the Nigerian Chess Rating System.
           </DialogDescription>
         </DialogHeader>
         
@@ -133,10 +145,10 @@ const TournamentRatingProcessor = ({
               <div className="font-medium">Rating System Parameters:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                 <li>Floor rating of 800 for new players</li>
-                <li>K=40 for new players (less than 30 games)</li>
+                <li>K=40 for new players (less than 10 games) under 2000 rating</li>
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>
-                <li>K=16 for higher-rated players</li>
+                <li>K=16 for higher-rated players (2400+)</li>
               </ul>
             </div>
           </div>

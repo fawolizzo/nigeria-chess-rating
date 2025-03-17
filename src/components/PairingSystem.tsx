@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Player } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
 import { generateSwissPairings } from "@/lib/swissPairingService";
+import { AlertTriangle } from "lucide-react";
 
 interface PairingSystemProps {
   players: Player[];

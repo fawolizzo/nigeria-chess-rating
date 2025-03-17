@@ -15,6 +15,7 @@ interface StandingsTableProps {
 }
 
 const StandingsTable = ({ standings, players }: StandingsTableProps) => {
+  // Calculate Buchholz score (sum of opponents' scores)
   const calculateBuchholz = (player: PlayerWithScore) => {
     // Buchholz is the sum of the scores of all the player's opponents
     let buchholz = 0;
@@ -29,12 +30,32 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
     return buchholz;
   };
 
-  // Sort standings by score, then by buchholz
+  // Calculate Sonneborn-Berger score (sum of the scores of the opponents a player has defeated, 
+  // plus half the scores of the opponents with whom the player has drawn)
+  const calculateSonnebornBerger = (player: PlayerWithScore) => {
+    let sb = 0;
+    
+    // Implemented only when we have match results data available
+    // This is a placeholder for future implementation
+    
+    return sb;
+  };
+
+  // Sort standings by score, then by buchholz, then by rating
   const sortedStandings = [...standings].sort((a, b) => {
     if (b.score === a.score) {
-      // If scores are tied, sort by buchholz
-      return calculateBuchholz(b) - calculateBuchholz(a);
+      const buchholzA = calculateBuchholz(a);
+      const buchholzB = calculateBuchholz(b);
+      
+      if (buchholzB === buchholzA) {
+        // If buchholz scores are tied, sort by rating
+        return b.rating - a.rating;
+      }
+      
+      // Sort by buchholz score
+      return buchholzB - buchholzA;
     }
+    // Sort by score
     return b.score - a.score;
   });
 
