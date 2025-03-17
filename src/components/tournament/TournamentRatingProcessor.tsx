@@ -149,6 +149,7 @@ const TournamentRatingProcessor = ({
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>
                 <li>K=16 for higher-rated players (2400+)</li>
+                <li>Players rated 2000-2400 are treated as experienced players regardless of games played</li>
               </ul>
             </div>
           </div>

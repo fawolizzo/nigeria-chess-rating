@@ -1,6 +1,12 @@
 
 // Utility function to calculate K-factor for Elo calculation
 export const getKFactor = (rating: number, gamesPlayed: number): number => {
+  // If rating is high (2000-2400), we treat them as experienced players (30+ games)
+  // regardless of actual games played
+  if (rating >= 2000 && rating < 2400) {
+    return 24; // Treat high-rated players as experienced
+  }
+  
   // New or provisional players (fewer than 10 rated games)
   // High-rated new players aren't treated as new players (no K=40)
   if (gamesPlayed < 10 && rating < 2000) {

@@ -15,6 +15,7 @@ import TournamentRatingDialog from "./TournamentRatingDialog";
 import ProcessedTournamentDetails from "./ProcessedTournamentDetails";
 import PendingTournamentApprovals from "./PendingTournamentApprovals";
 import { useToast } from "@/components/ui/use-toast";
+import CreatePlayerDialog from "./CreatePlayerDialog";
 
 const OfficerDashboardContent = () => {
   const [activeTab, setActiveTab] = useState("organizers");
@@ -25,6 +26,7 @@ const OfficerDashboardContent = () => {
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<any>(null);
   const [selectedProcessedTournament, setSelectedProcessedTournament] = useState<any>(null);
+  const [isCreatePlayerDialogOpen, setIsCreatePlayerDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -108,6 +110,18 @@ const OfficerDashboardContent = () => {
   const handleTournamentApprovalUpdate = () => {
     // Reload tournaments to reflect approval/rejection changes
     loadTournaments();
+  };
+
+  const handlePlayerCreated = () => {
+    // Refresh player data after creating new players
+    const players = JSON.parse(localStorage.getItem('players') || '[]');
+    const pendingPlayersList = players.filter((player: any) => player.status === 'pending');
+    setPendingPlayers(pendingPlayersList);
+    
+    toast({
+      title: "Player created successfully",
+      description: "The player has been added to the system.",
+    });
   };
 
   return (
@@ -213,6 +227,7 @@ const OfficerDashboardContent = () => {
                           <div>Location: {tournament.location}, {tournament.city}, {tournament.state}</div>
                           <div>Rounds: {tournament.rounds}</div>
                           <div>Organizer: {tournament.organizerId}</div>
+                          <div>Players: {tournament.players ? tournament.players.length : 0}</div>
                         </div>
                         <div className="flex justify-between mt-2">
                           <Button
@@ -227,6 +242,7 @@ const OfficerDashboardContent = () => {
                             size="sm"
                             onClick={() => handleProcessTournament(tournament.id)}
                             className="bg-green-600 hover:bg-green-700"
+                            disabled={!tournament.players || tournament.players.length === 0}
                           >
                             <CheckCircle className="h-4 w-4 mr-2" />
                             Process Ratings
@@ -291,6 +307,15 @@ const OfficerDashboardContent = () => {
       </TabsContent>
 
       <TabsContent value="players">
+        <div className="mb-4 flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Player Management</h2>
+          <Button 
+            onClick={() => setIsCreatePlayerDialogOpen(true)}
+            className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+          >
+            Add New Player
+          </Button>
+        </div>
         <PlayerManagement onPlayerApproval={() => {
           // Refresh the pending players count
           const players = JSON.parse(localStorage.getItem('players') || '[]');
@@ -333,6 +358,13 @@ const OfficerDashboardContent = () => {
           onOpenChange={() => setSelectedProcessedTournament(null)}
         />
       )}
+
+      {/* Create Player Dialog */}
+      <CreatePlayerDialog
+        isOpen={isCreatePlayerDialogOpen}
+        onOpenChange={setIsCreatePlayerDialogOpen}
+        onSuccess={handlePlayerCreated}
+      />
     </Tabs>
   );
 };

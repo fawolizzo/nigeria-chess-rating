@@ -3,9 +3,10 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
 import { Player, Tournament, updatePlayer, updateTournament, getPlayersByTournamentId, getAllPlayers } from "@/lib/mockData";
 import { calculatePostRoundRatings } from "@/lib/ratingCalculation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TournamentRatingDialogProps {
   tournament: Tournament | null;
@@ -24,10 +25,25 @@ const TournamentRatingDialog = ({
 
   if (!tournament) return null;
 
+  // Check if tournament can be processed
+  const tournamentPlayers = getPlayersByTournamentId(tournament.id);
+  const hasNoPlayers = !tournamentPlayers || tournamentPlayers.length === 0;
+  const isNotCompleted = tournament.status !== 'completed';
+  const cannotProcess = hasNoPlayers || isNotCompleted;
+
   const processRatings = async () => {
     setIsProcessing(true);
     
     try {
+      // Double-check if tournament is in a valid state for processing
+      if (cannotProcess) {
+        throw new Error(
+          hasNoPlayers 
+            ? "Cannot process a tournament with no players." 
+            : "Only completed tournaments can be processed for ratings."
+        );
+      }
+      
       // Get all players to ensure we have a complete dataset
       const allPlayers = getAllPlayers();
       
@@ -210,29 +226,40 @@ const TournamentRatingDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 rounded-md">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">This action is irreversible</p>
-                <p className="text-sm mt-1">
-                  Player ratings will be permanently updated based on tournament results.
-                </p>
+        {cannotProcess ? (
+          <Alert variant="destructive" className="my-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {hasNoPlayers 
+                ? "This tournament has no registered players and cannot be processed." 
+                : "Only tournaments marked as 'Completed' by the organizer can be processed for ratings."}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <div className="py-4">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 rounded-md">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">This action is irreversible</p>
+                  <p className="text-sm mt-1">
+                    Player ratings will be permanently updated based on tournament results.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <div className="font-medium">Rating System Parameters:</div>
+                <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                  <li>K=40 for new players (less than 10 games) under 2000 rating</li>
+                  <li>K=32 for players rated below 2100</li>
+                  <li>K=24 for players rated 2100-2399</li>
+                  <li>K=16 for higher-rated players (2400+)</li>
+                </ul>
               </div>
             </div>
-            
-            <div className="flex flex-col gap-2">
-              <div className="font-medium">Rating System Parameters:</div>
-              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                <li>K=40 for new players (less than 10 games) under 2000 rating</li>
-                <li>K=32 for players rated below 2100</li>
-                <li>K=24 for players rated 2100-2399</li>
-                <li>K=16 for higher-rated players (2400+)</li>
-              </ul>
-            </div>
           </div>
-        </div>
+        )}
         
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isProcessing}>
@@ -240,7 +267,7 @@ const TournamentRatingDialog = ({
           </Button>
           <Button 
             onClick={processRatings} 
-            disabled={isProcessing}
+            disabled={isProcessing || cannotProcess}
             className="relative bg-green-600 hover:bg-green-700"
           >
             {isProcessing ? (
