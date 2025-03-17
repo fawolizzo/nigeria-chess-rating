@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { read, utils } from "xlsx";
 import { Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import { v4 as uuidv4 } from "uuid";
 
 interface FileUploadButtonProps {
   onPlayersImported: (players: Partial<Player>[]) => void;
@@ -192,19 +193,19 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
             }
           }
           
-          // Create the player object with required id for selection list compatibility
+          // Create the player object with proper UUID for selection list compatibility
           const player: Partial<Player> = {
-            // Add a temporary ID for the player selection component
-            id: `temp_${i}_${Date.now()}`,
+            id: uuidv4(), // Generate proper UUID instead of temp string
             name: String(name).trim(),
             rating,
             gender,
             birthYear,
-            // Set state if available from the file
             state: 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : undefined,
             country: 'Nigeria',
-            // We need to set status for the MultiSelectPlayers component
-            status: 'approved'
+            status: 'approved', // Set status to approved for immediate selection
+            gamesPlayed: 0,
+            tournamentResults: [],
+            ratingHistory: []
           };
           
           // Add title if it exists and isn't empty
@@ -212,7 +213,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
             player.title = String(title).trim();
           }
           
-          console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}`);
+          console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}, id: ${player.id}`);
           processedPlayers.push(player);
         }
         

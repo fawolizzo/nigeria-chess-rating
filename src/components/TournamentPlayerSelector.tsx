@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, UserPlus, X, Users, AlertTriangle } from "lucide-react";
@@ -61,16 +60,51 @@ const TournamentPlayerSelector = ({
   const handlePlayersImported = (players: Partial<Player>[]) => {
     console.log("Players imported:", players);
     
-    // Add temporary IDs to the imported players for selection
-    const playersWithIds = players.map(player => ({
+    // For players that have complete necessary fields, add them directly to the system
+    // and make them available for selection
+    const playersToCreate = players
+      .filter(p => p.name && p.id)
+      .map(player => ({
+        id: player.id as string, // Using the UUID created in FileUploadButton
+        name: player.name as string,
+        title: player.title,
+        rating: player.rating || 800,
+        country: "Nigeria",
+        state: player.state,
+        city: player.city,
+        gender: player.gender || "M",
+        birthYear: player.birthYear,
+        ratingHistory: [{ 
+          date: new Date().toISOString().split('T')[0], 
+          rating: player.rating || 800,
+          reason: "Initial import"
+        }],
+        tournamentResults: [],
+        status: "approved" as const,
+        gamesPlayed: 0,
+        createdBy: "current_user" // This would be replaced with actual user ID in a real app
+      } as Player));
+    
+    // Add the players to the system
+    playersToCreate.forEach(player => {
+      addPlayer(player);
+    });
+    
+    toast({
+      title: "Players created successfully",
+      description: `${playersToCreate.length} players have been imported and are ready to use.`,
+    });
+    
+    // For review purposes, convert them to have tempId
+    const playersWithTempIds: ImportPlayerWithTempId[] = players.map(player => ({
       ...player,
-      tempId: uuidv4()
-    })) as ImportPlayerWithTempId[];
+      tempId: (player.id as string) || uuidv4()
+    }));
     
-    setImportedPlayers(playersWithIds);
-    setSelectedImportIds(playersWithIds.map(p => p.tempId)); // Auto-select all imported players
+    setImportedPlayers(playersWithTempIds);
+    setSelectedImportIds(playersWithTempIds.map(p => p.tempId)); // Auto-select all
     
-    // Switch to the review tab
+    // Switch to the review tab to show what we imported
     setActiveTab("review");
   };
 
@@ -83,62 +117,11 @@ const TournamentPlayerSelector = ({
   };
 
   const submitImportedPlayers = () => {
-    // Create players from the selected imports
-    const playersToCreate = importedPlayers
-      .filter(player => selectedImportIds.includes(player.tempId))
-      .map(player => ({
-        id: uuidv4(),
-        name: player.name || "Unknown Player",
-        title: player.title,
-        rating: player.rating || 800,
-        country: "Nigeria",
-        state: player.state?.replace(" NGR", "").trim() || undefined,
-        city: player.city,
-        gender: player.gender || "M",
-        birthYear: player.birthYear,
-        ratingHistory: [{ 
-          date: new Date().toISOString().split('T')[0], 
-          rating: player.rating || 800,
-          reason: "Initial import"
-        }],
-        tournamentResults: [],
-        status: "approved" as const, // Changed from 'pending' to 'approved' to fix selection issue
-        gamesPlayed: 0,
-        createdBy: "current_user" // This would be replaced with actual user ID in a real app
-      } as Player));
-    
-    // Add the players to the system
-    playersToCreate.forEach(player => {
-      addPlayer(player);
-    });
-    
-    // Check if players were actually added
-    const allPlayers = getAllPlayers();
-    const addedPlayerIds = playersToCreate.map(p => p.id);
-    const addedPlayers = allPlayers.filter(p => addedPlayerIds.includes(p.id));
-    
-    if (addedPlayers.length > 0) {
-      toast({
-        title: "Players created successfully",
-        description: `${addedPlayers.length} players have been imported and are ready to use.`,
-      });
-      
-      // Auto-add these players to the selection if we want them to be immediately added to tournament
-      onPlayersAdded(addedPlayers);
-      
-      // Reset state
-      setImportedPlayers([]);
-      setSelectedImportIds([]);
-      setIsDialogOpen(false);
-      setActiveTab("select");
-      setPendingPlayersExist(false);
-    } else {
-      toast({
-        title: "Error adding players",
-        description: "There was a problem adding the players to the system.",
-        variant: "destructive"
-      });
-    }
+    // We've already created the players in handlePlayersImported
+    // Just return to the selection tab now
+    setActiveTab("select");
+    setImportedPlayers([]);
+    setSelectedImportIds([]);
   };
   
   const resetImportedPlayers = () => {

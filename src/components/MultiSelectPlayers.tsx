@@ -42,6 +42,7 @@ export const MultiSelectPlayers = ({
   // Fetch approved and pending players for display
   useEffect(() => {
     const fetchPlayers = () => {
+      // Force refresh player list every time the dialog opens to catch newly imported players
       const allPlayers = getAllPlayers();
       
       // Get players with any status but exclude those already in the tournament
@@ -51,6 +52,8 @@ export const MultiSelectPlayers = ({
         const statusOk = includePendingPlayers ? true : player.status !== 'pending';
         return !isExcluded && statusOk;
       });
+      
+      console.log("Available players for selection:", availablePlayers);
       
       if (availablePlayers.length === 0) {
         if (allPlayers.length === 0) {

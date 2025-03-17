@@ -4,7 +4,7 @@ export const getKFactor = (rating: number, gamesPlayed: number): number => {
   // If rating is high (2000-2400), we treat them as experienced players (30+ games)
   // regardless of actual games played
   if (rating >= 2000 && rating < 2400) {
-    return 24; // Treat high-rated players as experienced
+    return 24; // Treat high-rated players (2000-2400) as experienced with K=24
   }
   
   // New or provisional players (fewer than 10 rated games)

@@ -46,7 +46,11 @@ const TournamentManagement = () => {
       setIsLoading(true);
       try {
         const foundTournament = getTournamentById(id as string);
-        if (foundTournament && currentUser?.role === 'tournament_organizer' && foundTournament.organizerId === currentUser.id) {
+
+        // Check if tournament exists and the current user is the organizer
+        if (foundTournament && 
+            currentUser?.role === 'tournament_organizer' && 
+            foundTournament.organizerId === currentUser.id) {
           setTournament(foundTournament);
           
           if (foundTournament.players && foundTournament.players.length > 0) {
@@ -57,6 +61,11 @@ const TournamentManagement = () => {
             setRegisteredPlayers([]);
           }
         } else {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to view this tournament or it doesn't exist.",
+            variant: "destructive"
+          });
           navigate("/tournaments");
         }
       } catch (error) {
