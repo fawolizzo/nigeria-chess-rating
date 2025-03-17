@@ -1,4 +1,3 @@
-
 import { Player } from "./mockData";
 
 interface PairingMatch {
@@ -327,3 +326,18 @@ export function getInitialStandings(players: Player[]): Array<{
     }))
     .sort((a, b) => b.rating - a.rating);
 }
+
+// Added function to initialize standings by rating
+export const initializeStandingsByRating = (players: any[]) => {
+  return players.map(player => ({
+    playerId: player.id,
+    playerName: player.fullName,
+    points: 0,
+    rating: player.rating || 0,
+    opponents: [],
+    colorHistory: [],
+    tieBreak1: 0, // Buchholz
+    tieBreak2: 0, // Sonneborn-Berger
+    rank: 0
+  })).sort((a, b) => b.rating - a.rating);
+};

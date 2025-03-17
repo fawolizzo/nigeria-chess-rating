@@ -65,3 +65,45 @@
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
 }
+
+/* Fix for white background issue */
+body {
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+.app-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+/* Additional Nigerian-themed color classes */
+.bg-nigeria-green {
+  background-color: #008751;
+}
+
+.bg-nigeria-yellow {
+  background-color: #F7C445;
+}
+
+.text-nigeria-green {
+  color: #008751;
+}
+
+.text-nigeria-yellow {
+  color: #F7C445;
+}
+
+.nigeria-card {
+  border-color: #008751;
+  box-shadow: 0 4px 6px rgba(0, 135, 81, 0.1);
+}
+
+/* Button hover effects */
+.btn-nigeria-primary:hover {
+  background-color: #006741;
+}
+
+.btn-nigeria-secondary:hover {
+  background-color: #DFA920;
+}

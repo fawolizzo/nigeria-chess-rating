@@ -23,7 +23,7 @@ function App() {
   return (
     <UserProvider>
       <Router>
-        <div className="bg-gradient-to-br from-nigeria-white to-nigeria-white-dim min-h-screen">
+        <div className="app-container bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />

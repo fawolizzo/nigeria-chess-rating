@@ -39,20 +39,19 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Nigerian colors */
+    --nigeria-white: 0 0% 100%;
+    --nigeria-white-dim: 0 0% 91%;
+    --nigeria-green: 160 100% 26.7%;
+    --nigeria-yellow: 42 91% 62.7%;
   }
 
   .dark {
@@ -84,6 +83,7 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -92,6 +92,12 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    /* Nigerian colors in dark mode - slightly adjusted for better visibility */
+    --nigeria-white: 0 0% 95%;
+    --nigeria-white-dim: 0 0% 85%;
+    --nigeria-green: 160 80% 35%;
+    --nigeria-yellow: 42 80% 65%;
   }
 }
 
@@ -102,6 +108,12 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Ensure the root element takes full height */
+  html, body, #root {
+    height: 100%;
+    min-height: 100vh;
   }
 }
 
