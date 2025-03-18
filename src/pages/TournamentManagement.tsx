@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -40,6 +41,20 @@ const TournamentManagement = () => {
   const [standings, setStandings] = useState<PlayerWithScore[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [hasPendingPlayers, setHasPendingPlayers] = useState(false);
+  const [canAdvanceRound, setCanAdvanceRound] = useState(false);
+
+  // Determine tournament type (classical, rapid, blitz)
+  const getTournamentType = (): 'classical' | 'rapid' | 'blitz' => {
+    if (!tournament) return 'classical';
+    
+    const timeControl = tournament.timeControl || '';
+    if (timeControl.toLowerCase().includes('rapid')) {
+      return 'rapid';
+    } else if (timeControl.toLowerCase().includes('blitz')) {
+      return 'blitz';
+    }
+    return 'classical';
+  };
 
   useEffect(() => {
     const loadTournament = () => {
@@ -99,31 +114,28 @@ const TournamentManagement = () => {
     }
   }, [tournament?.status]);
 
+  // Effect to check if all matches in the current round have results
   useEffect(() => {
-    // Initialize standings for new tournaments
-    if (tournament?.status === "upcoming" || tournament?.status === "ongoing") {
-      // Generate initial standings based on player ratings
-      const approvedPlayers = registeredPlayers.filter(p => p.status === 'approved');
-      const initialStandings = initializeStandingsByRating(approvedPlayers);
+    if (tournament?.status === "ongoing" && tournament.pairings) {
+      const currentRoundPairings = tournament.pairings.find(p => p.roundNumber === tournament.currentRound);
       
-      // Convert PlayerStanding to PlayerWithScore
-      const standingsWithScores: PlayerWithScore[] = initialStandings.map(standing => {
-        // Find the corresponding player
-        const player = registeredPlayers.find(p => p.id === standing.playerId);
-        if (!player) {
-          throw new Error(`Player with ID ${standing.playerId} not found`);
-        }
+      if (currentRoundPairings) {
+        const allMatchesHaveResults = currentRoundPairings.matches.every(match => 
+          match.result && match.result !== "*"
+        );
         
-        return {
-          ...player,
-          score: 0,
-          tiebreak: [0, 0],
-          opponents: []
-        };
-      });
-      
-      setStandings(standingsWithScores);
-    } else if (tournament?.status === "completed") {
+        setCanAdvanceRound(allMatchesHaveResults);
+      } else {
+        setCanAdvanceRound(false);
+      }
+    } else {
+      setCanAdvanceRound(false);
+    }
+  }, [tournament]);
+
+  useEffect(() => {
+    // Initialize standings for new tournaments or update them for ongoing/completed tournaments
+    if (tournament) {
       calculateStandings();
     }
   }, [tournament, registeredPlayers]);
@@ -396,6 +408,9 @@ const TournamentManagement = () => {
       title: "Pairings Generated",
       description: `Successfully generated pairings for Round ${currentRound} using Swiss system.`,
     });
+    
+    // Immediately calculate standings after generating pairings
+    setTimeout(() => calculateStandings(), 100);
   };
 
   const saveResults = (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {
@@ -423,16 +438,49 @@ const TournamentManagement = () => {
   
     updateTournament(updatedTournament);
     setTournament(updatedTournament);
+    
+    // Check if all matches in the current round have results
+    if (roundNumber === tournament.currentRound) {
+      const currentRoundPairings = updatedPairings?.find(p => p.roundNumber === roundNumber);
+      
+      if (currentRoundPairings) {
+        const allMatchesHaveResults = currentRoundPairings.matches.every(match => 
+          match.result && match.result !== "*"
+        );
+        
+        setCanAdvanceRound(allMatchesHaveResults);
+      }
+    }
+    
+    // Immediately calculate standings after saving results
     calculateStandings();
     
     toast({
       title: "Results Saved",
-      description: `Round ${roundNumber} results have been saved successfully.`,
+      description: `Round ${roundNumber} results have been saved and standings have been updated.`,
     });
   };
 
   const advanceToNextRound = () => {
     if (!tournament || !tournament.currentRound) return;
+    
+    // Verify that all matches in the current round have results
+    const currentRoundPairings = tournament.pairings?.find(p => p.roundNumber === tournament.currentRound);
+    
+    if (currentRoundPairings) {
+      const allMatchesHaveResults = currentRoundPairings.matches.every(match => 
+        match.result && match.result !== "*"
+      );
+      
+      if (!allMatchesHaveResults) {
+        toast({
+          title: "Cannot Advance Round",
+          description: "All matches in the current round must have results before advancing to the next round.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
 
     const updatedTournament = {
       ...tournament,
@@ -443,61 +491,68 @@ const TournamentManagement = () => {
     setTournament(updatedTournament);
     setSelectedRound(updatedTournament.currentRound);
     setPairingsGenerated(false);
+    setCanAdvanceRound(false);
   };
 
   const calculateStandings = () => {
-    if (!tournament || !tournament.pairings) return;
+    if (!tournament) return;
   
     const initialStandings: { [playerId: string]: PlayerWithScore } = {};
+    const tournamentType = getTournamentType();
+    
+    // Get the appropriate rating based on tournament type
+    const getPlayerRating = (player: Player) => {
+      if (tournamentType === 'rapid') {
+        return player.rapidRating || player.rating;
+      } else if (tournamentType === 'blitz') {
+        return player.blitzRating || player.rating;
+      }
+      return player.rating; // Default to classical rating
+    };
     
     // First create initial standings with players sorted by rating
     registeredPlayers
       .filter(player => player.status === 'approved') // Only include approved players in standings
-      .sort((a, b) => b.rating - a.rating)  // Sort by rating descending (initialize by rating)
+      .sort((a, b) => getPlayerRating(b) - getPlayerRating(a))  // Sort by rating descending (initialize by rating)
       .forEach(player => {
         initialStandings[player.id] = { 
           ...player, 
+          rating: getPlayerRating(player), // Use the appropriate rating type
           score: 0, 
           tiebreak: [0, 0],
           opponents: [] 
         };
       });
       
-    // Track opponents for Buchholz calculation
-    tournament.pairings.forEach(round => {
-      round.matches.forEach(match => {
-        if (!initialStandings[match.whiteId] || !initialStandings[match.blackId]) return;
-        
-        // Add opponents to tracking
-        if (!initialStandings[match.whiteId].opponents) initialStandings[match.whiteId].opponents = [];
-        if (!initialStandings[match.blackId].opponents) initialStandings[match.blackId].opponents = [];
-        
-        initialStandings[match.whiteId].opponents!.push(match.blackId);
-        initialStandings[match.blackId].opponents!.push(match.whiteId);
-        
-        // Add scores
-        if (match.result === "1-0") {
-          initialStandings[match.whiteId].score += 1;
-        } else if (match.result === "0-1") {
-          initialStandings[match.blackId].score += 1;
-        } else if (match.result === "1/2-1/2") {
-          initialStandings[match.whiteId].score += 0.5;
-          initialStandings[match.blackId].score += 0.5;
-        }
+    // Track opponents for Buchholz calculation and add scores
+    if (tournament.pairings) {
+      tournament.pairings.forEach(round => {
+        round.matches.forEach(match => {
+          if (!initialStandings[match.whiteId] || !initialStandings[match.blackId]) return;
+          
+          // Add opponents to tracking
+          if (!initialStandings[match.whiteId].opponents) initialStandings[match.whiteId].opponents = [];
+          if (!initialStandings[match.blackId].opponents) initialStandings[match.blackId].opponents = [];
+          
+          initialStandings[match.whiteId].opponents!.push(match.blackId);
+          initialStandings[match.blackId].opponents!.push(match.whiteId);
+          
+          // Add scores
+          if (match.result === "1-0") {
+            initialStandings[match.whiteId].score += 1;
+          } else if (match.result === "0-1") {
+            initialStandings[match.blackId].score += 1;
+          } else if (match.result === "1/2-1/2") {
+            initialStandings[match.whiteId].score += 0.5;
+            initialStandings[match.blackId].score += 0.5;
+          }
+        });
       });
-    });
+    }
   
     const standingsArray = Object.values(initialStandings);
-  
-    // Sort by score first, then by rating
-    standingsArray.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      // If scores are equal, sort by rating
-      return b.rating - a.rating;
-    });
-  
+    
+    // Update the standings state
     setStandings(standingsArray);
   };
 
@@ -561,6 +616,7 @@ const TournamentManagement = () => {
               currentRound={tournament.currentRound}
               totalRounds={tournament.rounds}
               onAdvanceRound={advanceToNextRound}
+              canAdvanceRound={canAdvanceRound}
             />
           )}
           
@@ -613,6 +669,8 @@ const TournamentManagement = () => {
                     onRoundSelect={setSelectedRound}
                     onGeneratePairings={generatePairings}
                     onSaveResults={saveResults}
+                    canAdvanceRound={canAdvanceRound}
+                    tournamentType={getTournamentType()}
                   />
                 </TabsContent>
                 

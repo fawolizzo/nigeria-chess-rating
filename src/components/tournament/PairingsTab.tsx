@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ interface PairingsTabProps {
     blackId: string;
     result: "1-0" | "0-1" | "1/2-1/2" | "*"
   }>) => void;
+  canAdvanceRound?: boolean;
+  tournamentType?: 'classical' | 'rapid' | 'blitz';
 }
 
 const PairingsTab = ({
@@ -45,6 +47,8 @@ const PairingsTab = ({
   onRoundSelect,
   onGeneratePairings,
   onSaveResults,
+  canAdvanceRound,
+  tournamentType = 'classical',
 }: PairingsTabProps) => {
   const currentPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
   const isOngoing = tournamentStatus === "ongoing";
@@ -178,6 +182,7 @@ const PairingsTab = ({
               players={players}
               roundNumber={selectedRound}
               onSaveResults={handleSaveResults}
+              tournamentType={tournamentType}
             />
           ) : (
             <PairingSystem
@@ -187,6 +192,7 @@ const PairingsTab = ({
               playerScores={calculatePlayerScores()}
               roundNumber={selectedRound}
               readonly={true}
+              tournamentType={tournamentType}
             />
           )}
         </div>

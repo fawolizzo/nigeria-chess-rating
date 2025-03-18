@@ -19,9 +19,16 @@ interface ResultRecorderProps {
     blackId: string; 
     result: "1-0" | "0-1" | "1/2-1/2" | "*" 
   }>) => void;
+  tournamentType?: 'classical' | 'rapid' | 'blitz';
 }
 
-const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: ResultRecorderProps) => {
+const ResultRecorder = ({ 
+  pairings, 
+  players, 
+  roundNumber, 
+  onSaveResults,
+  tournamentType = 'classical'
+}: ResultRecorderProps) => {
   const [results, setResults] = useState<Array<{ 
     whiteId: string; 
     blackId: string; 
@@ -69,6 +76,16 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
     return players.find(p => p.id === id);
   };
 
+  // Function to get the appropriate rating based on tournament type
+  const getPlayerRating = (player: Player) => {
+    if (tournamentType === 'rapid') {
+      return player.rapidRating || player.rating;
+    } else if (tournamentType === 'blitz') {
+      return player.blitzRating || player.rating;
+    }
+    return player.rating; // Default to classical rating
+  };
+
   return (
     <Card className="border-nigeria-green/30">
       <CardHeader className="bg-gradient-to-r from-nigeria-green/5 to-transparent">
@@ -85,6 +102,9 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
                   
                   if (!whitePlayer || !blackPlayer) return null;
                   
+                  const whiteRating = getPlayerRating(whitePlayer);
+                  const blackRating = getPlayerRating(blackPlayer);
+                  
                   return (
                     <div key={index} className="border border-nigeria-green/20 rounded-md p-4 hover:bg-nigeria-green/5 transition-colors">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -100,7 +120,7 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
                                 {whitePlayer.name}
                               </p>
                               <p className="text-sm text-gray-500">
-                                White • {whitePlayer.rating}
+                                White • {whiteRating}
                               </p>
                             </div>
                             
@@ -118,7 +138,7 @@ const ResultRecorder = ({ pairings, players, roundNumber, onSaveResults }: Resul
                                 {blackPlayer.name}
                               </p>
                               <p className="text-sm text-gray-500">
-                                Black • {blackPlayer.rating}
+                                Black • {blackRating}
                               </p>
                             </div>
                           </div>

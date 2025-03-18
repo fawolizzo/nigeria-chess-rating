@@ -6,9 +6,15 @@ interface RoundControllerProps {
   currentRound: number;
   totalRounds: number;
   onAdvanceRound: () => void;
+  canAdvanceRound?: boolean;
 }
 
-const RoundController = ({ currentRound, totalRounds, onAdvanceRound }: RoundControllerProps) => {
+const RoundController = ({ 
+  currentRound, 
+  totalRounds, 
+  onAdvanceRound,
+  canAdvanceRound = true
+}: RoundControllerProps) => {
   if (!currentRound) return null;
   
   return (
@@ -22,6 +28,7 @@ const RoundController = ({ currentRound, totalRounds, onAdvanceRound }: RoundCon
           size="sm" 
           variant="outline" 
           onClick={onAdvanceRound}
+          disabled={!canAdvanceRound}
           className="ml-2"
         >
           Advance to Next Round

@@ -24,6 +24,7 @@ interface PairingSystemProps {
   }>;
   roundNumber?: number;
   readonly?: boolean;
+  tournamentType?: 'classical' | 'rapid' | 'blitz';
 }
 
 interface PairingDisplayData {
@@ -53,6 +54,7 @@ const PairingSystem = ({
   pairings = [],
   roundNumber = 1,
   readonly = false,
+  tournamentType = 'classical',
 }: PairingSystemProps) => {
   const [localPairings, setLocalPairings] = useState<Array<{ white: Player; black: Player }>>(
     existingPairings.map(pair => {
@@ -61,6 +63,16 @@ const PairingSystem = ({
       return { white, black };
     })
   );
+
+  // Function to get the appropriate rating based on tournament type
+  const getPlayerRating = (player: Player) => {
+    if (tournamentType === 'rapid') {
+      return player.rapidRating || player.rating;
+    } else if (tournamentType === 'blitz') {
+      return player.blitzRating || player.rating;
+    }
+    return player.rating; // Default to classical rating
+  };
 
   // Function to convert pairings to display format
   const getPairingsToDisplay = (): PairingDisplayData[] => {
@@ -188,7 +200,7 @@ const PairingSystem = ({
                           {pair.white.name}
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">
-                          ({pair.white.rating})
+                          ({getPlayerRating(pair.white)})
                         </span>
                         {pair.whiteRatingChange !== undefined && (
                           <span className={pair.whiteRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
@@ -209,7 +221,7 @@ const PairingSystem = ({
                           {pair.black.name}
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">
-                          ({pair.black.rating})
+                          ({getPlayerRating(pair.black)})
                         </span>
                         {pair.blackRatingChange !== undefined && (
                           <span className={pair.blackRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
