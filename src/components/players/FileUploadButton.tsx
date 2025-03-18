@@ -34,237 +34,201 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
     try {
       console.log("Processing file:", file.name, "Type:", file.type);
       
-      // Read file as ArrayBuffer
       const data = await file.arrayBuffer();
       console.log("File loaded as ArrayBuffer, size:", data.byteLength);
       
-      // Parse Excel file
-      try {
-        const workbook = read(data, { type: 'array' });
-        console.log("Workbook loaded:", workbook.SheetNames);
-        
-        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
-          throw new Error("Invalid Excel file format");
-        }
-        
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        if (!worksheet) {
-          throw new Error("Worksheet not found");
-        }
-        
-        // Get raw data as array to examine structure
-        const rawData = utils.sheet_to_json<any>(worksheet, { 
-          raw: false,
-          header: 1,
-          blankrows: false
-        });
-        
-        console.log("Raw Excel data:", rawData);
-        
-        if (!rawData || rawData.length <= 1) {
-          toast({
-            title: "Empty file",
-            description: "The file doesn't contain enough data. Please check the file.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        // Look at first row to identify column headers
-        const headerRow = rawData[0];
-        console.log("Header row:", headerRow);
-        
-        // Map common header names to standard fields
-        const columnMap: Record<string, number> = {};
-        
-        // These are the field names we're looking for
-        const fieldMappings: Record<string, string[]> = {
-          name: ["player", "name", "full name", "player name", "full", "fullname"],
-          title: ["title", "chess title"],
-          rating: ["rating", "elo", "fide rating", "chess rating", "elo rating"],
-          birthYear: ["birth year", "b-year", "year", "birthyear", "birth", "byear", "dob", "birth date", "birthdate"],
-          gender: ["gender", "sex", "m/f", "male/female"]
-        };
-        
-        // Find the index of each field in the header row
-        if (headerRow && Array.isArray(headerRow)) {
-          headerRow.forEach((header: any, index: number) => {
-            if (!header) return;
-            
-            const headerText = String(header).toLowerCase().trim();
-            console.log(`Checking header at index ${index}: "${headerText}"`);
-            
-            // Check each field type
-            Object.entries(fieldMappings).forEach(([field, possibleNames]) => {
-              if (possibleNames.some(name => headerText === name || headerText.includes(name))) {
-                columnMap[field] = index;
-                console.log(`Match found: "${headerText}" for field "${field}" at index ${index}`);
-              }
-            });
-            
-            // Additional special cases
-            if (headerText === "#" || headerText === "no" || headerText === "num" || headerText === "number") {
-              columnMap["id"] = index;
-            }
-          });
-        } else {
-          console.log("Header row is not an array:", headerRow);
-        }
-        
-        console.log("Identified columns:", columnMap);
-        
-        // If we can't find player name column, try alternative approach
-        if (!('name' in columnMap)) {
-          // Look for a column that might contain player names (usually the 2nd column)
-          if (headerRow && headerRow.length > 1) {
-            columnMap['name'] = 1; // Typically the 2nd column (index 1) contains names
-            console.log("Using column 1 as player name column");
-          }
-        }
-        
-        // If we still don't have a name column, try to guess which column might contain names
-        if (!('name' in columnMap) && rawData.length > 1) {
-          // Check if any column in the first data row has string values that could be names
-          for (let i = 0; i < rawData[1].length; i++) {
-            const value = rawData[1][i];
-            if (typeof value === 'string' && value.length > 3 && /^[A-Za-z\s,]+$/.test(value)) {
-              columnMap['name'] = i;
-              console.log(`Found potential name column at index ${i}`);
-              break;
-            }
-          }
-        }
-        
-        // If we still don't have a name column, we can't proceed
-        if (!('name' in columnMap)) {
-          toast({
-            title: "Invalid file format",
-            description: "Could not identify a player name column. Please ensure your file has a 'Player' or 'Name' column.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        // Process the data rows
-        const processedPlayers: Partial<Player>[] = [];
-        
-        // Start from row 1 (skip header)
-        for (let i = 1; i < rawData.length; i++) {
-          const row = rawData[i];
-          if (!row || row.length === 0) continue;
-          
-          // Get player name
-          const nameIndex = columnMap['name'];
-          const name = row[nameIndex];
-          
-          if (!name) continue; // Skip rows without names
-          
-          const title = 'title' in columnMap ? row[columnMap['title']] : null;
-          
-          // Check if player has rating in the file
-          let hasExistingRating = false;
-          let rating: number = 800; // Floor rating default
-          
-          if ('rating' in columnMap && row[columnMap['rating']] !== undefined) {
-            const ratingValue = row[columnMap['rating']];
-            if (ratingValue !== null && ratingValue !== "") {
-              hasExistingRating = true;
-              rating = parseInt(String(ratingValue)) || 800;
-              
-              // If uploaded by rating officer, add 100 points bonus to imported players with existing ratings
-              if (isRatingOfficer && hasExistingRating) {
-                rating += 100;
-                console.log(`Added 100 points to ${name}, new rating: ${rating}`);
-              }
-            }
-          }
-          
-          let birthYear: number | undefined = undefined;
-          if ('birthYear' in columnMap && row[columnMap['birthYear']] !== undefined) {
-            const birthYearValue = row[columnMap['birthYear']];
-            if (birthYearValue !== null && birthYearValue !== "") {
-              const parsedYear = parseInt(String(birthYearValue));
-              // Validate year is reasonable (between 1900 and current year)
-              if (!isNaN(parsedYear) && parsedYear > 1900 && parsedYear <= new Date().getFullYear()) {
-                birthYear = parsedYear;
-              }
-            }
-          }
-          
-          // Default gender to M, but check for specific gender value if available
-          let gender: 'M' | 'F' = 'M';
-          if ('gender' in columnMap && row[columnMap['gender']] !== undefined) {
-            const genderValue = row[columnMap['gender']];
-            if (genderValue && typeof genderValue === 'string') {
-              const genderStr = genderValue.toString().toUpperCase().trim();
-              if (genderStr === 'F' || genderStr === 'FEMALE' || genderStr === 'W' || genderStr === 'WOMEN') {
-                gender = 'F';
-              }
-            }
-          }
-          
-          // Create the player object with proper UUID for selection list compatibility
-          const player: Partial<Player> = {
-            id: uuidv4(), // Generate proper UUID instead of temp string
-            name: String(name).trim(),
-            rating,
-            gender,
-            birthYear,
-            state: 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : undefined,
-            country: 'Nigeria',
-            status: isRatingOfficer ? 'approved' : 'pending', // Rating officer uploads are auto-approved
-            gamesPlayed: 0,
-            tournamentResults: [],
-            ratingHistory: []
-          };
-          
-          // Add title if it exists and isn't empty
-          if (title && String(title).trim()) {
-            player.title = String(title).trim();
-          }
-          
-          console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}, id: ${player.id}`);
-          processedPlayers.push(player);
-        }
-        
-        console.log(`Found ${processedPlayers.length} valid players`);
-        
-        if (processedPlayers.length === 0) {
-          toast({
-            title: "No valid players found",
-            description: "Could not extract any valid players from the file. Please check the file format.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        // Send the players to the parent component
-        onPlayersImported(processedPlayers);
-        
-        // Check current system state after import
-        const currentPlayers = getAllPlayers();
-        console.log("System players after import:", currentPlayers);
-        
-        toast({
-          title: "Players imported",
-          description: `Successfully imported ${processedPlayers.length} players from file.${isRatingOfficer ? " Players with existing ratings received +100 rating points." : ""}`,
-        });
-        
-        // Reset file selection
-        setFile(null);
-      } catch (parseError) {
-        console.error("Error parsing Excel file:", parseError);
-        toast({
-          title: "Error parsing file",
-          description: "The file format could not be processed. Please check that it's a valid Excel or CSV file.",
-          variant: "destructive"
-        });
+      const workbook = read(data, { type: 'array' });
+      console.log("Workbook loaded:", workbook.SheetNames);
+      
+      if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+        throw new Error("Invalid Excel file format");
       }
       
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      
+      if (!worksheet) {
+        throw new Error("Worksheet not found");
+      }
+      
+      const rawData = utils.sheet_to_json<any>(worksheet, { 
+        raw: false,
+        header: 1,
+        blankrows: false
+      });
+      
+      console.log("Raw Excel data:", rawData);
+      
+      if (!rawData || rawData.length <= 1) {
+        toast({
+          title: "Empty file",
+          description: "The file doesn't contain enough data. Please check the file.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const headerRow = rawData[0];
+      console.log("Header row:", headerRow);
+      
+      const columnMap: Record<string, number> = {};
+      
+      const fieldMappings: Record<string, string[]> = {
+        name: ["player", "name", "full name", "player name", "full", "fullname"],
+        title: ["title", "chess title"],
+        rating: ["rating", "elo", "fide rating", "chess rating", "elo rating"],
+        birthYear: ["birth year", "b-year", "year", "birthyear", "birth", "byear", "dob", "birth date", "birthdate"],
+        gender: ["gender", "sex", "m/f", "male/female"]
+      };
+      
+      if (headerRow && Array.isArray(headerRow)) {
+        headerRow.forEach((header: any, index: number) => {
+          if (!header) return;
+          
+          const headerText = String(header).toLowerCase().trim();
+          console.log(`Checking header at index ${index}: "${headerText}"`);
+          
+          Object.entries(fieldMappings).forEach(([field, possibleNames]) => {
+            if (possibleNames.some(name => headerText === name || headerText.includes(name))) {
+              columnMap[field] = index;
+              console.log(`Match found: "${headerText}" for field "${field}" at index ${index}`);
+            }
+          });
+          
+          if (headerText === "#" || headerText === "no" || headerText === "num" || headerText === "number") {
+            columnMap["id"] = index;
+          }
+        });
+      } else {
+        console.log("Header row is not an array:", headerRow);
+      }
+      
+      console.log("Identified columns:", columnMap);
+      
+      if (!('name' in columnMap)) {
+        if (headerRow && headerRow.length > 1) {
+          columnMap['name'] = 1;
+          console.log("Using column 1 as player name column");
+        }
+      }
+      
+      if (!('name' in columnMap) && rawData.length > 1) {
+        for (let i = 0; i < rawData[1].length; i++) {
+          const value = rawData[1][i];
+          if (typeof value === 'string' && value.length > 3 && /^[A-Za-z\s,]+$/.test(value)) {
+            columnMap['name'] = i;
+            console.log(`Found potential name column at index ${i}`);
+            break;
+          }
+        }
+      }
+      
+      if (!('name' in columnMap)) {
+        toast({
+          title: "Invalid file format",
+          description: "Could not identify a player name column. Please ensure your file has a 'Player' or 'Name' column.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const processedPlayers: Partial<Player>[] = [];
+      
+      for (let i = 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (!row || row.length === 0) continue;
+        
+        const nameIndex = columnMap['name'];
+        const name = row[nameIndex];
+        
+        if (!name) continue;
+        
+        const title = 'title' in columnMap ? row[columnMap['title']] : null;
+        
+        let hasExistingRating = false;
+        let rating: number = 800;
+        
+        if ('rating' in columnMap && row[columnMap['rating']] !== undefined) {
+          const ratingValue = row[columnMap['rating']];
+          if (ratingValue !== null && ratingValue !== "") {
+            hasExistingRating = true;
+            rating = parseInt(String(ratingValue)) || 800;
+            
+            if (isRatingOfficer && hasExistingRating) {
+              rating += 100;
+              console.log(`Added 100 points to ${name}, new rating: ${rating}`);
+            }
+          }
+        }
+        
+        let birthYear: number | undefined = undefined;
+        if ('birthYear' in columnMap && row[columnMap['birthYear']] !== undefined) {
+          const birthYearValue = row[columnMap['birthYear']];
+          if (birthYearValue !== null && birthYearValue !== "") {
+            const parsedYear = parseInt(String(birthYearValue));
+            if (!isNaN(parsedYear) && parsedYear > 1900 && parsedYear <= new Date().getFullYear()) {
+              birthYear = parsedYear;
+            }
+          }
+        }
+        
+        let gender: 'M' | 'F' = 'M';
+        if ('gender' in columnMap && row[columnMap['gender']] !== undefined) {
+          const genderValue = row[columnMap['gender']];
+          if (genderValue && typeof genderValue === 'string') {
+            const genderStr = genderValue.toString().toUpperCase().trim();
+            if (genderStr === 'F' || genderStr === 'FEMALE' || genderStr === 'W' || genderStr === 'WOMEN') {
+              gender = 'F';
+            }
+          }
+        }
+        
+        const player: Partial<Player> = {
+          id: uuidv4(),
+          name: String(name).trim(),
+          rating,
+          gender,
+          birthYear,
+          state: 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : undefined,
+          country: 'Nigeria',
+          status: isRatingOfficer ? 'approved' : 'pending',
+          gamesPlayed: 0,
+          tournamentResults: [],
+          ratingHistory: []
+        };
+        
+        if (title && String(title).trim()) {
+          player.title = String(title).trim();
+        }
+        
+        console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}, id: ${player.id}`);
+        processedPlayers.push(player);
+      }
+      
+      console.log(`Found ${processedPlayers.length} valid players`);
+      
+      if (processedPlayers.length === 0) {
+        toast({
+          title: "No valid players found",
+          description: "Could not extract any valid players from the file. Please check the file format.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      onPlayersImported(processedPlayers);
+      
+      const currentPlayers = getAllPlayers();
+      console.log("System players after import:", currentPlayers);
+      
+      toast({
+        title: "Players imported",
+        description: `Successfully imported ${processedPlayers.length} players from file.${isRatingOfficer ? " Players with existing ratings received +100 rating points." : ""}`,
+      });
+      
+      setFile(null);
     } catch (error) {
       console.error("Error processing file:", error);
       toast({
@@ -292,7 +256,6 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
               accept=".csv,.xlsx,.xls"
               onChange={handleFileChange}
               onClick={(e) => {
-                // Reset the file input value to allow selecting the same file again
                 (e.target as HTMLInputElement).value = "";
               }}
             />
