@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
       case 'processed':
         return 'Processed';
       default:
-        return status.charAt(0).toUpperCase() + status.slice(1);
+        return 'Unknown Status';
     }
   };
 
