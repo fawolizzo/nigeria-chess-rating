@@ -1,4 +1,3 @@
-
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -29,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
+import { v4 as uuidv4 } from 'uuid';
 
 const playerSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters" }),
@@ -71,20 +71,22 @@ const PlayerFormModal = ({ isOpen, onOpenChange, onPlayerCreated, currentUserId 
   const handleCreatePlayer = (data: PlayerFormValues) => {
     // Create a new player with pending status
     const newPlayer: Player = {
-      id: `player_${Date.now()}`,
+      id: uuidv4(),
       name: data.name,
-      title: data.title && data.title.length > 0 ? data.title : undefined,
-      rating: 800, // Start with floor rating
-      country: data.country,
-      state: data.state,
-      club: data.club && data.club.length > 0 ? data.club : undefined,
       gender: data.gender,
-      birthYear: parseInt(data.birthYear),
-      ratingHistory: [{ date: new Date().toISOString().split('T')[0], rating: 800 }],
-      tournamentResults: [],
-      status: 'pending', // All players need approval from rating officer
-      createdBy: currentUserId,
-      gamesPlayed: 0
+      rating: 800, // Default floor rating
+      gamesPlayed: 0,
+      state: data.state || undefined,
+      country: "Nigeria",
+      status: "approved",
+      ratingHistory: [
+        {
+          date: new Date().toISOString(),
+          rating: 800,
+          reason: "Initial registration"
+        }
+      ],
+      tournamentResults: []
     };
     
     onPlayerCreated(newPlayer);

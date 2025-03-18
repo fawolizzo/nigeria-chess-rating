@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -135,6 +134,7 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
         gamesPlayed: classicalGamesPlayed,
         rapidGamesPlayed: rapidGamesPlayed,
         blitzGamesPlayed: blitzGamesPlayed,
+        status: 'approved',
         ratingHistory: [
           {
             date: currentDate,

@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -76,7 +77,7 @@ export interface Tournament {
   processedPlayerIds?: string[];
   prize?: string;
   rejectionReason?: string;
-  participants?: string[];
+  participants?: string | number; // Number or description of participants
   description?: string;
   registrationOpen?: boolean;
 }

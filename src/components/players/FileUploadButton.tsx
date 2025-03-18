@@ -233,9 +233,9 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           country: federation || 'Nigeria',
           status: 'approved',  // Rating officer imported players are automatically approved
           tournamentResults: [],
-          gamesPlayed: 0,  // Will be updated below
-          rating: 800,     // Will be updated below
-          ratingHistory: []  // Will be updated below
+          gamesPlayed: 0,     // Will be updated below
+          rating: 800,        // Will be updated below
+          ratingHistory: []   // Will be updated below
         };
         
         if (title && String(title).trim()) {
