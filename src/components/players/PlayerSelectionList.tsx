@@ -27,8 +27,8 @@ export const PlayerSelectionList = ({
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {filteredPlayers.map(player => {
             const isSelected = selectedPlayers.some(p => p.id === player.id);
-            // Only show verification for titled players
-            const isTitleVerified = player.titleVerified && player.title;
+            // Show verification for any titled player
+            const hasTitle = Boolean(player.title);
             
             return (
               <div
@@ -53,8 +53,10 @@ export const PlayerSelectionList = ({
                         </span>
                       )}
                       {player.name}
-                      {isTitleVerified && (
-                        <Check className="h-4 w-4 ml-1 text-nigeria-green dark:text-nigeria-green-light" />
+                      {hasTitle && (
+                        <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
+                          <Check className="h-3.5 w-3.5 text-nigeria-green dark:text-emerald-400" />
+                        </div>
                       )}
                       {player.status === 'pending' && (
                         <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">

@@ -64,8 +64,8 @@ const PlayerProfile = () => {
     return null;
   }
 
-  // Check if the player has a verified title
-  const isTitleVerified = player.titleVerified && player.title;
+  // Now considering any title as worthy of verification
+  const hasTitle = Boolean(player.title);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -97,8 +97,10 @@ const PlayerProfile = () => {
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     {player.name}
-                    {isTitleVerified && (
-                      <Check className="h-6 w-6 text-nigeria-green dark:text-nigeria-green-light" />
+                    {hasTitle && (
+                      <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-emerald-500">
+                        <Check className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
+                      </div>
                     )}
                   </h1>
                   <div className="flex items-center text-gray-500 dark:text-gray-400 mt-1">

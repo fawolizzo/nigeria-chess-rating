@@ -38,8 +38,8 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     }
   };
 
-  // Check if the player has a title that should be verified (like GM, IM, FM, etc.)
-  const isTitleVerified = player.titleVerified && player.title;
+  // Check if the player has a title - now considering any title as worthy of verification
+  const hasTitle = Boolean(player.title);
 
   return (
     <div className="container py-8">
@@ -55,8 +55,10 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                   <h3 className="text-lg font-semibold flex items-center">
                     {player.title && <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>}
                     {player.name}
-                    {isTitleVerified && (
-                      <Check className="h-5 w-5 ml-1.5 text-nigeria-green dark:text-nigeria-green-light" />
+                    {hasTitle && (
+                      <div className="inline-flex items-center justify-center ml-1.5 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
+                        <Check className="h-4 w-4 text-nigeria-green dark:text-emerald-400" />
+                      </div>
                     )}
                   </h3>
                 </div>

@@ -14,8 +14,8 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
   const ratingChange = latestRating - previousRating;
 
-  // Only verify players with legitimate chess titles
-  const isTitleVerified = player.titleVerified && player.title;
+  // Consider any player with a title as needing verification
+  const hasTitle = Boolean(player.title);
   
   return (
     <Link
@@ -33,8 +33,10 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                   </span>
                 )}
                 {player.name}
-                {isTitleVerified && (
-                  <Check className="h-4 w-4 ml-1 text-nigeria-green dark:text-nigeria-green-light" />
+                {hasTitle && (
+                  <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
+                    <Check className="h-3.5 w-3.5 text-nigeria-green dark:text-emerald-400" />
+                  </div>
                 )}
               </h2>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">

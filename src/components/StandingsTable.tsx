@@ -79,7 +79,7 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                 {sortedStandings.map((player, index) => {
-                  const isTitleVerified = player.titleVerified && player.title;
+                  const hasTitle = Boolean(player.title);
                   
                   return (
                     <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
@@ -106,8 +106,10 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
                               </span>
                             )}
                             {player.name}
-                            {isTitleVerified && (
-                              <Check className="h-4 w-4 ml-1 text-blue-500" />
+                            {hasTitle && (
+                              <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
+                                <Check className="h-3.5 w-3.5 text-nigeria-green dark:text-emerald-400" />
+                              </div>
                             )}
                           </span>
                         </div>
