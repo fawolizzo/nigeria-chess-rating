@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -38,21 +39,19 @@ export const MultiSelectPlayers = ({
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
 
-  // Fetch approved and pending players for display
+  // Fetch all players, regardless of status
   useEffect(() => {
     const fetchPlayers = () => {
-      // Force refresh player list every time the dialog opens to catch newly imported players
+      // Force refresh player list every time the dialog opens
       const allPlayers = getAllPlayers();
-      console.log("All players in system:", allPlayers);
+      console.log("All players in system:", allPlayers.length);
       
-      // Get players with any status but exclude those already in the tournament
+      // Get players excluding those already in the tournament
       const availablePlayers = allPlayers.filter(player => {
-        const isExcluded = excludeIds.includes(player.id);
-        // Always include all players regardless of status
-        return !isExcluded;
+        return !excludeIds.includes(player.id);
       });
       
-      console.log("Available players for selection:", availablePlayers);
+      console.log("Available players for selection:", availablePlayers.length);
       
       if (availablePlayers.length === 0) {
         if (allPlayers.length === 0) {
@@ -137,7 +136,7 @@ export const MultiSelectPlayers = ({
           setSearchQuery={setSearchQuery} 
         />
         
-        {/* Selected players - now with max height */}
+        {/* Selected players */}
         <div className="mt-4">
           <SelectedPlayersList 
             selectedPlayers={selectedPlayers}
@@ -145,7 +144,7 @@ export const MultiSelectPlayers = ({
           />
         </div>
         
-        {/* Player selection list - with flex-grow to take remaining space */}
+        {/* Player selection list */}
         <div className="mt-4 flex-grow">
           <PlayerSelectionList 
             filteredPlayers={filteredPlayers}

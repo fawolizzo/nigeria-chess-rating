@@ -25,17 +25,29 @@ const Players = () => {
     // Load states
     setNigerianStatesList(getAllStates());
     
-    const fetchedPlayers = getAllPlayers();
+    // Fetch players on mount and display only approved players
+    const fetchPlayers = () => {
+      const fetchedPlayers = getAllPlayers();
+      console.log("All players fetched:", fetchedPlayers.length);
+      
+      // Filter out only approved players for public display
+      const approvedPlayers = fetchedPlayers.filter(player => 
+        player.status === 'approved'
+      );
+      console.log("Approved players for display:", approvedPlayers.length);
+      
+      // Sort by rating (highest first)
+      const sortedPlayers = [...approvedPlayers].sort((a, b) => b.rating - a.rating);
+      
+      setPlayers(sortedPlayers);
+    };
     
-    // Filter out only approved players for public display
-    const approvedPlayers = fetchedPlayers.filter(player => 
-      player.status === 'approved'
-    );
+    fetchPlayers();
     
-    // Sort by rating (highest first)
-    const sortedPlayers = [...approvedPlayers].sort((a, b) => b.rating - a.rating);
+    // Set up interval to periodically refresh player data
+    const intervalId = setInterval(fetchPlayers, 30000); // Check every 30 seconds
     
-    setPlayers(sortedPlayers);
+    return () => clearInterval(intervalId);
   }, []);
 
   const filteredPlayers = players.filter(player => {
@@ -92,7 +104,15 @@ const Players = () => {
             <div className="mt-6">
               <h2 className="text-xl font-semibold mb-4">Top Players</h2>
               
-              {filteredPlayers.length > 0 ? (
+              {players.length === 0 ? (
+                <div className="text-center py-10 border rounded-lg">
+                  <Search className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                  <h3 className="text-lg font-medium mb-1">Loading Players...</h3>
+                  <p className="text-muted-foreground">
+                    Please wait while we fetch the player rankings
+                  </p>
+                </div>
+              ) : filteredPlayers.length > 0 ? (
                 <>
                   <RankingTable 
                     players={filteredPlayers.slice(0, displayCount)} 

@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Upload, X, FileSpreadsheet, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { read, utils } from "xlsx";
-import { Player, getAllPlayers } from "@/lib/mockData";
+import { Player, getAllPlayers, addPlayer } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { useUser } from "@/contexts/UserContext";
@@ -195,7 +196,10 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           status: isRatingOfficer ? 'approved' : 'pending',
           gamesPlayed: 0,
           tournamentResults: [],
-          ratingHistory: []
+          ratingHistory: [{
+            date: new Date().toISOString().split('T')[0],
+            rating
+          }]
         };
         
         if (title && String(title).trim()) {
@@ -203,6 +207,10 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         }
         
         console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}, id: ${player.id}`);
+        
+        // Add each player to localStorage immediately
+        addPlayer(player as Player);
+        
         processedPlayers.push(player);
       }
       
@@ -218,10 +226,11 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         return;
       }
       
-      onPlayersImported(processedPlayers);
-      
+      // Check that players were actually saved to localStorage
       const currentPlayers = getAllPlayers();
-      console.log("System players after import:", currentPlayers);
+      console.log(`System now has ${currentPlayers.length} players after import`);
+      
+      onPlayersImported(processedPlayers);
       
       toast({
         title: "Players imported",
