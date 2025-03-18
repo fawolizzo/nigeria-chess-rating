@@ -22,7 +22,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
       to={`/player/${player.id}`}
       className="group block"
     >
-      <div className="relative overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-gold hover:border-opacity-50 dark:hover:border-gold-light dark:hover:border-opacity-30">
+      <div className="relative overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-blue-500 hover:border-opacity-50 dark:hover:border-blue-400 dark:hover:border-opacity-30">
         <div className="p-6">
           <div className="flex items-center space-x-4">
             <div className="flex-1 min-w-0">
@@ -34,7 +34,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                 )}
                 {player.name}
                 {hasTitle && (
-                  <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-blue-500">
+                  <div className="inline-flex items-center justify-center ml-1.5 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-blue-500">
                     <Check className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
                   </div>
                 )}
@@ -82,7 +82,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
           )}
         </div>
         
-        <div className="h-1 w-full bg-gradient-to-r from-gold-light via-gold to-gold-dark opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="h-1 w-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
     </Link>
   );

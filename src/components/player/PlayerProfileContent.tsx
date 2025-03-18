@@ -56,8 +56,8 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                     {player.title && <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>}
                     {player.name}
                     {hasTitle && (
-                      <div className="inline-flex items-center justify-center ml-1.5 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
-                        <Check className="h-4 w-4 text-nigeria-green dark:text-emerald-400" />
+                      <div className="inline-flex items-center justify-center ml-1.5 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-nigeria-green shadow-sm">
+                        <Check className="h-4 w-4 text-nigeria-green dark:text-nigeria-green-light" />
                       </div>
                     )}
                   </h3>
