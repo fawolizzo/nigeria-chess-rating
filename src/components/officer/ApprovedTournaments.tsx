@@ -32,7 +32,7 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
       // Load all tournaments and filter by status if no tournaments are provided
       const allTournaments = getAllTournaments();
       const approvedAndCompletedTournaments = allTournaments.filter(
-        t => t.status === "completed" || t.status === "processed"
+        t => t.status === "completed" || t.status === "processed" || t.status === "upcoming" || t.status === "ongoing"
       );
       setTournaments(approvedAndCompletedTournaments);
     }
