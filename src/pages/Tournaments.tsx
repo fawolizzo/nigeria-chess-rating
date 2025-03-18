@@ -59,6 +59,10 @@ const Tournaments: React.FC = () => {
   const handleCreateTournament = () => {
     navigate("/tournament-management/new");
   };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+  };
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -83,7 +87,8 @@ const Tournaments: React.FC = () => {
           <SearchBar 
             placeholder="Search tournaments..." 
             value={searchQuery}
-            onChange={setSearchQuery}
+            onChange={handleSearchChange}
+            onSearch={(query) => setSearchQuery(query)}
           />
           <StateSelector
             value={selectedState}

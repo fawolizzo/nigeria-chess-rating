@@ -19,6 +19,7 @@ interface StateSelectorProps {
   className?: string;
   disabled?: boolean;
   label?: string;
+  placeholder?: string; // Add placeholder prop
 }
 
 const StateSelector = ({
@@ -29,7 +30,8 @@ const StateSelector = ({
   onValueChange,
   className,
   disabled = false,
-  label
+  label,
+  placeholder = "Select a state"
 }: StateSelectorProps) => {
   const [states, setStates] = useState<string[]>([]);
   
@@ -60,7 +62,7 @@ const StateSelector = ({
         disabled={disabled}
       >
         <SelectTrigger className={className}>
-          <SelectValue placeholder="Select a state" />
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, X } from "lucide-react";
@@ -5,14 +6,24 @@ import { players } from "@/lib/mockData";
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
+  value?: string;
+  onChange?: (value: string) => void;
+  placeholder?: string; // Add placeholder prop
 }
 
-const SearchBar = ({ onSearch }: SearchBarProps = {}) => {
+const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(value || "");
   const [searchResults, setSearchResults] = useState<typeof players>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  
+  // Update internal state when value prop changes
+  useEffect(() => {
+    if (value !== undefined) {
+      setSearchQuery(value);
+    }
+  }, [value]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -36,7 +47,12 @@ const SearchBar = ({ onSearch }: SearchBarProps = {}) => {
     if (onSearch) {
       onSearch(searchQuery);
     }
-  }, [searchQuery, onSearch]);
+    
+    // Call onChange prop if provided
+    if (onChange && value !== searchQuery) {
+      onChange(searchQuery);
+    }
+  }, [searchQuery, onSearch, onChange, value]);
 
   const handleSearchClick = () => {
     setIsOpen(true);
@@ -46,6 +62,15 @@ const SearchBar = ({ onSearch }: SearchBarProps = {}) => {
     setIsOpen(false);
     setSearchQuery("");
     setSearchResults([]);
+    
+    if (onChange) {
+      onChange("");
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setSearchQuery(newValue);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -82,8 +107,8 @@ const SearchBar = ({ onSearch }: SearchBarProps = {}) => {
                   ref={inputRef}
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search players"
+                  onChange={handleInputChange}
+                  placeholder={placeholder}
                   className="w-full p-3 bg-transparent focus:outline-none text-gray-900 dark:text-white"
                 />
                 <button
