@@ -25,9 +25,45 @@ const TournamentRatingDialog = ({
 
   if (!tournament) return null;
 
+  // Get all registered players for this tournament
+  const allPlayers = getAllPlayers();
+  
+  // First try to get players from the players array in the tournament
+  let tournamentPlayers: Player[] = [];
+  if (tournament.players && tournament.players.length > 0) {
+    tournamentPlayers = tournament.players.map(playerId => {
+      const player = allPlayers.find(p => p.id === playerId);
+      return player;
+    }).filter((player): player is Player => player !== undefined);
+  }
+  
+  // If no players found, try to find players from the pairings
+  if (tournamentPlayers.length === 0 && tournament.pairings && tournament.pairings.length > 0) {
+    const playerIds = new Set<string>();
+    
+    // Collect all player IDs from pairings
+    tournament.pairings.forEach(round => {
+      round.matches.forEach(match => {
+        playerIds.add(match.whiteId);
+        playerIds.add(match.blackId);
+      });
+    });
+    
+    tournamentPlayers = Array.from(playerIds).map(id => {
+      const player = allPlayers.find(p => p.id === id);
+      return player;
+    }).filter((player): player is Player => player !== undefined);
+  }
+  
+  // As a last resort, try the tournament results in player objects
+  if (tournamentPlayers.length === 0) {
+    tournamentPlayers = allPlayers.filter(player => 
+      player.tournamentResults.some(result => result.tournamentId === tournament.id)
+    );
+  }
+  
   // Check if tournament can be processed
-  const tournamentPlayers = getPlayersByTournamentId(tournament.id);
-  const hasNoPlayers = !tournamentPlayers || tournamentPlayers.length === 0;
+  const hasNoPlayers = tournamentPlayers.length === 0;
   const isNotCompleted = tournament.status !== 'completed';
   const cannotProcess = hasNoPlayers || isNotCompleted;
 
@@ -43,9 +79,6 @@ const TournamentRatingDialog = ({
             : "Only completed tournaments can be processed for ratings."
         );
       }
-      
-      // Get all players to ensure we have a complete dataset
-      const allPlayers = getAllPlayers();
       
       // Process each round of matches if tournament has pairings
       if (tournament.pairings && tournament.pairings.length > 0) {
@@ -70,12 +103,31 @@ const TournamentRatingDialog = ({
                 throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}. Please ensure all players exist in the system.`);
               }
               
+              // Get the appropriate rating based on tournament category
+              const getPlayerRating = (player: Player) => {
+                if (tournament.category === 'rapid') {
+                  return player.rapidRating || player.rating;
+                } else if (tournament.category === 'blitz') {
+                  return player.blitzRating || player.rating;
+                }
+                return player.rating;
+              };
+              
+              const getPlayerGamesPlayed = (player: Player) => {
+                if (tournament.category === 'rapid') {
+                  return player.rapidGamesPlayed || player.gamesPlayed || 0;
+                } else if (tournament.category === 'blitz') {
+                  return player.blitzGamesPlayed || player.gamesPlayed || 0;
+                }
+                return player.gamesPlayed || 0;
+              };
+              
               return {
                 ...match,
-                whiteRating: whitePlayer.rating,
-                blackRating: blackPlayer.rating,
-                whiteGamesPlayed: whitePlayer.gamesPlayed || 0,
-                blackGamesPlayed: blackPlayer.gamesPlayed || 0,
+                whiteRating: getPlayerRating(whitePlayer),
+                blackRating: getPlayerRating(blackPlayer),
+                whiteGamesPlayed: getPlayerGamesPlayed(whitePlayer),
+                blackGamesPlayed: getPlayerGamesPlayed(blackPlayer),
                 result: (match.result || "*") as "1-0" | "0-1" | "1/2-1/2" | "*"
               };
             })
@@ -119,22 +171,70 @@ const TournamentRatingDialog = ({
             // Calculate final position based on score
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
-            // Get the new rating value after the change
-            const newRating = player.rating + update.ratingChange;
-            
-            const updatedPlayer = {
-              ...player,
-              rating: newRating,
-              gamesPlayed: (player.gamesPlayed || 0) + 1,
-              ratingHistory: [
-                ...(player.ratingHistory || []),
-                {
-                  date: new Date().toISOString().split('T')[0],
+            const updatePlayerBasedOnTournamentType = (player: Player) => {
+              if (tournament.category === 'rapid') {
+                // Update rapid rating
+                const newRapidRating = (player.rapidRating || player.rating) + update.ratingChange;
+                const newRapidGamesPlayed = (player.rapidGamesPlayed || 0) + 1;
+                
+                return {
+                  ...player,
+                  rapidRating: newRapidRating,
+                  rapidGamesPlayed: newRapidGamesPlayed,
+                  rapidRatingHistory: [
+                    ...(player.rapidRatingHistory || []),
+                    {
+                      date: new Date().toISOString().split('T')[0],
+                      rating: newRapidRating,
+                      reason: `Tournament: ${tournament.name}`
+                    }
+                  ]
+                };
+              } else if (tournament.category === 'blitz') {
+                // Update blitz rating
+                const newBlitzRating = (player.blitzRating || player.rating) + update.ratingChange;
+                const newBlitzGamesPlayed = (player.blitzGamesPlayed || 0) + 1;
+                
+                return {
+                  ...player,
+                  blitzRating: newBlitzRating,
+                  blitzGamesPlayed: newBlitzGamesPlayed,
+                  blitzRatingHistory: [
+                    ...(player.blitzRatingHistory || []),
+                    {
+                      date: new Date().toISOString().split('T')[0],
+                      rating: newBlitzRating,
+                      reason: `Tournament: ${tournament.name}`
+                    }
+                  ]
+                };
+              } else {
+                // Default to classical rating
+                const newRating = player.rating + update.ratingChange;
+                const newGamesPlayed = (player.gamesPlayed || 0) + 1;
+                
+                return {
+                  ...player,
                   rating: newRating,
-                  reason: `Tournament: ${tournament.name}`
-                }
-              ],
-              // Update tournament results to include this tournament
+                  gamesPlayed: newGamesPlayed,
+                  ratingHistory: [
+                    ...(player.ratingHistory || []),
+                    {
+                      date: new Date().toISOString().split('T')[0],
+                      rating: newRating,
+                      reason: `Tournament: ${tournament.name}`
+                    }
+                  ]
+                };
+              }
+            };
+            
+            // Update the player with the appropriate rating changes
+            const updatedPlayer = updatePlayerBasedOnTournamentType(player);
+            
+            // Add tournament result
+            const updatedPlayerWithResults = {
+              ...updatedPlayer,
               tournamentResults: [
                 ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
                 {
@@ -146,7 +246,7 @@ const TournamentRatingDialog = ({
             };
             
             // Update player in system
-            updatePlayer(updatedPlayer);
+            updatePlayer(updatedPlayerWithResults);
           }
         });
         
@@ -256,6 +356,36 @@ const TournamentRatingDialog = ({
                   <li>K=24 for players rated 2100-2399</li>
                   <li>K=16 for higher-rated players (2400+)</li>
                 </ul>
+              </div>
+              
+              <div className="mt-4">
+                <div className="font-medium mb-2">Registered Players: {tournamentPlayers.length}</div>
+                {tournamentPlayers.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto border rounded p-2">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-1">Name</th>
+                          <th className="text-right p-1">Rating</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tournamentPlayers.map((player) => (
+                          <tr key={player.id} className="border-b border-gray-100 last:border-0">
+                            <td className="p-1">{player.name}</td>
+                            <td className="text-right p-1">
+                              {tournament.category === 'rapid' 
+                                ? player.rapidRating || player.rating 
+                                : tournament.category === 'blitz'
+                                  ? player.blitzRating || player.rating
+                                  : player.rating}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>

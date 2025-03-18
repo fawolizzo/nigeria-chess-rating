@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getTournamentById, getPlayersByTournamentId, Tournament, Player, getAllPlayers } from "@/lib/mockData";
@@ -36,15 +37,42 @@ const TournamentDetails = () => {
         setTournament(fetchedTournament);
         
         let tournamentPlayers: Player[] = [];
+        const allPlayers = getAllPlayers();
         
-        if (fetchedTournament.status === 'processed' && fetchedTournament.processedPlayerIds) {
-          const allPlayers = getAllPlayers();
+        // First, check if tournament has a players array
+        if (fetchedTournament.players && fetchedTournament.players.length > 0) {
+          tournamentPlayers = fetchedTournament.players
+            .map(playerId => allPlayers.find(p => p.id === playerId))
+            .filter((p): p is Player => p !== undefined);
+        }
+        
+        // If no players found in the players array, look in pairings
+        if (tournamentPlayers.length === 0 && fetchedTournament.pairings && fetchedTournament.pairings.length > 0) {
+          const playerIds = new Set<string>();
+          fetchedTournament.pairings.forEach(round => {
+            round.matches.forEach(match => {
+              playerIds.add(match.whiteId);
+              playerIds.add(match.blackId);
+            });
+          });
+          
+          tournamentPlayers = Array.from(playerIds)
+            .map(id => allPlayers.find(p => p.id === id))
+            .filter((p): p is Player => p !== undefined);
+        }
+        
+        // As a last resort, look for players who have results for this tournament
+        if (tournamentPlayers.length === 0) {
           tournamentPlayers = allPlayers.filter(player => 
-            fetchedTournament.processedPlayerIds?.includes(player.id) ||
             player.tournamentResults.some(result => result.tournamentId === id)
           );
-        } else {
-          tournamentPlayers = getPlayersByTournamentId(id);
+        }
+        
+        // If tournament is processed, check the processed player IDs
+        if (tournamentPlayers.length === 0 && fetchedTournament.status === 'processed' && fetchedTournament.processedPlayerIds) {
+          tournamentPlayers = allPlayers.filter(player => 
+            fetchedTournament.processedPlayerIds?.includes(player.id)
+          );
         }
         
         setPlayers(tournamentPlayers);
@@ -79,12 +107,22 @@ const TournamentDetails = () => {
     
     const playerScores: Record<string, { score: number, tiebreak: number[] }> = {};
     
+    // Initialize scores for all players first
     playerList.forEach(player => {
       playerScores[player.id] = { score: 0, tiebreak: [0, 0] };
     });
     
+    // Now process the rounds safely
     tournament.pairings.forEach(round => {
       round.matches.forEach(match => {
+        // Ensure both players exist in playerScores before updating
+        if (!playerScores[match.whiteId]) {
+          playerScores[match.whiteId] = { score: 0, tiebreak: [0, 0] };
+        }
+        if (!playerScores[match.blackId]) {
+          playerScores[match.blackId] = { score: 0, tiebreak: [0, 0] };
+        }
+        
         if (match.result === "1-0") {
           playerScores[match.whiteId].score += 1;
         } else if (match.result === "0-1") {
@@ -96,12 +134,27 @@ const TournamentDetails = () => {
       });
     });
     
-    const calculatedStandings = playerList.map(player => ({
-      ...player,
-      score: playerScores[player.id]?.score || 0,
-      tiebreak: playerScores[player.id]?.tiebreak || [0, 0],
-    }));
+    // Map player objects with their scores
+    const calculatedStandings: PlayerWithScore[] = [];
     
+    playerList.forEach(player => {
+      if (playerScores[player.id]) {
+        calculatedStandings.push({
+          ...player,
+          score: playerScores[player.id].score,
+          tiebreak: playerScores[player.id].tiebreak || [0, 0],
+        });
+      } else {
+        // Handle players that might not have matches yet
+        calculatedStandings.push({
+          ...player,
+          score: 0,
+          tiebreak: [0, 0],
+        });
+      }
+    });
+    
+    // Sort by score (descending)
     calculatedStandings.sort((a, b) => b.score - a.score);
     
     setStandings(calculatedStandings);

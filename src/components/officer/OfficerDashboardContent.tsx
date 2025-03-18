@@ -31,12 +31,22 @@ const OfficerDashboardContent: React.FC = () => {
     });
   };
   
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // Refresh data when switching to the tournaments tab
+    if (value === "approved-tournaments") {
+      const allTournaments = getAllTournaments();
+      setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
+    }
+  };
+  
   return (
     <div>
       <Tabs 
         defaultValue="organizers" 
         value={activeTab} 
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="w-full"
       >
         <TabsList className="grid grid-cols-4 mb-0 border-b rounded-none w-full">
