@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Award } from "lucide-react";
+import { Trophy, Award, BadgeCheck } from "lucide-react";
 import { Player } from "@/lib/mockData";
 
 interface PlayerWithScore extends Player {
@@ -78,45 +78,52 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                {sortedStandings.map((player, index) => (
-                  <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="font-medium">
-                          {index === 0 ? (
-                            <Trophy className="h-4 w-4 text-yellow-500 inline mr-1" />
-                          ) : index === 1 ? (
-                            <Award className="h-4 w-4 text-gray-400 inline mr-1" />
-                          ) : index === 2 ? (
-                            <Award className="h-4 w-4 text-amber-600 inline mr-1" />
-                          ) : null}
-                          {index + 1}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {player.title && (
-                            <span className="text-gold-dark dark:text-gold-light mr-1">
-                              {player.title}
-                            </span>
-                          )}
-                          {player.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
-                      {player.rating}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-gray-900 dark:text-white">
-                      {player.score}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
-                      {calculateBuchholz(player)}
-                    </td>
-                  </tr>
-                ))}
+                {sortedStandings.map((player, index) => {
+                  const isTitleVerified = player.titleVerified && player.title;
+                  
+                  return (
+                    <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className="font-medium">
+                            {index === 0 ? (
+                              <Trophy className="h-4 w-4 text-yellow-500 inline mr-1" />
+                            ) : index === 1 ? (
+                              <Award className="h-4 w-4 text-gray-400 inline mr-1" />
+                            ) : index === 2 ? (
+                              <Award className="h-4 w-4 text-amber-600 inline mr-1" />
+                            ) : null}
+                            {index + 1}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className="font-medium text-gray-900 dark:text-white flex items-center">
+                            {player.title && (
+                              <span className="text-gold-dark dark:text-gold-light mr-1">
+                                {player.title}
+                              </span>
+                            )}
+                            {player.name}
+                            {isTitleVerified && (
+                              <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
+                        {player.rating}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right font-semibold text-gray-900 dark:text-white">
+                        {player.score}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
+                        {calculateBuchholz(player)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

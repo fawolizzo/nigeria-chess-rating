@@ -1,5 +1,5 @@
 
-import { Check } from "lucide-react";
+import { Check, BadgeCheck } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Player } from "@/lib/mockData";
@@ -27,6 +27,7 @@ export const PlayerSelectionList = ({
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {filteredPlayers.map(player => {
             const isSelected = selectedPlayers.some(p => p.id === player.id);
+            const isTitleVerified = player.titleVerified && player.title;
             
             return (
               <div
@@ -44,13 +45,16 @@ export const PlayerSelectionList = ({
                     id={`player-${player.id}`}
                   />
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="font-medium text-gray-900 dark:text-white flex items-center">
                       {player.title && (
                         <span className="text-gold-dark dark:text-gold-light mr-1">
                           {player.title}
                         </span>
                       )}
                       {player.name}
+                      {isTitleVerified && (
+                        <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
+                      )}
                       {player.status === 'pending' && (
                         <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">
                           Pending

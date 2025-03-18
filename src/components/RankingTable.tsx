@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Player } from "@/lib/mockData";
 import { Link } from "react-router-dom";
-import { ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronUp, ChevronDown, BadgeCheck } from "lucide-react";
 
 interface RankingTableProps {
   players: Player[];
@@ -105,6 +105,7 @@ const RankingTable = ({ players, itemsPerPage = 10 }: RankingTableProps) => {
               const latestRating = ratingHistory[ratingHistory.length - 1].rating;
               const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
               const ratingChange = latestRating - previousRating;
+              const isTitleVerified = player.titleVerified && player.title;
               
               return (
                 <tr 
@@ -117,9 +118,12 @@ const RankingTable = ({ players, itemsPerPage = 10 }: RankingTableProps) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <Link 
                       to={`/player/${player.id}`}
-                      className="text-gray-900 dark:text-white hover:text-gold-dark dark:hover:text-gold-light font-medium transition-colors duration-150"
+                      className="text-gray-900 dark:text-white hover:text-gold-dark dark:hover:text-gold-light font-medium transition-colors duration-150 flex items-center"
                     >
                       {player.name}
+                      {isTitleVerified && (
+                        <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
+                      )}
                     </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gold-dark dark:text-gold-light font-medium">

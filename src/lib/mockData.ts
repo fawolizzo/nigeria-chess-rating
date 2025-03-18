@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -41,6 +40,7 @@ export interface Player {
     rating: number;
     reason: string;
   }>;
+  titleVerified?: boolean; // New field to track title verification status
 }
 
 export interface Tournament {
@@ -85,7 +85,6 @@ export interface Tournament {
 export const players: Player[] = [];
 export const tournaments: Tournament[] = [];
 
-// Helper function to clear all stored data
 export const clearAllStoredData = (): void => {
   localStorage.removeItem('users');
   localStorage.removeItem('players');
@@ -133,6 +132,13 @@ export const updatePlayer = (updatedPlayer: Player): void => {
     }];
   }
   
+  // Automatically verify titles for titled players
+  if (updatedPlayer.title && 
+      ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(updatedPlayer.title) && 
+      updatedPlayer.titleVerified === undefined) {
+    updatedPlayer.titleVerified = true;
+  }
+  
   const updatedPlayers = allPlayers.map(player => 
     player.id === updatedPlayer.id ? updatedPlayer : player
   );
@@ -141,6 +147,14 @@ export const updatePlayer = (updatedPlayer: Player): void => {
 
 export const addPlayer = (newPlayer: Player): void => {
   const allPlayers = getAllPlayers();
+  
+  // Automatically verify titles for titled players
+  if (newPlayer.title && 
+      ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(newPlayer.title) && 
+      newPlayer.titleVerified === undefined) {
+    newPlayer.titleVerified = true;
+  }
+  
   savePlayers([...allPlayers, newPlayer]);
 };
 

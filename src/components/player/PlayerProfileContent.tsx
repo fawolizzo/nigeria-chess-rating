@@ -38,6 +38,8 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     }
   };
 
+  const isTitleVerified = player.titleVerified && player.title;
+
   return (
     <div className="container py-8">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -49,9 +51,12 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold flex items-center">
                     {player.title && <span className="text-gold-dark dark:text-gold-light">{player.title} </span>}
                     {player.name}
+                    {isTitleVerified && (
+                      <BadgeCheck className="h-5 w-5 ml-1.5 text-blue-500" />
+                    )}
                   </h3>
                 </div>
                 

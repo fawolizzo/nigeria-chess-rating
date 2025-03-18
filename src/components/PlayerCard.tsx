@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Player } from "@/lib/mockData";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, BadgeCheck } from "lucide-react";
 
 interface PlayerCardProps {
   player: Player;
@@ -14,6 +14,8 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
   const ratingChange = latestRating - previousRating;
 
+  const isTitleVerified = player.titleVerified && player.title;
+  
   return (
     <Link
       to={`/player/${player.id}`}
@@ -30,6 +32,9 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                   </span>
                 )}
                 {player.name}
+                {isTitleVerified && (
+                  <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
+                )}
               </h2>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                 <span>

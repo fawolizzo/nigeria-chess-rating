@@ -1,3 +1,4 @@
+
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -88,6 +89,25 @@ const PlayerFormModal = ({ isOpen, onOpenChange, onPlayerCreated, currentUserId 
       ],
       tournamentResults: []
     };
+    
+    // Add title if selected
+    if (data.title && data.title.trim() !== "") {
+      newPlayer.title = data.title;
+      
+      // Auto-verify official titles
+      if (["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(data.title)) {
+        newPlayer.titleVerified = true;
+      }
+    }
+    
+    // Add optional fields if provided
+    if (data.club && data.club.trim() !== "") {
+      newPlayer.club = data.club;
+    }
+    
+    if (data.birthYear) {
+      newPlayer.birthYear = parseInt(data.birthYear);
+    }
     
     onPlayerCreated(newPlayer);
     
@@ -231,6 +251,7 @@ const PlayerFormModal = ({ isOpen, onOpenChange, onPlayerCreated, currentUserId 
         
         <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-md text-sm">
           <p>Note: All newly created players will have a pending status and require approval from a Rating Officer before they can participate in tournaments.</p>
+          <p className="mt-2">Players with official chess titles (GM, IM, FM, etc.) will automatically receive a verified badge.</p>
         </div>
       </DialogContent>
     </Dialog>
