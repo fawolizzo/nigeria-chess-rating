@@ -98,8 +98,8 @@ const PlayerProfile = () => {
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     {player.name}
                     {hasTitle && (
-                      <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-emerald-500">
-                        <Check className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
+                      <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-nigeria-green">
+                        <Check className="h-5 w-5 text-nigeria-green dark:text-nigeria-green-light" />
                       </div>
                     )}
                   </h1>

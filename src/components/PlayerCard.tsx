@@ -34,8 +34,8 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                 )}
                 {player.name}
                 {hasTitle && (
-                  <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
-                    <Check className="h-3.5 w-3.5 text-nigeria-green dark:text-emerald-400" />
+                  <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-blue-500">
+                    <Check className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
                   </div>
                 )}
               </h2>
