@@ -1,36 +1,33 @@
 
 // Utility function to calculate K-factor for Elo calculation
 export const getKFactor = (rating: number, gamesPlayed: number): number => {
-  // If rating is high (2000-2400), we treat them as experienced players (30+ games)
-  // regardless of actual games played
-  if (rating >= 2000 && rating < 2400) {
-    return 24; // Treat high-rated players (2000-2400) as experienced with K=24
-  }
-  
   // Check if player has a rating ending with +100 (e.g., 1400+100)
   // These players should be treated as having 30+ games
-  if (String(rating).endsWith('100') || gamesPlayed >= 30) {
-    return 32; // Treat as established players
+  const hasPlus100 = String(rating).endsWith('100');
+  
+  // Players with +100 rating or 30+ games are treated as established players
+  if (hasPlus100 || gamesPlayed >= 30) {
+    // Players below 2100 get K=32
+    if (rating < 2100) {
+      return 32;
+    }
+    
+    // Players 2100-2399 get K=24
+    if (rating >= 2100 && rating <= 2399) {
+      return 24;
+    }
+    
+    // Higher rated players (2400+) get K=16
+    return 16;
   }
   
   // New or provisional players (fewer than 10 rated games)
-  // High-rated new players aren't treated as new players (no K=40)
   if (gamesPlayed < 10 && rating < 2000) {
     return 40;
   }
   
-  // Players below 2100 get K=32
-  if (rating < 2100) {
-    return 32;
-  }
-  
-  // Players 2100-2399 get K=24
-  if (rating >= 2100 && rating <= 2399) {
-    return 24;
-  }
-  
-  // Higher rated players (2400+) get K=16
-  return 16;
+  // Default K-factor for other players
+  return 32;
 };
 
 interface Match {
@@ -85,8 +82,11 @@ export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
     } = match;
 
     // Adjust games played for players with +100 ratings
-    const adjustedWhiteGamesPlayed = String(whiteRating).endsWith('100') ? Math.max(30, whiteGamesPlayed) : whiteGamesPlayed;
-    const adjustedBlackGamesPlayed = String(blackRating).endsWith('100') ? Math.max(30, blackGamesPlayed) : blackGamesPlayed;
+    const hasWhitePlus100 = String(whiteRating).endsWith('100');
+    const hasBlackPlus100 = String(blackRating).endsWith('100');
+    
+    const adjustedWhiteGamesPlayed = hasWhitePlus100 ? Math.max(31, whiteGamesPlayed) : whiteGamesPlayed;
+    const adjustedBlackGamesPlayed = hasBlackPlus100 ? Math.max(31, blackGamesPlayed) : blackGamesPlayed;
 
     const kFactorWhite = getKFactor(whiteRating, adjustedWhiteGamesPlayed);
     const kFactorBlack = getKFactor(blackRating, adjustedBlackGamesPlayed);

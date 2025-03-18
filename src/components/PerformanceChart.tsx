@@ -28,13 +28,33 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
   const minRating = Math.max(Math.floor((lowestRating - 50) / 100) * 100, 800); // Never go below floor rating
   const maxRating = Math.ceil((highestRating + 50) / 100) * 100;
 
+  // Adjust games played for display if player has a +100 rating
+  const getDisplayedGamesPlayed = () => {
+    const hasPlus100 = String(currentRating).endsWith('100');
+    const actualGamesPlayed = player.gamesPlayed || 0;
+    
+    // If player has +100 rating, ensure displayed games count starts at 31
+    if (hasPlus100) {
+      return Math.max(31, actualGamesPlayed);
+    }
+    return actualGamesPlayed;
+  };
+
   // Get K-factor description based on rating and games played
   const getKFactorDescription = (rating: number, gamesPlayed: number = 0) => {
-    if (gamesPlayed < 30) return "K=40 (New player)";
+    // If rating ends with 100, treat as experienced player
+    if (String(rating).endsWith('100')) {
+      return "K=32 (Established player)";
+    }
+    
+    if (gamesPlayed < 10) return "K=40 (New player)";
     if (rating < 2100) return "K=32";
     if (rating < 2400) return "K=24";
     return "K=16";
   };
+
+  // Calculate displayed games played
+  const displayedGamesPlayed = getDisplayedGamesPlayed();
 
   return (
     <Card className={className}>
@@ -67,7 +87,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
               </div>
               <div>
                 <div className="font-semibold">Games</div>
-                <div>{player.gamesPlayed || chartData.length}</div>
+                <div>{displayedGamesPlayed}</div>
               </div>
             </div>
             

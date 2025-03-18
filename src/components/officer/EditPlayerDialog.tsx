@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -88,10 +87,30 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     }
   }, [player, form]);
 
+  // Helper function to determine if a rating has +100
+  const hasPlus100Rating = (rating: number | undefined): boolean => {
+    if (!rating) return false;
+    return String(rating).endsWith('100');
+  };
+
+  // Adjust games played for +100 ratings when submitting
+  const adjustGamesPlayed = (rating: number | undefined, gamesPlayed: number | undefined): number | undefined => {
+    if (!rating || !gamesPlayed) return gamesPlayed;
+    if (String(rating).endsWith('100')) {
+      return Math.max(31, gamesPlayed);
+    }
+    return gamesPlayed;
+  };
+
   const onSubmit = (data: PlayerFormValues) => {
     if (!player) return;
     
     try {
+      // Adjust games played for +100 ratings
+      const adjustedGamesPlayed = adjustGamesPlayed(data.rating, data.gamesPlayed);
+      const adjustedRapidGamesPlayed = adjustGamesPlayed(data.rapidRating, data.rapidGamesPlayed);
+      const adjustedBlitzGamesPlayed = adjustGamesPlayed(data.blitzRating, data.blitzGamesPlayed);
+      
       const updatedPlayer: Player = {
         ...player,
         name: data.name,
@@ -102,9 +121,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         gender: data.gender,
         state: data.state,
         birthYear: data.birthYear,
-        gamesPlayed: data.gamesPlayed,
-        rapidGamesPlayed: data.rapidGamesPlayed,
-        blitzGamesPlayed: data.blitzGamesPlayed,
+        gamesPlayed: adjustedGamesPlayed,
+        rapidGamesPlayed: adjustedRapidGamesPlayed,
+        blitzGamesPlayed: adjustedBlitzGamesPlayed,
       };
       
       // Only add to history if rating changed
