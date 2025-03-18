@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Award, Check } from "lucide-react";
 import { Player } from "@/lib/mockData";
