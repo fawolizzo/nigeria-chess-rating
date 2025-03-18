@@ -14,6 +14,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
   const ratingChange = latestRating - previousRating;
 
+  // Only verify players with legitimate chess titles
   const isTitleVerified = player.titleVerified && player.title;
   
   return (

@@ -38,6 +38,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     }
   };
 
+  // Check if the player has a title that should be verified (like GM, IM, FM, etc.)
   const isTitleVerified = player.titleVerified && player.title;
 
   return (

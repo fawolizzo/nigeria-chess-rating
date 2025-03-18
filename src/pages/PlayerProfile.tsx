@@ -7,7 +7,7 @@ import { Player } from "@/lib/mockData";
 import PlayerProfileContent from "@/components/player/PlayerProfileContent";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
-import { Pencil, ArrowLeft } from "lucide-react";
+import { Pencil, ArrowLeft, Check } from "lucide-react";
 import EditPlayerDialog from "@/components/officer/EditPlayerDialog";
 
 const PlayerProfile = () => {
@@ -64,6 +64,9 @@ const PlayerProfile = () => {
     return null;
   }
 
+  // Check if the player has a verified title
+  const isTitleVerified = player.titleVerified && player.title;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -94,6 +97,9 @@ const PlayerProfile = () => {
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     {player.name}
+                    {isTitleVerified && (
+                      <Check className="h-6 w-6 text-blue-500" />
+                    )}
                   </h1>
                   <div className="flex items-center text-gray-500 dark:text-gray-400 mt-1">
                     <span className="font-medium text-nigeria-green dark:text-nigeria-green-light">Rating: {player.rating}</span>

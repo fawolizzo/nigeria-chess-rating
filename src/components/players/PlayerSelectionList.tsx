@@ -27,6 +27,7 @@ export const PlayerSelectionList = ({
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {filteredPlayers.map(player => {
             const isSelected = selectedPlayers.some(p => p.id === player.id);
+            // Only show verification for titled players
             const isTitleVerified = player.titleVerified && player.title;
             
             return (
