@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Award, Check } from "lucide-react";
+import { Trophy, Award, BadgeCheck } from "lucide-react";
 import { Player } from "@/lib/mockData";
 
 interface PlayerWithScore extends Player {
@@ -30,7 +30,8 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
     return buchholz;
   };
 
-  // Calculate Sonneborn-Berger score 
+  // Calculate Sonneborn-Berger score (sum of the scores of the opponents a player has defeated, 
+  // plus half the scores of the opponents with whom the player has drawn)
   const calculateSonnebornBerger = (player: PlayerWithScore) => {
     let sb = 0;
     
@@ -78,7 +79,7 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                 {sortedStandings.map((player, index) => {
-                  const hasTitle = Boolean(player.title);
+                  const isTitleVerified = player.titleVerified && player.title;
                   
                   return (
                     <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
@@ -100,17 +101,13 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
                         <div className="flex items-center">
                           <span className="font-medium text-gray-900 dark:text-white flex items-center">
                             {player.title && (
-                              <span className="text-gold-dark dark:text-gold-light mr-2">
+                              <span className="text-gold-dark dark:text-gold-light mr-1">
                                 {player.title}
                               </span>
                             )}
                             {player.name}
-                            {hasTitle && (
-                              <div className="inline-flex items-center justify-center ml-1.5">
-                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                                  <Check className="h-3 w-3 text-white" />
-                                </div>
-                              </div>
+                            {isTitleVerified && (
+                              <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
                             )}
                           </span>
                         </div>

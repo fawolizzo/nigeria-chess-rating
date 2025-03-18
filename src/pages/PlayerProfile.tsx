@@ -7,8 +7,9 @@ import { Player } from "@/lib/mockData";
 import PlayerProfileContent from "@/components/player/PlayerProfileContent";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
-import { Pencil, ArrowLeft, Check } from "lucide-react";
+import { Pencil, Award, ArrowLeft } from "lucide-react";
 import EditPlayerDialog from "@/components/officer/EditPlayerDialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -64,9 +65,6 @@ const PlayerProfile = () => {
     return null;
   }
 
-  // Now considering any title as worthy of verification
-  const hasTitle = Boolean(player.title);
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -97,13 +95,6 @@ const PlayerProfile = () => {
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     {player.name}
-                    {hasTitle && (
-                      <div className="inline-flex items-center justify-center ml-1.5">
-                        <div className="w-7 h-7 bg-nigeria-green rounded-full flex items-center justify-center">
-                          <Check className="h-4 w-4 text-white" />
-                        </div>
-                      </div>
-                    )}
                   </h1>
                   <div className="flex items-center text-gray-500 dark:text-gray-400 mt-1">
                     <span className="font-medium text-nigeria-green dark:text-nigeria-green-light">Rating: {player.rating}</span>

@@ -33,15 +33,6 @@ export const getKFactor = (rating: number, gamesPlayed: number): number => {
 // Floor rating constant
 export const FLOOR_RATING = 800;
 
-// Initialize a new rating for a player without history in a specific format
-export const initializeNewFormatRating = () => {
-  return {
-    rating: FLOOR_RATING,
-    gamesPlayed: 0,
-    ratingStatus: 'provisional' as 'provisional' | 'established'
-  };
-};
-
 interface Match {
   whiteId: string;
   blackId: string;

@@ -1,7 +1,8 @@
+
 import { useMemo, useState } from "react";
 import { Player } from "@/lib/mockData";
 import { Link } from "react-router-dom";
-import { ArrowUp, ArrowDown, ChevronUp, ChevronDown, Check } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronUp, ChevronDown, BadgeCheck } from "lucide-react";
 
 interface RankingTableProps {
   players: Player[];
@@ -34,6 +35,7 @@ const RankingTable = ({ players, itemsPerPage = 10 }: RankingTableProps) => {
       } else if (sortField === "rating") {
         comparison = a.rating - b.rating;
       } else if (sortField === "title") {
+        // Sort players by title, null titles last
         const titleA = a.title || "";
         const titleB = b.title || "";
         comparison = titleA.localeCompare(titleB);
@@ -103,7 +105,7 @@ const RankingTable = ({ players, itemsPerPage = 10 }: RankingTableProps) => {
               const latestRating = ratingHistory[ratingHistory.length - 1].rating;
               const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
               const ratingChange = latestRating - previousRating;
-              const hasTitle = Boolean(player.title);
+              const isTitleVerified = player.titleVerified && player.title;
               
               return (
                 <tr 
@@ -119,10 +121,8 @@ const RankingTable = ({ players, itemsPerPage = 10 }: RankingTableProps) => {
                       className="text-gray-900 dark:text-white hover:text-gold-dark dark:hover:text-gold-light font-medium transition-colors duration-150 flex items-center"
                     >
                       {player.name}
-                      {hasTitle && (
-                        <div className="inline-flex items-center justify-center ml-1 bg-white dark:bg-gray-800 rounded-full border border-nigeria-green">
-                          <Check className="h-3.5 w-3.5 text-nigeria-green dark:text-emerald-400" />
-                        </div>
+                      {isTitleVerified && (
+                        <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
                       )}
                     </Link>
                   </td>

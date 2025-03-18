@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle, AlertCircle, BadgeCheck } from "lucide-react";
 import { Player, Tournament, updatePlayer, updateTournament, getAllPlayers } from "@/lib/mockData";
-import { calculatePostRoundRatings, FLOOR_RATING, initializeNewFormatRating } from "@/lib/ratingCalculation";
+import { calculatePostRoundRatings, FLOOR_RATING } from "@/lib/ratingCalculation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TournamentRatingDialogProps {
@@ -104,11 +104,11 @@ const TournamentRatingDialog = ({
               
               // Get the appropriate rating based on tournament category
               const getPlayerRating = (player: Player) => {
-                // CORRECTED LOGIC: Only use the specific tournament format rating
-                // if format rating doesn't exist, use floor rating
                 if (tournament.category === 'rapid') {
+                  // Use floor rating if player has no rapid rating
                   return player.rapidRating ?? FLOOR_RATING;
                 } else if (tournament.category === 'blitz') {
+                  // Use floor rating if player has no blitz rating
                   return player.blitzRating ?? FLOOR_RATING;
                 }
                 return player.rating;
@@ -125,19 +125,19 @@ const TournamentRatingDialog = ({
               };
               
               const getPlayerGamesPlayed = (player: Player) => {
-                if (tournament.category === 'rapid') {
-                  return player.rapidGamesPlayed ?? 0;
-                } else if (tournament.category === 'blitz') {
-                  return player.blitzGamesPlayed ?? 0;
-                }
-                return player.gamesPlayed || 0;
-              };
-              
-              // Adjust games played if player has established rating
-              const adjustGamesPlayed = (player: Player) => {
-                const gamesPlayed = getPlayerGamesPlayed(player);
+                const playerRating = getPlayerRating(player);
                 const ratingStatus = getPlayerRatingStatus(player);
                 
+                if (tournament.category === 'rapid') {
+                  // Start at 0 games if player has no rapid rating history
+                  const gamesPlayed = player.rapidGamesPlayed ?? 0;
+                  return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
+                } else if (tournament.category === 'blitz') {
+                  // Start at 0 games if player has no blitz rating history
+                  const gamesPlayed = player.blitzGamesPlayed ?? 0;
+                  return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
+                }
+                const gamesPlayed = player.gamesPlayed || 0;
                 return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
               };
               
@@ -145,8 +145,8 @@ const TournamentRatingDialog = ({
                 ...match,
                 whiteRating: getPlayerRating(whitePlayer),
                 blackRating: getPlayerRating(blackPlayer),
-                whiteGamesPlayed: adjustGamesPlayed(whitePlayer),
-                blackGamesPlayed: adjustGamesPlayed(blackPlayer),
+                whiteGamesPlayed: getPlayerGamesPlayed(whitePlayer),
+                blackGamesPlayed: getPlayerGamesPlayed(blackPlayer),
                 result: (match.result || "*") as "1-0" | "0-1" | "1/2-1/2" | "*"
               };
             })
@@ -195,88 +195,89 @@ const TournamentRatingDialog = ({
             // Calculate final position based on score
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
-            // CORRECTED RATING ASSIGNMENT LOGIC
-            // Only update specific format ratings and leave other format ratings unchanged
-            let updatedPlayer: Player = { ...player };
-            
-            if (tournament.category === 'rapid') {
-              // Check if player has a rapid rating yet
-              if (updatedPlayer.rapidRating === undefined) {
-                // Initialize with floor rating + rating change
-                const newRating = FLOOR_RATING + update.ratingChange;
+            const updatePlayerBasedOnTournamentType = (player: Player) => {
+              if (tournament.category === 'rapid') {
+                // Update rapid rating
+                // If no rapid rating yet, start with floor rating
+                const currentRapidRating = player.rapidRating ?? FLOOR_RATING;
+                const newRapidRating = currentRapidRating + update.ratingChange;
                 
-                updatedPlayer = {
-                  ...updatedPlayer,
-                  rapidRating: newRating,
-                  rapidGamesPlayed: update.gamesPlayed,
-                  rapidRatingStatus: 'provisional',
-                  rapidRatingHistory: [{
-                    date: new Date().toISOString().split('T')[0],
-                    rating: newRating,
-                    reason: `Tournament: ${tournament.name} (First rapid rating)`
-                  }]
-                };
-              } else {
-                // Update existing rapid rating
-                const newRating = updatedPlayer.rapidRating + update.ratingChange;
-                const newGamesPlayed = (updatedPlayer.rapidGamesPlayed || 0) + update.gamesPlayed;
+                // Update rapid games played
+                const currentRapidGamesPlayed = player.rapidGamesPlayed ?? 0;
+                const newRapidGamesPlayed = currentRapidGamesPlayed + update.gamesPlayed;
                 
-                // Update rating status if needed
-                let newRatingStatus = updatedPlayer.rapidRatingStatus || 'provisional';
-                if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
-                  newRatingStatus = 'established';
+                // Determine if rating status should change
+                let newRapidRatingStatus = player.rapidRatingStatus || 'provisional';
+                if (newRapidRatingStatus === 'provisional' && newRapidGamesPlayed >= 30) {
+                  newRapidRatingStatus = 'established';
                 }
                 
-                updatedPlayer = {
-                  ...updatedPlayer,
-                  rapidRating: newRating,
-                  rapidGamesPlayed: newGamesPlayed,
-                  rapidRatingStatus: newRatingStatus,
+                return {
+                  ...player,
+                  rapidRating: newRapidRating,
+                  rapidGamesPlayed: newRapidGamesPlayed,
+                  rapidRatingStatus: newRapidRatingStatus,
                   rapidRatingHistory: [
-                    ...(updatedPlayer.rapidRatingHistory || []),
+                    ...(player.rapidRatingHistory || []),
                     {
                       date: new Date().toISOString().split('T')[0],
-                      rating: newRating,
+                      rating: newRapidRating,
                       reason: `Tournament: ${tournament.name}`
                     }
                   ]
                 };
-              }
-            } else if (tournament.category === 'blitz') {
-              // Check if player has a blitz rating yet
-              if (updatedPlayer.blitzRating === undefined) {
-                // Initialize with floor rating + rating change
-                const newRating = FLOOR_RATING + update.ratingChange;
+              } else if (tournament.category === 'blitz') {
+                // Update blitz rating
+                // If no blitz rating yet, start with floor rating
+                const currentBlitzRating = player.blitzRating ?? FLOOR_RATING;
+                const newBlitzRating = currentBlitzRating + update.ratingChange;
                 
-                updatedPlayer = {
-                  ...updatedPlayer,
-                  blitzRating: newRating,
-                  blitzGamesPlayed: update.gamesPlayed,
-                  blitzRatingStatus: 'provisional',
-                  blitzRatingHistory: [{
-                    date: new Date().toISOString().split('T')[0],
-                    rating: newRating,
-                    reason: `Tournament: ${tournament.name} (First blitz rating)`
-                  }]
+                // Update blitz games played
+                const currentBlitzGamesPlayed = player.blitzGamesPlayed ?? 0;
+                const newBlitzGamesPlayed = currentBlitzGamesPlayed + update.gamesPlayed;
+                
+                // Determine if rating status should change
+                let newBlitzRatingStatus = player.blitzRatingStatus || 'provisional';
+                if (newBlitzRatingStatus === 'provisional' && newBlitzGamesPlayed >= 30) {
+                  newBlitzRatingStatus = 'established';
+                }
+                
+                return {
+                  ...player,
+                  blitzRating: newBlitzRating,
+                  blitzGamesPlayed: newBlitzGamesPlayed,
+                  blitzRatingStatus: newBlitzRatingStatus,
+                  blitzRatingHistory: [
+                    ...(player.blitzRatingHistory || []),
+                    {
+                      date: new Date().toISOString().split('T')[0],
+                      rating: newBlitzRating,
+                      reason: `Tournament: ${tournament.name}`
+                    }
+                  ]
                 };
               } else {
-                // Update existing blitz rating
-                const newRating = updatedPlayer.blitzRating + update.ratingChange;
-                const newGamesPlayed = (updatedPlayer.blitzGamesPlayed || 0) + update.gamesPlayed;
+                // Default to classical rating
+                const currentRating = player.rating;
+                const newRating = currentRating + update.ratingChange;
                 
-                // Update rating status if needed
-                let newRatingStatus = updatedPlayer.blitzRatingStatus || 'provisional';
+                // Update classical games played
+                const currentGamesPlayed = player.gamesPlayed || 0;
+                const newGamesPlayed = currentGamesPlayed + update.gamesPlayed;
+                
+                // Determine if rating status should change
+                let newRatingStatus = player.ratingStatus || 'provisional';
                 if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
                   newRatingStatus = 'established';
                 }
                 
-                updatedPlayer = {
-                  ...updatedPlayer,
-                  blitzRating: newRating,
-                  blitzGamesPlayed: newGamesPlayed,
-                  blitzRatingStatus: newRatingStatus,
-                  blitzRatingHistory: [
-                    ...(updatedPlayer.blitzRatingHistory || []),
+                return {
+                  ...player,
+                  rating: newRating,
+                  gamesPlayed: newGamesPlayed,
+                  ratingStatus: newRatingStatus,
+                  ratingHistory: [
+                    ...(player.ratingHistory || []),
                     {
                       date: new Date().toISOString().split('T')[0],
                       rating: newRating,
@@ -285,45 +286,26 @@ const TournamentRatingDialog = ({
                   ]
                 };
               }
-            } else {
-              // Classical tournament
-              const newRating = updatedPlayer.rating + update.ratingChange;
-              const newGamesPlayed = (updatedPlayer.gamesPlayed || 0) + update.gamesPlayed;
-              
-              // Update rating status if needed
-              let newRatingStatus = updatedPlayer.ratingStatus || 'provisional';
-              if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
-                newRatingStatus = 'established';
-              }
-              
-              updatedPlayer = {
-                ...updatedPlayer,
-                rating: newRating,
-                gamesPlayed: newGamesPlayed,
-                ratingStatus: newRatingStatus,
-                ratingHistory: [
-                  ...(updatedPlayer.ratingHistory || []),
-                  {
-                    date: new Date().toISOString().split('T')[0],
-                    rating: newRating,
-                    reason: `Tournament: ${tournament.name}`
-                  }
-                ]
-              };
-            }
+            };
+            
+            // Update the player with the appropriate rating changes
+            const updatedPlayer = updatePlayerBasedOnTournamentType(player);
             
             // Add tournament result
-            updatedPlayer.tournamentResults = [
-              ...updatedPlayer.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
-              {
-                tournamentId: tournament.id,
-                position: finalPosition,
-                ratingChange: update.ratingChange
-              }
-            ];
+            const updatedPlayerWithResults = {
+              ...updatedPlayer,
+              tournamentResults: [
+                ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
+                {
+                  tournamentId: tournament.id,
+                  position: finalPosition,
+                  ratingChange: update.ratingChange
+                }
+              ]
+            };
             
             // Update player in system
-            updatePlayer(updatedPlayer);
+            updatePlayer(updatedPlayerWithResults);
           }
         });
         
@@ -338,7 +320,7 @@ const TournamentRatingDialog = ({
         
         toast({
           title: "Ratings Processed",
-          description: `All player ${tournament.category || 'classical'} ratings have been updated for ${tournament.name}`,
+          description: `All player ratings have been updated for ${tournament.name}`,
         });
         
         onOpenChange(false);
@@ -403,16 +385,6 @@ const TournamentRatingDialog = ({
     return player.rating;
   };
 
-  // Function to check if a player needs to start with a floor rating
-  const needsFloorRating = (player: Player) => {
-    if (tournament.category === 'rapid') {
-      return player.rapidRating === undefined;
-    } else if (tournament.category === 'blitz') {
-      return player.blitzRating === undefined;
-    }
-    return false; // Classical rating should always exist
-  };
-
   // Function to get the rating status icon
   const getRatingStatusIcon = (player: Player) => {
     let ratingStatus: string | undefined;
@@ -460,7 +432,6 @@ const TournamentRatingDialog = ({
                   <p className="text-sm font-medium">This action is irreversible</p>
                   <p className="text-sm mt-1">
                     Player {tournament.category || 'classical'} ratings will be permanently updated based on tournament results.
-                    Ratings in other formats will remain unchanged.
                   </p>
                 </div>
               </div>
@@ -468,7 +439,7 @@ const TournamentRatingDialog = ({
               <div className="flex flex-col gap-2">
                 <div className="font-medium">Rating System Parameters:</div>
                 <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                  <li>Floor rating of {FLOOR_RATING} for players without existing {tournament.category || 'classical'} ratings</li>
+                  <li>Floor rating of {FLOOR_RATING} for players without {tournament.category || 'classical'} ratings</li>
                   <li>K=40 for new players (less than 10 games) under 2000 rating</li>
                   <li>K=32 for players rated below 2100</li>
                   <li>K=24 for players rated 2100-2399</li>
@@ -495,27 +466,14 @@ const TournamentRatingDialog = ({
                           let displayRating: number;
                           let gamesPlayed: number;
                           let statusText: string;
-                          let isFloorRating = false;
                           
                           if (tournament.category === 'rapid') {
-                            if (player.rapidRating === undefined) {
-                              displayRating = FLOOR_RATING;
-                              gamesPlayed = 0;
-                              isFloorRating = true;
-                            } else {
-                              displayRating = player.rapidRating;
-                              gamesPlayed = player.rapidGamesPlayed ?? 0;
-                            }
+                            displayRating = player.rapidRating ?? FLOOR_RATING;
+                            gamesPlayed = player.rapidGamesPlayed ?? 0;
                             statusText = player.rapidRatingStatus === 'established' ? 'Established' : `Provisional (${gamesPlayed}/30)`;
                           } else if (tournament.category === 'blitz') {
-                            if (player.blitzRating === undefined) {
-                              displayRating = FLOOR_RATING;
-                              gamesPlayed = 0;
-                              isFloorRating = true;
-                            } else {
-                              displayRating = player.blitzRating;
-                              gamesPlayed = player.blitzGamesPlayed ?? 0;
-                            }
+                            displayRating = player.blitzRating ?? FLOOR_RATING;
+                            gamesPlayed = player.blitzGamesPlayed ?? 0;
                             statusText = player.blitzRatingStatus === 'established' ? 'Established' : `Provisional (${gamesPlayed}/30)`;
                           } else {
                             displayRating = player.rating;
@@ -528,9 +486,6 @@ const TournamentRatingDialog = ({
                               <td className="p-1">{player.name}</td>
                               <td className="text-right p-1">
                                 {displayRating}
-                                {isFloorRating && (
-                                  <span className="text-blue-600 ml-1">(Floor)</span>
-                                )}
                               </td>
                               <td className="text-right p-1 flex items-center justify-end">
                                 {statusText}
@@ -581,3 +536,4 @@ const TournamentRatingDialog = ({
 };
 
 export default TournamentRatingDialog;
+

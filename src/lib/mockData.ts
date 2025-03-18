@@ -132,14 +132,11 @@ export const updatePlayer = (updatedPlayer: Player): void => {
     }];
   }
   
-  // Automatically verify titles for official chess titles only
+  // Automatically verify titles for titled players
   if (updatedPlayer.title && 
       ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(updatedPlayer.title) && 
       updatedPlayer.titleVerified === undefined) {
     updatedPlayer.titleVerified = true;
-  } else if (!updatedPlayer.title || !["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(updatedPlayer.title)) {
-    // Remove verification for non-titled players or non-official titles
-    updatedPlayer.titleVerified = false;
   }
   
   const updatedPlayers = allPlayers.map(player => 
@@ -151,13 +148,11 @@ export const updatePlayer = (updatedPlayer: Player): void => {
 export const addPlayer = (newPlayer: Player): void => {
   const allPlayers = getAllPlayers();
   
-  // Automatically verify only official chess titles
+  // Automatically verify titles for titled players
   if (newPlayer.title && 
       ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(newPlayer.title) && 
       newPlayer.titleVerified === undefined) {
     newPlayer.titleVerified = true;
-  } else {
-    newPlayer.titleVerified = false;
   }
   
   savePlayers([...allPlayers, newPlayer]);

@@ -123,12 +123,6 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     return gamesPlayed;
   };
 
-  // Determine if the title should be automatically verified
-  const shouldVerifyTitle = (title: string | undefined): boolean => {
-    if (!title || title === "none") return false;
-    return ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(title);
-  };
-
   const onSubmit = (data: PlayerFormValues) => {
     if (!player) return;
     
@@ -138,15 +132,10 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       const adjustedRapidGamesPlayed = adjustGamesPlayed(data.rapidRating, data.rapidGamesPlayed, data.rapidRatingStatus);
       const adjustedBlitzGamesPlayed = adjustGamesPlayed(data.blitzRating, data.blitzGamesPlayed, data.blitzRatingStatus);
       
-      // Handle title verification
-      const titleToSave = data.title === "none" ? undefined : data.title;
-      const titleVerified = shouldVerifyTitle(titleToSave);
-      
       const updatedPlayer: Player = {
         ...player,
         name: data.name,
-        title: titleToSave,
-        titleVerified: titleVerified, // Set verification based on title
+        title: data.title === "none" ? undefined : data.title,
         rating: data.rating,
         rapidRating: data.rapidRating,
         blitzRating: data.blitzRating,

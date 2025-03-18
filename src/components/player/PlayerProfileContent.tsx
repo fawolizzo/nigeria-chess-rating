@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,7 +7,7 @@ import PlayerPerformance from "./PlayerPerformance";
 import RatingChart from "../RatingChart";
 import PlayerRatings from "./PlayerRatings";
 import MultiFormatRatingChart from "./MultiFormatRatingChart";
-import { Check, AlertCircle } from "lucide-react";
+import { BadgeCheck, AlertCircle } from "lucide-react";
 
 interface PlayerProfileContentProps {
   player: Player;
@@ -23,7 +24,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     if (status === 'established' || gamesPlayed && gamesPlayed >= 30) {
       return (
         <span className="inline-flex items-center ml-2 text-green-600">
-          <Check size={16} className="mr-1" />
+          <BadgeCheck size={16} className="mr-1" />
           <span className="text-xs">Established</span>
         </span>
       );
@@ -37,8 +38,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     }
   };
 
-  // Check if the player has a title - now considering any title as worthy of verification
-  const hasTitle = Boolean(player.title);
+  const isTitleVerified = player.titleVerified && player.title;
 
   return (
     <div className="container py-8">
@@ -52,14 +52,10 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold flex items-center">
-                    {player.title && <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>}
+                    {player.title && <span className="text-gold-dark dark:text-gold-light">{player.title} </span>}
                     {player.name}
-                    {hasTitle && (
-                      <div className="inline-flex items-center justify-center ml-1.5">
-                        <div className="w-6 h-6 bg-nigeria-green rounded-full flex items-center justify-center">
-                          <Check className="h-3.5 w-3.5 text-white" />
-                        </div>
-                      </div>
+                    {isTitleVerified && (
+                      <BadgeCheck className="h-5 w-5 ml-1.5 text-blue-500" />
                     )}
                   </h3>
                 </div>
@@ -105,29 +101,21 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                       {renderRatingStatus(player.ratingStatus, player.gamesPlayed)}
                     </div>
                     
-                    <div>
-                      <span className="font-medium">Rapid: </span>
-                      {player.rapidRating !== undefined ? (
-                        <>
-                          <span>{player.rapidRating}</span>
-                          {renderRatingStatus(player.rapidRatingStatus, player.rapidGamesPlayed)}
-                        </>
-                      ) : (
-                        <span className="text-gray-500">Not rated</span>
-                      )}
-                    </div>
+                    {player.rapidRating && (
+                      <div>
+                        <span className="font-medium">Rapid: </span>
+                        <span>{player.rapidRating}</span>
+                        {renderRatingStatus(player.rapidRatingStatus, player.rapidGamesPlayed)}
+                      </div>
+                    )}
                     
-                    <div>
-                      <span className="font-medium">Blitz: </span>
-                      {player.blitzRating !== undefined ? (
-                        <>
-                          <span>{player.blitzRating}</span>
-                          {renderRatingStatus(player.blitzRatingStatus, player.blitzGamesPlayed)}
-                        </>
-                      ) : (
-                        <span className="text-gray-500">Not rated</span>
-                      )}
-                    </div>
+                    {player.blitzRating && (
+                      <div>
+                        <span className="font-medium">Blitz: </span>
+                        <span>{player.blitzRating}</span>
+                        {renderRatingStatus(player.blitzRatingStatus, player.blitzGamesPlayed)}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -158,8 +146,10 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
             </TabsList>
             
             <TabsContent value="ratings" className="space-y-6">
+              {/* Replace the old chart with our new multi-format chart */}
               <MultiFormatRatingChart player={player} height={400} />
               
+              {/* Add rating rules explainer */}
               <Card className="mt-4">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Rating System Rules</CardTitle>
@@ -168,9 +158,9 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                     <li>Players start with a floor rating of 800 in each format if unrated</li>
                     <li>Players need 30 games to establish their rating in each format</li>
-                    <li>Each format (Classical, Rapid, Blitz) has its own independent rating</li>
                     <li>When a Rating Officer gives a player a +100 bonus, they are immediately considered established</li>
                     <li>K-factor varies based on experience: 40 for new players under 2000, 32 for under 2100, 24 for 2100-2399, 16 for 2400+</li>
+                    <li>Each format (Classical, Rapid, Blitz) has its own independent rating</li>
                   </ul>
                 </CardContent>
               </Card>

@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Player } from "@/lib/mockData";
-import { ArrowUp, ArrowDown, Check } from "lucide-react";
+import { ArrowUp, ArrowDown, BadgeCheck } from "lucide-react";
 
 interface PlayerCardProps {
   player: Player;
@@ -14,31 +14,26 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
   const ratingChange = latestRating - previousRating;
 
-  // Consider any player with a title as needing verification
-  const hasTitle = Boolean(player.title);
+  const isTitleVerified = player.titleVerified && player.title;
   
   return (
     <Link
       to={`/player/${player.id}`}
       className="group block"
     >
-      <div className="relative overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-blue-500 hover:border-opacity-50 dark:hover:border-blue-400 dark:hover:border-opacity-30">
+      <div className="relative overflow-hidden rounded-lg transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-lg hover:border-gold hover:border-opacity-50 dark:hover:border-gold-light dark:hover:border-opacity-30">
         <div className="p-6">
           <div className="flex items-center space-x-4">
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold truncate flex items-center">
                 {player.title && (
-                  <span className="mr-2 text-gold-dark dark:text-gold-light">
+                  <span className="mr-1 text-gold-dark dark:text-gold-light">
                     {player.title}
                   </span>
                 )}
                 {player.name}
-                {hasTitle && (
-                  <div className="inline-flex items-center justify-center ml-1.5">
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Check className="h-3 w-3 text-white" />
-                    </div>
-                  </div>
+                {isTitleVerified && (
+                  <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
                 )}
               </h2>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
@@ -84,7 +79,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
           )}
         </div>
         
-        <div className="h-1 w-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="h-1 w-full bg-gradient-to-r from-gold-light via-gold to-gold-dark opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
     </Link>
   );
