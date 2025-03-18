@@ -54,8 +54,11 @@ export const PlayerSelectionList = ({
                       )}
                       {player.name}
                       {hasTitle && (
-                        <div className="inline-flex items-center justify-center ml-1.5 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-blue-500">
-                          <Check className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+                        <div className="inline-flex items-center justify-center ml-1.5 relative">
+                          <div className="w-5 h-5 bg-black rounded-full overflow-hidden flex items-center justify-center">
+                            <div className="absolute inset-0 w-5 h-5 bg-nigeria-yellow/50 rounded-full" style={{ clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }}></div>
+                            <Check className="h-3 w-3 text-nigeria-yellow z-10" />
+                          </div>
                         </div>
                       )}
                       {player.status === 'pending' && (

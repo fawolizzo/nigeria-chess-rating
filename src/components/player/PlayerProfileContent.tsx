@@ -56,8 +56,11 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                     {player.title && <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>}
                     {player.name}
                     {hasTitle && (
-                      <div className="inline-flex items-center justify-center ml-1.5 bg-white dark:bg-gray-800 rounded-full p-0.5 border-2 border-nigeria-green shadow-sm">
-                        <Check className="h-4 w-4 text-nigeria-green dark:text-nigeria-green-light" />
+                      <div className="inline-flex items-center justify-center ml-1.5 relative">
+                        <div className="w-6 h-6 bg-black rounded-full overflow-hidden flex items-center justify-center">
+                          <div className="absolute inset-0 w-6 h-6 bg-nigeria-yellow/50 rounded-full" style={{ clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }}></div>
+                          <Check className="h-3.5 w-3.5 text-nigeria-yellow z-10" />
+                        </div>
                       </div>
                     )}
                   </h3>
