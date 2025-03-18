@@ -16,16 +16,29 @@ const OfficerDashboard: React.FC = () => {
       navigate("/login");
     }
     
-    // Load pending tournaments count
-    const allTournaments = getAllTournaments();
-    const pendingTournaments = allTournaments.filter(t => t.status === "pending");
+    // Load pending data counts
+    const loadPendingCounts = () => {
+      // Load pending tournaments count
+      const allTournaments = getAllTournaments();
+      const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
+      
+      // Load pending players count
+      const allPlayers = getAllPlayers();
+      const pendingPlayers = allPlayers.filter(p => p.status === "pending").length;
+      
+      // Load pending organizers count
+      const pendingOrganizers = 0; // Assuming this is handled elsewhere
+      
+      // Set total pending count
+      setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers);
+    };
     
-    // Load pending players count
-    const allPlayers = getAllPlayers();
-    const pendingPlayers = allPlayers.filter(p => p.status === "pending");
+    loadPendingCounts();
     
-    // Set total pending count (tournaments + players)
-    setPendingCount(pendingTournaments.length + pendingPlayers.length);
+    // Set up an interval to refresh the counts
+    const interval = setInterval(loadPendingCounts, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
   }, [currentUser, isLoading, navigate]);
   
   if (isLoading) {

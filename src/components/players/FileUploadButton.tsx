@@ -6,6 +6,7 @@ import { read, utils } from "xlsx";
 import { Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
+import { useUser } from "@/contexts/UserContext";
 
 interface FileUploadButtonProps {
   onPlayersImported: (players: Partial<Player>[]) => void;
@@ -16,6 +17,9 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useUser();
+  
+  const isRatingOfficer = currentUser?.role === "rating_officer";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -161,11 +165,21 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           
           const title = 'title' in columnMap ? row[columnMap['title']] : null;
           
-          let rating: number = 800;
+          // Check if player has rating in the file
+          let hasExistingRating = false;
+          let rating: number = 800; // Floor rating default
+          
           if ('rating' in columnMap && row[columnMap['rating']] !== undefined) {
             const ratingValue = row[columnMap['rating']];
             if (ratingValue !== null && ratingValue !== "") {
+              hasExistingRating = true;
               rating = parseInt(String(ratingValue)) || 800;
+              
+              // If uploaded by rating officer, add 100 points bonus to imported players with existing ratings
+              if (isRatingOfficer && hasExistingRating) {
+                rating += 100;
+                console.log(`Added 100 points to ${name}, new rating: ${rating}`);
+              }
             }
           }
           
@@ -202,7 +216,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
             birthYear,
             state: 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : undefined,
             country: 'Nigeria',
-            status: 'approved', // Set status to approved for immediate selection
+            status: isRatingOfficer ? 'approved' : 'pending', // Rating officer uploads are auto-approved
             gamesPlayed: 0,
             tournamentResults: [],
             ratingHistory: []
@@ -234,7 +248,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         
         toast({
           title: "Players imported",
-          description: `Successfully imported ${processedPlayers.length} players from file.`,
+          description: `Successfully imported ${processedPlayers.length} players from file.${isRatingOfficer ? " Players with existing ratings received +100 rating points." : ""}`,
         });
         
         // Reset file selection

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import TournamentPlayerSelector from "@/components/TournamentPlayerSelector";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PlayersTabProps {
   tournamentId: string;
@@ -29,6 +30,33 @@ const PlayersTab = ({
   const isUpcoming = tournamentStatus === "upcoming";
   const pendingPlayers = registeredPlayers.filter(player => player.status === "pending");
   const approvedPlayers = registeredPlayers.filter(player => player.status !== "pending");
+  const { toast } = useToast();
+
+  const handleAddPlayers = (players: Player[]) => {
+    // Filter out players that are already in the tournament
+    const newPlayers = players.filter(player => 
+      !playerIds.includes(player.id)
+    );
+    
+    if (newPlayers.length === 0) {
+      toast({
+        title: "No new players added",
+        description: "All selected players are already in the tournament.",
+        variant: "warning"
+      });
+      return;
+    }
+    
+    if (newPlayers.length !== players.length) {
+      toast({
+        title: "Some players already added",
+        description: `${players.length - newPlayers.length} player(s) were already in the tournament and have been skipped.`,
+        variant: "default"
+      });
+    }
+    
+    onAddPlayers(newPlayers);
+  };
 
   return (
     <Card>
@@ -50,7 +78,7 @@ const PlayersTab = ({
               <TournamentPlayerSelector 
                 tournamentId={tournamentId}
                 existingPlayerIds={playerIds || []}
-                onPlayersAdded={onAddPlayers}
+                onPlayersAdded={handleAddPlayers}
               />
             </div>
           )}
@@ -188,7 +216,7 @@ const PlayersTab = ({
                 <TournamentPlayerSelector 
                   tournamentId={tournamentId}
                   existingPlayerIds={playerIds || []}
-                  onPlayersAdded={onAddPlayers}
+                  onPlayersAdded={handleAddPlayers}
                 />
               </div>
             )}
