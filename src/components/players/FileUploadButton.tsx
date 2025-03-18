@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Upload, X, FileSpreadsheet, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -245,6 +244,10 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         
         // Send the players to the parent component
         onPlayersImported(processedPlayers);
+        
+        // Check current system state after import
+        const currentPlayers = getAllPlayers();
+        console.log("System players after import:", currentPlayers);
         
         toast({
           title: "Players imported",

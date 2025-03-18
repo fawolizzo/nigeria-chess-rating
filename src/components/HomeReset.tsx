@@ -3,6 +3,7 @@ import React from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { clearAllStoredData } from "@/lib/mockData";
 
 const HomeReset: React.FC = () => {
   const { toast } = useToast();
@@ -10,7 +11,7 @@ const HomeReset: React.FC = () => {
   const handleResetSystem = () => {
     if (window.confirm("Are you sure you want to reset all system data? This will remove all users, players, and tournaments. This action cannot be undone.")) {
       // Clear all data from localStorage
-      localStorage.clear();
+      clearAllStoredData();
       
       toast({
         title: "System Reset Successful",
@@ -20,7 +21,7 @@ const HomeReset: React.FC = () => {
       
       // Refresh the page
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = "/";
       }, 1500);
     }
   };

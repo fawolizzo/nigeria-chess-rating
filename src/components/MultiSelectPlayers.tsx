@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -21,8 +20,8 @@ interface MultiSelectPlayersProps {
   onOpenChange: (open: boolean) => void;
   onPlayersSelected: (players: Player[]) => void;
   excludeIds?: string[];
-  hideDialog?: boolean; // Add this prop to support hiding the dialog
-  includePendingPlayers?: boolean; // Add this prop to allow showing pending players
+  hideDialog?: boolean; 
+  includePendingPlayers?: boolean;
 }
 
 export const MultiSelectPlayers = ({ 
@@ -30,8 +29,8 @@ export const MultiSelectPlayers = ({
   onOpenChange, 
   onPlayersSelected,
   excludeIds = [],
-  hideDialog = false, // Default to showing the dialog
-  includePendingPlayers = false // Default to not showing pending players
+  hideDialog = false,
+  includePendingPlayers = true
 }: MultiSelectPlayersProps) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,13 +43,13 @@ export const MultiSelectPlayers = ({
     const fetchPlayers = () => {
       // Force refresh player list every time the dialog opens to catch newly imported players
       const allPlayers = getAllPlayers();
+      console.log("All players in system:", allPlayers);
       
       // Get players with any status but exclude those already in the tournament
       const availablePlayers = allPlayers.filter(player => {
         const isExcluded = excludeIds.includes(player.id);
-        // Include or exclude pending players based on the includePendingPlayers prop
-        const statusOk = includePendingPlayers ? true : player.status !== 'pending';
-        return !isExcluded && statusOk;
+        // Always include all players regardless of status
+        return !isExcluded;
       });
       
       console.log("Available players for selection:", availablePlayers);

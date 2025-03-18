@@ -51,6 +51,11 @@ export const PlayerSelectionList = ({
                         </span>
                       )}
                       {player.name}
+                      {player.status === 'pending' && (
+                        <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">
+                          Pending
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
                       Rating: {player.rating} • {player.state || 'N/A'}, {player.country || 'Nigeria'}

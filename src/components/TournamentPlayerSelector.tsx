@@ -58,6 +58,7 @@ const TournamentPlayerSelector = ({
     } else {
       // Check for pending players when opening dialog
       const allPlayers = getAllPlayers();
+      console.log("All players in system:", allPlayers);
       const hasPendingPlayers = allPlayers.some(player => player.status === 'pending');
       setPendingPlayersExist(hasPendingPlayers);
       setIsDialogOpen(open);
@@ -103,7 +104,7 @@ const TournamentPlayerSelector = ({
             onPlayersSelected={handlePlayersSelected}
             excludeIds={existingPlayerIds}
             hideDialog={true}
-            includePendingPlayers={true} // Show pending players too
+            includePendingPlayers={true}
           />
         </DialogContent>
       </Dialog>
