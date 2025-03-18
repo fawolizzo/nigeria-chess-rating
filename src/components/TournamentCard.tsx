@@ -1,8 +1,11 @@
+
 import { Link } from "react-router-dom";
-import { Calendar, MapPin, Users, Clock } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tournament } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -10,6 +13,8 @@ interface TournamentCardProps {
 }
 
 const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
+  const isMobile = useIsMobile();
+  
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-US', options);
@@ -62,14 +67,18 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
 
   return (
     <Link to={`/tournament/${tournament.id}`} className="block h-full">
-      <div className="group h-full overflow-hidden rounded-xl transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:shadow-card-hover hover:border-nigeria-green/30 dark:hover:border-nigeria-green/40">
+      <div className={cn(
+        "group h-full overflow-hidden rounded-xl transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800",
+        "hover:shadow-card-hover hover:border-nigeria-green/30 dark:hover:border-nigeria-green/40",
+        "transform hover:-translate-y-1"
+      )}>
         <div className="p-6">
           <div className="flex justify-between items-start mb-3">
-            <Badge className={`${getStatusClass(tournament.status)} border`}>
+            <Badge className={`${getStatusClass(tournament.status)} border animate-fade-in`}>
               {getStatusLabel(tournament.status)}
             </Badge>
             {tournament.category && (
-              <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+              <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
                 {tournament.category}
               </span>
             )}
@@ -86,7 +95,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
             </div>
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-2 text-nigeria-accent/70 dark:text-nigeria-accent-light/70" />
-              <span>
+              <span className="truncate">
                 {tournament.location}
                 {tournament.city && `, ${tournament.city}`}
                 {tournament.state && `, ${tournament.state}`}
@@ -102,6 +111,12 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
               <Clock className="h-4 w-4 mr-2 text-blue-500/70 dark:text-blue-400/70" />
               <span>{tournament.timeControl}, {tournament.rounds} rounds</span>
             </div>
+            {tournament.prize && (
+              <div className="flex items-center">
+                <Award className="h-4 w-4 mr-2 text-yellow-500/70 dark:text-yellow-400/70" />
+                <span>{tournament.prize}</span>
+              </div>
+            )}
           </div>
           
           {tournament.description && (
@@ -110,24 +125,37 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
             </p>
           )}
           
-          <div className="flex space-x-2 mt-5">
+          <div className={cn(
+            "flex mt-5",
+            isMobile ? "flex-col space-y-2" : "space-x-2"
+          )}>
             <Button
               variant="default"
-              size="sm"
-              className="flex-1 bg-nigeria-green hover:bg-nigeria-green-dark text-white dark:bg-nigeria-green-light dark:hover:bg-nigeria-green"
+              size={isMobile ? "sm" : "default"}
+              className={cn(
+                "flex-1 bg-nigeria-green hover:bg-nigeria-green-dark text-white",
+                "dark:bg-nigeria-green-light dark:hover:bg-nigeria-green",
+                "flex items-center justify-center",
+                "transition-all duration-300 ease-in-out"
+              )}
               onClick={(e) => {
                 e.preventDefault();
                 window.location.href = `/tournament/${tournament.id}`;
               }}
             >
               View Details
+              <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
             
             {tournament.status === 'upcoming' && tournament.registrationOpen && onRegister && (
               <Button
                 variant="outline"
-                size="sm"
-                className="flex-1 border-nigeria-yellow text-nigeria-green hover:bg-nigeria-yellow/10 dark:border-nigeria-yellow dark:text-nigeria-green-light"
+                size={isMobile ? "sm" : "default"}
+                className={cn(
+                  "flex-1 border-nigeria-yellow text-nigeria-green",
+                  "hover:bg-nigeria-yellow/10 dark:border-nigeria-yellow dark:text-nigeria-green-light",
+                  "transition-all duration-300 ease-in-out"
+                )}
                 onClick={handleRegisterClick}
               >
                 Register
