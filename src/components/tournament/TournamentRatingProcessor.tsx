@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Dialog, 
@@ -77,12 +76,34 @@ const TournamentRatingProcessor = ({
               return player.rating;
             };
             
+            // Use the appropriate games played based on tournament type
+            const getPlayerGamesPlayed = (player: Player) => {
+              if (tournamentType === 'rapid') {
+                return player.rapidGamesPlayed || player.gamesPlayed || 0;
+              } else if (tournamentType === 'blitz') {
+                return player.blitzGamesPlayed || player.gamesPlayed || 0;
+              }
+              return player.gamesPlayed || 0;
+            };
+            
+            // If player has a +100 rating, ensure their games played count starts at 31
+            const adjustGamesPlayed = (player: Player, games: number) => {
+              const playerRating = getPlayerRating(player);
+              if (String(playerRating).endsWith('100')) {
+                return Math.max(31, games);
+              }
+              return games;
+            };
+            
+            const whiteGamesPlayed = adjustGamesPlayed(whitePlayer, getPlayerGamesPlayed(whitePlayer));
+            const blackGamesPlayed = adjustGamesPlayed(blackPlayer, getPlayerGamesPlayed(blackPlayer));
+            
             return {
               ...match,
               whiteRating: getPlayerRating(whitePlayer),
               blackRating: getPlayerRating(blackPlayer),
-              whiteGamesPlayed: whitePlayer.gamesPlayed || 0,
-              blackGamesPlayed: blackPlayer.gamesPlayed || 0
+              whiteGamesPlayed: whiteGamesPlayed,
+              blackGamesPlayed: blackGamesPlayed
             };
           })
         );
@@ -149,7 +170,7 @@ const TournamentRatingProcessor = ({
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>
                 <li>K=16 for higher-rated players (2400+)</li>
-                <li>Players rated 2000-2400 are treated as experienced players regardless of games played</li>
+                <li>Players with +100 ratings are treated as having 30+ games</li>
               </ul>
             </div>
           </div>

@@ -7,6 +7,12 @@ export const getKFactor = (rating: number, gamesPlayed: number): number => {
     return 24; // Treat high-rated players (2000-2400) as experienced with K=24
   }
   
+  // Check if player has a rating ending with +100 (e.g., 1400+100)
+  // These players should be treated as having 30+ games
+  if (String(rating).endsWith('100') || gamesPlayed >= 30) {
+    return 32; // Treat as established players
+  }
+  
   // New or provisional players (fewer than 10 rated games)
   // High-rated new players aren't treated as new players (no K=40)
   if (gamesPlayed < 10 && rating < 2000) {
@@ -78,8 +84,12 @@ export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
       result
     } = match;
 
-    const kFactorWhite = getKFactor(whiteRating, whiteGamesPlayed);
-    const kFactorBlack = getKFactor(blackRating, blackGamesPlayed);
+    // Adjust games played for players with +100 ratings
+    const adjustedWhiteGamesPlayed = String(whiteRating).endsWith('100') ? Math.max(30, whiteGamesPlayed) : whiteGamesPlayed;
+    const adjustedBlackGamesPlayed = String(blackRating).endsWith('100') ? Math.max(30, blackGamesPlayed) : blackGamesPlayed;
+
+    const kFactorWhite = getKFactor(whiteRating, adjustedWhiteGamesPlayed);
+    const kFactorBlack = getKFactor(blackRating, adjustedBlackGamesPlayed);
 
     const expectedScoreWhite = calculateExpectedScore(whiteRating, blackRating);
     const expectedScoreBlack = calculateExpectedScore(blackRating, whiteRating);

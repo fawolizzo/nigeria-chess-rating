@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -114,12 +113,18 @@ const TournamentRatingDialog = ({
               };
               
               const getPlayerGamesPlayed = (player: Player) => {
+                const playerRating = getPlayerRating(player);
+                const has100Plus = String(playerRating).endsWith('100');
+                
                 if (tournament.category === 'rapid') {
-                  return player.rapidGamesPlayed || player.gamesPlayed || 0;
+                  const gamesPlayed = player.rapidGamesPlayed || player.gamesPlayed || 0;
+                  return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
                 } else if (tournament.category === 'blitz') {
-                  return player.blitzGamesPlayed || player.gamesPlayed || 0;
+                  const gamesPlayed = player.blitzGamesPlayed || player.gamesPlayed || 0;
+                  return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
                 }
-                return player.gamesPlayed || 0;
+                const gamesPlayed = player.gamesPlayed || 0;
+                return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
               };
               
               return {
@@ -172,10 +177,17 @@ const TournamentRatingDialog = ({
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
             const updatePlayerBasedOnTournamentType = (player: Player) => {
+              // Check if player has +100 rating to adjust games played
+              const hasPlus100 = (rating: number) => String(rating).endsWith('100');
+              
               if (tournament.category === 'rapid') {
                 // Update rapid rating
-                const newRapidRating = (player.rapidRating || player.rating) + update.ratingChange;
-                const newRapidGamesPlayed = (player.rapidGamesPlayed || 0) + 1;
+                const currentRapidRating = player.rapidRating || player.rating;
+                const newRapidRating = currentRapidRating + update.ratingChange;
+                const currentRapidGamesPlayed = player.rapidGamesPlayed || 0;
+                const newRapidGamesPlayed = hasPlus100(currentRapidRating) ? 
+                  Math.max(31, currentRapidGamesPlayed) + 1 : 
+                  currentRapidGamesPlayed + 1;
                 
                 return {
                   ...player,
@@ -192,8 +204,12 @@ const TournamentRatingDialog = ({
                 };
               } else if (tournament.category === 'blitz') {
                 // Update blitz rating
-                const newBlitzRating = (player.blitzRating || player.rating) + update.ratingChange;
-                const newBlitzGamesPlayed = (player.blitzGamesPlayed || 0) + 1;
+                const currentBlitzRating = player.blitzRating || player.rating;
+                const newBlitzRating = currentBlitzRating + update.ratingChange;
+                const currentBlitzGamesPlayed = player.blitzGamesPlayed || 0;
+                const newBlitzGamesPlayed = hasPlus100(currentBlitzRating) ? 
+                  Math.max(31, currentBlitzGamesPlayed) + 1 : 
+                  currentBlitzGamesPlayed + 1;
                 
                 return {
                   ...player,
@@ -210,8 +226,12 @@ const TournamentRatingDialog = ({
                 };
               } else {
                 // Default to classical rating
-                const newRating = player.rating + update.ratingChange;
-                const newGamesPlayed = (player.gamesPlayed || 0) + 1;
+                const currentRating = player.rating;
+                const newRating = currentRating + update.ratingChange;
+                const currentGamesPlayed = player.gamesPlayed || 0;
+                const newGamesPlayed = hasPlus100(currentRating) ? 
+                  Math.max(31, currentGamesPlayed) + 1 : 
+                  currentGamesPlayed + 1;
                 
                 return {
                   ...player,
@@ -355,6 +375,7 @@ const TournamentRatingDialog = ({
                   <li>K=32 for players rated below 2100</li>
                   <li>K=24 for players rated 2100-2399</li>
                   <li>K=16 for higher-rated players (2400+)</li>
+                  <li>Players with +100 ratings are treated as having 30+ games</li>
                 </ul>
               </div>
               
