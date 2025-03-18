@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Upload, X, FileSpreadsheet, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { read, utils } from "xlsx";
-import { Player } from "@/lib/mockData";
+import { Player, getAllPlayers } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import { v4 as uuidv4 } from "uuid";
 import { useUser } from "@/contexts/UserContext";
