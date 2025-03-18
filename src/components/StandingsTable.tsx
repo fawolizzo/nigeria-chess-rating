@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trophy, Award, BadgeCheck } from "lucide-react";
+import { Trophy, Award, Check } from "lucide-react";
 import { Player } from "@/lib/mockData";
 
 interface PlayerWithScore extends Player {
@@ -101,13 +101,13 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
                         <div className="flex items-center">
                           <span className="font-medium text-gray-900 dark:text-white flex items-center">
                             {player.title && (
-                              <span className="text-gold-dark dark:text-gold-light mr-1">
+                              <span className="text-gold-dark dark:text-gold-light mr-2">
                                 {player.title}
                               </span>
                             )}
                             {player.name}
                             {isTitleVerified && (
-                              <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
+                              <Check className="h-4 w-4 ml-1 text-blue-500" />
                             )}
                           </span>
                         </div>

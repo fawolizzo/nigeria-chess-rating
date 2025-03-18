@@ -7,9 +7,8 @@ import { Player } from "@/lib/mockData";
 import PlayerProfileContent from "@/components/player/PlayerProfileContent";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
-import { Pencil, Award, ArrowLeft } from "lucide-react";
+import { Pencil, ArrowLeft } from "lucide-react";
 import EditPlayerDialog from "@/components/officer/EditPlayerDialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();

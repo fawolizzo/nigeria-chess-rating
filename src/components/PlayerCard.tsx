@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Player } from "@/lib/mockData";
-import { ArrowUp, ArrowDown, BadgeCheck } from "lucide-react";
+import { ArrowUp, ArrowDown, Check } from "lucide-react";
 
 interface PlayerCardProps {
   player: Player;
@@ -27,13 +27,13 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold truncate flex items-center">
                 {player.title && (
-                  <span className="mr-1 text-gold-dark dark:text-gold-light">
+                  <span className="mr-2 text-gold-dark dark:text-gold-light">
                     {player.title}
                   </span>
                 )}
                 {player.name}
                 {isTitleVerified && (
-                  <BadgeCheck className="h-4 w-4 ml-1 text-blue-500" />
+                  <Check className="h-4 w-4 ml-1 text-blue-500" />
                 )}
               </h2>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
