@@ -98,7 +98,7 @@ const PlayerProfile = () => {
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     {player.name}
                     {isTitleVerified && (
-                      <Check className="h-6 w-6 text-blue-500" />
+                      <Check className="h-6 w-6 text-nigeria-green dark:text-nigeria-green-light" />
                     )}
                   </h1>
                   <div className="flex items-center text-gray-500 dark:text-gray-400 mt-1">

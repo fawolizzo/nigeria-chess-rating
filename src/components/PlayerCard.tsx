@@ -34,7 +34,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                 )}
                 {player.name}
                 {isTitleVerified && (
-                  <Check className="h-4 w-4 ml-1 text-blue-500" />
+                  <Check className="h-4 w-4 ml-1 text-nigeria-green dark:text-nigeria-green-light" />
                 )}
               </h2>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">

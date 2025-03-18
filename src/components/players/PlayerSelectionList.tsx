@@ -54,7 +54,7 @@ export const PlayerSelectionList = ({
                       )}
                       {player.name}
                       {isTitleVerified && (
-                        <Check className="h-4 w-4 ml-1 text-blue-500" />
+                        <Check className="h-4 w-4 ml-1 text-nigeria-green dark:text-nigeria-green-light" />
                       )}
                       {player.status === 'pending' && (
                         <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">
