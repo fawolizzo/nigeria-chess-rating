@@ -75,11 +75,14 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
       const columnMap: Record<string, number> = {};
       
       const fieldMappings: Record<string, string[]> = {
-        name: ["player", "name", "full name", "player name", "full", "fullname"],
+        name: ["player", "players", "name", "full name", "player name", "full", "fullname"],
         title: ["title", "chess title"],
-        rating: ["rating", "elo", "fide rating", "chess rating", "elo rating"],
-        birthYear: ["birth year", "b-year", "year", "birthyear", "birth", "byear", "dob", "birth date", "birthdate"],
-        gender: ["gender", "sex", "m/f", "male/female"]
+        rating: ["std.", "standard", "classical", "rating", "elo", "fide rating", "chess rating", "elo rating"],
+        rapidRating: ["rpd.", "rapid", "rapid rating"],
+        blitzRating: ["blz.", "blitz", "blitz rating"],
+        birthYear: ["b-year", "birth year", "year", "birthyear", "birth", "byear", "dob", "birth date", "birthdate"],
+        gender: ["gender", "sex", "m/f", "male/female"],
+        fed: ["fed", "federation", "country"]
       };
       
       if (headerRow && Array.isArray(headerRow)) {
@@ -152,28 +155,49 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         
         const title = 'title' in columnMap ? row[columnMap['title']] : null;
         
-        // Initialize with floor rating
-        let rating = 800;
+        // Parse the player's ratings
+        let classicalRating: number | undefined = undefined;
+        let rapidRating: number | undefined = undefined;
+        let blitzRating: number | undefined = undefined;
+        const currentDate = new Date().toISOString().split('T')[0];
         
-        // Check if rating is provided in the file
+        // Parse Classical Rating
         if ('rating' in columnMap && row[columnMap['rating']] !== undefined) {
           const ratingValue = row[columnMap['rating']];
           if (ratingValue !== null && ratingValue !== "") {
-            // Parse the rating from the file
-            const parsedRating = parseInt(String(ratingValue)) || 800;
-            
-            // If rating officer is importing, add 100 to the parsed rating
-            if (isRatingOfficer) {
-              rating = parsedRating + 100;
-              console.log(`Rating officer import: ${name}, base rating: ${parsedRating}, with bonus: ${rating}`);
-            } else {
-              rating = parsedRating;
+            const parsedRating = parseInt(String(ratingValue));
+            if (!isNaN(parsedRating)) {
+              classicalRating = isRatingOfficer ? parsedRating + 100 : parsedRating;
             }
           }
-        } else if (isRatingOfficer) {
-          // If no rating in file but rating officer is importing, still add 100 to floor rating
-          rating = 900;
-          console.log(`Rating officer import with no rating provided: ${name}, using 900 (800+100)`);
+        }
+        
+        // Parse Rapid Rating
+        if ('rapidRating' in columnMap && row[columnMap['rapidRating']] !== undefined) {
+          const rapidValue = row[columnMap['rapidRating']];
+          if (rapidValue !== null && rapidValue !== "") {
+            const parsedRapid = parseInt(String(rapidValue));
+            if (!isNaN(parsedRapid)) {
+              rapidRating = isRatingOfficer ? parsedRapid + 100 : parsedRapid;
+            }
+          }
+        }
+        
+        // Parse Blitz Rating
+        if ('blitzRating' in columnMap && row[columnMap['blitzRating']] !== undefined) {
+          const blitzValue = row[columnMap['blitzRating']];
+          if (blitzValue !== null && blitzValue !== "") {
+            const parsedBlitz = parseInt(String(blitzValue));
+            if (!isNaN(parsedBlitz)) {
+              blitzRating = isRatingOfficer ? parsedBlitz + 100 : parsedBlitz;
+            }
+          }
+        }
+        
+        // Only apply floor rating if no ratings are provided
+        if (!classicalRating && !rapidRating && !blitzRating) {
+          classicalRating = 800;
+          console.log(`No ratings provided for player ${name}, using floor rating of 800`);
         }
         
         let birthYear: number | undefined = undefined;
@@ -199,21 +223,24 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         }
         
         const state = 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : '';
+        const federation = 'fed' in columnMap ? String(row[columnMap['fed']] || '').trim() : 'Nigeria';
         
         const player: Player = {
           id: uuidv4(),
           name: String(name).trim(),
-          rating,
+          rating: classicalRating ?? 800,
+          rapidRating,
+          blitzRating,
           gender,
           birthYear,
           state: state || undefined,
-          country: 'Nigeria',
+          country: federation || 'Nigeria',
           status: 'approved',  // Rating officer imported players are automatically approved
           gamesPlayed: 0,
           tournamentResults: [],
           ratingHistory: [{
-            date: new Date().toISOString().split('T')[0],
-            rating,
+            date: currentDate,
+            rating: classicalRating ?? 800,
             reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
           }]
         };
@@ -222,7 +249,27 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           player.title = String(title).trim();
         }
         
-        console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}, id: ${player.id}`);
+        // Add rapid rating history if rapidRating exists
+        if (rapidRating) {
+          player.rapidRatingHistory = [{
+            date: currentDate,
+            rating: rapidRating,
+            reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
+          }];
+          player.rapidGamesPlayed = 0;
+        }
+        
+        // Add blitz rating history if blitzRating exists
+        if (blitzRating) {
+          player.blitzRatingHistory = [{
+            date: currentDate,
+            rating: blitzRating,
+            reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
+          }];
+          player.blitzGamesPlayed = 0;
+        }
+        
+        console.log(`Processed player: "${player.name}", classical: ${player.rating}, rapid: ${player.rapidRating}, blitz: ${player.blitzRating}, id: ${player.id}`);
         
         // Add each player to localStorage immediately
         addPlayer(player);

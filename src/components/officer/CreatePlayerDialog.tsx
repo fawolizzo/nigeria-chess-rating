@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -139,16 +138,14 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
   };
 
   const handlePlayersImported = (players: Partial<Player>[]) => {
-    // Add temporary IDs to the imported players for selection
     const playersWithIds = players.map(player => ({
       ...player,
       tempId: uuidv4()
     })) as ImportPlayerWithTempId[];
     
     setImportedPlayers(playersWithIds);
-    setSelectedImportIds(playersWithIds.map(p => p.tempId)); // Auto-select all imported players
+    setSelectedImportIds(playersWithIds.map(p => p.tempId));
     
-    // Switch to the review tab
     setActiveTab("review");
   };
 
@@ -162,7 +159,6 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
 
   const submitImportedPlayers = () => {
     try {
-      // Create players from the selected imports
       const playersToCreate = importedPlayers
         .filter(player => selectedImportIds.includes(player.tempId))
         .map(player => {
@@ -191,7 +187,6 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
           } as Player;
         });
       
-      // Add the players to the system
       playersToCreate.forEach(player => {
         addPlayer(player);
       });
@@ -201,12 +196,10 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
         description: `${playersToCreate.length} players have been imported and added to the system.`,
       });
       
-      // Reset state
       setImportedPlayers([]);
       setSelectedImportIds([]);
       setActiveTab("single");
       
-      // Close the dialog
       onOpenChange(false);
       
       if (onSuccess) {
@@ -284,9 +277,10 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
                       <TableRow>
                         <TableHead className="w-[50px]"></TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Gender</TableHead>
-                        <TableHead>State</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Classical</TableHead>
+                        <TableHead>Rapid</TableHead>
+                        <TableHead>Blitz</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -300,10 +294,11 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
                               className="h-4 w-4"
                             />
                           </TableCell>
-                          <TableCell>{player.title ? `${player.title} ` : ""}{player.name || "Unknown"}</TableCell>
-                          <TableCell>{player.rating || 800}</TableCell>
-                          <TableCell>{player.gender || "M"}</TableCell>
-                          <TableCell>{player.state?.replace(" NGR", "") || "-"}</TableCell>
+                          <TableCell>{player.name || "Unknown"}</TableCell>
+                          <TableCell>{player.title || "-"}</TableCell>
+                          <TableCell>{player.rating || "-"}</TableCell>
+                          <TableCell>{player.rapidRating || "-"}</TableCell>
+                          <TableCell>{player.blitzRating || "-"}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -338,11 +333,18 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
                 <div className="text-center mt-6">
                   <p className="text-sm text-muted-foreground mb-4">
                     Upload a CSV or Excel file with player information.
-                    <br />The file should have columns for Player Name, Rating, and optionally Title, Birth Year, and Gender.
+                    <br />The file should have columns for Player Name, Title, Federation, and Ratings.
                   </p>
                   <div className="mt-3 p-3 bg-muted rounded-md text-sm">
-                    <p>Expected column headers:</p>
-                    <p className="text-xs mt-1">Player, Rating, Title, B-Year (or Birth Year), Gender/Sex</p>
+                    <p>Expected column headers format:</p>
+                    <p className="text-xs mt-1 font-mono">Players | Title | Fed | Std. | Rpd. | Blz. | B-Year</p>
+                    <p className="text-xs mt-2">Where:</p>
+                    <ul className="text-xs mt-1 list-disc list-inside">
+                      <li>Std. = Classical rating</li>
+                      <li>Rpd. = Rapid rating</li>
+                      <li>Blz. = Blitz rating</li>
+                      <li>B-Year = Birth Year</li>
+                    </ul>
                   </div>
                 </div>
               </div>
