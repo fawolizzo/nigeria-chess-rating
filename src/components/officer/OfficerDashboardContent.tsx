@@ -7,17 +7,23 @@ import PendingTournamentApprovals from "./PendingTournamentApprovals";
 import ApprovedTournaments from "./ApprovedTournaments";
 import ApprovedOrganizers from "./ApprovedOrganizers";
 import { useToast } from "@/components/ui/use-toast";
+import { getAllTournaments } from "@/lib/mockData";
 
 const OfficerDashboardContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("organizers");
   const { toast } = useToast();
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const refreshDashboard = () => {
+    setRefreshKey(prev => prev + 1);
     toast({
       title: "Dashboard refreshed",
       description: "The dashboard has been refreshed with the latest data.",
     });
   };
+
+  // Get pending tournaments
+  const pendingTournaments = getAllTournaments().filter(t => t.status === "pending");
   
   return (
     <div>
@@ -35,7 +41,7 @@ const OfficerDashboardContent: React.FC = () => {
         </TabsList>
         <TabsContent value="organizers" className="p-4">
           <div className="space-y-8">
-            <OrganizerApprovals onOrganizerApproval={refreshDashboard} />
+            <OrganizerApprovals />
             <ApprovedOrganizers />
           </div>
         </TabsContent>
@@ -43,7 +49,10 @@ const OfficerDashboardContent: React.FC = () => {
           <PlayerManagement onPlayerApproval={refreshDashboard} />
         </TabsContent>
         <TabsContent value="pending-tournaments" className="p-4">
-          <PendingTournamentApprovals onTournamentApproval={refreshDashboard} />
+          <PendingTournamentApprovals 
+            tournaments={pendingTournaments}
+            onApprovalUpdate={refreshDashboard} 
+          />
         </TabsContent>
         <TabsContent value="approved-tournaments" className="p-4">
           <ApprovedTournaments />

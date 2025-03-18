@@ -1,11 +1,12 @@
 
 import React, { useState } from "react";
-import { useUser, User } from "@/contexts/UserContext";
-import { toast } from "@/components/ui/use-toast";
+import { useUser } from "@/contexts/UserContext";
+import { useToast } from "@/components/ui/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 
 const OrganizerApprovals: React.FC = () => {
   const { users, approveUser, rejectUser } = useUser();
+  const { toast } = useToast();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Filter tournament organizers with pending status
