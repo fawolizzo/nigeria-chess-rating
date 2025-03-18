@@ -52,7 +52,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg font-semibold flex items-center">
-                    {player.title && <span className="text-gold-dark dark:text-gold-light">{player.title} </span>}
+                    {player.title && <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>}
                     {player.name}
                     {isTitleVerified && (
                       <span className="ml-1.5 inline-flex items-center justify-center bg-blue-500 rounded-full w-5 h-5">

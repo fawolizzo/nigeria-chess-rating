@@ -47,7 +47,7 @@ export const PlayerSelectionList = ({
                   <div>
                     <div className="font-medium text-gray-900 dark:text-white flex items-center">
                       {player.title && (
-                        <span className="text-gold-dark dark:text-gold-light mr-1">
+                        <span className="text-gold-dark dark:text-gold-light mr-2">
                           {player.title}
                         </span>
                       )}

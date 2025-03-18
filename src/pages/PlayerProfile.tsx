@@ -97,6 +97,9 @@ const PlayerProfile = () => {
                 
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    {player.title && (
+                      <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>
+                    )}
                     {player.name}
                     {isTitleVerified && (
                       <span className="inline-flex items-center justify-center bg-blue-500 rounded-full w-6 h-6">
