@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,11 +13,19 @@ import {
 } from "@/components/ui/dialog";
 import {
   Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { updatePlayer, Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import PlayerFormFields from "@/components/player/PlayerFormFields";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const playerSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -30,6 +39,9 @@ const playerSchema = z.object({
   gamesPlayed: z.coerce.number().optional(),
   rapidGamesPlayed: z.coerce.number().optional(),
   blitzGamesPlayed: z.coerce.number().optional(),
+  ratingStatus: z.enum(["provisional", "established"]).optional(),
+  rapidRatingStatus: z.enum(["provisional", "established"]).optional(),
+  blitzRatingStatus: z.enum(["provisional", "established"]).optional(),
 });
 
 type PlayerFormValues = z.infer<typeof playerSchema>;
@@ -65,6 +77,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       gamesPlayed: undefined,
       rapidGamesPlayed: undefined,
       blitzGamesPlayed: undefined,
+      ratingStatus: "provisional",
+      rapidRatingStatus: "provisional",
+      blitzRatingStatus: "provisional",
     },
   });
 
@@ -83,6 +98,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         gamesPlayed: player.gamesPlayed,
         rapidGamesPlayed: player.rapidGamesPlayed,
         blitzGamesPlayed: player.blitzGamesPlayed,
+        ratingStatus: player.ratingStatus || "provisional",
+        rapidRatingStatus: player.rapidRatingStatus || "provisional",
+        blitzRatingStatus: player.blitzRatingStatus || "provisional",
       });
     }
   }, [player, form]);
@@ -94,11 +112,14 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   };
 
   // Adjust games played for +100 ratings when submitting
-  const adjustGamesPlayed = (rating: number | undefined, gamesPlayed: number | undefined): number | undefined => {
+  const adjustGamesPlayed = (rating: number | undefined, gamesPlayed: number | undefined, status?: string): number | undefined => {
     if (!rating || !gamesPlayed) return gamesPlayed;
-    if (String(rating).endsWith('100')) {
-      return Math.max(31, gamesPlayed);
+    
+    // If status is established or has +100 rating, ensure games played is at least 30
+    if (status === 'established' || String(rating).endsWith('100')) {
+      return Math.max(30, gamesPlayed);
     }
+    
     return gamesPlayed;
   };
 
@@ -106,10 +127,10 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     if (!player) return;
     
     try {
-      // Adjust games played for +100 ratings
-      const adjustedGamesPlayed = adjustGamesPlayed(data.rating, data.gamesPlayed);
-      const adjustedRapidGamesPlayed = adjustGamesPlayed(data.rapidRating, data.rapidGamesPlayed);
-      const adjustedBlitzGamesPlayed = adjustGamesPlayed(data.blitzRating, data.blitzGamesPlayed);
+      // Adjust games played based on rating status
+      const adjustedGamesPlayed = adjustGamesPlayed(data.rating, data.gamesPlayed, data.ratingStatus);
+      const adjustedRapidGamesPlayed = adjustGamesPlayed(data.rapidRating, data.rapidGamesPlayed, data.rapidRatingStatus);
+      const adjustedBlitzGamesPlayed = adjustGamesPlayed(data.blitzRating, data.blitzGamesPlayed, data.blitzRatingStatus);
       
       const updatedPlayer: Player = {
         ...player,
@@ -124,6 +145,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         gamesPlayed: adjustedGamesPlayed,
         rapidGamesPlayed: adjustedRapidGamesPlayed,
         blitzGamesPlayed: adjustedBlitzGamesPlayed,
+        ratingStatus: data.ratingStatus,
+        rapidRatingStatus: data.rapidRatingStatus,
+        blitzRatingStatus: data.blitzRatingStatus,
       };
       
       // Only add to history if rating changed
@@ -198,7 +222,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Edit Player</DialogTitle>
           <DialogDescription>
@@ -209,6 +233,98 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <PlayerFormFields control={form.control} formState={form.formState} />
+            
+            {/* Rating status section */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="font-medium">Rating Status</h3>
+              
+              <FormField
+                control={form.control}
+                name="ratingStatus"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel>Classical Rating Status</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                        className="flex space-x-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="provisional" id="classical-provisional" />
+                          <Label htmlFor="classical-provisional">Provisional</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="established" id="classical-established" />
+                          <Label htmlFor="classical-established">Established</Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormDescription>
+                      {form.watch('ratingStatus') === 'established' 
+                        ? "Player will be treated as having completed the 30-game provisional period"
+                        : "Player must complete 30 games to achieve established rating"}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+              
+              {form.watch('rapidRating') && (
+                <FormField
+                  control={form.control}
+                  name="rapidRatingStatus"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>Rapid Rating Status</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          className="flex space-x-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="provisional" id="rapid-provisional" />
+                            <Label htmlFor="rapid-provisional">Provisional</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="established" id="rapid-established" />
+                            <Label htmlFor="rapid-established">Established</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+              
+              {form.watch('blitzRating') && (
+                <FormField
+                  control={form.control}
+                  name="blitzRatingStatus"
+                  render={({ field }) => (
+                    <FormItem className="space-y-1">
+                      <FormLabel>Blitz Rating Status</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          defaultValue={field.value}
+                          onValueChange={field.onChange}
+                          className="flex space-x-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="provisional" id="blitz-provisional" />
+                            <Label htmlFor="blitz-provisional">Provisional</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="established" id="blitz-established" />
+                            <Label htmlFor="blitz-established">Established</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
             
             <DialogFooter>
               <Button 

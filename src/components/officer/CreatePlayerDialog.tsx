@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,7 +18,8 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,9 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { CheckCircle } from "lucide-react";
 
 const playerSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -45,6 +50,10 @@ const playerSchema = z.object({
   gender: z.enum(["M", "F"]),
   state: z.string().optional(),
   birthYear: z.coerce.number().optional(),
+  ratingStatus: z.enum(["provisional", "established"]),
+  rapidRatingStatus: z.enum(["provisional", "established"]).optional(),
+  blitzRatingStatus: z.enum(["provisional", "established"]).optional(),
+  apply100Bonus: z.boolean().optional(),
 });
 
 type PlayerFormValues = z.infer<typeof playerSchema>;
@@ -82,6 +91,10 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
       gender: "M",
       state: "",
       birthYear: undefined,
+      ratingStatus: "provisional",
+      rapidRatingStatus: "provisional",
+      blitzRatingStatus: "provisional",
+      apply100Bonus: false,
     },
   });
 
@@ -89,26 +102,70 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
     try {
       const currentDate = new Date().toISOString();
       
+      // Apply +100 bonus if selected by the rating officer
+      let finalClassicalRating = data.rating;
+      let finalRapidRating = data.rapidRating;
+      let finalBlitzRating = data.blitzRating;
+      
+      if (data.apply100Bonus) {
+        finalClassicalRating += 100;
+        if (finalRapidRating) finalRapidRating += 100;
+        if (finalBlitzRating) finalBlitzRating += 100;
+      }
+      
+      // Set games played based on rating status
+      // Established ratings should start at 30 games
+      const classicalGamesPlayed = data.ratingStatus === 'established' ? 30 : 0;
+      const rapidGamesPlayed = data.rapidRatingStatus === 'established' ? 30 : 0;
+      const blitzGamesPlayed = data.blitzRatingStatus === 'established' ? 30 : 0;
+      
       const newPlayer: Player = {
         id: uuidv4(),
         name: data.name,
         title: data.title === "none" ? undefined : data.title,
-        rating: data.rating,
-        rapidRating: data.rapidRating,
-        blitzRating: data.blitzRating,
+        rating: finalClassicalRating,
+        rapidRating: finalRapidRating,
+        blitzRating: finalBlitzRating,
         gender: data.gender,
         state: data.state,
         birthYear: data.birthYear,
+        ratingStatus: data.ratingStatus,
+        rapidRatingStatus: data.rapidRatingStatus,
+        blitzRatingStatus: data.blitzRatingStatus,
+        gamesPlayed: classicalGamesPlayed,
+        rapidGamesPlayed: rapidGamesPlayed,
+        blitzGamesPlayed: blitzGamesPlayed,
         ratingHistory: [
           {
             date: currentDate,
-            rating: data.rating,
-            reason: "Initial rating"
+            rating: finalClassicalRating,
+            reason: data.apply100Bonus ? "Initial rating with +100 bonus" : "Initial rating"
           }
         ],
         tournamentResults: [],
-        gamesPlayed: 0
       };
+      
+      // Add rapid rating history if applicable
+      if (finalRapidRating) {
+        newPlayer.rapidRatingHistory = [
+          {
+            date: currentDate,
+            rating: finalRapidRating,
+            reason: data.apply100Bonus ? "Initial rating with +100 bonus" : "Initial rating"
+          }
+        ];
+      }
+      
+      // Add blitz rating history if applicable
+      if (finalBlitzRating) {
+        newPlayer.blitzRatingHistory = [
+          {
+            date: currentDate,
+            rating: finalBlitzRating,
+            reason: data.apply100Bonus ? "Initial rating with +100 bonus" : "Initial rating"
+          }
+        ];
+      }
       
       addPlayer(newPlayer);
       
@@ -241,6 +298,151 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <PlayerFormFields control={form.control} formState={form.formState} />
+                
+                {/* Rating status section */}
+                <div className="border rounded-md p-4 space-y-4">
+                  <h3 className="font-medium">Rating Status</h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="apply100Bonus"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-2 space-y-0 rounded-md border p-4 mb-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="h-4 w-4"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Apply +100 Rating Bonus</FormLabel>
+                          <FormDescription>
+                            Adds 100 points to the player's initial rating in all formats and treats them as established
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="ratingStatus"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel>Classical Rating Status</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // If +100 bonus is checked, all ratings should be established
+                              if (form.watch('apply100Bonus')) {
+                                form.setValue('ratingStatus', 'established');
+                              }
+                            }}
+                            className="flex space-x-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem 
+                                value="provisional" 
+                                id="classical-provisional" 
+                                disabled={form.watch('apply100Bonus')}
+                              />
+                              <Label htmlFor="classical-provisional">Provisional</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="established" id="classical-established" />
+                              <Label htmlFor="classical-established">Established</Label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormDescription>
+                          {field.value === 'established' 
+                            ? "Player will start with 30 games played (established rating)"
+                            : "Player will start with 0 games played (provisional rating)"}
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {form.watch('rapidRating') && (
+                    <FormField
+                      control={form.control}
+                      name="rapidRatingStatus"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel>Rapid Rating Status</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // If +100 bonus is checked, all ratings should be established
+                                if (form.watch('apply100Bonus')) {
+                                  form.setValue('rapidRatingStatus', 'established');
+                                }
+                              }}
+                              className="flex space-x-4"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem 
+                                  value="provisional" 
+                                  id="rapid-provisional" 
+                                  disabled={form.watch('apply100Bonus')}
+                                />
+                                <Label htmlFor="rapid-provisional">Provisional</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="established" id="rapid-established" />
+                                <Label htmlFor="rapid-established">Established</Label>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  
+                  {form.watch('blitzRating') && (
+                    <FormField
+                      control={form.control}
+                      name="blitzRatingStatus"
+                      render={({ field }) => (
+                        <FormItem className="space-y-1">
+                          <FormLabel>Blitz Rating Status</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // If +100 bonus is checked, all ratings should be established
+                                if (form.watch('apply100Bonus')) {
+                                  form.setValue('blitzRatingStatus', 'established');
+                                }
+                              }}
+                              className="flex space-x-4"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem 
+                                  value="provisional" 
+                                  id="blitz-provisional" 
+                                  disabled={form.watch('apply100Bonus')}
+                                />
+                                <Label htmlFor="blitz-provisional">Provisional</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="established" id="blitz-established" />
+                                <Label htmlFor="blitz-established">Established</Label>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
                 
                 <DialogFooter>
                   <Button 

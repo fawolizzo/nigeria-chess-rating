@@ -92,11 +92,23 @@ const TournamentRatingProcessor = ({
               return player.gamesPlayed || 0;
             };
             
-            // If player has a +100 rating, ensure their games played count starts at 31
-            const adjustGamesPlayed = (player: Player, games: number) => {
+            // Check if player has an established rating (+100 or 30+ games)
+            const isEstablishedRating = (player: Player) => {
               const playerRating = getPlayerRating(player);
-              if (String(playerRating).endsWith('100')) {
-                return Math.max(31, games);
+              const gamesPlayed = getPlayerGamesPlayed(player);
+              const ratingStatus = tournamentType === 'rapid' 
+                ? player.rapidRatingStatus 
+                : tournamentType === 'blitz'
+                ? player.blitzRatingStatus
+                : player.ratingStatus;
+                
+              return ratingStatus === 'established' || gamesPlayed >= 30 || String(playerRating).endsWith('100');
+            };
+            
+            // If player has a +100 rating or is established, ensure they're treated as established
+            const adjustGamesPlayed = (player: Player, games: number) => {
+              if (isEstablishedRating(player)) {
+                return Math.max(30, games);
               }
               return games;
             };
@@ -177,6 +189,7 @@ const TournamentRatingProcessor = ({
                 <li>K=24 for players rated 2100-2399</li>
                 <li>K=16 for higher-rated players (2400+)</li>
                 <li>Players with +100 ratings are treated as having 30+ games</li>
+                <li>Players need 30 games to achieve an established rating</li>
               </ul>
             </div>
           </div>

@@ -2,31 +2,44 @@ export interface Player {
   id: string;
   name: string;
   title?: string;
-  rating: number;
+  rating: number;  // Classical rating
   rapidRating?: number;
   blitzRating?: number;
-  country?: string;
-  club?: string;
-  state?: string;
-  city?: string;
   gender: 'M' | 'F';
   birthYear?: number;
-  ratingHistory: { date: string; rating: number; lichessRating?: number; reason?: string }[];
-  rapidRatingHistory?: { date: string; rating: number; reason?: string }[];
-  blitzRatingHistory?: { date: string; rating: number; reason?: string }[];
+  country?: string;
+  state?: string;
+  city?: string;
+  club?: string;
+  federationId?: string;
+  gamesPlayed: number;  // Classical games played
+  rapidGamesPlayed?: number;
+  blitzGamesPlayed?: number;
+  ratingStatus?: 'provisional' | 'established';  // Classical rating status
+  rapidRatingStatus?: 'provisional' | 'established';
+  blitzRatingStatus?: 'provisional' | 'established';
   achievements?: string[];
-  tournamentResults: {
+  status: 'pending' | 'approved' | 'rejected';
+  tournamentResults: Array<{
     tournamentId: string;
     position: number;
     ratingChange: number;
-  }[];
-  status?: 'pending' | 'approved' | 'rejected' | 'processed';
-  createdBy?: string;
-  gamesPlayed?: number;
-  rapidGamesPlayed?: number;
-  blitzGamesPlayed?: number;
-  federationId?: string;
-  tempId?: string;
+  }>;
+  ratingHistory: Array<{
+    date: string;
+    rating: number;
+    reason: string;
+  }>;
+  rapidRatingHistory?: Array<{
+    date: string;
+    rating: number;
+    reason: string;
+  }>;
+  blitzRatingHistory?: Array<{
+    date: string;
+    rating: number;
+    reason: string;
+  }>;
 }
 
 export interface Tournament {
@@ -35,18 +48,15 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   location: string;
-  city: string;
-  state: string;
-  category: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed';
-  participants: number;
-  rounds: number;
-  timeControl: string;
-  coverImage?: string;
-  description?: string;
-  registrationOpen?: boolean;
-  organizerId?: string;
+  state?: string;
+  city?: string;
+  organizerId: string;
+  status: 'upcoming' | 'ongoing' | 'completed' | 'processed' | 'pending' | 'rejected' | 'approved';
   players?: string[];
+  rounds?: number;
+  currentRound?: number;
+  category?: 'classical' | 'rapid' | 'blitz';
+  timeControl?: string;
   pairings?: Array<{
     roundNumber: number;
     matches: Array<{
@@ -57,7 +67,11 @@ export interface Tournament {
       blackRatingChange?: number;
     }>;
   }>;
-  currentRound?: number;
+  standings?: Array<{
+    playerId: string;
+    score: number;
+    position: number;
+  }>;
   processingDate?: string;
   processedPlayerIds?: string[];
   prize?: string;

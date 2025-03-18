@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
+import { BadgeCheck, AlertCircle } from "lucide-react";
 
 interface ResultRecorderProps {
   pairings: Array<{ 
@@ -86,6 +87,26 @@ const ResultRecorder = ({
     }
     return player.rating;
   };
+  
+  // Function to get the appropriate rating status based on tournament type
+  const getPlayerRatingStatus = (player: Player) => {
+    if (tournamentType === 'rapid') {
+      return player.rapidRatingStatus ?? 'provisional';
+    } else if (tournamentType === 'blitz') {
+      return player.blitzRatingStatus ?? 'provisional';
+    }
+    return player.ratingStatus ?? 'provisional';
+  };
+  
+  // Function to get the games played count based on tournament type
+  const getPlayerGamesPlayed = (player: Player) => {
+    if (tournamentType === 'rapid') {
+      return player.rapidGamesPlayed ?? 0;
+    } else if (tournamentType === 'blitz') {
+      return player.blitzGamesPlayed ?? 0;
+    }
+    return player.gamesPlayed ?? 0;
+  };
 
   return (
     <Card className="border-nigeria-green/30">
@@ -105,6 +126,8 @@ const ResultRecorder = ({
                   
                   const whiteRating = getPlayerRating(whitePlayer);
                   const blackRating = getPlayerRating(blackPlayer);
+                  const whiteRatingStatus = getPlayerRatingStatus(whitePlayer);
+                  const blackRatingStatus = getPlayerRatingStatus(blackPlayer);
                   
                   return (
                     <div key={index} className="border border-nigeria-green/20 rounded-md p-4 hover:bg-nigeria-green/5 transition-colors">
@@ -120,12 +143,17 @@ const ResultRecorder = ({
                                 )}
                                 {whitePlayer.name}
                               </p>
-                              <p className="text-sm text-gray-500">
-                                White • {whiteRating}
-                                {!whitePlayer[`${tournamentType}Rating`] && tournamentType !== 'classical' && (
-                                  <span className="ml-1 text-amber-600 text-xs">(Floor)</span>
+                              <div className="text-sm text-gray-500 flex items-center gap-1">
+                                <span>White • {whiteRating}</span>
+                                {whiteRatingStatus === 'established' ? (
+                                  <BadgeCheck size={14} className="text-green-600" />
+                                ) : (
+                                  <span className="inline-flex items-center ml-1 text-amber-600 text-xs">
+                                    <AlertCircle size={12} className="mr-0.5" />
+                                    {getPlayerGamesPlayed(whitePlayer)}/30
+                                  </span>
                                 )}
-                              </p>
+                              </div>
                             </div>
                             
                             <div className="text-center my-2 md:my-0">
@@ -141,12 +169,17 @@ const ResultRecorder = ({
                                 )}
                                 {blackPlayer.name}
                               </p>
-                              <p className="text-sm text-gray-500">
-                                Black • {blackRating}
-                                {!blackPlayer[`${tournamentType}Rating`] && tournamentType !== 'classical' && (
-                                  <span className="ml-1 text-amber-600 text-xs">(Floor)</span>
+                              <div className="text-sm text-gray-500 flex items-center gap-1">
+                                <span>Black • {blackRating}</span>
+                                {blackRatingStatus === 'established' ? (
+                                  <BadgeCheck size={14} className="text-green-600" />
+                                ) : (
+                                  <span className="inline-flex items-center ml-1 text-amber-600 text-xs">
+                                    <AlertCircle size={12} className="mr-0.5" />
+                                    {getPlayerGamesPlayed(blackPlayer)}/30
+                                  </span>
                                 )}
-                              </p>
+                              </div>
                             </div>
                           </div>
                         </div>

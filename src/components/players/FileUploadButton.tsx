@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Upload, X, FileSpreadsheet, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -167,7 +166,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           if (ratingValue !== null && ratingValue !== "") {
             const parsedRating = parseInt(String(ratingValue));
             if (!isNaN(parsedRating)) {
-              classicalRating = isRatingOfficer ? parsedRating + 100 : parsedRating;
+              classicalRating = parsedRating;
             }
           }
         }
@@ -178,7 +177,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           if (rapidValue !== null && rapidValue !== "") {
             const parsedRapid = parseInt(String(rapidValue));
             if (!isNaN(parsedRapid)) {
-              rapidRating = isRatingOfficer ? parsedRapid + 100 : parsedRapid;
+              rapidRating = parsedRapid;
             }
           }
         }
@@ -189,7 +188,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           if (blitzValue !== null && blitzValue !== "") {
             const parsedBlitz = parseInt(String(blitzValue));
             if (!isNaN(parsedBlitz)) {
-              blitzRating = isRatingOfficer ? parsedBlitz + 100 : parsedBlitz;
+              blitzRating = parsedBlitz;
             }
           }
         }
@@ -228,45 +227,96 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         const player: Player = {
           id: uuidv4(),
           name: String(name).trim(),
-          rating: classicalRating ?? 800,
-          rapidRating,
-          blitzRating,
           gender,
           birthYear,
           state: state || undefined,
           country: federation || 'Nigeria',
           status: 'approved',  // Rating officer imported players are automatically approved
-          gamesPlayed: 0,
           tournamentResults: [],
-          ratingHistory: [{
-            date: currentDate,
-            rating: classicalRating ?? 800,
-            reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
-          }]
         };
         
         if (title && String(title).trim()) {
           player.title = String(title).trim();
         }
         
-        // Add rapid rating history if rapidRating exists
-        if (rapidRating) {
-          player.rapidRatingHistory = [{
+        // Apply 100-point bonus for Rating Officer uploads and set games played according to rules
+        if (classicalRating) {
+          // Classical rating 
+          const finalClassicalRating = isRatingOfficer ? classicalRating + 100 : classicalRating;
+          player.rating = finalClassicalRating;
+          
+          // If rating officer gave a +100 bonus, set games played to 30 (established rating)
+          if (isRatingOfficer) {
+            player.gamesPlayed = 30;
+            player.ratingStatus = 'established';
+          } else {
+            player.gamesPlayed = 0;
+            player.ratingStatus = 'provisional';
+          }
+          
+          player.ratingHistory = [{
             date: currentDate,
-            rating: rapidRating,
+            rating: finalClassicalRating,
             reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
           }];
-          player.rapidGamesPlayed = 0;
+        } else {
+          // No classical rating provided, use floor rating
+          player.rating = 800;
+          player.gamesPlayed = 0;
+          player.ratingStatus = 'provisional';
+          player.ratingHistory = [{
+            date: currentDate,
+            rating: 800,
+            reason: "Floor rating assigned"
+          }];
         }
         
-        // Add blitz rating history if blitzRating exists
-        if (blitzRating) {
-          player.blitzRatingHistory = [{
+        // Add rapid rating if provided
+        if (rapidRating) {
+          const finalRapidRating = isRatingOfficer ? rapidRating + 100 : rapidRating;
+          player.rapidRating = finalRapidRating;
+          
+          // If rating officer gave a +100 bonus, set games played to 30 (established rating)
+          if (isRatingOfficer) {
+            player.rapidGamesPlayed = 30;
+            player.rapidRatingStatus = 'established';
+          } else {
+            player.rapidGamesPlayed = 0;
+            player.rapidRatingStatus = 'provisional';
+          }
+          
+          player.rapidRatingHistory = [{
             date: currentDate,
-            rating: blitzRating,
+            rating: finalRapidRating,
             reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
           }];
-          player.blitzGamesPlayed = 0;
+        } else {
+          // Only set floor rating for rapid if specifically processing a rapid tournament
+          // Otherwise, leave it undefined
+        }
+        
+        // Add blitz rating if provided
+        if (blitzRating) {
+          const finalBlitzRating = isRatingOfficer ? blitzRating + 100 : blitzRating;
+          player.blitzRating = finalBlitzRating;
+          
+          // If rating officer gave a +100 bonus, set games played to 30 (established rating)
+          if (isRatingOfficer) {
+            player.blitzGamesPlayed = 30;
+            player.blitzRatingStatus = 'established';
+          } else {
+            player.blitzGamesPlayed = 0;
+            player.blitzRatingStatus = 'provisional';
+          }
+          
+          player.blitzRatingHistory = [{
+            date: currentDate,
+            rating: finalBlitzRating,
+            reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
+          }];
+        } else {
+          // Only set floor rating for blitz if specifically processing a blitz tournament
+          // Otherwise, leave it undefined
         }
         
         console.log(`Processed player: "${player.name}", classical: ${player.rating}, rapid: ${player.rapidRating}, blitz: ${player.blitzRating}, id: ${player.id}`);

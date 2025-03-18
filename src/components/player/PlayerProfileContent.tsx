@@ -7,6 +7,7 @@ import PlayerPerformance from "./PlayerPerformance";
 import RatingChart from "../RatingChart";
 import PlayerRatings from "./PlayerRatings";
 import MultiFormatRatingChart from "./MultiFormatRatingChart";
+import { BadgeCheck, AlertCircle } from "lucide-react";
 
 interface PlayerProfileContentProps {
   player: Player;
@@ -17,6 +18,25 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
   const hasMultipleRatings = Boolean(
     player.rapidRatingHistory?.length || player.blitzRatingHistory?.length
   );
+
+  // Helper function to render rating status badge
+  const renderRatingStatus = (status?: 'provisional' | 'established', gamesPlayed?: number) => {
+    if (status === 'established' || gamesPlayed && gamesPlayed >= 30) {
+      return (
+        <span className="inline-flex items-center ml-2 text-green-600">
+          <BadgeCheck size={16} className="mr-1" />
+          <span className="text-xs">Established</span>
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center ml-2 text-amber-600">
+          <AlertCircle size={14} className="mr-1" />
+          <span className="text-xs">Provisional ({gamesPlayed || 0}/30)</span>
+        </span>
+      );
+    }
+  };
 
   return (
     <div className="container py-8">
@@ -67,6 +87,33 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                   </div>
                 </div>
                 
+                <div className="border-t pt-3">
+                  <h4 className="font-medium mb-2">Rating Information</h4>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="font-medium">Classical: </span>
+                      <span>{player.rating}</span>
+                      {renderRatingStatus(player.ratingStatus, player.gamesPlayed)}
+                    </div>
+                    
+                    {player.rapidRating && (
+                      <div>
+                        <span className="font-medium">Rapid: </span>
+                        <span>{player.rapidRating}</span>
+                        {renderRatingStatus(player.rapidRatingStatus, player.rapidGamesPlayed)}
+                      </div>
+                    )}
+                    
+                    {player.blitzRating && (
+                      <div>
+                        <span className="font-medium">Blitz: </span>
+                        <span>{player.blitzRating}</span>
+                        {renderRatingStatus(player.blitzRatingStatus, player.blitzGamesPlayed)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
                 {player.achievements && player.achievements.length > 0 && (
                   <div>
                     <h3 className="font-semibold">Achievements</h3>
@@ -96,6 +143,22 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
             <TabsContent value="ratings" className="space-y-6">
               {/* Replace the old chart with our new multi-format chart */}
               <MultiFormatRatingChart player={player} height={400} />
+              
+              {/* Add rating rules explainer */}
+              <Card className="mt-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Rating System Rules</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                    <li>Players start with a floor rating of 800 in each format if unrated</li>
+                    <li>Players need 30 games to establish their rating in each format</li>
+                    <li>When a Rating Officer gives a player a +100 bonus, they are immediately considered established</li>
+                    <li>K-factor varies based on experience: 40 for new players under 2000, 32 for under 2100, 24 for 2100-2399, 16 for 2400+</li>
+                    <li>Each format (Classical, Rapid, Blitz) has its own independent rating</li>
+                  </ul>
+                </CardContent>
+              </Card>
             </TabsContent>
             
             <TabsContent value="performance">

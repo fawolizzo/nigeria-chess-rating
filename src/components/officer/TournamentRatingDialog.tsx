@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, AlertCircle, BadgeCheck } from "lucide-react";
 import { Player, Tournament, updatePlayer, updateTournament, getAllPlayers } from "@/lib/mockData";
 import { calculatePostRoundRatings, FLOOR_RATING } from "@/lib/ratingCalculation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -115,21 +114,31 @@ const TournamentRatingDialog = ({
                 return player.rating;
               };
               
+              // Helper function to get rating status
+              const getPlayerRatingStatus = (player: Player) => {
+                if (tournament.category === 'rapid') {
+                  return player.rapidRatingStatus || 'provisional';
+                } else if (tournament.category === 'blitz') {
+                  return player.blitzRatingStatus || 'provisional';
+                }
+                return player.ratingStatus || 'provisional';
+              };
+              
               const getPlayerGamesPlayed = (player: Player) => {
                 const playerRating = getPlayerRating(player);
-                const has100Plus = String(playerRating).endsWith('100');
+                const ratingStatus = getPlayerRatingStatus(player);
                 
                 if (tournament.category === 'rapid') {
                   // Start at 0 games if player has no rapid rating history
                   const gamesPlayed = player.rapidGamesPlayed ?? 0;
-                  return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
+                  return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
                 } else if (tournament.category === 'blitz') {
                   // Start at 0 games if player has no blitz rating history
                   const gamesPlayed = player.blitzGamesPlayed ?? 0;
-                  return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
+                  return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
                 }
                 const gamesPlayed = player.gamesPlayed || 0;
-                return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
+                return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
               };
               
               return {
@@ -151,7 +160,8 @@ const TournamentRatingDialog = ({
         
         // Calculate player rating changes
         const playerUpdates: Record<string, { 
-          ratingChange: number
+          ratingChange: number,
+          gamesPlayed: number
         }> = {};
         
         processedRounds.forEach(round => {
@@ -159,17 +169,21 @@ const TournamentRatingDialog = ({
             if (match.result !== "*") {
               // Track white player updates
               if (!playerUpdates[match.whiteId]) {
-                playerUpdates[match.whiteId] = { ratingChange: 0 };
+                playerUpdates[match.whiteId] = { ratingChange: 0, gamesPlayed: 0 };
               }
               
               // Track black player updates
               if (!playerUpdates[match.blackId]) {
-                playerUpdates[match.blackId] = { ratingChange: 0 };
+                playerUpdates[match.blackId] = { ratingChange: 0, gamesPlayed: 0 };
               }
               
               // Add rating changes
               playerUpdates[match.whiteId].ratingChange += match.whiteRatingChange || 0;
               playerUpdates[match.blackId].ratingChange += match.blackRatingChange || 0;
+              
+              // Increment games played
+              playerUpdates[match.whiteId].gamesPlayed += 1;
+              playerUpdates[match.blackId].gamesPlayed += 1;
             }
           });
         });
@@ -182,24 +196,27 @@ const TournamentRatingDialog = ({
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
             const updatePlayerBasedOnTournamentType = (player: Player) => {
-              // Check if player has +100 rating to adjust games played
-              const hasPlus100 = (rating: number) => String(rating).endsWith('100');
-              
               if (tournament.category === 'rapid') {
                 // Update rapid rating
                 // If no rapid rating yet, start with floor rating
                 const currentRapidRating = player.rapidRating ?? FLOOR_RATING;
                 const newRapidRating = currentRapidRating + update.ratingChange;
-                // If no rapid games played yet, start at 0
+                
+                // Update rapid games played
                 const currentRapidGamesPlayed = player.rapidGamesPlayed ?? 0;
-                const newRapidGamesPlayed = hasPlus100(currentRapidRating) ? 
-                  Math.max(31, currentRapidGamesPlayed) + 1 : 
-                  currentRapidGamesPlayed + 1;
+                const newRapidGamesPlayed = currentRapidGamesPlayed + update.gamesPlayed;
+                
+                // Determine if rating status should change
+                let newRapidRatingStatus = player.rapidRatingStatus || 'provisional';
+                if (newRapidRatingStatus === 'provisional' && newRapidGamesPlayed >= 30) {
+                  newRapidRatingStatus = 'established';
+                }
                 
                 return {
                   ...player,
                   rapidRating: newRapidRating,
                   rapidGamesPlayed: newRapidGamesPlayed,
+                  rapidRatingStatus: newRapidRatingStatus,
                   rapidRatingHistory: [
                     ...(player.rapidRatingHistory || []),
                     {
@@ -214,16 +231,22 @@ const TournamentRatingDialog = ({
                 // If no blitz rating yet, start with floor rating
                 const currentBlitzRating = player.blitzRating ?? FLOOR_RATING;
                 const newBlitzRating = currentBlitzRating + update.ratingChange;
-                // If no blitz games played yet, start at 0
+                
+                // Update blitz games played
                 const currentBlitzGamesPlayed = player.blitzGamesPlayed ?? 0;
-                const newBlitzGamesPlayed = hasPlus100(currentBlitzRating) ? 
-                  Math.max(31, currentBlitzGamesPlayed) + 1 : 
-                  currentBlitzGamesPlayed + 1;
+                const newBlitzGamesPlayed = currentBlitzGamesPlayed + update.gamesPlayed;
+                
+                // Determine if rating status should change
+                let newBlitzRatingStatus = player.blitzRatingStatus || 'provisional';
+                if (newBlitzRatingStatus === 'provisional' && newBlitzGamesPlayed >= 30) {
+                  newBlitzRatingStatus = 'established';
+                }
                 
                 return {
                   ...player,
                   blitzRating: newBlitzRating,
                   blitzGamesPlayed: newBlitzGamesPlayed,
+                  blitzRatingStatus: newBlitzRatingStatus,
                   blitzRatingHistory: [
                     ...(player.blitzRatingHistory || []),
                     {
@@ -237,15 +260,22 @@ const TournamentRatingDialog = ({
                 // Default to classical rating
                 const currentRating = player.rating;
                 const newRating = currentRating + update.ratingChange;
+                
+                // Update classical games played
                 const currentGamesPlayed = player.gamesPlayed || 0;
-                const newGamesPlayed = hasPlus100(currentRating) ? 
-                  Math.max(31, currentGamesPlayed) + 1 : 
-                  currentGamesPlayed + 1;
+                const newGamesPlayed = currentGamesPlayed + update.gamesPlayed;
+                
+                // Determine if rating status should change
+                let newRatingStatus = player.ratingStatus || 'provisional';
+                if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
+                  newRatingStatus = 'established';
+                }
                 
                 return {
                   ...player,
                   rating: newRating,
                   gamesPlayed: newGamesPlayed,
+                  ratingStatus: newRatingStatus,
                   ratingHistory: [
                     ...(player.ratingHistory || []),
                     {
@@ -355,6 +385,25 @@ const TournamentRatingDialog = ({
     return player.rating;
   };
 
+  // Function to get the rating status icon
+  const getRatingStatusIcon = (player: Player) => {
+    let ratingStatus: string | undefined;
+    
+    if (tournament.category === 'rapid') {
+      ratingStatus = player.rapidRatingStatus;
+    } else if (tournament.category === 'blitz') {
+      ratingStatus = player.blitzRatingStatus;
+    } else {
+      ratingStatus = player.ratingStatus;
+    }
+    
+    if (ratingStatus === 'established') {
+      return <BadgeCheck size={16} className="text-green-600 ml-1" />;
+    } else {
+      return <AlertCircle size={14} className="text-amber-600 ml-1" />;
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -395,7 +444,7 @@ const TournamentRatingDialog = ({
                   <li>K=32 for players rated below 2100</li>
                   <li>K=24 for players rated 2100-2399</li>
                   <li>K=16 for higher-rated players (2400+)</li>
-                  <li>Players with +100 ratings are treated as having 30+ games</li>
+                  <li>Players need 30 games to achieve an established rating</li>
                 </ul>
               </div>
               
@@ -408,17 +457,43 @@ const TournamentRatingDialog = ({
                         <tr className="border-b">
                           <th className="text-left p-1">Name</th>
                           <th className="text-right p-1">{tournament.category || 'Classical'} Rating</th>
+                          <th className="text-right p-1">Status</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {tournamentPlayers.map((player) => (
-                          <tr key={player.id} className="border-b border-gray-100 last:border-0">
-                            <td className="p-1">{player.name}</td>
-                            <td className="text-right p-1">
-                              {getDisplayRating(player)}
-                            </td>
-                          </tr>
-                        ))}
+                        {tournamentPlayers.map((player) => {
+                          // Get appropriate rating and status for display
+                          let displayRating: number;
+                          let gamesPlayed: number;
+                          let statusText: string;
+                          
+                          if (tournament.category === 'rapid') {
+                            displayRating = player.rapidRating ?? FLOOR_RATING;
+                            gamesPlayed = player.rapidGamesPlayed ?? 0;
+                            statusText = player.rapidRatingStatus === 'established' ? 'Established' : `Provisional (${gamesPlayed}/30)`;
+                          } else if (tournament.category === 'blitz') {
+                            displayRating = player.blitzRating ?? FLOOR_RATING;
+                            gamesPlayed = player.blitzGamesPlayed ?? 0;
+                            statusText = player.blitzRatingStatus === 'established' ? 'Established' : `Provisional (${gamesPlayed}/30)`;
+                          } else {
+                            displayRating = player.rating;
+                            gamesPlayed = player.gamesPlayed || 0;
+                            statusText = player.ratingStatus === 'established' ? 'Established' : `Provisional (${gamesPlayed}/30)`;
+                          }
+                          
+                          return (
+                            <tr key={player.id} className="border-b border-gray-100 last:border-0">
+                              <td className="p-1">{player.name}</td>
+                              <td className="text-right p-1">
+                                {displayRating}
+                              </td>
+                              <td className="text-right p-1 flex items-center justify-end">
+                                {statusText}
+                                {getRatingStatusIcon(player)}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -461,3 +536,4 @@ const TournamentRatingDialog = ({
 };
 
 export default TournamentRatingDialog;
+
