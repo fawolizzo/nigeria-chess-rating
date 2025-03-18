@@ -43,6 +43,10 @@ const TournamentHeader: React.FC<TournamentHeaderProps> = ({
         return <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300">Completed</Badge>;
       case "processed":
         return <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300">Ratings Processed</Badge>;
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300">Rejected</Badge>;
+      case "pending":
+        return <Badge className="bg-nigeria-yellow/10 text-nigeria-yellow-dark dark:bg-nigeria-yellow/20 dark:text-nigeria-yellow">Pending Approval</Badge>;
       default:
         return <Badge variant="outline">Draft</Badge>;
     }
@@ -103,6 +107,15 @@ const TournamentHeader: React.FC<TournamentHeaderProps> = ({
           <CheckCircle className="h-5 w-5 text-green-500" />
           <span className="text-sm font-medium text-green-700 dark:text-green-400">
             Ratings have been processed
+          </span>
+        </div>
+      );
+    } else if (tournament.status === "rejected") {
+      return (
+        <div className="flex items-center gap-2">
+          <CircleOff className="h-5 w-5 text-red-500" />
+          <span className="text-sm font-medium text-red-700 dark:text-red-400">
+            Tournament was rejected by Rating Officer
           </span>
         </div>
       );

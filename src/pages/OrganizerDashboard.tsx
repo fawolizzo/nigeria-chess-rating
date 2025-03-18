@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Users, Clock, Award, Plus, MapPin, File, List, LogOut } from "lucide-react";
@@ -35,7 +34,6 @@ interface Tournament {
   organizerId: string;
 }
 
-// Create a function to validate that a date is not in the past
 const isNotInPast = (date: Date) => {
   const today = startOfDay(new Date());
   return !isBefore(date, today);
@@ -92,7 +90,6 @@ const TIME_CONTROLS = [
   "Classical: 120min + 30sec increment"
 ];
 
-// Helper function to format dates consistently
 const formatDisplayDate = (dateString: string): string => {
   try {
     const date = parseISO(dateString);
@@ -173,7 +170,6 @@ const OrganizerDashboard = () => {
       return;
     }
 
-    // Double check date is not in the past
     const today = startOfDay(new Date());
     const startDate = startOfDay(new Date(data.startDate));
     const endDate = startOfDay(new Date(data.endDate));
@@ -226,20 +222,17 @@ const OrganizerDashboard = () => {
     navigate(`/tournament/${tournamentId}/manage`);
   };
 
-  // Function to get upcoming tournaments sorted by date
+  const filterTournamentsByStatus = (status: Tournament['status']) => {
+    return tournaments.filter(tournament => tournament.status === status);
+  };
+
   const getUpcomingTournaments = () => {
     return tournaments
       .filter(t => t.status === "upcoming")
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
   };
 
-  // Get the next upcoming tournament
   const nextTournament = getUpcomingTournaments()[0];
-
-  // Function to filter tournaments by status (fixes the completed tournaments issue)
-  const filterTournamentsByStatus = (status: Tournament['status']) => {
-    return tournaments.filter(tournament => tournament.status === status);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -324,7 +317,7 @@ const OrganizerDashboard = () => {
           </Card>
         </div>
         
-        <Tabs defaultValue="upcoming" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
           <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
             <TabsTrigger value="upcoming" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Upcoming</TabsTrigger>
             <TabsTrigger value="pending" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Pending Approval</TabsTrigger>

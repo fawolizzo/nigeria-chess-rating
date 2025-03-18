@@ -35,6 +35,25 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
     }
   };
 
+  const getStatusLabel = (status: Tournament['status']) => {
+    switch (status) {
+      case 'upcoming':
+        return 'Upcoming';
+      case 'ongoing':
+        return 'Ongoing';
+      case 'completed':
+        return 'Completed';
+      case 'pending':
+        return 'Pending Approval';
+      case 'rejected':
+        return 'Rejected';
+      case 'processed':
+        return 'Processed';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   const handleRegisterClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (onRegister) {
@@ -48,7 +67,7 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
         <div className="p-6">
           <div className="flex justify-between items-start mb-3">
             <Badge className={`${getStatusClass(tournament.status)} border`}>
-              {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
+              {getStatusLabel(tournament.status)}
             </Badge>
             {tournament.category && (
               <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
