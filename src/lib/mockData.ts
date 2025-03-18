@@ -76,6 +76,9 @@ export interface Tournament {
   processedPlayerIds?: string[];
   prize?: string;
   rejectionReason?: string;
+  participants?: string[];
+  description?: string;
+  registrationOpen?: boolean;
 }
 
 export const players: Player[] = [];

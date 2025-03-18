@@ -141,7 +141,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         return;
       }
       
-      const processedPlayers: Partial<Player>[] = [];
+      const processedPlayers: Player[] = [];
       
       for (let i = 1; i < rawData.length; i++) {
         const row = rawData[i];
@@ -233,6 +233,9 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           country: federation || 'Nigeria',
           status: 'approved',  // Rating officer imported players are automatically approved
           tournamentResults: [],
+          gamesPlayed: 0,  // Will be updated below
+          rating: 800,     // Will be updated below
+          ratingHistory: []  // Will be updated below
         };
         
         if (title && String(title).trim()) {

@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Pencil, Plus, Search, UserCheck, UserX, RefreshCw } from "lucide-react";
+import { CheckCircle, Pencil, Plus, Search, UserCheck, UserX, RefreshCw, Upload } from "lucide-react";
 import { getAllPlayers, updatePlayer } from "@/lib/mockData";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
+import FileUploadButton from "@/components/players/FileUploadButton";
 
 interface PlayerManagementProps {
   onPlayerApproval?: () => void;
@@ -24,6 +24,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
   useEffect(() => {
     loadPlayers();
@@ -53,6 +54,14 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     setTimeout(() => {
       setIsRefreshing(false);
     }, 500);
+  };
+  
+  const handlePlayersImported = (importedPlayers: any[]) => {
+    loadPlayers();
+    toast({
+      title: "Players Imported Successfully",
+      description: `${importedPlayers.length} players have been imported into the system.`,
+    });
   };
   
   const handleApprovePlayer = (playerId: string) => {
@@ -161,12 +170,50 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => setIsImportDialogOpen(true)}
+            className="mr-2"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import Players
+          </Button>
+          
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Player
           </Button>
         </div>
       </div>
+      
+      {isImportDialogOpen && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Import Players</CardTitle>
+            <CardDescription>
+              Upload a CSV or Excel file to import multiple players at once
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FileUploadButton 
+              onPlayersImported={(players) => {
+                handlePlayersImported(players);
+                setIsImportDialogOpen(false);
+              }}
+              buttonText="Import Players"
+            />
+            <div className="mt-4 flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsImportDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Tabs defaultValue={pendingPlayers.length > 0 ? "pending" : "approved"} className="space-y-4">
         <TabsList>
@@ -330,14 +377,12 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         </TabsContent>
       </Tabs>
       
-      {/* Create Player Dialog */}
       <CreatePlayerDialog 
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onPlayerCreated={handlePlayerCreated}
       />
       
-      {/* Edit Player Dialog */}
       {editingPlayer && (
         <EditPlayerDialog
           isOpen={!!editingPlayer}
