@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Pencil, Plus, Search, UserCheck, UserX } from "lucide-react";
+import { CheckCircle, Pencil, Plus, Search, UserCheck, UserX, RefreshCw } from "lucide-react";
 import { getAllPlayers, updatePlayer } from "@/lib/mockData";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
@@ -23,9 +23,15 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   useEffect(() => {
     loadPlayers();
+    
+    // Set up interval to refresh players every 10 seconds
+    const intervalId = setInterval(loadPlayers, 10000);
+    
+    return () => clearInterval(intervalId);
   }, []);
   
   const loadPlayers = () => {
@@ -39,6 +45,14 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     // Filter approved players
     const approved = allPlayers.filter(player => player.status === 'approved');
     setApprovedPlayers(approved);
+  };
+  
+  const handleRefreshPlayers = () => {
+    setIsRefreshing(true);
+    loadPlayers();
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
   };
   
   const handleApprovePlayer = (playerId: string) => {
@@ -126,7 +140,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   
   const filteredApprovedPlayers = approvedPlayers.filter(player => 
     player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    player.state.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (player.state && player.state.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (player.city && player.city.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   
@@ -137,10 +151,21 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
           <h2 className="text-2xl font-bold">Player Management</h2>
           <p className="text-muted-foreground">Manage player registrations and approvals</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Player
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleRefreshPlayers}
+            disabled={isRefreshing}
+            className="mr-2"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Player
+          </Button>
+        </div>
       </div>
       
       <Tabs defaultValue={pendingPlayers.length > 0 ? "pending" : "approved"} className="space-y-4">

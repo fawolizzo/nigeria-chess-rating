@@ -46,8 +46,13 @@ export const MultiSelectPlayers = ({
       const allPlayers = getAllPlayers();
       console.log("All players in system:", allPlayers.length);
       
+      // Filter players based on includePendingPlayers flag
+      const statusFilteredPlayers = includePendingPlayers 
+        ? allPlayers 
+        : allPlayers.filter(player => player.status === 'approved');
+      
       // Get players excluding those already in the tournament
-      const availablePlayers = allPlayers.filter(player => {
+      const availablePlayers = statusFilteredPlayers.filter(player => {
         return !excludeIds.includes(player.id);
       });
       
@@ -58,6 +63,11 @@ export const MultiSelectPlayers = ({
           toast({
             title: "No players available",
             description: "There are no players in the system yet.",
+          });
+        } else if (statusFilteredPlayers.length === 0) {
+          toast({
+            title: "No approved players",
+            description: "There are no approved players in the system yet.",
           });
         } else {
           toast({

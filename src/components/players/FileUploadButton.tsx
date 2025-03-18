@@ -99,6 +99,11 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           if (headerText === "#" || headerText === "no" || headerText === "num" || headerText === "number") {
             columnMap["id"] = index;
           }
+
+          // Check for state column
+          if (headerText === "state" || headerText === "location") {
+            columnMap["state"] = index;
+          }
         });
       } else {
         console.log("Header row is not an array:", headerRow);
@@ -147,20 +152,28 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         
         const title = 'title' in columnMap ? row[columnMap['title']] : null;
         
-        let hasExistingRating = false;
-        let rating: number = 800;
+        // Initialize with floor rating
+        let rating = 800;
         
+        // Check if rating is provided in the file
         if ('rating' in columnMap && row[columnMap['rating']] !== undefined) {
           const ratingValue = row[columnMap['rating']];
           if (ratingValue !== null && ratingValue !== "") {
-            hasExistingRating = true;
-            rating = parseInt(String(ratingValue)) || 800;
+            // Parse the rating from the file
+            const parsedRating = parseInt(String(ratingValue)) || 800;
             
-            if (isRatingOfficer && hasExistingRating) {
-              rating += 100;
-              console.log(`Added 100 points to ${name}, new rating: ${rating}`);
+            // If rating officer is importing, add 100 to the parsed rating
+            if (isRatingOfficer) {
+              rating = parsedRating + 100;
+              console.log(`Rating officer import: ${name}, base rating: ${parsedRating}, with bonus: ${rating}`);
+            } else {
+              rating = parsedRating;
             }
           }
+        } else if (isRatingOfficer) {
+          // If no rating in file but rating officer is importing, still add 100 to floor rating
+          rating = 900;
+          console.log(`Rating officer import with no rating provided: ${name}, using 900 (800+100)`);
         }
         
         let birthYear: number | undefined = undefined;
@@ -185,20 +198,23 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
           }
         }
         
-        const player: Partial<Player> = {
+        const state = 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : '';
+        
+        const player: Player = {
           id: uuidv4(),
           name: String(name).trim(),
           rating,
           gender,
           birthYear,
-          state: 'state' in columnMap ? String(row[columnMap['state']] || '').trim() : undefined,
+          state: state || undefined,
           country: 'Nigeria',
-          status: isRatingOfficer ? 'approved' : 'pending',
+          status: 'approved',  // Rating officer imported players are automatically approved
           gamesPlayed: 0,
           tournamentResults: [],
           ratingHistory: [{
             date: new Date().toISOString().split('T')[0],
-            rating
+            rating,
+            reason: isRatingOfficer ? "Initial rating by Rating Officer (+100)" : "Initial rating"
           }]
         };
         
@@ -209,7 +225,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
         console.log(`Processed player: "${player.name}", rating: ${player.rating}, gender: ${player.gender}, id: ${player.id}`);
         
         // Add each player to localStorage immediately
-        addPlayer(player as Player);
+        addPlayer(player);
         
         processedPlayers.push(player);
       }
@@ -234,7 +250,7 @@ const FileUploadButton = ({ onPlayersImported, buttonText = "Import Players" }: 
       
       toast({
         title: "Players imported",
-        description: `Successfully imported ${processedPlayers.length} players from file.${isRatingOfficer ? " Players with existing ratings received +100 rating points." : ""}`,
+        description: `Successfully imported ${processedPlayers.length} players from file.${isRatingOfficer ? " Players received +100 rating points as per Rating Officer rules." : ""}`,
       });
       
       setFile(null);
