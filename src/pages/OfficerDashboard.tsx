@@ -22,6 +22,7 @@ const OfficerDashboard: React.FC = () => {
       // Load pending tournaments count
       const allTournaments = getAllTournaments();
       const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
+      const completedTournaments = allTournaments.filter(t => t.status === "completed").length;
       
       // Load pending players count
       const allPlayers = getAllPlayers();
@@ -30,8 +31,8 @@ const OfficerDashboard: React.FC = () => {
       // Load pending organizers count
       const pendingOrganizers = 0; // Assuming this is handled elsewhere
       
-      // Set total pending count
-      setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers);
+      // Set total pending count (include completed tournaments that need processing)
+      setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
     };
     
     loadPendingCounts();

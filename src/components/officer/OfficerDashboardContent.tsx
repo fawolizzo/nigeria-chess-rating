@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrganizerApprovals from "./OrganizerApprovals";
 import PlayerManagement from "./PlayerManagement";
@@ -13,6 +13,15 @@ const OfficerDashboardContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("organizers");
   const { toast } = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [pendingTournaments, setPendingTournaments] = useState<any[]>([]);
+  const [completedTournaments, setCompletedTournaments] = useState<any[]>([]);
+  
+  useEffect(() => {
+    // Load tournaments based on their status
+    const allTournaments = getAllTournaments();
+    setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
+    setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
+  }, [refreshKey]);
   
   const refreshDashboard = () => {
     setRefreshKey(prev => prev + 1);
@@ -21,9 +30,6 @@ const OfficerDashboardContent: React.FC = () => {
       description: "The dashboard has been refreshed with the latest data.",
     });
   };
-
-  // Get pending tournaments
-  const pendingTournaments = getAllTournaments().filter(t => t.status === "pending");
   
   return (
     <div>
@@ -37,7 +43,14 @@ const OfficerDashboardContent: React.FC = () => {
           <TabsTrigger value="organizers">Organizers</TabsTrigger>
           <TabsTrigger value="players">Players</TabsTrigger>
           <TabsTrigger value="pending-tournaments">Pending Tournaments</TabsTrigger>
-          <TabsTrigger value="approved-tournaments">Approved Tournaments</TabsTrigger>
+          <TabsTrigger value="approved-tournaments">
+            Tournaments
+            {completedTournaments.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-100 text-green-600 text-xs font-medium">
+                {completedTournaments.length}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="organizers" className="p-4">
           <div className="space-y-8">
@@ -55,7 +68,10 @@ const OfficerDashboardContent: React.FC = () => {
           />
         </TabsContent>
         <TabsContent value="approved-tournaments" className="p-4">
-          <ApprovedTournaments />
+          <ApprovedTournaments 
+            completedTournaments={completedTournaments}
+            onTournamentProcessed={refreshDashboard} 
+          />
         </TabsContent>
       </Tabs>
     </div>
