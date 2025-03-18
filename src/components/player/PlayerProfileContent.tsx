@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,10 +55,9 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                     {player.title && <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>}
                     {player.name}
                     {hasTitle && (
-                      <div className="inline-flex items-center justify-center ml-1.5 relative">
-                        <div className="w-6 h-6 bg-black rounded-full overflow-hidden flex items-center justify-center">
-                          <div className="absolute inset-0 w-6 h-6 bg-nigeria-yellow/50 rounded-full" style={{ clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }}></div>
-                          <Check className="h-3.5 w-3.5 text-nigeria-yellow z-10" />
+                      <div className="inline-flex items-center justify-center ml-1.5">
+                        <div className="w-6 h-6 bg-nigeria-green rounded-full flex items-center justify-center">
+                          <Check className="h-3.5 w-3.5 text-white" />
                         </div>
                       </div>
                     )}
@@ -101,14 +99,12 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                 <div className="border-t pt-3">
                   <h4 className="font-medium mb-2">Rating Information</h4>
                   <div className="space-y-2">
-                    {/* Classical Rating - Always show */}
                     <div>
                       <span className="font-medium">Classical: </span>
                       <span>{player.rating}</span>
                       {renderRatingStatus(player.ratingStatus, player.gamesPlayed)}
                     </div>
                     
-                    {/* Rapid Rating - Only show if exists or "Not rated" */}
                     <div>
                       <span className="font-medium">Rapid: </span>
                       {player.rapidRating !== undefined ? (
@@ -121,7 +117,6 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                       )}
                     </div>
                     
-                    {/* Blitz Rating - Only show if exists or "Not rated" */}
                     <div>
                       <span className="font-medium">Blitz: </span>
                       {player.blitzRating !== undefined ? (
@@ -163,10 +158,8 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
             </TabsList>
             
             <TabsContent value="ratings" className="space-y-6">
-              {/* Replace the old chart with our new multi-format chart */}
               <MultiFormatRatingChart player={player} height={400} />
               
-              {/* Add rating rules explainer */}
               <Card className="mt-4">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Rating System Rules</CardTitle>

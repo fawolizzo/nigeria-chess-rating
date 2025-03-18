@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Award, Check } from "lucide-react";
 import { Player } from "@/lib/mockData";
@@ -30,8 +29,7 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
     return buchholz;
   };
 
-  // Calculate Sonneborn-Berger score (sum of the scores of the opponents a player has defeated, 
-  // plus half the scores of the opponents with whom the player has drawn)
+  // Calculate Sonneborn-Berger score 
   const calculateSonnebornBerger = (player: PlayerWithScore) => {
     let sb = 0;
     
@@ -107,10 +105,9 @@ const StandingsTable = ({ standings, players }: StandingsTableProps) => {
                             )}
                             {player.name}
                             {hasTitle && (
-                              <div className="inline-flex items-center justify-center ml-1.5 relative">
-                                <div className="w-5 h-5 bg-black rounded-full overflow-hidden flex items-center justify-center">
-                                  <div className="absolute inset-0 w-5 h-5 bg-nigeria-yellow/50 rounded-full" style={{ clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)" }}></div>
-                                  <Check className="h-3 w-3 text-nigeria-yellow z-10" />
+                              <div className="inline-flex items-center justify-center ml-1.5">
+                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-white" />
                                 </div>
                               </div>
                             )}
