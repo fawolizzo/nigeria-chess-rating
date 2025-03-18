@@ -96,27 +96,38 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                 <div className="border-t pt-3">
                   <h4 className="font-medium mb-2">Rating Information</h4>
                   <div className="space-y-2">
+                    {/* Classical Rating - Always show */}
                     <div>
                       <span className="font-medium">Classical: </span>
                       <span>{player.rating}</span>
                       {renderRatingStatus(player.ratingStatus, player.gamesPlayed)}
                     </div>
                     
-                    {player.rapidRating && (
-                      <div>
-                        <span className="font-medium">Rapid: </span>
-                        <span>{player.rapidRating}</span>
-                        {renderRatingStatus(player.rapidRatingStatus, player.rapidGamesPlayed)}
-                      </div>
-                    )}
+                    {/* Rapid Rating - Only show if exists or "Not rated" */}
+                    <div>
+                      <span className="font-medium">Rapid: </span>
+                      {player.rapidRating !== undefined ? (
+                        <>
+                          <span>{player.rapidRating}</span>
+                          {renderRatingStatus(player.rapidRatingStatus, player.rapidGamesPlayed)}
+                        </>
+                      ) : (
+                        <span className="text-gray-500">Not rated</span>
+                      )}
+                    </div>
                     
-                    {player.blitzRating && (
-                      <div>
-                        <span className="font-medium">Blitz: </span>
-                        <span>{player.blitzRating}</span>
-                        {renderRatingStatus(player.blitzRatingStatus, player.blitzGamesPlayed)}
-                      </div>
-                    )}
+                    {/* Blitz Rating - Only show if exists or "Not rated" */}
+                    <div>
+                      <span className="font-medium">Blitz: </span>
+                      {player.blitzRating !== undefined ? (
+                        <>
+                          <span>{player.blitzRating}</span>
+                          {renderRatingStatus(player.blitzRatingStatus, player.blitzGamesPlayed)}
+                        </>
+                      ) : (
+                        <span className="text-gray-500">Not rated</span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
@@ -159,9 +170,9 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
                     <li>Players start with a floor rating of 800 in each format if unrated</li>
                     <li>Players need 30 games to establish their rating in each format</li>
+                    <li>Each format (Classical, Rapid, Blitz) has its own independent rating</li>
                     <li>When a Rating Officer gives a player a +100 bonus, they are immediately considered established</li>
                     <li>K-factor varies based on experience: 40 for new players under 2000, 32 for under 2100, 24 for 2100-2399, 16 for 2400+</li>
-                    <li>Each format (Classical, Rapid, Blitz) has its own independent rating</li>
                   </ul>
                 </CardContent>
               </Card>

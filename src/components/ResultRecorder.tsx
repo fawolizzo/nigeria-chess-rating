@@ -108,6 +108,16 @@ const ResultRecorder = ({
     return player.gamesPlayed ?? 0;
   };
 
+  // Function to check if a player needs to be initialized with a floor rating
+  const needsFloorRating = (player: Player) => {
+    if (tournamentType === 'rapid') {
+      return player.rapidRating === undefined;
+    } else if (tournamentType === 'blitz') {
+      return player.blitzRating === undefined;
+    }
+    return false; // Classical rating should always exist
+  };
+
   return (
     <Card className="border-nigeria-green/30">
       <CardHeader className="bg-gradient-to-r from-nigeria-green/5 to-transparent">
@@ -128,6 +138,11 @@ const ResultRecorder = ({
                   const blackRating = getPlayerRating(blackPlayer);
                   const whiteRatingStatus = getPlayerRatingStatus(whitePlayer);
                   const blackRatingStatus = getPlayerRatingStatus(blackPlayer);
+                  const whiteGamesPlayed = getPlayerGamesPlayed(whitePlayer);
+                  const blackGamesPlayed = getPlayerGamesPlayed(blackPlayer);
+                  
+                  const whiteNeedsFloorRating = needsFloorRating(whitePlayer);
+                  const blackNeedsFloorRating = needsFloorRating(blackPlayer);
                   
                   return (
                     <div key={index} className="border border-nigeria-green/20 rounded-md p-4 hover:bg-nigeria-green/5 transition-colors">
@@ -145,12 +160,17 @@ const ResultRecorder = ({
                               </p>
                               <div className="text-sm text-gray-500 flex items-center gap-1">
                                 <span>White • {whiteRating}</span>
+                                {whiteNeedsFloorRating && (
+                                  <span className="inline-flex items-center ml-1 text-blue-600 text-xs">
+                                    (Floor Rating)
+                                  </span>
+                                )}
                                 {whiteRatingStatus === 'established' ? (
                                   <BadgeCheck size={14} className="text-green-600" />
                                 ) : (
                                   <span className="inline-flex items-center ml-1 text-amber-600 text-xs">
                                     <AlertCircle size={12} className="mr-0.5" />
-                                    {getPlayerGamesPlayed(whitePlayer)}/30
+                                    {whiteGamesPlayed}/30
                                   </span>
                                 )}
                               </div>
@@ -171,12 +191,17 @@ const ResultRecorder = ({
                               </p>
                               <div className="text-sm text-gray-500 flex items-center gap-1">
                                 <span>Black • {blackRating}</span>
+                                {blackNeedsFloorRating && (
+                                  <span className="inline-flex items-center ml-1 text-blue-600 text-xs">
+                                    (Floor Rating)
+                                  </span>
+                                )}
                                 {blackRatingStatus === 'established' ? (
                                   <BadgeCheck size={14} className="text-green-600" />
                                 ) : (
                                   <span className="inline-flex items-center ml-1 text-amber-600 text-xs">
                                     <AlertCircle size={12} className="mr-0.5" />
-                                    {getPlayerGamesPlayed(blackPlayer)}/30
+                                    {blackGamesPlayed}/30
                                   </span>
                                 )}
                               </div>
