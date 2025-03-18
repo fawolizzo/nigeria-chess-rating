@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
+import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
 interface ResultRecorderProps {
   pairings: Array<{ 
@@ -79,11 +80,11 @@ const ResultRecorder = ({
   // Function to get the appropriate rating based on tournament type
   const getPlayerRating = (player: Player) => {
     if (tournamentType === 'rapid') {
-      return player.rapidRating || player.rating;
+      return player.rapidRating ?? FLOOR_RATING;
     } else if (tournamentType === 'blitz') {
-      return player.blitzRating || player.rating;
+      return player.blitzRating ?? FLOOR_RATING;
     }
-    return player.rating; // Default to classical rating
+    return player.rating;
   };
 
   return (
@@ -121,6 +122,9 @@ const ResultRecorder = ({
                               </p>
                               <p className="text-sm text-gray-500">
                                 White • {whiteRating}
+                                {!whitePlayer[`${tournamentType}Rating`] && tournamentType !== 'classical' && (
+                                  <span className="ml-1 text-amber-600 text-xs">(Floor)</span>
+                                )}
                               </p>
                             </div>
                             
@@ -139,6 +143,9 @@ const ResultRecorder = ({
                               </p>
                               <p className="text-sm text-gray-500">
                                 Black • {blackRating}
+                                {!blackPlayer[`${tournamentType}Rating`] && tournamentType !== 'classical' && (
+                                  <span className="ml-1 text-amber-600 text-xs">(Floor)</span>
+                                )}
                               </p>
                             </div>
                           </div>

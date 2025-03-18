@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
-import { Player, Tournament, updatePlayer, updateTournament, getPlayersByTournamentId, getAllPlayers } from "@/lib/mockData";
-import { calculatePostRoundRatings } from "@/lib/ratingCalculation";
+import { Player, Tournament, updatePlayer, updateTournament, getAllPlayers } from "@/lib/mockData";
+import { calculatePostRoundRatings, FLOOR_RATING } from "@/lib/ratingCalculation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TournamentRatingDialogProps {
@@ -105,9 +106,11 @@ const TournamentRatingDialog = ({
               // Get the appropriate rating based on tournament category
               const getPlayerRating = (player: Player) => {
                 if (tournament.category === 'rapid') {
-                  return player.rapidRating || player.rating;
+                  // Use floor rating if player has no rapid rating
+                  return player.rapidRating ?? FLOOR_RATING;
                 } else if (tournament.category === 'blitz') {
-                  return player.blitzRating || player.rating;
+                  // Use floor rating if player has no blitz rating
+                  return player.blitzRating ?? FLOOR_RATING;
                 }
                 return player.rating;
               };
@@ -117,10 +120,12 @@ const TournamentRatingDialog = ({
                 const has100Plus = String(playerRating).endsWith('100');
                 
                 if (tournament.category === 'rapid') {
-                  const gamesPlayed = player.rapidGamesPlayed || player.gamesPlayed || 0;
+                  // Start at 0 games if player has no rapid rating history
+                  const gamesPlayed = player.rapidGamesPlayed ?? 0;
                   return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
                 } else if (tournament.category === 'blitz') {
-                  const gamesPlayed = player.blitzGamesPlayed || player.gamesPlayed || 0;
+                  // Start at 0 games if player has no blitz rating history
+                  const gamesPlayed = player.blitzGamesPlayed ?? 0;
                   return has100Plus ? Math.max(31, gamesPlayed) : gamesPlayed;
                 }
                 const gamesPlayed = player.gamesPlayed || 0;
@@ -182,9 +187,11 @@ const TournamentRatingDialog = ({
               
               if (tournament.category === 'rapid') {
                 // Update rapid rating
-                const currentRapidRating = player.rapidRating || player.rating;
+                // If no rapid rating yet, start with floor rating
+                const currentRapidRating = player.rapidRating ?? FLOOR_RATING;
                 const newRapidRating = currentRapidRating + update.ratingChange;
-                const currentRapidGamesPlayed = player.rapidGamesPlayed || 0;
+                // If no rapid games played yet, start at 0
+                const currentRapidGamesPlayed = player.rapidGamesPlayed ?? 0;
                 const newRapidGamesPlayed = hasPlus100(currentRapidRating) ? 
                   Math.max(31, currentRapidGamesPlayed) + 1 : 
                   currentRapidGamesPlayed + 1;
@@ -204,9 +211,11 @@ const TournamentRatingDialog = ({
                 };
               } else if (tournament.category === 'blitz') {
                 // Update blitz rating
-                const currentBlitzRating = player.blitzRating || player.rating;
+                // If no blitz rating yet, start with floor rating
+                const currentBlitzRating = player.blitzRating ?? FLOOR_RATING;
                 const newBlitzRating = currentBlitzRating + update.ratingChange;
-                const currentBlitzGamesPlayed = player.blitzGamesPlayed || 0;
+                // If no blitz games played yet, start at 0
+                const currentBlitzGamesPlayed = player.blitzGamesPlayed ?? 0;
                 const newBlitzGamesPlayed = hasPlus100(currentBlitzRating) ? 
                   Math.max(31, currentBlitzGamesPlayed) + 1 : 
                   currentBlitzGamesPlayed + 1;
@@ -336,13 +345,23 @@ const TournamentRatingDialog = ({
     return position > 0 ? position : sortedPlayers.length; // Default to last if not found
   };
 
+  // Function to get appropriate rating based on tournament type
+  const getDisplayRating = (player: Player) => {
+    if (tournament.category === 'rapid') {
+      return player.rapidRating ?? FLOOR_RATING;
+    } else if (tournament.category === 'blitz') {
+      return player.blitzRating ?? FLOOR_RATING;
+    }
+    return player.rating;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Process Tournament Ratings</DialogTitle>
           <DialogDescription>
-            This will process the results of {tournament.name} and update all participating players' ratings accordingly.
+            This will process the results of {tournament.name} and update all participating players' {tournament.category || 'classical'} ratings accordingly.
           </DialogDescription>
         </DialogHeader>
         
@@ -363,7 +382,7 @@ const TournamentRatingDialog = ({
                 <div>
                   <p className="text-sm font-medium">This action is irreversible</p>
                   <p className="text-sm mt-1">
-                    Player ratings will be permanently updated based on tournament results.
+                    Player {tournament.category || 'classical'} ratings will be permanently updated based on tournament results.
                   </p>
                 </div>
               </div>
@@ -371,6 +390,7 @@ const TournamentRatingDialog = ({
               <div className="flex flex-col gap-2">
                 <div className="font-medium">Rating System Parameters:</div>
                 <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                  <li>Floor rating of {FLOOR_RATING} for players without {tournament.category || 'classical'} ratings</li>
                   <li>K=40 for new players (less than 10 games) under 2000 rating</li>
                   <li>K=32 for players rated below 2100</li>
                   <li>K=24 for players rated 2100-2399</li>
@@ -387,7 +407,7 @@ const TournamentRatingDialog = ({
                       <thead>
                         <tr className="border-b">
                           <th className="text-left p-1">Name</th>
-                          <th className="text-right p-1">Rating</th>
+                          <th className="text-right p-1">{tournament.category || 'Classical'} Rating</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -395,11 +415,7 @@ const TournamentRatingDialog = ({
                           <tr key={player.id} className="border-b border-gray-100 last:border-0">
                             <td className="p-1">{player.name}</td>
                             <td className="text-right p-1">
-                              {tournament.category === 'rapid' 
-                                ? player.rapidRating || player.rating 
-                                : tournament.category === 'blitz'
-                                  ? player.blitzRating || player.rating
-                                  : player.rating}
+                              {getDisplayRating(player)}
                             </td>
                           </tr>
                         ))}

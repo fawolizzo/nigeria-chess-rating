@@ -30,6 +30,9 @@ export const getKFactor = (rating: number, gamesPlayed: number): number => {
   return 32;
 };
 
+// Floor rating constant
+export const FLOOR_RATING = 800;
+
 interface Match {
   whiteId: string;
   blackId: string;

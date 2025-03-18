@@ -19,6 +19,7 @@ import {
 } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
 interface GenerateReportDialogProps {
   tournament: Tournament | null;
@@ -52,21 +53,67 @@ const GenerateReportDialog = ({
       
       if (tournamentResult) {
         const ratingChange = tournamentResult.ratingChange;
-        const newRating = player.rating + ratingChange;
         
-        // Update player's rating
-        const updatedPlayer: Player = {
-          ...player,
-          rating: newRating,
-          ratingHistory: [
-            ...player.ratingHistory,
-            {
-              date: new Date().toISOString().split('T')[0],
-              rating: newRating,
-              reason: `Tournament: ${tournament.name}`
-            }
-          ]
+        // Get the appropriate rating based on tournament category
+        const getCurrentRating = () => {
+          if (tournament.category === 'rapid') {
+            return player.rapidRating ?? FLOOR_RATING;
+          } else if (tournament.category === 'blitz') {
+            return player.blitzRating ?? FLOOR_RATING;
+          }
+          return player.rating;
         };
+        
+        const currentRating = getCurrentRating();
+        const newRating = currentRating + ratingChange;
+        
+        // Update player's appropriate rating type
+        let updatedPlayer: Player;
+        
+        if (tournament.category === 'rapid') {
+          updatedPlayer = {
+            ...player,
+            rapidRating: newRating,
+            rapidGamesPlayed: (player.rapidGamesPlayed ?? 0) + 1,
+            rapidRatingHistory: [
+              ...(player.rapidRatingHistory || []),
+              {
+                date: new Date().toISOString().split('T')[0],
+                rating: newRating,
+                reason: `Tournament: ${tournament.name}`
+              }
+            ]
+          };
+        } else if (tournament.category === 'blitz') {
+          updatedPlayer = {
+            ...player,
+            blitzRating: newRating,
+            blitzGamesPlayed: (player.blitzGamesPlayed ?? 0) + 1,
+            blitzRatingHistory: [
+              ...(player.blitzRatingHistory || []),
+              {
+                date: new Date().toISOString().split('T')[0],
+                rating: newRating,
+                reason: `Tournament: ${tournament.name}`
+              }
+            ]
+          };
+        } else {
+          // Default to classical
+          updatedPlayer = {
+            ...player,
+            rating: newRating,
+            gamesPlayed: (player.gamesPlayed || 0) + 1,
+            ratingHistory: [
+              ...player.ratingHistory,
+              {
+                date: new Date().toISOString().split('T')[0],
+                rating: newRating,
+                reason: `Tournament: ${tournament.name}`
+              }
+            ]
+          };
+        }
         
         updatePlayer(updatedPlayer);
       }
@@ -87,7 +134,7 @@ const GenerateReportDialog = ({
       
       toast({
         title: "Report Generated",
-        description: `Ratings have been updated for all players in ${tournament.name}`,
+        description: `${tournament.category || 'Classical'} ratings have been updated for all players in ${tournament.name}`,
         duration: 5000,
       });
     }, 1500);
@@ -99,7 +146,7 @@ const GenerateReportDialog = ({
         <DialogHeader>
           <DialogTitle>Generate Tournament Report</DialogTitle>
           <DialogDescription>
-            This will process the results of {tournament.name} and update all participating players' ratings accordingly.
+            This will process the results of {tournament.name} and update all participating players' {tournament.category || 'classical'} ratings accordingly.
           </DialogDescription>
         </DialogHeader>
         
@@ -110,7 +157,7 @@ const GenerateReportDialog = ({
               <div>
                 <p className="text-sm font-medium">This action is irreversible</p>
                 <p className="text-sm mt-1">
-                  Player ratings will be permanently updated based on their tournament results.
+                  Player {tournament.category || 'classical'} ratings will be permanently updated based on their tournament results.
                 </p>
               </div>
             </div>
@@ -118,9 +165,10 @@ const GenerateReportDialog = ({
             <div className="flex flex-col gap-2">
               <div className="font-medium">The following changes will occur:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                <li>Player ratings will be updated based on their results</li>
-                <li>Rating history will be updated with new entries</li>
+                <li>Player {tournament.category || 'classical'} ratings will be updated based on their results</li>
+                <li>{tournament.category || 'Classical'} rating history will be updated with new entries</li>
                 <li>Tournament status will change to "Processed"</li>
+                <li>New players without {tournament.category || 'classical'} ratings will start at {FLOOR_RATING}</li>
               </ul>
             </div>
           </div>

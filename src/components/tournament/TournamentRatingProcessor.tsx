@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Dialog, 
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Player } from "@/lib/mockData";
 import { AlertTriangle, CheckCircle } from "lucide-react";
-import { calculatePostRoundRatings } from "@/lib/ratingCalculation";
+import { calculatePostRoundRatings, FLOOR_RATING } from "@/lib/ratingCalculation";
 
 interface TournamentRatingProcessorProps {
   isOpen: boolean;
@@ -69,19 +70,24 @@ const TournamentRatingProcessor = ({
             // Use the appropriate rating based on tournament type
             const getPlayerRating = (player: Player) => {
               if (tournamentType === 'rapid') {
-                return player.rapidRating || player.rating;
+                // If player has no rapid rating, use floor rating
+                return player.rapidRating ?? FLOOR_RATING;
               } else if (tournamentType === 'blitz') {
-                return player.blitzRating || player.rating;
+                // If player has no blitz rating, use floor rating
+                return player.blitzRating ?? FLOOR_RATING;
               }
+              // For classical, always use the player's classical rating (which should always exist)
               return player.rating;
             };
             
             // Use the appropriate games played based on tournament type
             const getPlayerGamesPlayed = (player: Player) => {
               if (tournamentType === 'rapid') {
-                return player.rapidGamesPlayed || player.gamesPlayed || 0;
+                // If player has no rapid games played, start at 0
+                return player.rapidGamesPlayed ?? 0;
               } else if (tournamentType === 'blitz') {
-                return player.blitzGamesPlayed || player.gamesPlayed || 0;
+                // If player has no blitz games played, start at 0
+                return player.blitzGamesPlayed ?? 0;
               }
               return player.gamesPlayed || 0;
             };
@@ -165,7 +171,7 @@ const TournamentRatingProcessor = ({
             <div className="flex flex-col gap-2">
               <div className="font-medium">Rating System Parameters:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                <li>Floor rating of 800 for new players</li>
+                <li>Floor rating of {FLOOR_RATING} for new players</li>
                 <li>K=40 for new players (less than 10 games) under 2000 rating</li>
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>

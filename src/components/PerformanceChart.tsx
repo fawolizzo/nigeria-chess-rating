@@ -3,35 +3,72 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { Player } from "@/lib/mockData";
+import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
 interface PerformanceChartProps {
   player: Player;
   className?: string;
+  ratingType?: 'classical' | 'rapid' | 'blitz';
 }
 
-const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }) => {
+const PerformanceChart: React.FC<PerformanceChartProps> = ({ 
+  player, 
+  className,
+  ratingType = 'classical'
+}) => {
+  // Get the appropriate rating history based on rating type
+  const getRatingHistory = () => {
+    if (ratingType === 'rapid') {
+      return player.rapidRatingHistory || [];
+    } else if (ratingType === 'blitz') {
+      return player.blitzRatingHistory || [];
+    }
+    return player.ratingHistory;
+  };
+  
+  // Get the current rating based on rating type
+  const getCurrentRating = () => {
+    if (ratingType === 'rapid') {
+      return player.rapidRating ?? FLOOR_RATING;
+    } else if (ratingType === 'blitz') {
+      return player.blitzRating ?? FLOOR_RATING;
+    }
+    return player.rating;
+  };
+  
+  // Get the games played based on rating type
+  const getGamesPlayed = () => {
+    if (ratingType === 'rapid') {
+      return player.rapidGamesPlayed ?? 0;
+    } else if (ratingType === 'blitz') {
+      return player.blitzGamesPlayed ?? 0;
+    }
+    return player.gamesPlayed || 0;
+  };
+  
   // Transform rating history for chart display
-  const chartData = player.ratingHistory.map(entry => ({
+  const ratingHistory = getRatingHistory();
+  const chartData = ratingHistory.map(entry => ({
     date: entry.date,
     rating: entry.rating,
     event: entry.reason || "",
   }));
 
   // Calculate statistics
-  const currentRating = player.rating;
+  const currentRating = getCurrentRating();
   const initialRating = chartData.length > 0 ? chartData[0].rating : currentRating;
-  const highestRating = Math.max(...chartData.map(d => d.rating));
-  const lowestRating = Math.min(...chartData.map(d => d.rating));
+  const highestRating = chartData.length > 0 ? Math.max(...chartData.map(d => d.rating)) : currentRating;
+  const lowestRating = chartData.length > 0 ? Math.min(...chartData.map(d => d.rating)) : currentRating;
   const netChange = currentRating - initialRating;
   
   // Calculate appropriate domain padding
-  const minRating = Math.max(Math.floor((lowestRating - 50) / 100) * 100, 800); // Never go below floor rating
+  const minRating = Math.max(Math.floor((lowestRating - 50) / 100) * 100, FLOOR_RATING); // Never go below floor rating
   const maxRating = Math.ceil((highestRating + 50) / 100) * 100;
 
   // Adjust games played for display if player has a +100 rating
   const getDisplayedGamesPlayed = () => {
     const hasPlus100 = String(currentRating).endsWith('100');
-    const actualGamesPlayed = player.gamesPlayed || 0;
+    const actualGamesPlayed = getGamesPlayed();
     
     // If player has +100 rating, ensure displayed games count starts at 31
     if (hasPlus100) {
@@ -53,6 +90,16 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
     return "K=16";
   };
 
+  // Get rating type display name
+  const getRatingTypeDisplay = () => {
+    if (ratingType === 'rapid') {
+      return "Rapid Rating";
+    } else if (ratingType === 'blitz') {
+      return "Blitz Rating";
+    }
+    return "Classical Rating";
+  };
+
   // Calculate displayed games played
   const displayedGamesPlayed = getDisplayedGamesPlayed();
 
@@ -60,11 +107,11 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
-          <span>Rating Performance</span>
+          <span>{getRatingTypeDisplay()}</span>
           <span className="text-lg font-bold">{currentRating}</span>
         </CardTitle>
         <CardDescription>
-          K-factor: {getKFactorDescription(currentRating, player.gamesPlayed || 0)}
+          K-factor: {getKFactorDescription(currentRating, getGamesPlayed())}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -115,7 +162,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
                       return `${label}${dataPoint?.event ? ` - ${dataPoint.event}` : ''}`;
                     }}
                   />
-                  <ReferenceLine y={800} stroke="#FF5733" strokeDasharray="3 3" label={{ value: 'Floor Rating', position: 'insideBottomRight' }} />
+                  <ReferenceLine y={FLOOR_RATING} stroke="#FF5733" strokeDasharray="3 3" label={{ value: 'Floor Rating', position: 'insideBottomRight' }} />
                   <Line 
                     type="monotone" 
                     dataKey="rating" 
@@ -130,7 +177,10 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ player, className }
           </>
         ) : (
           <div className="flex items-center justify-center h-72 text-gray-500">
-            Insufficient rating history data to display chart
+            {currentRating === FLOOR_RATING && ratingHistory.length === 0 
+              ? `No ${ratingType} rating history yet. Starting at floor rating ${FLOOR_RATING}.`
+              : `Insufficient ${ratingType} rating history data to display chart`
+            }
           </div>
         )}
       </CardContent>
