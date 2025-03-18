@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -61,6 +60,8 @@ export interface Tournament {
   currentRound?: number;
   processingDate?: string;
   processedPlayerIds?: string[];
+  prize?: string;
+  rejectionReason?: string;
 }
 
 export const players: Player[] = [];
