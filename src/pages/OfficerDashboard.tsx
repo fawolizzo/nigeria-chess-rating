@@ -5,9 +5,10 @@ import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
 import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
+import ResetSystemData from "@/components/ResetSystemData";
 
 const OfficerDashboard: React.FC = () => {
-  const { currentUser, isLoading } = useUser();
+  const { currentUser, isLoading, logout } = useUser();
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
   
@@ -41,6 +42,11 @@ const OfficerDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [currentUser, isLoading, navigate]);
   
+  const handleSystemReset = () => {
+    // Log out the current user after reset
+    logout();
+  };
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
@@ -70,6 +76,10 @@ const OfficerDashboard: React.FC = () => {
         
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
           <OfficerDashboardContent />
+        </div>
+        
+        <div className="mt-8">
+          <ResetSystemData onReset={handleSystemReset} />
         </div>
       </div>
     </div>

@@ -1,110 +1,165 @@
 
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { getAllTournaments, Tournament } from "@/lib/mockData";
 import TournamentCard from "@/components/TournamentCard";
-import SearchBar from "@/components/SearchBar";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, CalendarRange } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, CalendarRange, CalendarSearch, Trophy } from "lucide-react";
-import { Tournament, getAllTournaments } from "@/lib/mockData";
+import StateSelector from "@/components/selectors/StateSelector";
+import SearchBar from "@/components/SearchBar";
+import HomeReset from "@/components/HomeReset";
 
-const Tournaments = () => {
-  const [tournamentList, setTournamentList] = useState<Tournament[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredTournaments, setFilteredTournaments] = useState<Tournament[]>(tournamentList);
-  const [activeTab, setActiveTab] = useState("all");
-  const { currentUser } = useUser();
+const Tournaments: React.FC = () => {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Load tournaments from localStorage instead of using dummy data
-    const tournaments = getAllTournaments();
-    setTournamentList(tournaments);
-  }, []);
-
-  useEffect(() => {
-    const filtered = tournamentList.filter((tournament) =>
-      tournament.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tournament.location.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredTournaments(filtered);
-  }, [searchTerm, tournamentList]);
-
-  useEffect(() => {
-    const allTournaments = getAllTournaments();
-    let filtered = allTournaments;
-
-    if (activeTab === "upcoming") {
-      filtered = allTournaments.filter(
-        (tournament) => tournament.status === "upcoming"
-      );
-    } else if (activeTab === "completed") {
-      filtered = allTournaments.filter(
-        (tournament) => tournament.status === "completed"
-      );
-    }
-
-    setTournamentList(filtered);
-  }, [activeTab]);
-
-  const handleRegister = (tournamentId: string) => {
-    if (currentUser) {
-      navigate(`/tournament/${tournamentId}`);
-    } else {
-      navigate("/login");
-    }
+  const { currentUser } = useUser();
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  // Get all tournaments from localStorage
+  const allTournaments = getAllTournaments();
+  
+  // Filter tournaments based on selected state and search query
+  const filteredTournaments = allTournaments.filter((tournament) => {
+    const matchesState = selectedState === "" || tournament.state === selectedState;
+    const matchesSearch = 
+      searchQuery === "" || 
+      tournament.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tournament.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tournament.city.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesState && matchesSearch;
+  });
+  
+  // Function to determine if a tournament is upcoming, ongoing, or completed
+  const categorizeTournaments = (tournaments: Tournament[]) => {
+    const upcoming: Tournament[] = [];
+    const ongoing: Tournament[] = [];
+    const completed: Tournament[] = [];
+    
+    tournaments.forEach((tournament) => {
+      const startDate = new Date(tournament.startDate);
+      const endDate = new Date(tournament.endDate);
+      const today = new Date();
+      
+      if (endDate < today || tournament.status === "completed" || tournament.status === "processed") {
+        completed.push(tournament);
+      } else if (startDate <= today) {
+        ongoing.push(tournament);
+      } else {
+        upcoming.push(tournament);
+      }
+    });
+    
+    return { upcoming, ongoing, completed };
   };
-
+  
+  const { upcoming, ongoing, completed } = categorizeTournaments(filteredTournaments);
+  
+  const handleCreateTournament = () => {
+    navigate("/tournament-management/new");
+  };
+  
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
-      <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Tournaments
-          </h1>
+      
+      <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
-            <SearchBar onSearch={setSearchTerm} />
+            <h1 className="text-3xl font-bold">Tournaments</h1>
+            <p className="text-muted-foreground mt-1">View all chess tournaments in Nigeria</p>
           </div>
+          
+          {currentUser && currentUser.role === "tournament_organizer" && (
+            <Button onClick={handleCreateTournament}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create Tournament
+            </Button>
+          )}
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-          <TabsList className="grid grid-cols-1 md:grid-cols-3">
-            <TabsTrigger value="all" className="text-sm md:text-base">
-              <CalendarDays className="w-4 h-4 mr-2" />
-              All Tournaments
-            </TabsTrigger>
-            <TabsTrigger value="upcoming" className="text-sm md:text-base">
-              <CalendarRange className="w-4 h-4 mr-2" />
-              Upcoming
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="text-sm md:text-base">
-              <Trophy className="w-4 h-4 mr-2" />
-              Completed
-            </TabsTrigger>
-          </TabsList>
-          <div className="mt-4">
-            {filteredTournaments.length === 0 ? (
-              <div className="text-center py-10">
-                <CalendarSearch className="w-6 h-6 mx-auto text-gray-400 dark:text-gray-600 mb-2" />
-                <p className="text-gray-600 dark:text-gray-400">
-                  No tournaments found.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTournaments.map((tournament) => (
-                  <TournamentCard
-                    key={tournament.id}
-                    tournament={tournament}
-                    onRegister={handleRegister}
-                  />
-                ))}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <SearchBar 
+            placeholder="Search tournaments..." 
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+          <StateSelector
+            value={selectedState}
+            onChange={setSelectedState}
+            placeholder="All States"
+          />
+        </div>
+        
+        {filteredTournaments.length === 0 ? (
+          <div className="text-center py-12">
+            <CalendarRange className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No tournaments found</h3>
+            <p className="text-muted-foreground mb-8">
+              {selectedState || searchQuery 
+                ? "Try adjusting your search or filters"
+                : "There are no tournaments in the system yet"}
+            </p>
+            {currentUser && currentUser.role === "tournament_organizer" && (
+              <Button onClick={handleCreateTournament}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Create Your First Tournament
+              </Button>
+            )}
+            
+            <HomeReset />
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {/* Ongoing Tournaments */}
+            {ongoing.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                  Ongoing Tournaments
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {ongoing.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} />
+                  ))}
+                </div>
               </div>
             )}
+            
+            {/* Upcoming Tournaments */}
+            {upcoming.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                  Upcoming Tournaments
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {upcoming.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} />
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Completed Tournaments */}
+            {completed.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-gray-500 mr-2"></div>
+                  Completed Tournaments
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {completed.map((tournament) => (
+                    <TournamentCard key={tournament.id} tournament={tournament} />
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <HomeReset />
           </div>
-        </Tabs>
+        )}
       </div>
     </div>
   );
