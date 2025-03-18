@@ -1,211 +1,91 @@
 
-import { useState, useEffect } from "react";
-import { players, tournaments } from "@/lib/mockData";
-import RankingTable from "@/components/RankingTable";
-import PlayerCard from "@/components/PlayerCard";
-import TournamentCard from "@/components/TournamentCard";
-import Navbar from "@/components/Navbar";
-import SearchBar from "@/components/SearchBar";
-import { ArrowRight, Trophy, Award } from "lucide-react";
+import React from "react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ChevronRight, Users, Calendar, UserCheck, Shield } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import HomeReset from "@/components/HomeReset";
 
 const Index = () => {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Get top players
-  const topPlayers = players
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 4);
-
-  // We've removed the tournament dummy data
-  const upcomingTournaments = [];
-  const recentTournaments = [];
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto animate-fade-in">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
-            Nigeria Chess Rating System
-            <span className="block text-nigeria-green dark:text-nigeria-green-light">Official Ratings</span>
+      <div className="pt-32 pb-20 px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+            Nigerian Chess Rating System
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-            The comprehensive rating platform for Nigerian chess players, tracking performance, tournaments, and achievements.
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+            A comprehensive platform for tournament organizers and players across Nigeria
+            to manage chess tournaments and track ratings.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              to="/players"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-nigeria-green dark:bg-nigeria-green-light hover:bg-nigeria-green/90 dark:hover:bg-nigeria-green-light/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nigeria-green dark:focus:ring-nigeria-green-light transition-colors duration-200"
-            >
-              Browse Players
-            </Link>
-            <Link
-              to="/tournaments"
-              className="inline-flex items-center px-6 py-3 border border-nigeria-green dark:border-nigeria-green-light text-base font-medium rounded-md shadow-sm text-nigeria-green dark:text-nigeria-green-light bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-nigeria-green dark:focus:ring-nigeria-green-light transition-colors duration-200"
-            >
-              View Tournaments
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Top Players Section */}
-      <section className="py-16 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto">
-        <div className="mb-8 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-nigeria-green dark:text-nigeria-green-light" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Top Rated Players</h2>
-          </div>
-          <Link
-            to="/players"
-            className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light transition-colors"
-          >
-            View all <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {topPlayers.length > 0 ? (
-            topPlayers.map(player => (
-              <div key={player.id} className="animate-fade-up">
-                <PlayerCard player={player} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-12">
+          <Link 
+            to="/register?role=tournament_organizer" 
+            className="group block p-6 bg-white dark:bg-gray-900 border border-green-100 dark:border-green-900 rounded-lg hover:border-green-500 dark:hover:border-green-700 hover:shadow-md transition-all duration-200"
+          >
+            <div className="flex items-start mb-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <Calendar className="h-6 w-6 text-green-700 dark:text-green-500" />
               </div>
-            ))
-          ) : (
-            <div className="col-span-4 bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
-              <p className="text-gray-500 dark:text-gray-400">No player data available</p>
-              <Link 
-                to="/players" 
-                className="inline-block mt-4 text-sm text-nigeria-green dark:text-nigeria-green-light hover:underline"
-              >
-                Browse players
-              </Link>
+              <div className="ml-4">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                  Tournament Organizers
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Register and manage chess tournaments across Nigeria
+                </p>
+              </div>
             </div>
-          )}
-        </div>
-        
-        <div className="animate-fade-up" style={{ animationDelay: "200ms" }}>
-          <RankingTable players={players} itemsPerPage={10} />
-        </div>
-      </section>
-
-      {/* Tournaments Section */}
-      <section className="py-16 px-4 sm:px-6 md:px-8 lg:px-0 max-w-7xl mx-auto">
-        <div className="mb-8 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Award className="h-6 w-6 text-nigeria-green dark:text-nigeria-green-light" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tournaments</h2>
-          </div>
-          <Link
-            to="/tournaments"
-            className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light transition-colors"
+            <div className="pl-16 flex items-center text-green-700 dark:text-green-500 group-hover:underline text-sm font-medium">
+              Register as Organizer <ChevronRight className="ml-1 h-4 w-4" />
+            </div>
+          </Link>
+          
+          <Link 
+            to="/register?role=rating_officer" 
+            className="group block p-6 bg-white dark:bg-gray-900 border border-blue-100 dark:border-blue-900 rounded-lg hover:border-blue-500 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200"
           >
-            View all <ArrowRight className="ml-1 h-4 w-4" />
+            <div className="flex items-start mb-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Shield className="h-6 w-6 text-blue-700 dark:text-blue-500" />
+              </div>
+              <div className="ml-4">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                  Rating Officers
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Manage the national rating system and approve tournaments
+                </p>
+              </div>
+            </div>
+            <div className="pl-16 flex items-center text-blue-700 dark:text-blue-500 group-hover:underline text-sm font-medium">
+              Register as Rating Officer <ChevronRight className="ml-1 h-4 w-4" />
+            </div>
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Upcoming Tournaments</h3>
-            <div className="grid grid-cols-1 gap-6">
-              {upcomingTournaments.length > 0 ? (
-                upcomingTournaments.map(tournament => (
-                  <div key={tournament.id} className="animate-fade-up">
-                    <TournamentCard tournament={tournament} />
-                  </div>
-                ))
-              ) : (
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">No upcoming tournaments</p>
-                  <Link 
-                    to="/tournaments" 
-                    className="inline-block mt-4 text-sm text-nigeria-green dark:text-nigeria-green-light hover:underline"
-                  >
-                    View all tournaments
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Tournaments</h3>
-            <div className="grid grid-cols-1 gap-6">
-              {recentTournaments.length > 0 ? (
-                recentTournaments.map(tournament => (
-                  <div key={tournament.id} className="animate-fade-up" style={{ animationDelay: "100ms" }}>
-                    <TournamentCard tournament={tournament} />
-                  </div>
-                ))
-              ) : (
-                <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">No recent tournaments</p>
-                  <Link 
-                    to="/tournaments" 
-                    className="inline-block mt-4 text-sm text-nigeria-green dark:text-nigeria-green-light hover:underline"
-                  >
-                    View all tournaments
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="flex flex-col items-center justify-center mt-12">
+          <Link to="/players">
+            <Button className="mb-4 bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Users className="mr-2 h-4 w-4" />
+              Browse Players
+            </Button>
+          </Link>
+          
+          <Link to="/tournaments">
+            <Button className="bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+              <Calendar className="mr-2 h-4 w-4" />
+              Browse Tournaments
+            </Button>
+          </Link>
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 py-12 px-4 sm:px-6 md:px-8 lg:px-0">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-6 md:mb-0">
-              <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green to-nigeria-green-dark dark:from-nigeria-green-light dark:to-white">
-                NCR Ratings
-              </span>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                The official Nigerian Chess Rating system.
-              </p>
-            </div>
-            <div className="flex space-x-6">
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
-                About
-              </a>
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
-                Contact
-              </a>
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
-                Privacy
-              </a>
-              <a href="#" className="text-gray-500 dark:text-gray-400 hover:text-nigeria-green dark:hover:text-nigeria-green-light">
-                Terms
-              </a>
-            </div>
-          </div>
-          <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} Nigeria Chess Rating System. All rights reserved.
-          </div>
-        </div>
-      </footer>
+        
+        <HomeReset />
+      </div>
     </div>
   );
 };

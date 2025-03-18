@@ -10,19 +10,18 @@ const HomeReset: React.FC = () => {
   const handleResetSystem = () => {
     if (window.confirm("Are you sure you want to reset all system data? This will remove all users, players, and tournaments. This action cannot be undone.")) {
       // Clear all data from localStorage
-      localStorage.removeItem('users');
-      localStorage.removeItem('players');
-      localStorage.removeItem('tournaments');
-      localStorage.removeItem('currentUser');
+      localStorage.clear();
       
       toast({
         title: "System Reset Successful",
-        description: "All data has been cleared. You can now create new accounts.",
+        description: "All data has been cleared. The page will now reload.",
         variant: "default",
       });
       
       // Refresh the page
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     }
   };
 

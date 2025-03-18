@@ -66,6 +66,15 @@ export interface Tournament {
 export const players: Player[] = [];
 export const tournaments: Tournament[] = [];
 
+// Helper function to clear all stored data
+export const clearAllStoredData = (): void => {
+  localStorage.removeItem('users');
+  localStorage.removeItem('players');
+  localStorage.removeItem('tournaments');
+  localStorage.removeItem('currentUser');
+  console.log("All stored data has been cleared");
+};
+
 export const getPlayerById = (id: string): Player | undefined => {
   return getAllPlayers().find(player => player.id === id);
 };

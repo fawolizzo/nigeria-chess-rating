@@ -1,7 +1,7 @@
 
 import { useEffect } from "react";
-import { getAllTournaments, saveTournaments } from "@/lib/mockData";
-import { toast } from "@/components/ui/use-toast";
+import { clearAllStoredData } from "@/lib/mockData";
+import { useToast } from "@/components/ui/use-toast";
 
 /**
  * Utility function to remove a specific tournament by name
@@ -9,15 +9,15 @@ import { toast } from "@/components/ui/use-toast";
 export const removeTournamentByName = (tournamentName: string) => {
   try {
     // Get all tournaments
-    const allTournaments = getAllTournaments();
+    const allTournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
     
     // Filter out the tournament with the specified name
     const filteredTournaments = allTournaments.filter(
-      tournament => !tournament.name.toLowerCase().includes(tournamentName.toLowerCase())
+      (tournament: any) => !tournament.name.toLowerCase().includes(tournamentName.toLowerCase())
     );
     
     // Save the filtered tournaments back to localStorage
-    saveTournaments(filteredTournaments);
+    localStorage.setItem('tournaments', JSON.stringify(filteredTournaments));
     
     return {
       success: true,
@@ -33,28 +33,28 @@ export const removeTournamentByName = (tournamentName: string) => {
 };
 
 /**
- * Component to execute the removal and show a toast notification
+ * Component that completely resets all data in the system
  */
-const RemoveTournamentUtil = () => {
+export const ResetAllData = () => {
+  const { toast } = useToast();
+  
   // Use useEffect to avoid calling toast during render
   useEffect(() => {
-    const result = removeTournamentByName("Osun rapid");
+    clearAllStoredData();
     
-    if (result.success) {
-      toast({
-        title: "Tournament Removed",
-        description: `Successfully removed ${result.removed} tournament(s) containing "Osun rapid"`,
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: result.error,
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "System Completely Reset",
+      description: "All data has been cleared. You can now register new accounts.",
+      duration: 5000,
+    });
+    
+    // Reload the page after a delay
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 1500);
   }, []);
   
   return null;
 };
 
-export default RemoveTournamentUtil;
+export default ResetAllData;

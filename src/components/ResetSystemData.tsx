@@ -14,14 +14,11 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
   const handleResetSystem = () => {
     if (window.confirm("Are you sure you want to reset all system data? This will remove all users, players, and tournaments. This action cannot be undone.")) {
       // Clear all data from localStorage
-      localStorage.removeItem('users');
-      localStorage.removeItem('players');
-      localStorage.removeItem('tournaments');
-      localStorage.removeItem('currentUser');
+      localStorage.clear();
       
       toast({
         title: "System Reset Successful",
-        description: "All data has been cleared. You will need to log out and create new accounts.",
+        description: "All data has been cleared. The system will now reload.",
         variant: "default",
       });
       
@@ -32,7 +29,7 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
       // Redirect to homepage after a brief delay
       setTimeout(() => {
         window.location.href = "/";
-      }, 2000);
+      }, 1500);
     }
   };
 
