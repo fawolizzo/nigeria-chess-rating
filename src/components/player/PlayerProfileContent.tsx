@@ -7,7 +7,7 @@ import PlayerPerformance from "./PlayerPerformance";
 import RatingChart from "../RatingChart";
 import PlayerRatings from "./PlayerRatings";
 import MultiFormatRatingChart from "./MultiFormatRatingChart";
-import { BadgeCheck, AlertCircle } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 
 interface PlayerProfileContentProps {
   player: Player;
@@ -24,7 +24,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     if (status === 'established' || gamesPlayed && gamesPlayed >= 30) {
       return (
         <span className="inline-flex items-center ml-2 text-green-600">
-          <BadgeCheck size={16} className="mr-1" />
+          <Check size={16} className="mr-1" />
           <span className="text-xs">Established</span>
         </span>
       );
@@ -55,7 +55,9 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                     {player.title && <span className="text-gold-dark dark:text-gold-light">{player.title} </span>}
                     {player.name}
                     {isTitleVerified && (
-                      <BadgeCheck className="h-5 w-5 ml-1.5 text-blue-500" />
+                      <span className="ml-1.5 inline-flex items-center justify-center bg-blue-500 rounded-full w-5 h-5">
+                        <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                      </span>
                     )}
                   </h3>
                 </div>
