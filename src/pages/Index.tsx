@@ -1,7 +1,8 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Users, Calendar, UserCheck, Shield, Crown, Award, Trophy, Info, ArrowRight } from "lucide-react";
+import { ChevronRight, Users, Calendar, UserCheck, Shield, Award, Trophy, Info, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HomeReset from "@/components/HomeReset";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
