@@ -153,7 +153,7 @@ const About = () => {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Email</h3>
-              <p className="text-gray-700 dark:text-gray-300">contact@nigeriaratings.org</p>
+              <p className="text-gray-700 dark:text-gray-300">nigeriachessrating@gmail.com</p>
             </div>
             
             <div className="flex flex-col items-center text-center">
@@ -163,7 +163,7 @@ const About = () => {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Phone</h3>
-              <p className="text-gray-700 dark:text-gray-300">+234 800 123 4567</p>
+              <p className="text-gray-700 dark:text-gray-300">+234 810 315 7745</p>
             </div>
             
             <div className="flex flex-col items-center text-center">
