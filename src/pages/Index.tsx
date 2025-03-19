@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 animate-fade-in">
             <div className="flex justify-center mb-6">
-              <Logo size="lg" showText={false} />
+              <Logo size="xl" showText={false} />
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
               Nigerian Chess Rating System
@@ -205,7 +206,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <Logo size="sm" showText={false} className="mr-2" />
+                <Logo size="sm" className="mr-2" />
                 NCR Ratings
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">

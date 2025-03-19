@@ -5,20 +5,22 @@ import { Link } from "react-router-dom";
 interface LogoProps {
   className?: string;
   showText?: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 const Logo: React.FC<LogoProps> = ({ className = "", showText = true, size = "md" }) => {
   const sizeClasses = {
     sm: "h-8",
     md: "h-10",
-    lg: "h-16"
+    lg: "h-16",
+    xl: "h-24"
   };
   
   const textSizeClasses = {
     sm: "text-sm",
     md: "text-base",
-    lg: "text-xl"
+    lg: "text-xl",
+    xl: "text-2xl"
   };
 
   return (
