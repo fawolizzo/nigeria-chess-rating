@@ -1,8 +1,7 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Users, Calendar, UserCheck, Shield, ChessKnight, ChessKing, ChessQueen, Info, ArrowRight } from "lucide-react";
+import { ChevronRight, Users, Calendar, UserCheck, Shield, Crown, Award, Trophy, Info, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HomeReset from "@/components/HomeReset";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +17,7 @@ const Index = () => {
           <div className="text-center mb-12 animate-fade-in">
             <div className="flex justify-center mb-6">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-nigeria-green text-white shadow-lg animate-float">
-                <ChessKnight className="w-10 h-10" />
+                <Crown className="w-10 h-10" />
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
@@ -207,7 +206,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <ChessKnight className="mr-2 h-5 w-5 text-nigeria-green" />
+                <Crown className="mr-2 h-5 w-5 text-nigeria-green" />
                 NCR Ratings
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">

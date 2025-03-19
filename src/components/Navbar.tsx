@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { NavLink, Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar, Bell, ChessKnight } from "lucide-react";
+import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar, Bell, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
 import {
@@ -102,7 +102,7 @@ const Navbar = ({ notificationCount = 0 }: NavbarProps) => {
           <div className="flex items-center">
             <NavLink to="/" className="flex items-center">
               <div className="flex items-center gap-2 text-2xl font-bold">
-                <ChessKnight className="h-6 w-6 text-nigeria-green animate-float" />
+                <Crown className="h-6 w-6 text-nigeria-green animate-float" />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green-dark to-nigeria-green">
                   NCR Ratings
                 </span>
