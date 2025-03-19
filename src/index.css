@@ -14,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Nigerian green as primary color */
+    /* Enhanced Nigerian green as primary color */
     --primary: 160 100% 26.7%;
     --primary-foreground: 210 40% 98%;
 
-    /* Softer secondary color with golden hue */
-    --secondary: 42 85% 90%;
+    /* Richer secondary color with golden hue */
+    --secondary: 42 85% 65%;
     --secondary-foreground: 42 50% 25%;
 
-    /* Softer muted colors */
-    --muted: 210 40% 96.1%;
+    /* Softer muted colors with better contrast */
+    --muted: 210 40% 93%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
     /* Warmer accent color */
@@ -74,19 +74,19 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    /* Nigerian green in dark mode */
+    /* Enhanced Nigerian green in dark mode */
     --primary: 160 70% 40%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    /* Adjusted secondary for dark mode */
-    --secondary: 42 50% 40%;
+    /* Richer secondary for dark mode */
+    --secondary: 42 60% 55%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
     /* Warmer accent in dark mode */
-    --accent: 42 30% 25%;
+    --accent: 42 35% 30%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
@@ -127,7 +127,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
   }
   
   /* Ensure the root element takes full height */
@@ -145,7 +146,7 @@
   
   /* Enhanced card styles */
   .nigeria-card {
-    @apply border-nigeria-green/30 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300;
+    @apply border-nigeria-green/30 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300;
   }
   
   .nigeria-card-header {
@@ -193,4 +194,74 @@
   .nigeria-table tr:hover {
     @apply bg-nigeria-green/5;
   }
+}
+
+.app-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23008751' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.chessboard-pattern-bg {
+  background-color: rgba(255, 255, 255, 0.6);
+  background-image: 
+    linear-gradient(45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%), 
+    linear-gradient(-45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%), 
+    linear-gradient(-45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+/* Nigerian flag-inspired gradients */
+.nigeria-gradient {
+  background: linear-gradient(135deg, var(--nigeria-green) 0%, var(--nigeria-yellow) 100%);
+}
+
+.nigeria-gradient-soft {
+  background: linear-gradient(135deg, rgba(0, 135, 81, 0.7) 0%, rgba(247, 196, 69, 0.7) 100%);
+}
+
+.nigeria-gradient-subtle {
+  background: linear-gradient(135deg, rgba(0, 135, 81, 0.1) 0%, rgba(247, 196, 69, 0.1) 100%);
+}
+
+.hero-pattern {
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23008751' fill-opacity='0.05'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 20.83l2.83-2.83 1.41 1.41L1.41 22.24l-1.41 1.41L0 22.24v-1.41zM0 3.41l2.83 2.83L1.41 8.66 0 7.24V3.41zM20 0l2.83 2.83-1.41 1.41L18.59 1.41 17.17 0l1.41 1.41L20 0zM3.41 0l2.83 2.83-1.41 1.41L1.41 1.41 0 0l1.41 1.41 2-1.41z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+/* Chess piece icon styles */
+.chess-icon {
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+}
+
+/* Footer styles */
+.footer {
+  background: linear-gradient(180deg, transparent, rgba(0, 135, 81, 0.03) 50%);
 }
