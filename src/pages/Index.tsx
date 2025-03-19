@@ -257,10 +257,7 @@ const Index = () => {
               <h3 className="text-lg font-semibold mb-4">Contact</h3>
               <ul className="space-y-2 text-sm">
                 <li className="text-gray-600 dark:text-gray-400">
-                  Email: contact@ncrratings.ng
-                </li>
-                <li className="text-gray-600 dark:text-gray-400">
-                  Nigerian Chess Federation
+                  Email: nigeriachessrating@gmail.com
                 </li>
               </ul>
             </div>
