@@ -5,6 +5,7 @@ import { ChevronRight, Users, Calendar, UserCheck, Shield, Crown, Award, Trophy,
 import Navbar from "@/components/Navbar";
 import HomeReset from "@/components/HomeReset";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import Logo from "@/components/Logo";
 
 const Index = () => {
   return (
@@ -16,9 +17,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 animate-fade-in">
             <div className="flex justify-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-nigeria-green text-white shadow-lg animate-float">
-                <Crown className="w-10 h-10" />
-              </div>
+              <Logo size="lg" showText={false} />
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 tracking-tight">
               Nigerian Chess Rating System
@@ -200,19 +199,20 @@ const Index = () => {
         </div>
       </div>
       
-      {/* Added Footer Section */}
+      {/* Footer Section */}
       <footer className="footer py-8 px-4 border-t border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-semibold mb-4 flex items-center">
-                <Crown className="mr-2 h-5 w-5 text-nigeria-green" />
+                <Logo size="sm" showText={false} className="mr-2" />
                 NCR Ratings
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 The official rating system for chess in Nigeria.
               </p>
             </div>
+            
             <div>
               <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-2 text-sm">
@@ -233,6 +233,7 @@ const Index = () => {
                 </li>
               </ul>
             </div>
+            
             <div>
               <h3 className="text-lg font-semibold mb-4">Resources</h3>
               <ul className="space-y-2 text-sm">
@@ -253,6 +254,7 @@ const Index = () => {
                 </li>
               </ul>
             </div>
+            
             <div>
               <h3 className="text-lg font-semibold mb-4">Contact</h3>
               <ul className="space-y-2 text-sm">
