@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -392,7 +391,6 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         </div>
       </div>
 
-      {/* Edit Player Dialog */}
       {selectedPlayer && (
         <EditPlayerDialog 
           player={selectedPlayer}
