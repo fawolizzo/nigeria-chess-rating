@@ -1,10 +1,9 @@
 
-import React, { useEffect, ErrorInfo } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
-import { useToast } from '@/components/ui/use-toast';
 
 // Import pages
 import Index from './pages/Index';
@@ -20,36 +19,36 @@ import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
 import NotFound from './pages/NotFound';
 
-// Error boundary component to catch rendering errors
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
-  constructor(props: {children: React.ReactNode}) {
+// Simple error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(_: Error) {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("App Error:", error, errorInfo);
+  componentDidCatch(error, info) {
+    console.error('App Error:', error, info);
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-          <div className="text-center max-w-md mx-auto">
+          <div className="text-center max-w-lg">
             <h1 className="text-2xl font-bold mb-4 text-red-600">Something went wrong</h1>
-            <p className="mb-4">The application encountered an error. Please try refreshing the page.</p>
-            <button 
-              onClick={() => {
-                this.setState({ hasError: false });
-                window.location.href = '/';
-              }}
+            <p className="mb-4">The application encountered an error. Please try again later.</p>
+            <pre className="bg-gray-100 p-4 rounded text-left text-sm overflow-auto mb-4">
+              {this.state.error?.toString() || 'Unknown error'}
+            </pre>
+            <button
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
-              Return to Home
+              Reload Page
             </button>
           </div>
         </div>
@@ -61,30 +60,21 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 }
 
 // Higher-order component for protected routes
-const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournament_organizer' | 'rating_officer' }) => {
+const RequireAuth = ({ children, role }) => {
   const userJSON = localStorage.getItem('ncr_current_user');
-  const { toast } = useToast();
   
   if (!userJSON) {
-    toast({
-      title: "Authentication Required",
-      description: "Please log in to access this page",
-      variant: "destructive",
-    });
+    console.log('Auth check failed: No user found in localStorage');
     return <Navigate to="/login" replace />;
   }
   
   try {
     const user = JSON.parse(userJSON);
     if (user.role !== role) {
-      toast({
-        title: "Access Denied",
-        description: `This page is only accessible to ${role === 'tournament_organizer' ? 'Tournament Organizers' : 'Rating Officers'}`,
-        variant: "destructive",
-      });
-      return <Navigate to="/login" replace />;
+      console.log(`Auth check failed: User role ${user.role} doesn't match required role ${role}`);
+      return <Navigate to="/" replace />;
     }
-    
+    console.log('Auth check passed for role:', role);
     return children;
   } catch (error) {
     console.error("Error parsing user data:", error);
@@ -93,35 +83,32 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
   }
 };
 
-// Main App component with error boundary and device detection
+// App component with DEBUG rendering
 function App() {
-  // Add console logging to help with debugging
   console.log("App component rendering");
   
-  // Check for mobile devices to apply optimizations
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      document.body.classList.add('mobile-optimized', 'safari-fix');
-    }
-    
-    // Check browser storage availability to ensure data persistence
-    try {
-      localStorage.setItem('storage_test', 'test');
-      localStorage.removeItem('storage_test');
-    } catch (e) {
-      console.error('Local storage is not available. This may affect application functionality.');
-    }
-    
-    // Log device info for debugging
-    console.log(`Device: ${window.navigator.userAgent}`);
-    console.log(`Screen size: ${window.innerWidth}x${window.innerHeight}`);
+  // Add a simple loading state to see if the component mounts
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    console.log("App component mounted");
+    // Set loading to false after a short delay to ensure all resources are loaded
+    const timer = setTimeout(() => setIsLoading(false), 100);
+    return () => clearTimeout(timer);
   }, []);
+  
+  // Show a simple loading state for debugging
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading application...</div>;
+  }
 
   return (
     <ErrorBoundary>
       <UserProvider>
         <Router>
+          {/* Add a debug element to ensure the app is rendering */}
+          <div id="app-debug" style={{ display: 'none' }}>App initialized</div>
+          
           <div className="app-container bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
             <Routes>
               <Route path="/" element={<Index />} />
