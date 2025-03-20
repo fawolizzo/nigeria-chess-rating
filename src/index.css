@@ -1,310 +1,96 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    /* Nigerian green as primary color */
-    --primary: 157 100% 26.3%; /* #008751 */
-    --primary-foreground: 210 40% 98%;
-
-    /* Nigerian yellow as secondary color */
-    --secondary: 47 100% 51%; /* #ffcb05 */
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    /* Softer muted colors with better contrast */
-    --muted: 210 40% 93%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    /* Warm accent based on Nigerian colors */
-    --accent: 47 80% 92%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Refined border colors */
-    --border: 157 60% 92%;
-    --input: 214.3 31.8% 91.4%;
-    /* Nigerian green for focus rings */
-    --ring: 157 100% 26.3%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Enhanced Nigerian colors */
-    --nigeria-white: 0 0% 100%;
-    --nigeria-white-dim: 0 0% 91%;
-    --nigeria-green: 157 100% 26.3%;
-    --nigeria-green-light: 157 85% 40%;
-    --nigeria-green-dark: 157 100% 20%;
-    --nigeria-yellow: 47 100% 51%;
-    --nigeria-yellow-light: 47 91% 75%;
-    --nigeria-yellow-dark: 47 91% 40%;
-    --nigeria-accent: 25 95% 65%;
-    --nigeria-accent-light: 25 95% 75%;
-    --nigeria-accent-dark: 25 95% 55%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    /* Enhanced Nigerian green in dark mode */
-    --primary: 157 70% 40%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    /* Richer Nigerian yellow for dark mode */
-    --secondary: 47 80% 55%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    /* Warmer accent in dark mode */
-    --accent: 47 35% 30%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Enhanced borders for dark mode */
-    --border: 157 30% 22%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Enhanced Nigerian colors in dark mode */
-    --nigeria-white: 0 0% 95%;
-    --nigeria-white-dim: 0 0% 85%;
-    --nigeria-green: 157 80% 35%;
-    --nigeria-green-light: 157 75% 45%;
-    --nigeria-green-dark: 157 85% 25%;
-    --nigeria-yellow: 47 80% 65%;
-    --nigeria-yellow-light: 47 75% 75%;
-    --nigeria-yellow-dark: 47 85% 55%;
-    --nigeria-accent: 25 70% 50%;
-    --nigeria-accent-light: 25 70% 60%;
-    --nigeria-accent-dark: 25 70% 40%;
-  }
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  
+  --nigeria-green: #008751;
+  --nigeria-green-dark: #006c41;
+  --nigeria-green-light: #3da77a;
+  --nigeria-black: #000000;
+  --nigeria-black-soft: #222222;
+  --nigeria-yellow: #FCD116;
+  --nigeria-yellow-light: #fde05e;
+  --gold-dark: #CEA052;
+  --gold-light: #F0CA7D;
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-
+  
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    background-color: #f8f9fa;
+    font-family: var(--font-sans);
   }
   
-  /* Ensure the root element takes full height */
-  html, body, #root {
-    height: 100%;
-    min-height: 100vh;
-  }
-}
-
-@layer components {
-  /* Enhanced button styles */
-  .nigeria-button {
-    @apply bg-nigeria-green text-white hover:bg-nigeria-green-dark transition-colors shadow-sm;
+  /* Ensure text wrapping in tables and grid cells */
+  td, th, div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
   
-  /* Enhanced card styles */
-  .nigeria-card {
-    @apply border-nigeria-green/30 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300;
-  }
-  
-  .nigeria-card-header {
-    @apply bg-gradient-to-r from-nigeria-green/10 to-transparent;
-  }
-  
-  /* Enhanced input styles */
-  .nigeria-input {
-    @apply border-nigeria-green/30 focus:border-nigeria-green focus:ring-nigeria-green/20 transition-all duration-200;
-  }
-
-  /* Enhanced tab styles */
-  .nigeria-tab {
-    @apply text-gray-600 hover:text-nigeria-green data-[state=active]:text-nigeria-green data-[state=active]:border-b-2 data-[state=active]:border-nigeria-green transition-colors;
-  }
-  
-  /* Enhanced badge styles */
-  .nigeria-badge {
-    @apply bg-nigeria-green/10 text-nigeria-green-dark border border-nigeria-green/20 rounded-full px-2 py-0.5 text-xs font-medium;
-  }
-
-  /* Enhanced section styles */
-  .nigeria-section {
-    @apply border border-nigeria-green/10 rounded-lg p-6 bg-white dark:bg-gray-900 shadow-sm;
-  }
-  
-  /* Enhanced heading styles */
-  .nigeria-heading {
-    @apply text-nigeria-green dark:text-nigeria-green-light font-bold;
-  }
-  
-  /* Enhanced table styles */
-  .nigeria-table {
-    @apply w-full border-collapse;
-  }
-  
-  .nigeria-table th {
-    @apply bg-nigeria-green/5 text-nigeria-green-dark dark:text-nigeria-green-light border-b border-nigeria-green/20 px-4 py-2 text-left;
-  }
-  
-  .nigeria-table td {
-    @apply border-b border-nigeria-green/10 px-4 py-2;
-  }
-  
-  .nigeria-table tr:hover {
-    @apply bg-nigeria-green/5;
+  /* Add ellipsis for overflowing text */
+  .truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
-.app-container {
-  min-height: 100vh;
-  background-color: #f8f9fa;
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23008751' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+/* Custom utility classes */
+.bg-gradient-nigeria {
+  background: linear-gradient(to right, var(--nigeria-green), var(--nigeria-green-dark));
 }
 
-.chessboard-pattern-bg {
-  background-color: rgba(255, 255, 255, 0.6);
-  background-image: 
-    linear-gradient(45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%), 
-    linear-gradient(-45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%), 
-    linear-gradient(45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%), 
-    linear-gradient(-45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%);
-  background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+.bg-gradient-nigeria-subtle {
+  background: linear-gradient(to right, rgba(0, 135, 81, 0.05), rgba(0, 108, 65, 0.02));
 }
 
-/* Nigerian flag-inspired gradients */
-.nigeria-gradient {
-  background: linear-gradient(135deg, #008751 0%, #ffcb05 100%);
+.shadow-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-.nigeria-gradient-soft {
-  background: linear-gradient(135deg, rgba(0, 135, 81, 0.7) 0%, rgba(255, 203, 5, 0.7) 100%);
+/* For the ratings chart */
+.recharts-wrapper text {
+  font-family: var(--font-sans) !important;
 }
 
-.nigeria-gradient-subtle {
-  background: linear-gradient(135deg, rgba(0, 135, 81, 0.1) 0%, rgba(255, 203, 5, 0.1) 100%);
+/* For consistent font on inputs and selects */
+input, select, textarea, button {
+  font-family: var(--font-sans) !important;
 }
 
-.hero-pattern {
-  background-color: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23008751' fill-opacity='0.05'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 20.83l2.83-2.83 1.41 1.41L1.41 22.24l-1.41 1.41L0 22.24v-1.41zM0 3.41l2.83 2.83L1.41 8.66 0 7.24V3.41zM20 0l2.83 2.83-1.41 1.41L18.59 1.41 17.17 0l1.41 1.41L20 0zM3.41 0l2.83 2.83-1.41 1.41L1.41 1.41 0 0l1.41 1.41 2-1.41z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+/* Fix for text overflow */
+.text-ellipsis {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-/* Add responsive styles for mobile */
-@media (max-width: 640px) {
-  .responsive-table {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .mobile-card {
-    @apply border rounded-md p-4 mb-4;
-  }
-  
-  .mobile-card-header {
-    @apply flex justify-between items-center mb-2;
-  }
-  
-  .mobile-card-content {
-    @apply text-sm space-y-2;
-  }
-  
-  .mobile-card-footer {
-    @apply mt-3 pt-2 border-t flex justify-end gap-2;
-  }
+/* Tooltip for truncated text */
+[data-tooltip] {
+  position: relative;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { 
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.5s ease-out;
-}
-
-/* Chess piece icon styles */
-.chess-icon {
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
-}
-
-/* Footer styles */
-.footer {
-  background: linear-gradient(180deg, transparent, rgba(0, 135, 81, 0.03) 50%);
-}
-
-/* Mobile optimization styles */
-.mobile-optimized {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-.mobile-list-item {
-  @apply p-3 border rounded-md mb-2 bg-white dark:bg-gray-800;
-}
-
-/* Fix for Safari on iOS */
-@supports (-webkit-touch-callout: none) {
-  .safari-fix {
-    height: -webkit-fill-available;
-  }
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
 }
