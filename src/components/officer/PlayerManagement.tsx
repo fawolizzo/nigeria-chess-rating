@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,32 +9,36 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { PlusCircle, RefreshCcw, Upload, UserPlus, CheckCircle, XCircle } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { getAllPlayers, createPlayer, approvePlayer, rejectPlayer } from "@/lib/mockData";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  getAllPlayers, 
+  addPlayer, 
+  updatePlayer, 
+  Player
+} from "@/lib/mockData";
 import FileUploadButton from "@/components/players/FileUploadButton";
 import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Define proper types to match component requirements
 interface FileUploadButtonProps {
   onFileUpload: (players: any[]) => void;
 }
 
 interface CreatePlayerDialogProps {
-  onPlayerCreate: (playerData: any) => void;
+  onPlayerCreated: (playerData: any) => void;
 }
 
 interface EditPlayerDialogProps {
-  playerData: any;
-  onPlayerEdit: () => void;
+  player: Player;
+  onSuccess: () => void;
 }
 
 const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlayerApproval }) => {
-  const [players, setPlayers] = useState<any[]>([]);
-  const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
-  const [approvedPlayers, setApprovedPlayers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
+  const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadedPlayers, setUploadedPlayers] = useState<any[]>([]);
@@ -62,7 +65,24 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
   };
   
   const handleCreatePlayer = (playerData: any) => {
-    createPlayer(playerData);
+    const newPlayer: Player = {
+      id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      name: playerData.fullName,
+      rating: playerData.rating || 800,
+      gender: playerData.gender || 'M',
+      state: playerData.state || '',
+      city: playerData.city || '',
+      gamesPlayed: 0,
+      status: playerData.status || 'pending',
+      tournamentResults: [],
+      ratingHistory: [{
+        date: new Date().toISOString(),
+        rating: playerData.rating || 800,
+        reason: "Initial rating"
+      }]
+    };
+    
+    addPlayer(newPlayer);
     setRefreshKey(prev => prev + 1);
     toast({
       title: "Player Created",
@@ -71,30 +91,44 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
   };
   
   const handleApprovePlayer = (playerId: string) => {
-    approvePlayer(playerId);
-    setRefreshKey(prev => prev + 1);
-    toast({
-      title: "Player Approved",
-      description: "Player has been approved successfully",
-      variant: "default",
-    });
-    
-    if (onPlayerApproval) {
-      onPlayerApproval();
+    const playerToUpdate = players.find(p => p.id === playerId);
+    if (playerToUpdate) {
+      const updatedPlayer = {
+        ...playerToUpdate,
+        status: 'approved' as const
+      };
+      updatePlayer(updatedPlayer);
+      setRefreshKey(prev => prev + 1);
+      toast({
+        title: "Player Approved",
+        description: "Player has been approved successfully",
+        variant: "default",
+      });
+      
+      if (onPlayerApproval) {
+        onPlayerApproval();
+      }
     }
   };
   
   const handleRejectPlayer = (playerId: string) => {
-    rejectPlayer(playerId);
-    setRefreshKey(prev => prev + 1);
-    toast({
-      title: "Player Rejected",
-      description: "Player has been rejected",
-      variant: "destructive",
-    });
-    
-    if (onPlayerApproval) {
-      onPlayerApproval();
+    const playerToUpdate = players.find(p => p.id === playerId);
+    if (playerToUpdate) {
+      const updatedPlayer = {
+        ...playerToUpdate,
+        status: 'rejected' as const
+      };
+      updatePlayer(updatedPlayer);
+      setRefreshKey(prev => prev + 1);
+      toast({
+        title: "Player Rejected",
+        description: "Player has been rejected",
+        variant: "destructive",
+      });
+      
+      if (onPlayerApproval) {
+        onPlayerApproval();
+      }
     }
   };
   
@@ -102,12 +136,25 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
     setUploadedPlayers(players);
     setUploadSuccess(true);
     
-    // Auto-approve the uploaded players
     players.forEach(player => {
-      const newPlayer = createPlayer({
-        ...player,
-        status: "approved",
-      });
+      const newPlayer: Player = {
+        id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        name: player.fullName,
+        rating: player.rating || 800,
+        gender: player.gender || 'M',
+        state: player.state || '',
+        city: player.city || '',
+        gamesPlayed: 0,
+        status: 'approved',
+        tournamentResults: [],
+        ratingHistory: [{
+          date: new Date().toISOString(),
+          rating: player.rating || 800,
+          reason: "Initial rating"
+        }]
+      };
+      
+      addPlayer(newPlayer);
       console.log("Created player:", newPlayer);
     });
     
@@ -187,7 +234,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
             </DialogContent>
           </Dialog>
           
-          <CreatePlayerDialog onPlayerCreate={handleCreatePlayer} />
+          <CreatePlayerDialog onPlayerCreated={handleCreatePlayer} />
         </div>
       </div>
       
@@ -206,7 +253,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
               {pendingPlayers.map(player => (
                 <div key={player.id} className="border rounded-md p-3">
                   <div className="flex justify-between mb-2">
-                    <div className="font-medium">{player.fullName}</div>
+                    <div className="font-medium">{player.name}</div>
                     <div className="text-sm text-muted-foreground">ID: {player.id.slice(0, 8)}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
@@ -243,7 +290,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                 <TableBody>
                   {pendingPlayers.map(player => (
                     <TableRow key={player.id}>
-                      <TableCell>{player.fullName}</TableCell>
+                      <TableCell>{player.name}</TableCell>
                       <TableCell>{player.state}</TableCell>
                       <TableCell>{player.rating || "Unrated"}</TableCell>
                       <TableCell>
@@ -283,7 +330,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
               {approvedPlayers.slice(0, 5).map(player => (
                 <div key={player.id} className="border rounded-md p-3">
                   <div className="flex justify-between mb-2">
-                    <div className="font-medium">{player.fullName}</div>
+                    <div className="font-medium">{player.name}</div>
                     <div className="text-sm text-muted-foreground">ID: {player.id.slice(0, 8)}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
@@ -313,7 +360,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                 <TableBody>
                   {approvedPlayers.slice(0, 5).map(player => (
                     <TableRow key={player.id}>
-                      <TableCell>{player.fullName}</TableCell>
+                      <TableCell>{player.name}</TableCell>
                       <TableCell>{player.state}</TableCell>
                       <TableCell>{player.rating || "Unrated"}</TableCell>
                       <TableCell>
@@ -322,7 +369,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                         </span>
                       </TableCell>
                       <TableCell>
-                        <EditPlayerDialog playerData={player} onPlayerEdit={() => setRefreshKey(prev => prev + 1)} />
+                        <EditPlayerDialog player={player} onSuccess={() => setRefreshKey(prev => prev + 1)} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -345,3 +392,4 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
 };
 
 export default PlayerManagement;
+

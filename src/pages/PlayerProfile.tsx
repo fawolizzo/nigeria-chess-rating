@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPlayerById } from "@/lib/mockData";
@@ -140,7 +139,7 @@ const PlayerProfile = () => {
         </div>
       </div>
 
-      {isRatingOfficer && (
+      {isRatingOfficer && player && (
         <EditPlayerDialog 
           player={player} 
           isOpen={isEditDialogOpen} 
