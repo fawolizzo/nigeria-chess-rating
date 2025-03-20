@@ -4,12 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Upload, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import * as XLSX from 'xlsx';
+import { Player } from '@/lib/mockData';
 
 export interface FileUploadButtonProps {
-  onFileUpload: (players: any[]) => void;
+  onFileUpload?: (players: any[]) => void;
+  onPlayersImported?: (players: Partial<Player>[]) => void;
+  buttonText?: string;
 }
 
-const FileUploadButton: React.FC<FileUploadButtonProps> = ({ onFileUpload }) => {
+const FileUploadButton: React.FC<FileUploadButtonProps> = ({ 
+  onFileUpload, 
+  onPlayersImported,
+  buttonText = "Select Excel File" 
+}) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -54,8 +61,15 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({ onFileUpload }) => 
           return;
         }
         
-        // Call the onUpload callback with the processed data
-        onFileUpload(validPlayers);
+        // Call the appropriate callback with the processed data
+        if (onFileUpload) {
+          onFileUpload(validPlayers);
+        }
+        
+        if (onPlayersImported) {
+          onPlayersImported(validPlayers);
+        }
+        
         setIsLoading(false);
       } catch (error) {
         console.error("Error processing Excel file:", error);
@@ -121,7 +135,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({ onFileUpload }) => 
             asChild
           >
             <span>
-              {isLoading ? "Processing..." : "Select Excel File"}
+              {isLoading ? "Processing..." : buttonText}
             </span>
           </Button>
         </label>

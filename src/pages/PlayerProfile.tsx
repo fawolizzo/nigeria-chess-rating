@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPlayerById } from "@/lib/mockData";
@@ -6,9 +7,8 @@ import { Player } from "@/lib/mockData";
 import PlayerProfileContent from "@/components/player/PlayerProfileContent";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
-import { Pencil, Award, ArrowLeft, Check } from "lucide-react";
+import { Pencil, ArrowLeft, Check } from "lucide-react";
 import EditPlayerDialog from "@/components/officer/EditPlayerDialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();

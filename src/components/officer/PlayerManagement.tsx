@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,26 +23,19 @@ import EditPlayerDialog from "./EditPlayerDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-interface FileUploadButtonProps {
-  onFileUpload: (players: any[]) => void;
+interface PlayerManagementProps {
+  onPlayerApproval?: () => void;
 }
 
-interface CreatePlayerDialogProps {
-  onPlayerCreated: (playerData: any) => void;
-}
-
-interface EditPlayerDialogProps {
-  player: Player;
-  onSuccess: () => void;
-}
-
-const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlayerApproval }) => {
+const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadedPlayers, setUploadedPlayers] = useState<any[]>([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
@@ -165,6 +159,11 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
       description: `${players.length} players have been uploaded and approved.`,
       variant: "default",
     });
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    setSelectedPlayer(player);
+    setIsEditDialogOpen(true);
   };
   
   return (
@@ -337,6 +336,9 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                     <div>State: {player.state}</div>
                     <div>Rating: {player.rating || "Unrated"}</div>
                   </div>
+                  <Button size="sm" variant="outline" className="mt-2" onClick={() => handleEditPlayer(player)}>
+                    Edit Player
+                  </Button>
                 </div>
               ))}
               {approvedPlayers.length > 5 && (
@@ -369,7 +371,9 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                         </span>
                       </TableCell>
                       <TableCell>
-                        <EditPlayerDialog player={player} onSuccess={() => setRefreshKey(prev => prev + 1)} />
+                        <Button size="sm" variant="outline" onClick={() => handleEditPlayer(player)}>
+                          Edit Player
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -387,9 +391,18 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
           )}
         </div>
       </div>
+
+      {/* Edit Player Dialog */}
+      {selectedPlayer && (
+        <EditPlayerDialog 
+          player={selectedPlayer}
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSuccess={() => setRefreshKey(prev => prev + 1)}
+        />
+      )}
     </div>
   );
 };
 
 export default PlayerManagement;
-
