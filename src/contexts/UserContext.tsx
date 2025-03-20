@@ -227,7 +227,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: userData.role === 'rating_officer' 
           ? "You have been registered as a Rating Officer" 
           : "Your registration is pending approval by a Rating Officer",
-        variant: "success"
+        variant: "default"
       });
 
       return true;
@@ -261,7 +261,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({
         title: "Login Successful",
         description: `Welcome back, ${user.fullName}!`,
-        variant: "success"
+        variant: "default"
       });
       
       return true;

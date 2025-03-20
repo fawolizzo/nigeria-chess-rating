@@ -221,3 +221,41 @@ export const deleteTournament = (tournamentId: string): void => {
   );
   saveTournaments(filteredTournaments);
 };
+
+export const createPlayer = (playerData: any): Player => {
+  const newPlayer: Player = {
+    id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    name: playerData.fullName,
+    rating: playerData.rating || 800,
+    gender: playerData.gender || 'M',
+    state: playerData.state || '',
+    city: playerData.city || '',
+    gamesPlayed: 0,
+    status: playerData.status || 'pending',
+    tournamentResults: [],
+    ratingHistory: [{
+      date: new Date().toISOString(),
+      rating: playerData.rating || 800,
+      reason: "Initial rating"
+    }]
+  };
+  
+  addPlayer(newPlayer);
+  return newPlayer;
+};
+
+export const approvePlayer = (playerId: string): void => {
+  const allPlayers = getAllPlayers();
+  const updatedPlayers = allPlayers.map(player => 
+    player.id === playerId ? { ...player, status: 'approved' as const } : player
+  );
+  savePlayers(updatedPlayers);
+};
+
+export const rejectPlayer = (playerId: string): void => {
+  const allPlayers = getAllPlayers();
+  const updatedPlayers = allPlayers.map(player => 
+    player.id === playerId ? { ...player, status: 'rejected' as const } : player
+  );
+  savePlayers(updatedPlayers);
+};

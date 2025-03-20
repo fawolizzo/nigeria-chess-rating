@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -16,6 +17,20 @@ import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+// Define proper types to match component requirements
+interface FileUploadButtonProps {
+  onFileUpload: (players: any[]) => void;
+}
+
+interface CreatePlayerDialogProps {
+  onPlayerCreate: (playerData: any) => void;
+}
+
+interface EditPlayerDialogProps {
+  playerData: any;
+  onPlayerEdit: () => void;
+}
 
 const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlayerApproval }) => {
   const [players, setPlayers] = useState<any[]>([]);
@@ -61,7 +76,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
     toast({
       title: "Player Approved",
       description: "Player has been approved successfully",
-      variant: "success",
+      variant: "default",
     });
     
     if (onPlayerApproval) {
@@ -101,7 +116,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
     toast({
       title: "Upload Successful",
       description: `${players.length} players have been uploaded and approved.`,
-      variant: "success",
+      variant: "default",
     });
   };
   
@@ -133,7 +148,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                 <DialogTitle>Import Players from Excel</DialogTitle>
               </DialogHeader>
               <div className="py-4">
-                <FileUploadButton onUpload={handleFileUpload} />
+                <FileUploadButton onFileUpload={handleFileUpload} />
                 
                 {uploadSuccess && (
                   <div className="mt-4">
@@ -172,7 +187,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
             </DialogContent>
           </Dialog>
           
-          <CreatePlayerDialog onCreatePlayer={handleCreatePlayer} />
+          <CreatePlayerDialog onPlayerCreate={handleCreatePlayer} />
         </div>
       </div>
       
@@ -307,7 +322,7 @@ const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlaye
                         </span>
                       </TableCell>
                       <TableCell>
-                        <EditPlayerDialog player={player} onEditPlayer={() => setRefreshKey(prev => prev + 1)} />
+                        <EditPlayerDialog playerData={player} onPlayerEdit={() => setRefreshKey(prev => prev + 1)} />
                       </TableCell>
                     </TableRow>
                   ))}
