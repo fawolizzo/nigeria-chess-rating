@@ -58,9 +58,9 @@ const playerSchema = z.object({
 type PlayerFormValues = z.infer<typeof playerSchema>;
 
 interface CreatePlayerDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onPlayerCreated?: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onPlayerCreated?: (playerData: any) => void;
   onSuccess?: () => void;
 }
 
@@ -68,7 +68,7 @@ interface ImportPlayerWithTempId extends Partial<Player> {
   tempId: string;
 }
 
-const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({ 
+const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({ 
   isOpen, 
   onOpenChange,
   onPlayerCreated,
@@ -78,6 +78,7 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
   const [activeTab, setActiveTab] = useState<string>("single");
   const [importedPlayers, setImportedPlayers] = useState<ImportPlayerWithTempId[]>([]);
   const [selectedImportIds, setSelectedImportIds] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
   
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
@@ -96,6 +97,14 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
       apply100Bonus: false,
     },
   });
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    } else {
+      setOpen(newOpen);
+    }
+  };
 
   const onSubmit = (data: PlayerFormValues) => {
     try {
@@ -175,10 +184,10 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
       });
       
       form.reset();
-      onOpenChange(false);
+      handleOpenChange(false);
       
       if (onPlayerCreated) {
-        onPlayerCreated();
+        onPlayerCreated(newPlayer);
       }
       
       if (onSuccess) {
@@ -257,7 +266,7 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
       setSelectedImportIds([]);
       setActiveTab("single");
       
-      onOpenChange(false);
+      handleOpenChange(false);
       
       if (onSuccess) {
         onSuccess();
@@ -278,8 +287,16 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
     setActiveTab("import");
   };
 
+  const isDialogOpen = isOpen !== undefined ? isOpen : open;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Add Player
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Player</DialogTitle>
@@ -448,7 +465,7 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({
                   <Button 
                     variant="outline" 
                     type="button" 
-                    onClick={() => onOpenChange(false)}
+                    onClick={() => handleOpenChange(false)}
                   >
                     Cancel
                   </Button>
