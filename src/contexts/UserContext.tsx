@@ -32,6 +32,9 @@ interface UserContextType {
   getRatingOfficerEmails: () => string[];
 }
 
+const STORAGE_KEY_USERS = 'ncr_users';
+const STORAGE_KEY_CURRENT_USER = 'ncr_current_user';
+
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,33 +42,67 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load saved data from localStorage on initial render
+  // Load saved data from localStorage on initial render with error handling
   useEffect(() => {
-    const savedUsers = localStorage.getItem('users');
-    const savedCurrentUser = localStorage.getItem('currentUser');
-    
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
+    try {
+      const savedUsers = localStorage.getItem(STORAGE_KEY_USERS);
+      const savedCurrentUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
+      
+      if (savedUsers) {
+        const parsedUsers = JSON.parse(savedUsers);
+        if (Array.isArray(parsedUsers)) {
+          setUsers(parsedUsers);
+        } else {
+          console.error("Saved users is not an array, resetting to empty array");
+          setUsers([]);
+          localStorage.removeItem(STORAGE_KEY_USERS);
+        }
+      }
+      
+      if (savedCurrentUser) {
+        setCurrentUser(JSON.parse(savedCurrentUser));
+      }
+    } catch (error) {
+      console.error("Error loading saved data:", error);
+      // Reset the state if there's an error
+      setUsers([]);
+      setCurrentUser(null);
+      localStorage.removeItem(STORAGE_KEY_USERS);
+      localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+    } finally {
+      setIsLoading(false);
     }
-    
-    if (savedCurrentUser) {
-      setCurrentUser(JSON.parse(savedCurrentUser));
-    }
-    
-    setIsLoading(false);
   }, []);
 
-  // Save users to localStorage whenever they change
+  // Save users to localStorage whenever they change with error handling
   useEffect(() => {
-    if (users.length > 0) {
-      localStorage.setItem('users', JSON.stringify(users));
+    try {
+      if (users.length > 0) {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+      }
+    } catch (error) {
+      console.error("Error saving users data:", error);
+      toast({
+        title: "Error Saving Data",
+        description: "There was an error saving user data to your device",
+        variant: "destructive"
+      });
     }
   }, [users]);
 
-  // Save current user to localStorage whenever it changes
+  // Save current user to localStorage whenever it changes with error handling
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    try {
+      if (currentUser) {
+        localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUser));
+      }
+    } catch (error) {
+      console.error("Error saving current user data:", error);
+      toast({
+        title: "Error Saving Data",
+        description: "There was an error saving your session data",
+        variant: "destructive"
+      });
     }
   }, [currentUser]);
 
@@ -114,7 +151,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const newUser: User = {
         ...userData,
-        id: `user_${Date.now()}`,
+        id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         status: 'pending',
         registrationDate: new Date().toISOString(),
       };
@@ -155,6 +192,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Notify all rating officers about the new organizer registration
         const ratingOfficerEmails = getRatingOfficerEmails();
+        
         if (ratingOfficerEmails.length > 0) {
           const notificationHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
@@ -184,9 +222,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      toast({
+        title: "Registration Successful",
+        description: userData.role === 'rating_officer' 
+          ? "You have been registered as a Rating Officer" 
+          : "Your registration is pending approval by a Rating Officer",
+        variant: "success"
+      });
+
       return true;
     } catch (error) {
       console.error('Registration error:', error);
+      toast({
+        title: "Registration Failed",
+        description: error.message || "An error occurred during registration",
+        variant: "destructive"
+      });
       return false;
     }
   };
@@ -206,16 +257,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setCurrentUser(user);
+      
+      toast({
+        title: "Login Successful",
+        description: `Welcome back, ${user.fullName}!`,
+        variant: "success"
+      });
+      
       return true;
     } catch (error) {
       console.error('Login error:', error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive"
+      });
       return false;
     }
   };
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
+    localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out",
+    });
   };
 
   const approveUser = (userId: string) => {

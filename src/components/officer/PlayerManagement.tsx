@@ -1,396 +1,330 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Pencil, Plus, Search, UserCheck, UserX, RefreshCw, Upload } from "lucide-react";
-import { getAllPlayers, updatePlayer } from "@/lib/mockData";
-import { Separator } from "@/components/ui/separator";
-import { toast } from "@/components/ui/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { PlusCircle, RefreshCcw, Upload, UserPlus, CheckCircle, XCircle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { getAllPlayers, createPlayer, approvePlayer, rejectPlayer } from "@/lib/mockData";
+import FileUploadButton from "@/components/players/FileUploadButton";
 import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
-import FileUploadButton from "@/components/players/FileUploadButton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-interface PlayerManagementProps {
-  onPlayerApproval?: () => void;
-}
-
-const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval }) => {
+const PlayerManagement: React.FC<{ onPlayerApproval?: () => void }> = ({ onPlayerApproval }) => {
   const [players, setPlayers] = useState<any[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState<any>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadedPlayers, setUploadedPlayers] = useState<any[]>([]);
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
-    loadPlayers();
+    const fetchPlayers = () => {
+      const allPlayers = getAllPlayers();
+      setPlayers(allPlayers);
+      setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
+      setApprovedPlayers(allPlayers.filter(p => p.status === "approved"));
+    };
     
-    // Set up interval to refresh players every 10 seconds
-    const intervalId = setInterval(loadPlayers, 10000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
+    fetchPlayers();
+  }, [refreshKey]);
   
-  const loadPlayers = () => {
-    const allPlayers = getAllPlayers();
-    setPlayers(allPlayers);
-    
-    // Filter pending players
-    const pending = allPlayers.filter(player => player.status === 'pending');
-    setPendingPlayers(pending);
-    
-    // Filter approved players
-    const approved = allPlayers.filter(player => player.status === 'approved');
-    setApprovedPlayers(approved);
-  };
-  
-  const handleRefreshPlayers = () => {
-    setIsRefreshing(true);
-    loadPlayers();
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 500);
-  };
-  
-  const handlePlayersImported = (importedPlayers: any[]) => {
-    loadPlayers();
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
     toast({
-      title: "Players Imported Successfully",
-      description: `${importedPlayers.length} players have been imported into the system.`,
+      title: "Refreshed",
+      description: "Player data has been refreshed",
+    });
+  };
+  
+  const handleCreatePlayer = (playerData: any) => {
+    createPlayer(playerData);
+    setRefreshKey(prev => prev + 1);
+    toast({
+      title: "Player Created",
+      description: `${playerData.fullName} has been created successfully.`,
     });
   };
   
   const handleApprovePlayer = (playerId: string) => {
-    // Find player in the list
-    const player = players.find(p => p.id === playerId);
-    if (!player) return;
-    
-    // Update player status to approved
-    const updatedPlayer = {
-      ...player,
-      status: 'approved',
-      approvalDate: new Date().toISOString()
-    };
-    
-    // Update player in system
-    updatePlayer(updatedPlayer);
-    
-    // Reload players
-    loadPlayers();
-    
+    approvePlayer(playerId);
+    setRefreshKey(prev => prev + 1);
     toast({
       title: "Player Approved",
-      description: `${player.name} has been approved and can now participate in tournaments.`
+      description: "Player has been approved successfully",
+      variant: "success",
     });
     
-    // Call the callback if provided
     if (onPlayerApproval) {
       onPlayerApproval();
     }
   };
   
   const handleRejectPlayer = (playerId: string) => {
-    // Find player in the list
-    const player = players.find(p => p.id === playerId);
-    if (!player) return;
-    
-    // Update player status to rejected
-    const updatedPlayer = {
-      ...player,
-      status: 'rejected',
-      rejectionDate: new Date().toISOString()
-    };
-    
-    // Update player in system
-    updatePlayer(updatedPlayer);
-    
-    // Reload players
-    loadPlayers();
-    
+    rejectPlayer(playerId);
+    setRefreshKey(prev => prev + 1);
     toast({
       title: "Player Rejected",
-      description: `${player.name} has been rejected and cannot participate in tournaments.`,
-      variant: "destructive"
+      description: "Player has been rejected",
+      variant: "destructive",
     });
     
-    // Call the callback if provided
     if (onPlayerApproval) {
       onPlayerApproval();
     }
   };
   
-  const handleEditPlayer = (player: any) => {
-    setEditingPlayer(player);
-  };
-  
-  const handlePlayerEdited = () => {
-    setEditingPlayer(null);
-    loadPlayers();
+  const handleFileUpload = (players: any[]) => {
+    setUploadedPlayers(players);
+    setUploadSuccess(true);
+    
+    // Auto-approve the uploaded players
+    players.forEach(player => {
+      const newPlayer = createPlayer({
+        ...player,
+        status: "approved",
+      });
+      console.log("Created player:", newPlayer);
+    });
+    
+    setRefreshKey(prev => prev + 1);
     
     toast({
-      title: "Player Updated",
-      description: "Player information has been updated successfully."
+      title: "Upload Successful",
+      description: `${players.length} players have been uploaded and approved.`,
+      variant: "success",
     });
   };
-  
-  const handlePlayerCreated = () => {
-    loadPlayers();
-    setIsCreateDialogOpen(false);
-    
-    toast({
-      title: "Player Created",
-      description: "New player has been created successfully."
-    });
-  };
-  
-  const filteredApprovedPlayers = approvedPlayers.filter(player => 
-    player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (player.state && player.state.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (player.city && player.city.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
   
   return (
-    <div>
-      <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Player Management</h2>
-          <p className="text-muted-foreground">Manage player registrations and approvals</p>
+          <h2 className="text-xl font-semibold mb-1">Player Management</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage players and import player data
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleRefreshPlayers}
-            disabled={isRefreshing}
-            className="mr-2"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+        
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCcw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
           
-          <Button
-            variant="outline"
-            onClick={() => setIsImportDialogOpen(true)}
-            className="mr-2"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Import Players
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Upload className="h-4 w-4 mr-2" />
+                Import Players
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import Players from Excel</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <FileUploadButton onUpload={handleFileUpload} />
+                
+                {uploadSuccess && (
+                  <div className="mt-4">
+                    <div className="flex items-center text-green-600 mb-2">
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      <span>Upload Successful! {uploadedPlayers.length} players imported.</span>
+                    </div>
+                    
+                    <div className="max-h-60 overflow-y-auto mt-4 border rounded-md">
+                      {uploadedPlayers.length > 0 && (
+                        <div className="w-full overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Rating</TableHead>
+                                <TableHead>State</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {uploadedPlayers.map((player, index) => (
+                                <TableRow key={index}>
+                                  <TableCell>{player.fullName}</TableCell>
+                                  <TableCell>{player.rating || "Unrated"}</TableCell>
+                                  <TableCell>{player.state}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Player
-          </Button>
+          <CreatePlayerDialog onCreatePlayer={handleCreatePlayer} />
         </div>
       </div>
       
-      {isImportDialogOpen && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Import Players</CardTitle>
-            <CardDescription>
-              Upload a CSV or Excel file to import multiple players at once
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FileUploadButton 
-              onPlayersImported={(players) => {
-                handlePlayersImported(players);
-                setIsImportDialogOpen(false);
-              }}
-              buttonText="Import Players"
-            />
-            <div className="mt-4 flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsImportDialogOpen(false)}
-              >
-                Close
-              </Button>
+      <div className="border rounded-md">
+        <div className="p-4 border-b bg-muted/40">
+          <h3 className="text-lg font-medium">Player Database</h3>
+        </div>
+        
+        <div className="p-4">
+          <h4 className="font-medium mb-3">Pending Players ({pendingPlayers.length})</h4>
+          
+          {pendingPlayers.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4">No pending players to approve.</p>
+          ) : isMobile ? (
+            <div className="space-y-4">
+              {pendingPlayers.map(player => (
+                <div key={player.id} className="border rounded-md p-3">
+                  <div className="flex justify-between mb-2">
+                    <div className="font-medium">{player.fullName}</div>
+                    <div className="text-sm text-muted-foreground">ID: {player.id.slice(0, 8)}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                    <div>State: {player.state}</div>
+                    <div>Rating: {player.rating || "Unrated"}</div>
+                  </div>
+                  <div className="flex space-x-2 mt-2">
+                    <Button size="sm" variant="outline" 
+                      onClick={() => handleApprovePlayer(player.id)}>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="destructive" 
+                      onClick={() => handleRejectPlayer(player.id)}>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Tabs defaultValue={pendingPlayers.length > 0 ? "pending" : "approved"} className="space-y-4">
-        <TabsList>
-          <TabsTrigger 
-            value="pending" 
-            className="relative"
-          >
-            Pending Approval
-            {pendingPlayers.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
-                {pendingPlayers.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="approved">
-            Approved Players
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="pending">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Players</CardTitle>
-              <CardDescription>
-                Players waiting for approval to participate in tournaments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingPlayers.length === 0 ? (
-                <div className="text-center py-10">
-                  <UserCheck className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
-                    No Pending Players
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    All player registrations have been processed
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {pendingPlayers.map(player => (
-                    <div 
-                      key={player.id} 
-                      className="border border-gray-200 dark:border-gray-800 rounded-lg p-4"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-medium text-lg flex items-center gap-2">
-                            {player.name}
-                          </h3>
-                          <p className="text-muted-foreground">
-                            Rating: {player.rating} • {player.state}
-                            {player.city && `, ${player.city}`}
-                          </p>
-                        </div>
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800">
+                    <TableRow key={player.id}>
+                      <TableCell>{player.fullName}</TableCell>
+                      <TableCell>{player.state}</TableCell>
+                      <TableCell>{player.rating || "Unrated"}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                           Pending
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex gap-2 mt-2 justify-end">
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-                          onClick={() => handleRejectPlayer(player.id)}
-                        >
-                          <UserX className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                        <Button 
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleApprovePlayer(player.id)}
-                        >
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="approved">
-          <Card>
-            <CardHeader>
-              <CardTitle>Approved Players</CardTitle>
-              <CardDescription>
-                Manage all players who have been approved to participate in tournaments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  <Input
-                    type="search"
-                    placeholder="Search players by name, state or city..."
-                    className="pl-9"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <Separator className="my-4" />
-              
-              {filteredApprovedPlayers.length === 0 ? (
-                <div className="text-center py-10">
-                  <Search className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
-                    No Players Found
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {searchQuery
-                      ? "Try adjusting your search query"
-                      : "No approved players in the system yet"}
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredApprovedPlayers.map(player => (
-                    <div
-                      key={player.id}
-                      className="border border-gray-200 dark:border-gray-800 rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium flex items-center gap-2">
-                            {player.name}
-                            <Badge variant="outline" className="ml-2 bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Approved
-                            </Badge>
-                          </h3>
-                          <p className="text-muted-foreground text-sm">
-                            Rating: {player.rating} • Games: {player.gamesPlayed || 0}
-                          </p>
-                          <p className="text-muted-foreground text-sm">
-                            {player.state}{player.city && `, ${player.city}`}
-                          </p>
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" 
+                            onClick={() => handleApprovePlayer(player.id)}>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="destructive" 
+                            onClick={() => handleRejectPlayer(player.id)}>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Reject
+                          </Button>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleEditPlayer(player)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+        
+        <div className="p-4 border-t">
+          <h4 className="font-medium mb-3">Approved Players ({approvedPlayers.length})</h4>
+          
+          {approvedPlayers.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4">No approved players yet.</p>
+          ) : isMobile ? (
+            <div className="space-y-4">
+              {approvedPlayers.slice(0, 5).map(player => (
+                <div key={player.id} className="border rounded-md p-3">
+                  <div className="flex justify-between mb-2">
+                    <div className="font-medium">{player.fullName}</div>
+                    <div className="text-sm text-muted-foreground">ID: {player.id.slice(0, 8)}</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>State: {player.state}</div>
+                    <div>Rating: {player.rating || "Unrated"}</div>
+                  </div>
+                </div>
+              ))}
+              {approvedPlayers.length > 5 && (
+                <Button variant="link" className="w-full" asChild>
+                  <Link to="/players">View All {approvedPlayers.length} Approved Players</Link>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {approvedPlayers.slice(0, 5).map(player => (
+                    <TableRow key={player.id}>
+                      <TableCell>{player.fullName}</TableCell>
+                      <TableCell>{player.state}</TableCell>
+                      <TableCell>{player.rating || "Unrated"}</TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Approved
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <EditPlayerDialog player={player} onEditPlayer={() => setRefreshKey(prev => prev + 1)} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {approvedPlayers.length > 5 && (
+                <div className="mt-4 text-center">
+                  <Button variant="link" asChild>
+                    <Link to="/players">View All {approvedPlayers.length} Approved Players</Link>
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      <CreatePlayerDialog 
-        isOpen={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onPlayerCreated={handlePlayerCreated}
-      />
-      
-      {editingPlayer && (
-        <EditPlayerDialog
-          isOpen={!!editingPlayer}
-          onOpenChange={() => setEditingPlayer(null)}
-          player={editingPlayer}
-          onPlayerEdited={handlePlayerEdited}
-        />
-      )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

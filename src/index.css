@@ -14,30 +14,30 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    /* Enhanced Nigerian green as primary color */
-    --primary: 160 100% 26.7%;
+    /* Nigerian green as primary color */
+    --primary: 157 100% 26.3%; /* #008751 */
     --primary-foreground: 210 40% 98%;
 
-    /* Richer secondary color with golden hue */
-    --secondary: 42 85% 65%;
-    --secondary-foreground: 42 50% 25%;
+    /* Nigerian yellow as secondary color */
+    --secondary: 47 100% 51%; /* #ffcb05 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
     /* Softer muted colors with better contrast */
     --muted: 210 40% 93%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Warmer accent color */
-    --accent: 42 80% 92%;
+    /* Warm accent based on Nigerian colors */
+    --accent: 47 80% 92%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     /* Refined border colors */
-    --border: 160 60% 92%;
+    --border: 157 60% 92%;
     --input: 214.3 31.8% 91.4%;
     /* Nigerian green for focus rings */
-    --ring: 160 100% 26.7%;
+    --ring: 157 100% 26.3%;
 
     --radius: 0.5rem;
 
@@ -53,12 +53,12 @@
     /* Enhanced Nigerian colors */
     --nigeria-white: 0 0% 100%;
     --nigeria-white-dim: 0 0% 91%;
-    --nigeria-green: 160 100% 26.7%;
-    --nigeria-green-light: 160 85% 40%;
-    --nigeria-green-dark: 160 100% 20%;
-    --nigeria-yellow: 42 91% 62.7%;
-    --nigeria-yellow-light: 42 91% 75%;
-    --nigeria-yellow-dark: 42 91% 50%;
+    --nigeria-green: 157 100% 26.3%;
+    --nigeria-green-light: 157 85% 40%;
+    --nigeria-green-dark: 157 100% 20%;
+    --nigeria-yellow: 47 100% 51%;
+    --nigeria-yellow-light: 47 91% 75%;
+    --nigeria-yellow-dark: 47 91% 40%;
     --nigeria-accent: 25 95% 65%;
     --nigeria-accent-light: 25 95% 75%;
     --nigeria-accent-dark: 25 95% 55%;
@@ -75,25 +75,25 @@
     --popover-foreground: 210 40% 98%;
 
     /* Enhanced Nigerian green in dark mode */
-    --primary: 160 70% 40%;
+    --primary: 157 70% 40%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    /* Richer secondary for dark mode */
-    --secondary: 42 60% 55%;
+    /* Richer Nigerian yellow for dark mode */
+    --secondary: 47 80% 55%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
     /* Warmer accent in dark mode */
-    --accent: 42 35% 30%;
+    --accent: 47 35% 30%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     /* Enhanced borders for dark mode */
-    --border: 160 30% 22%;
+    --border: 157 30% 22%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
     
@@ -109,12 +109,12 @@
     /* Enhanced Nigerian colors in dark mode */
     --nigeria-white: 0 0% 95%;
     --nigeria-white-dim: 0 0% 85%;
-    --nigeria-green: 160 80% 35%;
-    --nigeria-green-light: 160 75% 45%;
-    --nigeria-green-dark: 160 85% 25%;
-    --nigeria-yellow: 42 80% 65%;
-    --nigeria-yellow-light: 42 75% 75%;
-    --nigeria-yellow-dark: 42 85% 55%;
+    --nigeria-green: 157 80% 35%;
+    --nigeria-green-light: 157 75% 45%;
+    --nigeria-green-dark: 157 85% 25%;
+    --nigeria-yellow: 47 80% 65%;
+    --nigeria-yellow-light: 47 75% 75%;
+    --nigeria-yellow-dark: 47 85% 55%;
     --nigeria-accent: 25 70% 50%;
     --nigeria-accent-light: 25 70% 60%;
     --nigeria-accent-dark: 25 70% 40%;
@@ -215,20 +215,46 @@
 
 /* Nigerian flag-inspired gradients */
 .nigeria-gradient {
-  background: linear-gradient(135deg, var(--nigeria-green) 0%, var(--nigeria-yellow) 100%);
+  background: linear-gradient(135deg, #008751 0%, #ffcb05 100%);
 }
 
 .nigeria-gradient-soft {
-  background: linear-gradient(135deg, rgba(0, 135, 81, 0.7) 0%, rgba(247, 196, 69, 0.7) 100%);
+  background: linear-gradient(135deg, rgba(0, 135, 81, 0.7) 0%, rgba(255, 203, 5, 0.7) 100%);
 }
 
 .nigeria-gradient-subtle {
-  background: linear-gradient(135deg, rgba(0, 135, 81, 0.1) 0%, rgba(247, 196, 69, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(0, 135, 81, 0.1) 0%, rgba(255, 203, 5, 0.1) 100%);
 }
 
 .hero-pattern {
   background-color: #ffffff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23008751' fill-opacity='0.05'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 20.83l2.83-2.83 1.41 1.41L1.41 22.24l-1.41 1.41L0 22.24v-1.41zM0 3.41l2.83 2.83L1.41 8.66 0 7.24V3.41zM20 0l2.83 2.83-1.41 1.41L18.59 1.41 17.17 0l1.41 1.41L20 0zM3.41 0l2.83 2.83-1.41 1.41L1.41 1.41 0 0l1.41 1.41 2-1.41z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Add responsive styles for mobile */
+@media (max-width: 640px) {
+  .responsive-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-card {
+    @apply border rounded-md p-4 mb-4;
+  }
+  
+  .mobile-card-header {
+    @apply flex justify-between items-center mb-2;
+  }
+  
+  .mobile-card-content {
+    @apply text-sm space-y-2;
+  }
+  
+  .mobile-card-footer {
+    @apply mt-3 pt-2 border-t flex justify-end gap-2;
+  }
 }
 
 /* Animations */
@@ -264,4 +290,21 @@
 /* Footer styles */
 .footer {
   background: linear-gradient(180deg, transparent, rgba(0, 135, 81, 0.03) 50%);
+}
+
+/* Mobile optimization styles */
+.mobile-optimized {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.mobile-list-item {
+  @apply p-3 border rounded-md mb-2 bg-white dark:bg-gray-800;
+}
+
+/* Fix for Safari on iOS */
+@supports (-webkit-touch-callout: none) {
+  .safari-fix {
+    height: -webkit-fill-available;
+  }
 }

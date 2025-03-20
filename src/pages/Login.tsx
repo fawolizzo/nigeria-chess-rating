@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LogIn, Mail, Lock, UserCheck, ChevronDown, Calendar, Shield, Check, AlertCircle } from "lucide-react";
+import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -9,6 +10,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Form validation schema
 const loginSchema = z.object({
@@ -26,6 +28,7 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const isMobile = useIsMobile();
   
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -55,9 +58,9 @@ const Login = () => {
         // Redirect based on role
         setTimeout(() => {
           if (data.role === "tournament_organizer") {
-            navigate("/organizer-dashboard");
+            navigate("/organizer/dashboard");
           } else {
-            navigate("/officer-dashboard");
+            navigate("/officer/dashboard");
           }
         }, 1000);
       } else {
@@ -74,7 +77,7 @@ const Login = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto pt-24 sm:pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
           <div className="p-6 sm:p-8">
             <div className="text-center mb-8">
@@ -101,23 +104,23 @@ const Login = () => {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 {/* Role Selection */}
-                <div className="grid grid-cols-2 gap-4 mb-2">
+                <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-4"}>
                   <div
                     className={`cursor-pointer rounded-md border p-4 flex flex-col items-center justify-center text-center ${
                       selectedRole === "tournament_organizer"
-                        ? "border-black dark:border-white bg-gray-50 dark:bg-gray-800"
+                        ? "border-nigeria-green bg-nigeria-green/5"
                         : "border-gray-200 dark:border-gray-700"
                     }`}
                     onClick={() => form.setValue("role", "tournament_organizer")}
                   >
                     <Calendar className={`h-6 w-6 mb-2 ${
                       selectedRole === "tournament_organizer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`} />
                     <h3 className={`text-sm font-medium ${
                       selectedRole === "tournament_organizer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green-dark dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`}>
                       Tournament Organizer
@@ -127,19 +130,19 @@ const Login = () => {
                   <div
                     className={`cursor-pointer rounded-md border p-4 flex flex-col items-center justify-center text-center ${
                       selectedRole === "rating_officer"
-                        ? "border-black dark:border-white bg-gray-50 dark:bg-gray-800"
+                        ? "border-nigeria-green bg-nigeria-green/5"
                         : "border-gray-200 dark:border-gray-700"
                     }`}
                     onClick={() => form.setValue("role", "rating_officer")}
                   >
                     <Shield className={`h-6 w-6 mb-2 ${
                       selectedRole === "rating_officer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`} />
                     <h3 className={`text-sm font-medium ${
                       selectedRole === "rating_officer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green-dark dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`}>
                       Rating Officer
@@ -200,7 +203,7 @@ const Login = () => {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -222,7 +225,7 @@ const Login = () => {
                 <div className="mt-4 text-center text-sm">
                   <p className="text-gray-600 dark:text-gray-400">
                     Don't have an account?{" "}
-                    <Link to="/register" className="text-black dark:text-white font-medium hover:underline">
+                    <Link to="/register" className="text-nigeria-green dark:text-nigeria-green-light font-medium hover:underline">
                       Register
                     </Link>
                   </p>
