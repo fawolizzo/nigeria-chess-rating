@@ -141,7 +141,7 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
       const newPlayer: Player = {
         ...formData as Player,
         id: crypto.randomUUID(),
-        organizerId: currentUserId,
+        organizerId: currentUserId, // Include organizer ID to track who created the player
         createdAt: new Date().toISOString(),
       };
       

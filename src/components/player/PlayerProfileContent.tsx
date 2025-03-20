@@ -58,7 +58,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     tr => tr.tournamentId === selectedTournament
   );
   
-  // Get match-by-match rating changes (this would come from actual data in a real implementation)
+  // Get match-by-match rating changes
   const matchRatingChanges = player.ratingHistory
     .filter(history => history.reason?.includes(selectedTournament || ''))
     .map(history => ({
