@@ -20,11 +20,8 @@ export interface Player {
   blitzRatingStatus?: 'provisional' | 'established';
   achievements?: string[];
   status: 'pending' | 'approved' | 'rejected';
-  organizerId?: string; // Add field to track which organizer created the player
-  createdAt?: string; // Add field to store creation date
   tournamentResults: Array<{
     tournamentId: string;
-    tournamentName?: string; // Add field to store tournament name
     position: number;
     ratingChange: number;
   }>;
@@ -32,30 +29,18 @@ export interface Player {
     date: string;
     rating: number;
     reason: string;
-    ratingChange?: number; // Add field to store rating change
-    opponent?: string; // Add field to store opponent name
-    opponentRating?: number; // Add field to store opponent rating
-    result?: string; // Add field to store match result
   }>;
   rapidRatingHistory?: Array<{
     date: string;
     rating: number;
     reason: string;
-    ratingChange?: number;
-    opponent?: string;
-    opponentRating?: number;
-    result?: string;
   }>;
   blitzRatingHistory?: Array<{
     date: string;
     rating: number;
     reason: string;
-    ratingChange?: number;
-    opponent?: string;
-    opponentRating?: number;
-    result?: string;
   }>;
-  titleVerified?: boolean; // Field to track title verification status
+  titleVerified?: boolean; // New field to track title verification status
 }
 
 export interface Tournament {
@@ -247,8 +232,6 @@ export const createPlayer = (playerData: any): Player => {
     city: playerData.city || '',
     gamesPlayed: 0,
     status: playerData.status || 'pending',
-    organizerId: playerData.organizerId || '',
-    createdAt: new Date().toISOString(),
     tournamentResults: [],
     ratingHistory: [{
       date: new Date().toISOString(),

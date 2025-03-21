@@ -1,13 +1,56 @@
 
 #root {
-  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #008751aa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #F7C445aa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* Fix for white background issue */
+body {
+  background-color: #f8fafc;
+  color: #333;
 }
 
 .app-container {
   min-height: 100vh;
-  width: 100%;
-  background-color: #f8f9fa;
 }
 
 /* Chess-themed elements */
@@ -113,22 +156,4 @@
 /* Chess piece icon background */
 .chess-piece-bg {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M18 8h4v44H18V8zm20 0h4v44h-4V8zM0 20h60v4H0v-4zm0 20h60v4H0v-4zM8 0v8h-8v4h8v40h4V12h36V8H12V0H8zm44 0v8h8v4h-8v40h-4V12H8V8h36V0h4z' fill='%23008751' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
-}
-
-/* Custom background patterns */
-.hero-pattern {
-  background-color: #f8f9fa;
-  background-image: radial-gradient(#008751 0.5px, transparent 0.5px);
-  background-size: 12px 12px;
-}
-
-.chessboard-pattern-bg {
-  background-color: #f8f9fa;
-  background-image: linear-gradient(45deg, #eaeaea 25%, transparent 25%), 
-    linear-gradient(-45deg, #eaeaea 25%, transparent 25%), 
-    linear-gradient(45deg, transparent 75%, #eaeaea 75%), 
-    linear-gradient(-45deg, transparent 75%, #eaeaea 75%);
-  background-size: 40px 40px;
-  background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
-  opacity: 0.4;
 }

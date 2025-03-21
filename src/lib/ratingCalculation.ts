@@ -40,7 +40,7 @@ interface Match {
   blackRating: number;
   whiteGamesPlayed: number;
   blackGamesPlayed: number;
-  result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F";
+  result: "1-0" | "0-1" | "1/2-1/2" | "*";
   whiteRatingChange?: number;
   blackRatingChange?: number;
 }
@@ -68,8 +68,7 @@ const calculateRatingChange = (
 
 export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
   return matches.map(match => {
-    // If match not played or double forfeit, no rating change
-    if (match.result === "*" || match.result === "0F-0F") {
+    if (match.result === "*") {
       return {
         ...match,
         whiteRatingChange: 0,
@@ -101,14 +100,13 @@ export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
     let scoreWhite = 0;
     let scoreBlack = 0;
 
-    // Handle all result types including forfeits
-    if (result === "1-0" || result === "1F-0F") {
+    if (result === "1-0") {
       scoreWhite = 1;
       scoreBlack = 0;
-    } else if (result === "0-1" || result === "0F-1F") {
+    } else if (result === "0-1") {
       scoreWhite = 0;
       scoreBlack = 1;
-    } else if (result === "1/2-1/2") {
+    } else {
       scoreWhite = 0.5;
       scoreBlack = 0.5;
     }
@@ -124,23 +122,10 @@ export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
       kFactorBlack
     );
 
-    // Store the match result details for individual game rating history
-    const matchDetails = {
-      whiteId: match.whiteId,
-      blackId: match.blackId,
-      whiteRating: match.whiteRating,
-      blackRating: match.blackRating,
-      result: match.result,
-      whiteRatingChange,
-      blackRatingChange,
-      date: new Date().toISOString()
-    };
-
     return {
       ...match,
       whiteRatingChange,
-      blackRatingChange,
-      matchDetails
+      blackRatingChange
     };
   });
 };
