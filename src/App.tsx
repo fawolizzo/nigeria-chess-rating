@@ -19,18 +19,28 @@ import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
 import NotFound from './pages/NotFound';
 
+// Define types for the ErrorBoundary component
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
 // Simple error boundary component
-class ErrorBoundary extends React.Component {
-  constructor(props) {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, info) {
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('App Error:', error, info);
   }
 
@@ -60,7 +70,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // Higher-order component for protected routes
-const RequireAuth = ({ children, role }) => {
+const RequireAuth = ({ children, role }: { children: React.ReactNode; role: string }) => {
   const userJSON = localStorage.getItem('ncr_current_user');
   
   if (!userJSON) {
