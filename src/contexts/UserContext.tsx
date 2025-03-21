@@ -35,6 +35,27 @@ interface UserContextType {
 const STORAGE_KEY_USERS = 'ncr_users';
 const STORAGE_KEY_CURRENT_USER = 'ncr_current_user';
 
+// Helper function to safely parse JSON with error handling
+const safeJSONParse = (jsonString: string | null, fallback: any = null) => {
+  if (!jsonString) return fallback;
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error("Error parsing JSON:", error);
+    return fallback;
+  }
+};
+
+// Helper function to safely stringify JSON with error handling
+const safeJSONStringify = (data: any, fallback: string = '') => {
+  try {
+    return JSON.stringify(data);
+  } catch (error) {
+    console.error("Error stringifying JSON:", error);
+    return fallback;
+  }
+};
+
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -45,22 +66,52 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load saved data from localStorage on initial render with error handling
   useEffect(() => {
     try {
-      const savedUsers = localStorage.getItem(STORAGE_KEY_USERS);
-      const savedCurrentUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
+      // Try localStorage first
+      let savedUsers = localStorage.getItem(STORAGE_KEY_USERS);
+      let savedCurrentUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
+      
+      // If not in localStorage, try sessionStorage as backup
+      if (!savedUsers) {
+        savedUsers = sessionStorage.getItem(STORAGE_KEY_USERS);
+      }
+      
+      if (!savedCurrentUser) {
+        savedCurrentUser = sessionStorage.getItem(STORAGE_KEY_CURRENT_USER);
+      }
       
       if (savedUsers) {
-        const parsedUsers = JSON.parse(savedUsers);
+        const parsedUsers = safeJSONParse(savedUsers, []);
         if (Array.isArray(parsedUsers)) {
           setUsers(parsedUsers);
+          
+          // Also store to the other storage type for cross-browser/device persistence
+          if (!localStorage.getItem(STORAGE_KEY_USERS)) {
+            localStorage.setItem(STORAGE_KEY_USERS, savedUsers);
+          }
+          
+          if (!sessionStorage.getItem(STORAGE_KEY_USERS)) {
+            sessionStorage.setItem(STORAGE_KEY_USERS, savedUsers);
+          }
         } else {
           console.error("Saved users is not an array, resetting to empty array");
           setUsers([]);
           localStorage.removeItem(STORAGE_KEY_USERS);
+          sessionStorage.removeItem(STORAGE_KEY_USERS);
         }
       }
       
       if (savedCurrentUser) {
-        setCurrentUser(JSON.parse(savedCurrentUser));
+        const parsedUser = safeJSONParse(savedCurrentUser);
+        setCurrentUser(parsedUser);
+        
+        // Also store to the other storage type for cross-browser/device persistence
+        if (!localStorage.getItem(STORAGE_KEY_CURRENT_USER)) {
+          localStorage.setItem(STORAGE_KEY_CURRENT_USER, savedCurrentUser);
+        }
+        
+        if (!sessionStorage.getItem(STORAGE_KEY_CURRENT_USER)) {
+          sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, savedCurrentUser);
+        }
       }
     } catch (error) {
       console.error("Error loading saved data:", error);
@@ -68,7 +119,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUsers([]);
       setCurrentUser(null);
       localStorage.removeItem(STORAGE_KEY_USERS);
+      sessionStorage.removeItem(STORAGE_KEY_USERS);
       localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+      sessionStorage.removeItem(STORAGE_KEY_CURRENT_USER);
     } finally {
       setIsLoading(false);
     }
@@ -78,11 +131,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       if (users.length > 0) {
+        const usersJSON = safeJSONStringify(users);
         // Save to localStorage and sessionStorage for cross-browser/device persistence
-        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-        
-        // Also store in sessionStorage as a backup
-        sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+        localStorage.setItem(STORAGE_KEY_USERS, usersJSON);
+        sessionStorage.setItem(STORAGE_KEY_USERS, usersJSON);
       }
     } catch (error) {
       console.error("Error saving users data:", error);
@@ -98,11 +150,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       if (currentUser) {
+        const currentUserJSON = safeJSONStringify(currentUser);
         // Save to localStorage and sessionStorage for cross-browser persistence
-        localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUser));
-        
-        // Also store in sessionStorage as a backup
-        sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUser));
+        localStorage.setItem(STORAGE_KEY_CURRENT_USER, currentUserJSON);
+        sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, currentUserJSON);
       }
     } catch (error) {
       console.error("Error saving current user data:", error);
@@ -175,8 +226,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update both state and storage
       const updatedUsers = [...users, newUser];
       setUsers(updatedUsers);
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
-      sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+      
+      // Store in both localStorage and sessionStorage
+      const updatedUsersJSON = safeJSONStringify(updatedUsers);
+      localStorage.setItem(STORAGE_KEY_USERS, updatedUsersJSON);
+      sessionStorage.setItem(STORAGE_KEY_USERS, updatedUsersJSON);
 
       // Send confirmation email to the new organizer
       if (userData.role === 'tournament_organizer') {
@@ -228,15 +282,39 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log(`Sending notifications to ${ratingOfficerEmails.length} rating officers`);
           
-          // Send notification emails to all rating officers
+          // Send notification emails to all rating officers with retry logic
           for (const email of ratingOfficerEmails) {
             try {
               console.log(`Sending notification to rating officer: ${email}`);
-              await sendEmail(
-                email,
-                "New Tournament Organizer Registration - Action Required",
-                notificationHtml
-              );
+              let success = false;
+              let attempts = 0;
+              const maxAttempts = 3;
+              
+              while (!success && attempts < maxAttempts) {
+                attempts++;
+                try {
+                  console.log(`Attempt ${attempts} to send notification to ${email}`);
+                  success = await sendEmail(
+                    email,
+                    "New Tournament Organizer Registration - Action Required",
+                    notificationHtml
+                  );
+                  
+                  if (success) {
+                    console.log(`Successfully sent notification to ${email} on attempt ${attempts}`);
+                  } else {
+                    console.log(`Failed to send notification to ${email} on attempt ${attempts}`);
+                    // Wait a moment before retrying
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                } catch (attemptError) {
+                  console.error(`Error on attempt ${attempts} to ${email}:`, attemptError);
+                }
+              }
+              
+              if (!success) {
+                console.error(`Failed to send notification to ${email} after ${maxAttempts} attempts`);
+              }
             } catch (emailError) {
               console.error(`Failed to send notification to ${email}:`, emailError);
             }
@@ -270,8 +348,42 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`Attempting login with email: ${email}, role: ${role}`);
       
+      // Get a fresh copy of users from storage to ensure we have the latest data
+      let latestUsers: User[] = [];
+      
+      try {
+        // Try localStorage first
+        const localData = localStorage.getItem(STORAGE_KEY_USERS);
+        if (localData) {
+          const parsedData = safeJSONParse(localData, []);
+          if (Array.isArray(parsedData)) {
+            latestUsers = parsedData;
+          }
+        }
+        
+        // If no users in localStorage, try sessionStorage
+        if (latestUsers.length === 0) {
+          const sessionData = sessionStorage.getItem(STORAGE_KEY_USERS);
+          if (sessionData) {
+            const parsedData = safeJSONParse(sessionData, []);
+            if (Array.isArray(parsedData)) {
+              latestUsers = parsedData;
+            }
+          }
+        }
+        
+        // If still no users, fall back to current state
+        if (latestUsers.length === 0) {
+          latestUsers = users;
+        }
+      } catch (storageError) {
+        console.error('Error accessing storage during login:', storageError);
+        // Fall back to current state
+        latestUsers = users;
+      }
+      
       // Find user by email and role
-      const user = users.find(u => u.email === email && u.role === role);
+      const user = latestUsers.find(u => u.email === email && u.role === role);
       
       if (!user) {
         console.log('User not found with the provided email and role');
@@ -284,11 +396,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Your account is pending approval');
       }
 
-      // Store user in both localStorage and sessionStorage
-      localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(user));
-      sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(user));
-      
+      // Update session in memory
       setCurrentUser(user);
+      
+      // Update users array in memory if we got a different version from storage
+      if (JSON.stringify(latestUsers) !== JSON.stringify(users)) {
+        setUsers(latestUsers);
+      }
+      
+      // Store user in both localStorage and sessionStorage
+      const userJSON = safeJSONStringify(user);
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, userJSON);
+      sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, userJSON);
+      
+      // Also ensure user list is synced across storage
+      const usersJSON = safeJSONStringify(latestUsers);
+      localStorage.setItem(STORAGE_KEY_USERS, usersJSON);
+      sessionStorage.setItem(STORAGE_KEY_USERS, usersJSON);
       
       toast({
         title: "Login Successful",
@@ -356,8 +480,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Update state and both storage types
     setUsers(updatedUsers);
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
-    sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+    const updatedUsersJSON = safeJSONStringify(updatedUsers);
+    localStorage.setItem(STORAGE_KEY_USERS, updatedUsersJSON);
+    sessionStorage.setItem(STORAGE_KEY_USERS, updatedUsersJSON);
   };
 
   const rejectUser = (userId: string) => {
@@ -393,8 +518,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Update state and both storage types
     setUsers(updatedUsers);
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
-    sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+    const updatedUsersJSON = safeJSONStringify(updatedUsers);
+    localStorage.setItem(STORAGE_KEY_USERS, updatedUsersJSON);
+    sessionStorage.setItem(STORAGE_KEY_USERS, updatedUsersJSON);
   };
 
   return (

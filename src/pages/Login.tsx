@@ -46,6 +46,12 @@ const Login = () => {
     setErrorMessage("");
     
     try {
+      console.log(`Login attempt - Email: ${data.email}, Role: ${data.role}`);
+      
+      // Clear any existing login data from storage to start fresh
+      localStorage.removeItem('ncr_current_user');
+      sessionStorage.removeItem('ncr_current_user');
+      
       const success = await login(
         data.email, 
         data.password, 
@@ -54,6 +60,7 @@ const Login = () => {
       
       if (success) {
         setSuccessMessage("Login successful!");
+        console.log("Login successful, redirecting...");
         
         // Redirect based on role
         setTimeout(() => {
@@ -64,10 +71,12 @@ const Login = () => {
           }
         }, 1000);
       } else {
-        setErrorMessage("Invalid credentials");
+        console.log("Login failed in component");
+        setErrorMessage("Invalid credentials or your account is pending approval");
       }
     } catch (error) {
-      setErrorMessage(error.message || "Login failed");
+      console.error("Login error in component:", error);
+      setErrorMessage(error.message || "Login failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
