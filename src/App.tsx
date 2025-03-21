@@ -1,10 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
 import MinimalTest from './pages/MinimalTest';
+import NotFound from './pages/NotFound';
+import Login from './pages/Login';
+import Players from './pages/Players';
+import PlayerProfile from './pages/PlayerProfile';
+import OfficerDashboard from './pages/OfficerDashboard';
+import Index from './pages/Index';
+import About from './pages/About';
+import Tournaments from './pages/Tournaments';
+import TournamentDetails from './pages/TournamentDetails';
+import OrganizerDashboard from './pages/OrganizerDashboard';
+import TournamentManagement from './pages/TournamentManagement';
+import Register from './pages/Register';
 
 // Define types for the ErrorBoundary component
 interface ErrorBoundaryProps {
@@ -56,7 +67,33 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-// App component with simplified routing for debugging
+// RequireAuth component to handle authentication checks
+interface RequireAuthProps {
+  children: React.ReactNode;
+  allowedRoles?: string[];
+}
+
+const RequireAuth: React.FC<RequireAuthProps> = ({ children, allowedRoles = [] }) => {
+  const location = useLocation();
+  // For now, we'll keep authentication checks simple
+  // This will be expanded when we implement authentication fully
+  const isAuthenticated = true; // Replace with actual auth check
+  const userRole = 'user'; // Replace with actual role check
+
+  if (!isAuthenticated) {
+    // Redirect to login page if not authenticated
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+    // Redirect to unauthorized page if not authorized
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// App component with full routing
 function App() {
   const [mounted, setMounted] = useState(false);
   
@@ -68,7 +105,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="app-debug-container" style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <div className="app-container">
         {/* Debug info that will show up if React is working but routing isn't */}
         {mounted && (
           <div id="react-works" style={{ position: 'fixed', top: 0, right: 0, background: '#eee', padding: '5px', zIndex: 9999, fontSize: '12px' }}>
@@ -79,12 +116,38 @@ function App() {
         <UserProvider>
           <Router>
             <Routes>
-              {/* Add a test route first to verify routing */}
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/players" element={<Players />} />
+              <Route path="/player/:id" element={<PlayerProfile />} />
+              <Route path="/tournaments" element={<Tournaments />} />
+              <Route path="/tournament/:id" element={<TournamentDetails />} />
+              
+              {/* Protected Routes */}
+              <Route path="/organizer/dashboard" element={
+                <RequireAuth allowedRoles={['tournament_organizer', 'rating_officer']}>
+                  <OrganizerDashboard />
+                </RequireAuth>
+              } />
+              <Route path="/tournament-management/:id" element={
+                <RequireAuth allowedRoles={['tournament_organizer', 'rating_officer']}>
+                  <TournamentManagement />
+                </RequireAuth>
+              } />
+              <Route path="/officer/dashboard" element={
+                <RequireAuth allowedRoles={['rating_officer']}>
+                  <OfficerDashboard />
+                </RequireAuth>
+              } />
+              
+              {/* Test Route (we'll keep it for debugging) */}
               <Route path="/test" element={<MinimalTest />} />
               
-              {/* Original routes */}
-              <Route path="/" element={<Navigate to="/test" replace />} />
-              {/* We'll add back the other routes after confirming basic functionality */}
+              {/* 404 Route */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
           </Router>
