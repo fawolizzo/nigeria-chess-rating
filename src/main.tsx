@@ -12,17 +12,17 @@ if (!rootElement) {
   document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h2>Error: Root element not found</h2><p>The application could not initialize because the root element was not found.</p></div>'
 } else {
   try {
-    // Render directly to DOM first to verify DOM rendering works
-    rootElement.innerHTML = '<div id="loading-indicator" style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">Loading Nigerian Chess Rating System...</div>'
+    // Ensure the root element is cleared and ready for React
+    rootElement.innerHTML = '<div id="loading-indicator" style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; background-color: #f8f9fa;">Loading Nigerian Chess Rating System...</div>'
     
-    // Now attempt to mount React
+    // Now mount React
     const root = createRoot(rootElement)
     root.render(
       <React.StrictMode>
         <App />
       </React.StrictMode>
     )
-    console.log('App successfully mounted to DOM')
+    console.log('React application successfully mounted to DOM')
   } catch (error) {
     console.error('Critical error rendering the application:', error)
     rootElement.innerHTML = `

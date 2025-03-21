@@ -29,6 +29,16 @@
   body {
     background-color: #f8f9fa;
     font-family: var(--font-sans);
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+  
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
   
   /* Ensure text wrapping in tables and grid cells */
@@ -93,4 +103,37 @@ input, select, textarea, button {
   border-radius: 4px;
   font-size: 12px;
   z-index: 10;
+}
+
+/* Nigerian flag colors */
+.text-nigeria-green {
+  color: var(--nigeria-green);
+}
+
+.bg-nigeria-green {
+  background-color: var(--nigeria-green);
+}
+
+.text-nigeria-white {
+  color: white;
+}
+
+.text-nigeria-green-light {
+  color: var(--nigeria-green-light);
+}
+
+/* Animation utilities */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

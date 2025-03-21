@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
@@ -105,7 +106,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="app-container">
+      <div className="app-container min-h-screen">
         {/* Debug info that will show up if React is working but routing isn't */}
         {mounted && (
           <div id="react-works" style={{ position: 'fixed', top: 0, right: 0, background: '#eee', padding: '5px', zIndex: 9999, fontSize: '12px' }}>
