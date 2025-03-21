@@ -1,23 +1,10 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
-
-// Import pages
-import Index from './pages/Index';
-import About from './pages/About';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import OrganizerDashboard from './pages/OrganizerDashboard';
-import OfficerDashboard from './pages/OfficerDashboard';
-import TournamentManagement from './pages/TournamentManagement';
-import Tournaments from './pages/Tournaments';
-import TournamentDetails from './pages/TournamentDetails';
-import Players from './pages/Players';
-import PlayerProfile from './pages/PlayerProfile';
-import NotFound from './pages/NotFound';
+import MinimalTest from './pages/MinimalTest';
 
 // Define types for the ErrorBoundary component
 interface ErrorBoundaryProps {
@@ -69,99 +56,40 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-// Higher-order component for protected routes
-const RequireAuth = ({ children, role }: { children: React.ReactNode; role: string }) => {
-  const userJSON = localStorage.getItem('ncr_current_user');
-  
-  if (!userJSON) {
-    console.log('Auth check failed: No user found in localStorage');
-    return <Navigate to="/login" replace />;
-  }
-  
-  try {
-    const user = JSON.parse(userJSON);
-    if (user.role !== role) {
-      console.log(`Auth check failed: User role ${user.role} doesn't match required role ${role}`);
-      return <Navigate to="/" replace />;
-    }
-    console.log('Auth check passed for role:', role);
-    return children;
-  } catch (error) {
-    console.error("Error parsing user data:", error);
-    localStorage.removeItem('ncr_current_user');
-    return <Navigate to="/login" replace />;
-  }
-};
-
-// App component with DEBUG rendering
+// App component with simplified routing for debugging
 function App() {
-  console.log("App component rendering");
+  const [mounted, setMounted] = useState(false);
   
-  // Add a simple loading state to see if the component mounts
-  const [isLoading, setIsLoading] = React.useState(true);
-  
-  React.useEffect(() => {
-    console.log("App component mounted");
-    // Set loading to false after a short delay to ensure all resources are loaded
-    const timer = setTimeout(() => setIsLoading(false), 100);
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    // Mark component as mounted to confirm React lifecycle is working
+    setMounted(true);
+    console.log("App component mounted successfully");
   }, []);
-  
-  // Show a simple loading state for debugging
-  if (isLoading) {
-    return <div className="p-8 text-center">Loading application...</div>;
-  }
 
   return (
     <ErrorBoundary>
-      <UserProvider>
-        <Router>
-          {/* Add a debug element to ensure the app is rendering */}
-          <div id="app-debug" style={{ display: 'none' }}>App initialized</div>
-          
-          <div className="app-container bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+      <div className="app-debug-container" style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+        {/* Debug info that will show up if React is working but routing isn't */}
+        {mounted && (
+          <div id="react-works" style={{ position: 'fixed', top: 0, right: 0, background: '#eee', padding: '5px', zIndex: 9999, fontSize: '12px' }}>
+            React mounted ✓
+          </div>
+        )}
+        
+        <UserProvider>
+          <Router>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              {/* Add a test route first to verify routing */}
+              <Route path="/test" element={<MinimalTest />} />
               
-              {/* Protected organizer routes */}
-              <Route path="/organizer/dashboard" element={
-                <RequireAuth role="tournament_organizer">
-                  <OrganizerDashboard />
-                </RequireAuth>
-              } />
-              
-              <Route path="/tournament/:id/manage" element={
-                <RequireAuth role="tournament_organizer">
-                  <TournamentManagement />
-                </RequireAuth>
-              } />
-              
-              {/* Protected officer routes */}
-              <Route path="/officer/dashboard" element={
-                <RequireAuth role="rating_officer">
-                  <OfficerDashboard />
-                </RequireAuth>
-              } />
-              
-              {/* Public routes */}
-              <Route path="/tournament/:id" element={<TournamentDetails />} />
-              <Route path="/tournaments" element={<Tournaments />} />
-              <Route path="/players" element={<Players />} />
-              <Route path="/player/:id" element={<PlayerProfile />} />
-              
-              {/* Redirects for incorrect URLs */}
-              <Route path="/organizer-dashboard" element={<Navigate to="/organizer/dashboard" replace />} />
-              <Route path="/officer-dashboard" element={<Navigate to="/officer/dashboard" replace />} />
-              
-              <Route path="*" element={<NotFound />} />
+              {/* Original routes */}
+              <Route path="/" element={<Navigate to="/test" replace />} />
+              {/* We'll add back the other routes after confirming basic functionality */}
             </Routes>
             <Toaster />
-          </div>
-        </Router>
-      </UserProvider>
+          </Router>
+        </UserProvider>
+      </div>
     </ErrorBoundary>
   );
 }

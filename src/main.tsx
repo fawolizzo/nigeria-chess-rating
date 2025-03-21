@@ -4,13 +4,18 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-// Ensure we have proper error handling for the root element
+// Get the root element
 const rootElement = document.getElementById('root')
+
 if (!rootElement) {
   console.error('Failed to find the root element with id "root"')
   document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h2>Error: Root element not found</h2><p>The application could not initialize because the root element was not found.</p></div>'
 } else {
   try {
+    // Render directly to DOM first to verify DOM rendering works
+    rootElement.innerHTML = '<div id="loading-indicator" style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif;">Loading Nigerian Chess Rating System...</div>'
+    
+    // Now attempt to mount React
     const root = createRoot(rootElement)
     root.render(
       <React.StrictMode>
