@@ -14,6 +14,8 @@ interface EmailRequest {
   subject: string;
   html: string;
   from?: string;
+  replyTo?: string;
+  text?: string;
 }
 
 serve(async (req) => {
@@ -43,7 +45,14 @@ serve(async (req) => {
       );
     }
     
-    const { to, subject, html, from = "Nigerian Chess Rating System <onboarding@resend.dev>" } = data as EmailRequest;
+    const { 
+      to, 
+      subject, 
+      html, 
+      from = "Nigerian Chess Rating System <onboarding@resend.dev>",
+      replyTo,
+      text
+    } = data as EmailRequest;
 
     if (!to || !subject || !html) {
       console.error("Missing required fields:", { to, subject, html: html ? "present" : "missing" });
@@ -62,12 +71,23 @@ serve(async (req) => {
     console.log("API key present:", !!apiKey);
     
     try {
-      const { data: resendData, error } = await resend.emails.send({
+      const emailConfig: any = {
         from,
         to,
         subject,
         html,
-      });
+      };
+      
+      // Add optional parameters if provided
+      if (replyTo) {
+        emailConfig.reply_to = replyTo;
+      }
+      
+      if (text) {
+        emailConfig.text = text;
+      }
+      
+      const { data: resendData, error } = await resend.emails.send(emailConfig);
 
       if (error) {
         console.error("Error from Resend API:", error);

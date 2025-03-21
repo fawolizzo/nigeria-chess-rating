@@ -23,7 +23,7 @@ interface TournamentRatingProcessorProps {
     matches: Array<{
       whiteId: string;
       blackId: string;
-      result: "1-0" | "0-1" | "1/2-1/2" | "*";
+      result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F";
     }>;
   }>;
   onProcessComplete: (
@@ -32,7 +32,7 @@ interface TournamentRatingProcessorProps {
       matches: Array<{
         whiteId: string;
         blackId: string;
-        result: "1-0" | "0-1" | "1/2-1/2" | "*";
+        result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F";
         whiteRatingChange: number;
         blackRatingChange: number;
       }>;
@@ -190,6 +190,8 @@ const TournamentRatingProcessor = ({
                 <li>K=16 for higher-rated players (2400+)</li>
                 <li>Players with +100 ratings are treated as having 30+ games</li>
                 <li>Players need 30 games to achieve an established rating</li>
+                <li>Forfeits are counted for rating (winner gets full point, forfeiter gets 0)</li>
+                <li>Double forfeits result in no rating change</li>
               </ul>
             </div>
           </div>
