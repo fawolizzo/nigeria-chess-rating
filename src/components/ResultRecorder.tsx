@@ -12,14 +12,14 @@ interface ResultRecorderProps {
   pairings: Array<{ 
     whiteId: string; 
     blackId: string; 
-    result?: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F"
+    result?: "1-0" | "0-1" | "1/2-1/2" | "*" 
   }>;
   players: Player[];
   roundNumber: number;
   onSaveResults: (results: Array<{ 
     whiteId: string; 
     blackId: string; 
-    result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F"
+    result: "1-0" | "0-1" | "1/2-1/2" | "*" 
   }>) => void;
   tournamentType?: 'classical' | 'rapid' | 'blitz';
 }
@@ -34,7 +34,7 @@ const ResultRecorder = ({
   const [results, setResults] = useState<Array<{ 
     whiteId: string; 
     blackId: string; 
-    result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F"
+    result: "1-0" | "0-1" | "1/2-1/2" | "*" 
   }>>(
     pairings.map(pair => ({
       whiteId: pair.whiteId,
@@ -53,7 +53,7 @@ const ResultRecorder = ({
     })));
   }, [pairings]);
 
-  const handleResultChange = (pairingIndex: number, newResult: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F") => {
+  const handleResultChange = (pairingIndex: number, newResult: "1-0" | "0-1" | "1/2-1/2" | "*") => {
     const newResults = [...results];
     newResults[pairingIndex] = {
       ...newResults[pairingIndex],
@@ -135,7 +135,7 @@ const ResultRecorder = ({
                         <div className="flex-1 mb-3 md:mb-0">
                           <div className="flex flex-col md:flex-row md:items-center gap-2">
                             <div className="w-full md:w-auto">
-                              <p className="font-medium truncate max-w-[200px] md:max-w-full">
+                              <p className="font-medium">
                                 {whitePlayer.title && (
                                   <span className="text-gold-dark dark:text-gold-light mr-1">
                                     {whitePlayer.title}
@@ -161,7 +161,7 @@ const ResultRecorder = ({
                             </div>
                             
                             <div className="w-full md:w-auto">
-                              <p className="font-medium truncate max-w-[200px] md:max-w-full">
+                              <p className="font-medium">
                                 {blackPlayer.title && (
                                   <span className="text-gold-dark dark:text-gold-light mr-1">
                                     {blackPlayer.title}
@@ -188,7 +188,7 @@ const ResultRecorder = ({
                           <Select
                             value={pairing.result}
                             onValueChange={(value) => 
-                              handleResultChange(index, value as "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0F" | "0F-1F" | "0F-0F")
+                              handleResultChange(index, value as "1-0" | "0-1" | "1/2-1/2" | "*")
                             }
                           >
                             <SelectTrigger className="border-nigeria-green/30 focus:ring-nigeria-green/30">
@@ -199,9 +199,6 @@ const ResultRecorder = ({
                               <SelectItem value="1-0">1-0 (White wins)</SelectItem>
                               <SelectItem value="0-1">0-1 (Black wins)</SelectItem>
                               <SelectItem value="1/2-1/2">½-½ (Draw)</SelectItem>
-                              <SelectItem value="1F-0F">1F-0F (White wins by forfeit)</SelectItem>
-                              <SelectItem value="0F-1F">0F-1F (Black wins by forfeit)</SelectItem>
-                              <SelectItem value="0F-0F">0F-0F (Double forfeit)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

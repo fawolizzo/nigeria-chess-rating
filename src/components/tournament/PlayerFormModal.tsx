@@ -1,19 +1,50 @@
 
-import React, { useState } from "react";
+import React from "react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   Dialog, 
   DialogContent, 
   DialogDescription, 
-  DialogFooter, 
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Player } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
-import { Player, addPlayer } from "@/lib/mockData";
-import PlayerFormFields from "@/components/player/PlayerFormFields";
-import { FLOOR_RATING } from "@/lib/ratingCalculation";
-import { supabase } from "@/lib/supabase";
+import { v4 as uuidv4 } from 'uuid';
+
+const playerSchema = z.object({
+  name: z.string().min(3, { message: "Name must be at least 3 characters" }),
+  title: z.string().optional(),
+  gender: z.enum(["M", "F"], { message: "Please select a gender" }),
+  state: z.string().min(1, { message: "State is required" }),
+  country: z.string().default("Nigeria"),
+  birthYear: z.string().refine(val => {
+    const year = parseInt(val);
+    return !isNaN(year) && year > 1900 && year <= new Date().getFullYear();
+  }, { message: "Please enter a valid birth year" }),
+  club: z.string().optional(),
+});
+
+type PlayerFormValues = z.infer<typeof playerSchema>;
 
 interface PlayerFormModalProps {
   isOpen: boolean;
@@ -22,205 +53,206 @@ interface PlayerFormModalProps {
   currentUserId: string;
 }
 
-const sendEmailNotification = async (player: Player, organizerId: string) => {
-  try {
-    const { data: organizer } = await supabase
-      .from('users')
-      .select('email, name')
-      .eq('id', organizerId)
-      .single();
-      
-    if (!organizer) {
-      console.error("Could not find organizer information");
-      return;
-    }
+const chessTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM", " "];
 
-    // Get rating officer email
-    const { data: ratingOfficers } = await supabase
-      .from('users')
-      .select('email')
-      .eq('role', 'rating_officer')
-      .limit(1);
-      
-    if (!ratingOfficers || ratingOfficers.length === 0) {
-      console.error("No rating officer found in the system");
-      return;
-    }
-    
-    const officerEmail = ratingOfficers[0].email;
-    
-    // Send email notification using edge function
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({
-        to: officerEmail,
-        subject: "New Player Needs Approval - Nigerian Chess Rating System",
-        html: `
-          <h1>New Player Registration Needs Approval</h1>
-          <p>Hello Rating Officer,</p>
-          <p>A new player has been registered by organizer ${organizer.name} and requires your approval:</p>
-          <ul>
-            <li><strong>Player Name:</strong> ${player.name}</li>
-            <li><strong>Rating:</strong> ${player.rating}</li>
-            <li><strong>Gender:</strong> ${player.gender}</li>
-            <li><strong>State:</strong> ${player.state || 'Not specified'}</li>
-          </ul>
-          <p>Please log in to the Nigerian Chess Rating System to review and approve this player.</p>
-          <p>Thank you,<br>Nigerian Chess Rating System</p>
-        `
-      })
-    });
-    
-    const result = await response.json();
-    console.log("Email notification sent:", result);
-    
-    // Log email status in database for audit
-    await supabase.from('email_logs').insert({
-      recipient: officerEmail,
-      subject: "New Player Needs Approval - Nigerian Chess Rating System",
-      status: response.ok ? 'delivered' : 'failed',
-      related_entity: 'player',
-      entity_id: player.id
-    });
-    
-  } catch (error) {
-    console.error("Failed to send email notification:", error);
-  }
-};
-
-const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
-  isOpen,
-  onOpenChange,
-  onPlayerCreated,
-  currentUserId
-}) => {
-  const [formData, setFormData] = useState<Partial<Player>>({
-    name: "",
-    gender: "M",
-    birthYear: 2000,
-    state: "",
-    city: "",
-    club: "",
-    rating: FLOOR_RATING,
-    title: "",
-    ratingStatus: "provisional",
-    status: "pending",
-    gamesPlayed: 0,
-    ratingHistory: [],
-    rapidRating: null,
-    rapidGamesPlayed: null,
-    rapidRatingHistory: [],
-    blitzRating: null,
-    blitzGamesPlayed: null,
-    blitzRatingHistory: [],
-    federationId: "",
-    tournamentResults: []
+const PlayerFormModal = ({ isOpen, onOpenChange, onPlayerCreated, currentUserId }: PlayerFormModalProps) => {
+  const form = useForm<PlayerFormValues>({
+    resolver: zodResolver(playerSchema),
+    defaultValues: {
+      name: "",
+      title: "",
+      gender: "M",
+      state: "",
+      country: "Nigeria",
+      birthYear: String(new Date().getFullYear()),
+      club: "",
+    },
   });
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+  const handleCreatePlayer = (data: PlayerFormValues) => {
+    // Create a new player with pending status
+    const newPlayer: Player = {
+      id: uuidv4(),
+      name: data.name,
+      gender: data.gender,
+      rating: 800, // Default floor rating
+      gamesPlayed: 0,
+      state: data.state || undefined,
+      country: "Nigeria",
+      status: "approved",
+      ratingHistory: [
+        {
+          date: new Date().toISOString(),
+          rating: 800,
+          reason: "Initial registration"
+        }
+      ],
+      tournamentResults: []
+    };
     
-    try {
-      // Validation checks
-      if (!formData.name) {
-        toast({
-          title: "Missing information",
-          description: "Player name is required",
-          variant: "destructive"
-        });
-        setIsSubmitting(false);
-        return;
+    // Add title if selected
+    if (data.title && data.title.trim() !== "") {
+      newPlayer.title = data.title;
+      
+      // Auto-verify official titles
+      if (["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(data.title)) {
+        newPlayer.titleVerified = true;
       }
-      
-      const newPlayer: Player = {
-        ...formData as Player,
-        id: crypto.randomUUID(),
-        organizerId: currentUserId,
-        createdAt: new Date().toISOString(),
-      };
-      
-      addPlayer(newPlayer);
-      
-      // Send email notification to rating officer
-      await sendEmailNotification(newPlayer, currentUserId);
-      
-      onPlayerCreated(newPlayer);
-      onOpenChange(false);
-      
-      toast({
-        title: "Player created",
-        description: "New player has been created and is awaiting approval. A notification has been sent to the Rating Officer.",
-      });
-    } catch (error) {
-      console.error("Error creating player:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create player. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
     }
-  };
-  
-  const handleChange = (field: keyof Player, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    
+    // Add optional fields if provided
+    if (data.club && data.club.trim() !== "") {
+      newPlayer.club = data.club;
+    }
+    
+    if (data.birthYear) {
+      newPlayer.birthYear = parseInt(data.birthYear);
+    }
+    
+    onPlayerCreated(newPlayer);
+    
+    toast({
+      title: "Player created",
+      description: "The player has been created with pending status and will need approval from a Rating Officer before participating in tournaments.",
+    });
+    
+    form.reset();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md md:max-w-2xl">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Add New Player</DialogTitle>
+          <DialogTitle>Create New Player</DialogTitle>
           <DialogDescription>
-            Create a new player record in the system. Players are subject to approval by the Rating Officer before participating in tournaments.
+            Add a new player to the Nigerian Chess Rating system
           </DialogDescription>
         </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleCreatePlayer)} className="space-y-4 py-2">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="John Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select title (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {chessTitles.map(title => (
+                        <SelectItem key={title} value={title}>{title || "None"}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="M">Male</SelectItem>
+                      <SelectItem value="F">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <FormControl>
+                    <Input placeholder="State" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="birthYear"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Birth Year</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 1990" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="club"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Club (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Club name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Create Player
+              </Button>
+            </div>
+          </form>
+        </Form>
         
-        <div className="py-4">
-          <PlayerFormFields 
-            player={formData as Player} 
-            onChange={handleChange}
-          />
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-md text-sm">
+          <p>Note: All newly created players will have a pending status and require approval from a Rating Officer before they can participate in tournaments.</p>
+          <p className="mt-2">Players with official chess titles (GM, IM, FM, etc.) will automatically receive a verified badge.</p>
         </div>
-        
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="relative"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="opacity-0">Create Player</span>
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </span>
-              </>
-            ) : (
-              "Create Player"
-            )}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
