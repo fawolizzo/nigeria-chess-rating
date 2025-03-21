@@ -147,7 +147,7 @@ const TournamentRatingDialog = ({
                 blackRating: getPlayerRating(blackPlayer),
                 whiteGamesPlayed: getPlayerGamesPlayed(whitePlayer),
                 blackGamesPlayed: getPlayerGamesPlayed(blackPlayer),
-                result: (match.result || "*") as "1-0" | "0-1" | "1/2-1/2" | "*"
+                result: (match.result || "*") as "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F"
               };
             })
           );
@@ -354,14 +354,15 @@ const TournamentRatingDialog = ({
           playerScores[match.blackId] = 0;
         }
         
-        if (match.result === "1-0") {
+        if (match.result === "1-0" || match.result === "1F-0") {
           playerScores[match.whiteId] += 1;
-        } else if (match.result === "0-1") {
+        } else if (match.result === "0-1" || match.result === "0-1F") {
           playerScores[match.blackId] += 1;
         } else if (match.result === "1/2-1/2") {
           playerScores[match.whiteId] += 0.5;
           playerScores[match.blackId] += 0.5;
         }
+        // Note: 0F-0F (double forfeit) - both players get 0, so no score to add
       });
     });
     
@@ -536,4 +537,3 @@ const TournamentRatingDialog = ({
 };
 
 export default TournamentRatingDialog;
-

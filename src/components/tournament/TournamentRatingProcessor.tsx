@@ -23,7 +23,7 @@ interface TournamentRatingProcessorProps {
     matches: Array<{
       whiteId: string;
       blackId: string;
-      result: "1-0" | "0-1" | "1/2-1/2" | "*";
+      result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F";
     }>;
   }>;
   onProcessComplete: (
@@ -32,7 +32,7 @@ interface TournamentRatingProcessorProps {
       matches: Array<{
         whiteId: string;
         blackId: string;
-        result: "1-0" | "0-1" | "1/2-1/2" | "*";
+        result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F";
         whiteRatingChange: number;
         blackRatingChange: number;
       }>;
