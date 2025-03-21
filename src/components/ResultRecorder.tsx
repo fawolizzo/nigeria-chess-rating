@@ -12,14 +12,14 @@ interface ResultRecorderProps {
   pairings: Array<{ 
     whiteId: string; 
     blackId: string; 
-    result?: "1-0" | "0-1" | "1/2-1/2" | "*" 
+    result?: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F" 
   }>;
   players: Player[];
   roundNumber: number;
   onSaveResults: (results: Array<{ 
     whiteId: string; 
     blackId: string; 
-    result: "1-0" | "0-1" | "1/2-1/2" | "*" 
+    result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F" 
   }>) => void;
   tournamentType?: 'classical' | 'rapid' | 'blitz';
 }
@@ -34,7 +34,7 @@ const ResultRecorder = ({
   const [results, setResults] = useState<Array<{ 
     whiteId: string; 
     blackId: string; 
-    result: "1-0" | "0-1" | "1/2-1/2" | "*" 
+    result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F" 
   }>>(
     pairings.map(pair => ({
       whiteId: pair.whiteId,
@@ -53,7 +53,7 @@ const ResultRecorder = ({
     })));
   }, [pairings]);
 
-  const handleResultChange = (pairingIndex: number, newResult: "1-0" | "0-1" | "1/2-1/2" | "*") => {
+  const handleResultChange = (pairingIndex: number, newResult: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F") => {
     const newResults = [...results];
     newResults[pairingIndex] = {
       ...newResults[pairingIndex],
@@ -188,7 +188,7 @@ const ResultRecorder = ({
                           <Select
                             value={pairing.result}
                             onValueChange={(value) => 
-                              handleResultChange(index, value as "1-0" | "0-1" | "1/2-1/2" | "*")
+                              handleResultChange(index, value as "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F")
                             }
                           >
                             <SelectTrigger className="border-nigeria-green/30 focus:ring-nigeria-green/30">
@@ -199,6 +199,9 @@ const ResultRecorder = ({
                               <SelectItem value="1-0">1-0 (White wins)</SelectItem>
                               <SelectItem value="0-1">0-1 (Black wins)</SelectItem>
                               <SelectItem value="1/2-1/2">½-½ (Draw)</SelectItem>
+                              <SelectItem value="1F-0">1F-0 (White wins by forfeit)</SelectItem>
+                              <SelectItem value="0-1F">0-1F (Black wins by forfeit)</SelectItem>
+                              <SelectItem value="0F-0F">0F-0F (Double forfeit)</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

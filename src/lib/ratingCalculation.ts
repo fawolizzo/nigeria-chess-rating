@@ -40,7 +40,7 @@ interface Match {
   blackRating: number;
   whiteGamesPlayed: number;
   blackGamesPlayed: number;
-  result: "1-0" | "0-1" | "1/2-1/2" | "*";
+  result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F";
   whiteRatingChange?: number;
   blackRatingChange?: number;
 }
@@ -100,15 +100,28 @@ export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
     let scoreWhite = 0;
     let scoreBlack = 0;
 
+    // Handle all possible result types including forfeits
     if (result === "1-0") {
       scoreWhite = 1;
       scoreBlack = 0;
     } else if (result === "0-1") {
       scoreWhite = 0;
       scoreBlack = 1;
-    } else {
+    } else if (result === "1/2-1/2") {
       scoreWhite = 0.5;
       scoreBlack = 0.5;
+    } else if (result === "1F-0") {
+      // White wins by forfeit - White gets full point, Black gets zero
+      scoreWhite = 1;
+      scoreBlack = 0;
+    } else if (result === "0-1F") {
+      // Black wins by forfeit - Black gets full point, White gets zero
+      scoreWhite = 0;
+      scoreBlack = 1;
+    } else if (result === "0F-0F") {
+      // Double forfeit - both players get zero
+      scoreWhite = 0;
+      scoreBlack = 0;
     }
 
     const whiteRatingChange = calculateRatingChange(

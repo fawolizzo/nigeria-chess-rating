@@ -78,7 +78,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       if (users.length > 0) {
+        // Save to localStorage and sessionStorage for cross-browser/device persistence
         localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+        
+        // Also store in sessionStorage as a backup
+        sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
       }
     } catch (error) {
       console.error("Error saving users data:", error);
@@ -94,7 +98,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       if (currentUser) {
+        // Save to localStorage and sessionStorage for cross-browser persistence
         localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUser));
+        
+        // Also store in sessionStorage as a backup
+        sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(currentUser));
       }
     } catch (error) {
       console.error("Error saving current user data:", error);
@@ -109,6 +117,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Function to send email using our edge function
   const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
     try {
+      console.log(`Attempting to send email to ${to} with subject: ${subject}`);
       const { error } = await supabase.functions.invoke('send-email', {
         body: { to, subject, html }
       });
@@ -123,6 +132,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      console.log('Email sent successfully to:', to);
       return true;
     } catch (error) {
       console.error('Error sending email:', error);
@@ -162,7 +172,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         newUser.approvalDate = new Date().toISOString();
       }
       
-      setUsers(prevUsers => [...prevUsers, newUser]);
+      // Update both state and storage
+      const updatedUsers = [...users, newUser];
+      setUsers(updatedUsers);
+      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+      sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
 
       // Send confirmation email to the new organizer
       if (userData.role === 'tournament_organizer') {
@@ -212,13 +226,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             </div>
           `;
 
+          console.log(`Sending notifications to ${ratingOfficerEmails.length} rating officers`);
+          
+          // Send notification emails to all rating officers
           for (const email of ratingOfficerEmails) {
-            await sendEmail(
-              email,
-              "New Tournament Organizer Registration - Action Required",
-              notificationHtml
-            );
+            try {
+              console.log(`Sending notification to rating officer: ${email}`);
+              await sendEmail(
+                email,
+                "New Tournament Organizer Registration - Action Required",
+                notificationHtml
+              );
+            } catch (emailError) {
+              console.error(`Failed to send notification to ${email}:`, emailError);
+            }
           }
+        } else {
+          console.log('No rating officers found to notify about new organizer registration');
         }
       }
 
@@ -244,18 +268,26 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, role: 'tournament_organizer' | 'rating_officer') => {
     try {
+      console.log(`Attempting login with email: ${email}, role: ${role}`);
+      
       // Find user by email and role
       const user = users.find(u => u.email === email && u.role === role);
       
       if (!user) {
+        console.log('User not found with the provided email and role');
         throw new Error('Invalid credentials');
       }
 
       // For tournament organizers, check approval status
       if (role === 'tournament_organizer' && user.status !== 'approved') {
+        console.log('Tournament organizer account not approved');
         throw new Error('Your account is pending approval');
       }
 
+      // Store user in both localStorage and sessionStorage
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(user));
+      sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(user));
+      
       setCurrentUser(user);
       
       toast({
@@ -279,6 +311,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+    sessionStorage.removeItem(STORAGE_KEY_CURRENT_USER);
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out",
@@ -286,76 +319,82 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const approveUser = (userId: string) => {
-    setUsers(prevUsers => 
-      prevUsers.map(user => {
-        if (user.id === userId) {
-          // Create a new user object with the correct type for status
-          const updatedUser: User = { 
-            ...user, 
-            status: 'approved' as const, 
-            approvalDate: new Date().toISOString() 
-          };
-          
-          // Send approval email to the organizer
-          const approvalEmailHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #008751; margin-bottom: 20px;">Account Approved - Nigerian Chess Rating System</h2>
-              <p>Dear ${user.fullName},</p>
-              <p>Congratulations! Your Tournament Organizer account has been approved.</p>
-              <p>You can now log in to the Nigerian Chess Rating System and start creating tournaments.</p>
-              <div style="margin: 30px 0; text-align: center;">
-                <a href="https://ncr-system.com/login" style="background-color: #008751; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Login Now</a>
-              </div>
-              <p>If you have any questions, please don't hesitate to contact our support team.</p>
-              <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
+    const updatedUsers = users.map(user => {
+      if (user.id === userId) {
+        // Create a new user object with the correct type for status
+        const updatedUser: User = { 
+          ...user, 
+          status: 'approved' as const, 
+          approvalDate: new Date().toISOString() 
+        };
+        
+        // Send approval email to the organizer
+        const approvalEmailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <h2 style="color: #008751; margin-bottom: 20px;">Account Approved - Nigerian Chess Rating System</h2>
+            <p>Dear ${user.fullName},</p>
+            <p>Congratulations! Your Tournament Organizer account has been approved.</p>
+            <p>You can now log in to the Nigerian Chess Rating System and start creating tournaments.</p>
+            <div style="margin: 30px 0; text-align: center;">
+              <a href="https://ncr-system.com/login" style="background-color: #008751; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Login Now</a>
             </div>
-          `;
-          
-          sendEmail(
-            user.email,
-            "Account Approved - Nigerian Chess Rating System",
-            approvalEmailHtml
-          );
-          
-          return updatedUser;
-        }
-        return user;
-      })
-    );
+            <p>If you have any questions, please don't hesitate to contact our support team.</p>
+            <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
+          </div>
+        `;
+        
+        sendEmail(
+          user.email,
+          "Account Approved - Nigerian Chess Rating System",
+          approvalEmailHtml
+        );
+        
+        return updatedUser;
+      }
+      return user;
+    });
+    
+    // Update state and both storage types
+    setUsers(updatedUsers);
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+    sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
   };
 
   const rejectUser = (userId: string) => {
-    setUsers(prevUsers => 
-      prevUsers.map(user => {
-        if (user.id === userId) {
-          // Create a new user object with the correct type for status
-          const updatedUser: User = { 
-            ...user, 
-            status: 'rejected' as const 
-          };
-          
-          // Send rejection email to the organizer
-          const rejectionEmailHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #d32f2f; margin-bottom: 20px;">Registration Not Approved - Nigerian Chess Rating System</h2>
-              <p>Dear ${user.fullName},</p>
-              <p>We regret to inform you that your application to become a Tournament Organizer has not been approved at this time.</p>
-              <p>If you believe this is an error or would like more information, please contact our support team.</p>
-              <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
-            </div>
-          `;
-          
-          sendEmail(
-            user.email,
-            "Registration Not Approved - Nigerian Chess Rating System",
-            rejectionEmailHtml
-          );
-          
-          return updatedUser;
-        }
-        return user;
-      })
-    );
+    const updatedUsers = users.map(user => {
+      if (user.id === userId) {
+        // Create a new user object with the correct type for status
+        const updatedUser: User = { 
+          ...user, 
+          status: 'rejected' as const 
+        };
+        
+        // Send rejection email to the organizer
+        const rejectionEmailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+            <h2 style="color: #d32f2f; margin-bottom: 20px;">Registration Not Approved - Nigerian Chess Rating System</h2>
+            <p>Dear ${user.fullName},</p>
+            <p>We regret to inform you that your application to become a Tournament Organizer has not been approved at this time.</p>
+            <p>If you believe this is an error or would like more information, please contact our support team.</p>
+            <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
+          </div>
+        `;
+        
+        sendEmail(
+          user.email,
+          "Registration Not Approved - Nigerian Chess Rating System",
+          rejectionEmailHtml
+        );
+        
+        return updatedUser;
+      }
+      return user;
+    });
+    
+    // Update state and both storage types
+    setUsers(updatedUsers);
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
+    sessionStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(updatedUsers));
   };
 
   return (
