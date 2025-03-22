@@ -10,15 +10,9 @@ interface PlayerCardProps {
 }
 
 const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
-  const ratingHistory = player.ratingHistory || [];
-  const latestRating = ratingHistory.length > 0 ? 
-    ratingHistory[ratingHistory.length - 1].rating : 
-    player.rating;
-    
-  const previousRating = ratingHistory.length > 1 ? 
-    ratingHistory[ratingHistory.length - 2].rating : 
-    latestRating;
-    
+  const ratingHistory = player.ratingHistory;
+  const latestRating = ratingHistory[ratingHistory.length - 1].rating;
+  const previousRating = ratingHistory.length > 1 ? ratingHistory[ratingHistory.length - 2].rating : latestRating;
   const ratingChange = latestRating - previousRating;
 
   const isTitleVerified = player.titleVerified && player.title;
@@ -34,7 +28,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
         <CardContent className="p-5">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 bg-nigeria-green/10 dark:bg-nigeria-green/20 rounded-full flex items-center justify-center text-lg font-bold text-nigeria-green dark:text-nigeria-green-light">
-              {player.name ? player.name.charAt(0) : 'U'}
+              {player.name.charAt(0)}
             </div>
             
             <div className="flex-1 min-w-0">
@@ -51,12 +45,9 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                   </span>
                 )}
               </h2>
-              <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                 <span>
-                  {player.state || 'Nigeria'}{player.country && `, ${player.country}`}
-                </span>
-                <span className="text-xs text-gray-400">
-                  ID: {player.id}
+                  {player.state}, {player.country}
                 </span>
               </div>
             </div>

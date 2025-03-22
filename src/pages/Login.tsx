@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,22 +24,11 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, currentUser } = useUser();
+  const { login } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const isMobile = useIsMobile();
-  
-  // Check if already logged in
-  useEffect(() => {
-    if (currentUser) {
-      if (currentUser.role === "tournament_organizer") {
-        navigate("/organizer/dashboard");
-      } else {
-        navigate("/officer/dashboard");
-      }
-    }
-  }, [currentUser, navigate]);
   
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -59,14 +48,12 @@ const Login = () => {
     try {
       console.log(`Login attempt - Email: ${data.email}, Role: ${data.role}`);
       
-      // Clear any existing error
-      setErrorMessage("");
-      
-      // Try to login with case-insensitive email
-      const normalizedEmail = data.email.toLowerCase().trim();
+      // Clear any existing login data from storage to start fresh
+      localStorage.removeItem('ncr_current_user');
+      sessionStorage.removeItem('ncr_current_user');
       
       const success = await login(
-        normalizedEmail, 
+        data.email, 
         data.password, 
         data.role as 'tournament_organizer' | 'rating_officer'
       );
@@ -188,7 +175,6 @@ const Login = () => {
                             placeholder="Enter your email address" 
                             className="pl-10" 
                             type="email"
-                            autoComplete="email"
                             {...field}
                           />
                         </div>
@@ -214,7 +200,6 @@ const Login = () => {
                             placeholder={selectedRole === "rating_officer" ? "Enter Rating Officer access code" : "Enter your password"} 
                             className="pl-10" 
                             type="password"
-                            autoComplete={selectedRole === "rating_officer" ? "off" : "current-password"}
                             {...field}
                           />
                         </div>

@@ -37,14 +37,14 @@ export const PlayerSelectionList = ({
                 }`}
                 onClick={() => onSelectPlayer(player)}
               >
-                <div className="flex items-center flex-1">
+                <div className="flex items-center">
                   <Checkbox 
                     checked={isSelected}
                     onCheckedChange={() => onSelectPlayer(player)}
                     className="mr-3"
                     id={`player-${player.id}`}
                   />
-                  <div className="min-w-0 flex-1">
+                  <div>
                     <div className="font-medium text-gray-900 dark:text-white flex items-center">
                       {player.title && (
                         <span className="text-gold-dark dark:text-gold-light mr-2">
@@ -63,18 +63,14 @@ export const PlayerSelectionList = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-2">
-                      <span>Rating: {player.rating}</span>
-                      {player.state && <span>• {player.state}</span>}
-                      <span className="text-xs text-gray-400">
-                        ID: {player.id}
-                      </span>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Rating: {player.rating} • {player.state || 'N/A'}, {player.country || 'Nigeria'}
                     </div>
                   </div>
                 </div>
                 
                 {isSelected && (
-                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400 ml-2" />
+                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 )}
               </div>
             );

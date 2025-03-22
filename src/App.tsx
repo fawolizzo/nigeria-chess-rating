@@ -78,44 +78,47 @@ function App() {
   return (
     <UserProvider>
       <Router>
-        <div className="app">
+        <div className="app-container bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route 
-              path="/organizer/*" 
-              element={
-                <RequireAuth role="tournament_organizer">
-                  <OrganizerDashboard />
-                </RequireAuth>
-              } 
-            />
-            <Route 
-              path="/officer/*" 
-              element={
-                <RequireAuth role="rating_officer">
-                  <OfficerDashboard />
-                </RequireAuth>
-              } 
-            />
-            <Route 
-              path="/manage/tournament/:id" 
-              element={
-                <RequireAuth role="tournament_organizer">
-                  <TournamentManagement />
-                </RequireAuth>
-              } 
-            />
-            <Route path="/tournaments" element={<Tournaments />} />
+            
+            {/* Protected organizer routes */}
+            <Route path="/organizer/dashboard" element={
+              <RequireAuth role="tournament_organizer">
+                <OrganizerDashboard />
+              </RequireAuth>
+            } />
+            
+            <Route path="/tournament/:id/manage" element={
+              <RequireAuth role="tournament_organizer">
+                <TournamentManagement />
+              </RequireAuth>
+            } />
+            
+            {/* Protected officer routes */}
+            <Route path="/officer/dashboard" element={
+              <RequireAuth role="rating_officer">
+                <OfficerDashboard />
+              </RequireAuth>
+            } />
+            
+            {/* Public routes */}
             <Route path="/tournament/:id" element={<TournamentDetails />} />
+            <Route path="/tournaments" element={<Tournaments />} />
             <Route path="/players" element={<Players />} />
             <Route path="/player/:id" element={<PlayerProfile />} />
+            
+            {/* Redirects for incorrect URLs */}
+            <Route path="/organizer-dashboard" element={<Navigate to="/organizer/dashboard" replace />} />
+            <Route path="/officer-dashboard" element={<Navigate to="/officer/dashboard" replace />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <Toaster />
         </div>
-        <Toaster />
       </Router>
     </UserProvider>
   );
