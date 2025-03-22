@@ -13,9 +13,11 @@ import { PlusCircle, RefreshCcw, Upload, UserPlus, CheckCircle, XCircle } from "
 import { useToast } from "@/hooks/use-toast";
 import { 
   getAllPlayers, 
+  getAllUsers,
   addPlayer, 
   updatePlayer, 
-  Player
+  Player,
+  User
 } from "@/lib/mockData";
 import FileUploadButton from "@/components/players/FileUploadButton";
 import CreatePlayerDialog from "./CreatePlayerDialog";
@@ -31,6 +33,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const [players, setPlayers] = useState<Player[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<Player[]>([]);
   const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
+  const [pendingOrganizers, setPendingOrganizers] = useState<User[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadedPlayers, setUploadedPlayers] = useState<any[]>([]);
@@ -47,20 +50,38 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       setApprovedPlayers(allPlayers.filter(p => p.status === "approved"));
     };
     
+    const fetchOrganizers = () => {
+      const allUsers = getAllUsers();
+      const pendingOrgUsers = allUsers.filter(
+        user => user.role === 'tournament_organizer' && user.status === 'pending'
+      );
+      setPendingOrganizers(pendingOrgUsers);
+    };
+    
     fetchPlayers();
+    fetchOrganizers();
   }, [refreshKey]);
   
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
     toast({
       title: "Refreshed",
-      description: "Player data has been refreshed",
+      description: "Data has been refreshed",
     });
   };
   
+  // Generate a unique NCR ID for each player
+  const generateNcrId = () => {
+    const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
+    const timestamp = Date.now().toString().slice(-5); // Last 5 digits of timestamp
+    return `NCR${randomPart}${timestamp}`;
+  };
+  
   const handleCreatePlayer = (playerData: any) => {
+    const ncrId = generateNcrId();
+    
     const newPlayer: Player = {
-      id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      id: ncrId,
       name: playerData.fullName,
       rating: playerData.rating || 800,
       gender: playerData.gender || 'M',
@@ -131,25 +152,53 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     setUploadSuccess(true);
     
     const createdPlayers = players.map(player => {
+      // Players will already have NCR IDs from FileUploadButton
+      const ncrId = player.id || generateNcrId();
+      
       const newPlayer: Player = {
-        id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        name: player.fullName,
-        rating: player.rating || 800,
+        id: ncrId,
+        name: player.name,
+        rating: player.rating || 900, // 800 + 100 bonus
         gender: player.gender || 'M',
         state: player.state || '',
         city: player.city || '',
-        gamesPlayed: 0,
+        gamesPlayed: 30, // Start at 30 games for uploads (established)
         status: 'approved',
+        ratingStatus: 'established',
         tournamentResults: [],
         ratingHistory: [{
           date: new Date().toISOString(),
-          rating: player.rating || 800,
-          reason: "Initial rating"
+          rating: player.rating || 900,
+          reason: "Initial rating with +100 bonus"
         }]
       };
       
       if (player.title) {
         newPlayer.title = player.title;
+      }
+      
+      // Add rapid rating if available
+      if (player.rapidRating) {
+        newPlayer.rapidRating = player.rapidRating;
+        newPlayer.rapidGamesPlayed = 30;
+        newPlayer.rapidRatingStatus = 'established';
+        newPlayer.rapidRatingHistory = [{
+          date: new Date().toISOString(),
+          rating: player.rapidRating,
+          reason: "Initial rating with +100 bonus"
+        }];
+      }
+      
+      // Add blitz rating if available
+      if (player.blitzRating) {
+        newPlayer.blitzRating = player.blitzRating;
+        newPlayer.blitzGamesPlayed = 30;
+        newPlayer.blitzRatingStatus = 'established';
+        newPlayer.blitzRatingHistory = [{
+          date: new Date().toISOString(),
+          rating: player.blitzRating,
+          reason: "Initial rating with +100 bonus"
+        }];
       }
       
       addPlayer(newPlayer);
@@ -215,6 +264,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                           <Table>
                             <TableHeader>
                               <TableRow>
+                                <TableHead>ID</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Rating</TableHead>
                                 <TableHead>State</TableHead>
@@ -223,9 +273,10 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                             <TableBody>
                               {uploadedPlayers.map((player, index) => (
                                 <TableRow key={index}>
-                                  <TableCell>{player.fullName}</TableCell>
-                                  <TableCell>{player.rating || "Unrated"}</TableCell>
-                                  <TableCell>{player.state}</TableCell>
+                                  <TableCell className="w-1/5">{player.id || "Auto-generated"}</TableCell>
+                                  <TableCell className="w-2/5">{player.name}</TableCell>
+                                  <TableCell className="w-1/5">{player.rating || "Unrated"}</TableCell>
+                                  <TableCell className="w-1/5">{player.state}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -243,6 +294,74 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         </div>
       </div>
       
+      {pendingOrganizers.length > 0 && (
+        <div className="border rounded-md">
+          <div className="p-4 border-b bg-yellow-50">
+            <h3 className="text-lg font-medium text-yellow-800">Pending Organizers ({pendingOrganizers.length})</h3>
+            <p className="text-sm text-yellow-700">
+              The following tournament organizers are waiting for approval
+            </p>
+          </div>
+          
+          <div className="p-4">
+            {isMobile ? (
+              <div className="space-y-4">
+                {pendingOrganizers.map(organizer => (
+                  <div key={organizer.id} className="border rounded-md p-3">
+                    <div className="font-medium">{organizer.name}</div>
+                    <div className="text-sm text-muted-foreground">{organizer.email}</div>
+                    <div className="mt-2 flex space-x-2">
+                      <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                      <Button size="sm" variant="outline" className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100">
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Registration Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingOrganizers.map(organizer => (
+                    <TableRow key={organizer.id}>
+                      <TableCell className="w-1/4">{organizer.name}</TableCell>
+                      <TableCell className="w-1/4">{organizer.email}</TableCell>
+                      <TableCell className="w-1/4">
+                        {new Date(organizer.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="w-1/4">
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100">
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Reject
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </div>
+      )}
+      
       <div className="border rounded-md">
         <div className="p-4 border-b bg-muted/40">
           <h3 className="text-lg font-medium">Player Database</h3>
@@ -259,7 +378,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                 <div key={player.id} className="border rounded-md p-3">
                   <div className="flex justify-between mb-2">
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">ID: {player.id.slice(0, 8)}</div>
+                    <div className="text-sm text-muted-foreground">ID: {player.id}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div>State: {player.state}</div>
@@ -285,11 +404,11 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="w-1/5">Name</TableHead>
+                    <TableHead className="w-1/5">State</TableHead>
+                    <TableHead className="w-1/5">Rating</TableHead>
+                    <TableHead className="w-1/5">Status</TableHead>
+                    <TableHead className="w-1/5">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -336,7 +455,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                 <div key={player.id} className="border rounded-md p-3">
                   <div className="flex justify-between mb-2">
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">ID: {player.id.slice(0, 8)}</div>
+                    <div className="text-sm text-muted-foreground">ID: {player.id}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>State: {player.state}</div>
@@ -358,11 +477,11 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="w-1/5">Name</TableHead>
+                    <TableHead className="w-1/5">State</TableHead>
+                    <TableHead className="w-1/5">Rating</TableHead>
+                    <TableHead className="w-1/5">Status</TableHead>
+                    <TableHead className="w-1/5">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

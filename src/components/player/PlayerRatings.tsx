@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Player } from "@/lib/mockData";
 import { getKFactor } from "@/lib/ratingCalculation";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { TrendingDown, TrendingUp, Minus, AlertCircle } from "lucide-react";
 
 interface PlayerRatingsProps {
   player: Player;
@@ -65,13 +65,13 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
   const blitzRatingChange = player.blitzRating ? calculateRecentBlitzChange() : 0;
   
   // Determine the player's rating status text
-  const getRatingStatusText = (rating: number, gamesPlayed: number = 0) => {
-    if (hasPlus100Rating(rating)) {
-      return "Provisional rating (+100)";
-    } else if (gamesPlayed < 10) {
-      return `${10 - gamesPlayed} more games until established`;
-    } else {
+  const getRatingStatusText = (rating: number, gamesPlayed: number = 0, ratingStatus?: string) => {
+    if (ratingStatus === 'established' || hasPlus100Rating(rating) || gamesPlayed >= 30) {
       return "Established rating";
+    } else if (gamesPlayed < 30) {
+      return `${30 - gamesPlayed} more games until established`;
+    } else {
+      return "Provisional rating";
     }
   };
   
@@ -99,7 +99,7 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
             </div>
             <div className="text-sm text-gray-500 mt-1">K-factor: {classicalKFactor}</div>
             <div className="text-sm text-gray-500">
-              {getRatingStatusText(player.rating, player.gamesPlayed)}
+              {getRatingStatusText(player.rating, player.gamesPlayed, player.ratingStatus)}
             </div>
           </div>
           
@@ -124,7 +124,7 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
                   K-factor: {getKFactor(player.rapidRating, player.rapidGamesPlayed || 0)}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {getRatingStatusText(player.rapidRating, player.rapidGamesPlayed)}
+                  {getRatingStatusText(player.rapidRating, player.rapidGamesPlayed, player.rapidRatingStatus)}
                 </div>
               </>
             )}
@@ -151,14 +151,14 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
                   K-factor: {getKFactor(player.blitzRating, player.blitzGamesPlayed || 0)}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {getRatingStatusText(player.blitzRating, player.blitzGamesPlayed)}
+                  {getRatingStatusText(player.blitzRating, player.blitzGamesPlayed, player.blitzRatingStatus)}
                 </div>
               </>
             )}
           </div>
         </div>
         
-        {player.ratingHistory && player.ratingHistory.length > 0 && (
+        {player.ratingHistory && player.ratingHistory.length > 0 ? (
           <div className="mt-6">
             <h3 className="text-md font-medium mb-2">Recent Rating Changes</h3>
             <div className="border rounded-md overflow-hidden">
@@ -205,6 +205,11 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
                 </tbody>
               </table>
             </div>
+          </div>
+        ) : (
+          <div className="mt-6 p-4 border rounded-md flex items-center justify-center">
+            <AlertCircle className="h-5 w-5 text-yellow-500 mr-2" />
+            <span className="text-sm text-gray-500">No rating history available</span>
           </div>
         )}
       </CardContent>

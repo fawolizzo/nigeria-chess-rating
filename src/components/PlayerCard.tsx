@@ -51,9 +51,12 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
                   </span>
                 )}
               </h2>
-              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400">
                 <span>
                   {player.state || 'Nigeria'}{player.country && `, ${player.country}`}
+                </span>
+                <span className="text-xs text-gray-400">
+                  ID: {player.id}
                 </span>
               </div>
             </div>

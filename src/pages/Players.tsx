@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, Loader2 } from "lucide-react";
 import RankingTable from "@/components/RankingTable";
 import { getAllPlayers, Player } from "@/lib/mockData";
 import { Separator } from "@/components/ui/separator";
@@ -60,8 +60,10 @@ const Players = () => {
 
   const filteredPlayers = players.filter(player => {
     // Filter by search query
-    const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (player.title && player.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = 
+      player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (player.title && player.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (player.id && player.id.toLowerCase().includes(searchQuery.toLowerCase()));
     
     // Filter by state if selected
     const matchesState = selectedState === "all" || player.state === selectedState;
@@ -72,6 +74,25 @@ const Players = () => {
   const handleViewPlayerProfile = (playerId: string) => {
     navigate(`/player/${playerId}`);
   };
+
+  // Early loading state
+  if (isLoading && players.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-2">Player Rankings</h1>
+          <p className="text-muted-foreground mb-8">View the official Nigerian Chess Rating rankings</p>
+          
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-nigeria-green mb-4" />
+            <h2 className="text-xl font-medium">Loading Player Data</h2>
+            <p className="text-muted-foreground">Please wait while we fetch the player rankings</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -92,7 +113,7 @@ const Players = () => {
               <CardHeader>
                 <CardTitle>Search Players</CardTitle>
                 <CardDescription>
-                  Find players by name or title
+                  Find players by name, title, or ID
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -114,7 +135,7 @@ const Players = () => {
               
               {isLoading ? (
                 <div className="text-center py-10 border rounded-lg">
-                  <Search className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                  <Loader2 className="h-10 w-10 mx-auto text-gray-400 mb-2 animate-spin" />
                   <h3 className="text-lg font-medium mb-1">Loading Players...</h3>
                   <p className="text-muted-foreground">
                     Please wait while we fetch the player rankings
