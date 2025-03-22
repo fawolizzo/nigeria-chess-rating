@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -70,10 +69,9 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     });
   };
   
-  // Generate a unique NCR ID for each player
   const generateNcrId = () => {
-    const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
-    const timestamp = Date.now().toString().slice(-5); // Last 5 digits of timestamp
+    const randomPart = Math.floor(10000 + Math.random() * 90000);
+    const timestamp = Date.now().toString().slice(-5);
     return `NCR${randomPart}${timestamp}`;
   };
   
@@ -152,17 +150,16 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     setUploadSuccess(true);
     
     const createdPlayers = players.map(player => {
-      // Players will already have NCR IDs from FileUploadButton
       const ncrId = player.id || generateNcrId();
       
       const newPlayer: Player = {
         id: ncrId,
         name: player.name,
-        rating: player.rating || 900, // 800 + 100 bonus
+        rating: player.rating || 900,
         gender: player.gender || 'M',
         state: player.state || '',
         city: player.city || '',
-        gamesPlayed: 30, // Start at 30 games for uploads (established)
+        gamesPlayed: 30,
         status: 'approved',
         ratingStatus: 'established',
         tournamentResults: [],
@@ -177,7 +174,6 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         newPlayer.title = player.title;
       }
       
-      // Add rapid rating if available
       if (player.rapidRating) {
         newPlayer.rapidRating = player.rapidRating;
         newPlayer.rapidGamesPlayed = 30;
@@ -189,7 +185,6 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         }];
       }
       
-      // Add blitz rating if available
       if (player.blitzRating) {
         newPlayer.blitzRating = player.blitzRating;
         newPlayer.blitzGamesPlayed = 30;
@@ -308,7 +303,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
               <div className="space-y-4">
                 {pendingOrganizers.map(organizer => (
                   <div key={organizer.id} className="border rounded-md p-3">
-                    <div className="font-medium">{organizer.name}</div>
+                    <div className="font-medium">{organizer.fullName}</div>
                     <div className="text-sm text-muted-foreground">{organizer.email}</div>
                     <div className="mt-2 flex space-x-2">
                       <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
@@ -336,10 +331,10 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                 <TableBody>
                   {pendingOrganizers.map(organizer => (
                     <TableRow key={organizer.id}>
-                      <TableCell className="w-1/4">{organizer.name}</TableCell>
+                      <TableCell className="w-1/4">{organizer.fullName}</TableCell>
                       <TableCell className="w-1/4">{organizer.email}</TableCell>
                       <TableCell className="w-1/4">
-                        {new Date(organizer.createdAt).toLocaleDateString()}
+                        {new Date(organizer.registrationDate).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="w-1/4">
                         <div className="flex space-x-2">
