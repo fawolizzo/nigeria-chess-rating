@@ -65,7 +65,7 @@ const OfficerDashboard: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar notificationCount={pendingCount} />
+      <Navbar />
       
       <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">

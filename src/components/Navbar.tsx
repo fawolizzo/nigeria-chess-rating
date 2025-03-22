@@ -90,10 +90,10 @@ const Navbar = () => {
                   <Button variant="ghost" className="relative h-8 flex items-center gap-2" size="sm">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="bg-nigeria-green text-white">
-                        {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                        {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{currentUser.name}</span>
+                    <span className="text-sm font-medium">{currentUser.fullName}</span>
                     <Badge variant="outline" className="ml-1 text-xs">
                       {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
                     </Badge>
@@ -195,11 +195,11 @@ const Navbar = () => {
                     <div className="py-2 flex items-center px-2">
                       <Avatar className="h-8 w-8 mr-2">
                         <AvatarFallback className="bg-nigeria-green text-white">
-                          {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                          {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="text-sm font-medium">{currentUser.name}</div>
+                        <div className="text-sm font-medium">{currentUser.fullName}</div>
                         <div className="text-xs text-muted-foreground">
                           {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
                         </div>

@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -82,8 +83,23 @@ export interface Tournament {
   registrationOpen?: boolean;
 }
 
+// Add User interface to match UserContext.tsx definition
+export interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  state: string;
+  role: 'tournament_organizer' | 'rating_officer';
+  status: 'pending' | 'approved' | 'rejected';
+  registrationDate: string;
+  approvalDate?: string;
+  password?: string;
+}
+
 export const players: Player[] = [];
 export const tournaments: Tournament[] = [];
+export const users: User[] = [];
 
 export const clearAllStoredData = (): void => {
   localStorage.removeItem('users');
@@ -258,4 +274,33 @@ export const rejectPlayer = (playerId: string): void => {
     player.id === playerId ? { ...player, status: 'rejected' as const } : player
   );
   savePlayers(updatedPlayers);
+};
+
+// Add functions to manage User data
+export const saveUsers = (updatedUsers: User[]): void => {
+  localStorage.setItem('users', JSON.stringify(updatedUsers));
+};
+
+export const getAllUsers = (): User[] => {
+  const savedUsers = localStorage.getItem('users');
+  return savedUsers ? JSON.parse(savedUsers) : users;
+};
+
+export const updateUser = (updatedUser: User): void => {
+  const allUsers = getAllUsers();
+  const updatedUsers = allUsers.map(user => 
+    user.id === updatedUser.id ? updatedUser : user
+  );
+  saveUsers(updatedUsers);
+};
+
+export const addUser = (newUser: User): void => {
+  const allUsers = getAllUsers();
+  saveUsers([...allUsers, newUser]);
+};
+
+export const deleteUser = (userId: string): void => {
+  const allUsers = getAllUsers();
+  const filteredUsers = allUsers.filter(user => user.id !== userId);
+  saveUsers(filteredUsers);
 };
