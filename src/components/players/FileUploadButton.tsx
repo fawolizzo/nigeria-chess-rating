@@ -52,7 +52,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         const findHeaderIndex = (possibleNames: string[]) => {
           for (const name of possibleNames) {
             const index = headers.findIndex(header => 
-              header.toLowerCase().includes(name.toLowerCase())
+              typeof header === 'string' && header.toLowerCase().includes(name.toLowerCase())
             );
             if (index !== -1) return index;
           }
@@ -68,8 +68,16 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         const blitzRatingIndex = findHeaderIndex(['blz', 'blitz']);
         const birthYearIndex = findHeaderIndex(['b-year', 'byear', 'birth year', 'birthyear', 'year']);
         const genderIndex = findHeaderIndex(['gender', 'sex']);
+        const stateIndex = findHeaderIndex(['state', 'region', 'province']);
         
-        console.log(`Column indices - Name: ${nameIndex}, Title: ${titleIndex}, Federation: ${federationIndex}, Classical: ${classicalRatingIndex}`);
+        console.log(`Column indices - Name: ${nameIndex}, Title: ${titleIndex}, Federation: ${federationIndex}, Classical: ${classicalRatingIndex}, State: ${stateIndex}`);
+        
+        // If name column not found, show error
+        if (nameIndex === -1) {
+          setError("Could not find a column for player names. Please include a column with 'Name', 'Player', or 'Full Name' in the header.");
+          setIsLoading(false);
+          return;
+        }
         
         // Process data rows
         for (let i = 1; i < jsonData.length; i++) {
@@ -87,9 +95,11 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
             continue;
           }
           
-          // Extract state from federation if available
+          // Get state from state column or extract from federation
           let state = "";
-          if (federationIndex !== -1 && row[federationIndex]) {
+          if (stateIndex !== -1 && row[stateIndex]) {
+            state = row[stateIndex].toString().trim();
+          } else if (federationIndex !== -1 && row[federationIndex]) {
             const federation = row[federationIndex].toString();
             if (federation.includes("NGR")) {
               state = federation.replace("NGR", "").trim();
@@ -155,9 +165,19 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         
         console.log(`Successfully processed ${processedPlayers.length} players`);
         
+        // Transform player data for display in the table
+        const formattedPlayers = processedPlayers.map(player => ({
+          fullName: player.name,
+          rating: player.rating || 800,
+          state: player.state || '',
+          gender: player.gender || 'M',
+          title: player.title || '',
+          // Add other fields as needed
+        }));
+        
         // Call the appropriate callback with the processed data
         if (onFileUpload) {
-          onFileUpload(processedPlayers);
+          onFileUpload(formattedPlayers);
         }
         
         if (onPlayersImported) {

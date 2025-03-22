@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -129,7 +130,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     setUploadedPlayers(players);
     setUploadSuccess(true);
     
-    players.forEach(player => {
+    const createdPlayers = players.map(player => {
       const newPlayer: Player = {
         id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         name: player.fullName,
@@ -147,8 +148,14 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         }]
       };
       
+      if (player.title) {
+        newPlayer.title = player.title;
+      }
+      
       addPlayer(newPlayer);
       console.log("Created player:", newPlayer);
+      
+      return newPlayer;
     });
     
     setRefreshKey(prev => prev + 1);

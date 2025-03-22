@@ -64,7 +64,7 @@ export const PlayerSelectionList = ({
                       )}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Rating: {player.rating} • {player.state || 'N/A'}, {player.country || 'Nigeria'}
+                      Rating: {player.rating} {player.state && `• ${player.state}`} {player.country && `, ${player.country || 'Nigeria'}`}
                     </div>
                   </div>
                 </div>

@@ -19,6 +19,7 @@ const Players = () => {
   const [selectedState, setSelectedState] = useState<string>("all");
   const [displayCount, setDisplayCount] = useState(10);
   const [nigerianStatesList, setNigerianStatesList] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,19 +28,26 @@ const Players = () => {
     
     // Fetch players on mount and display only approved players
     const fetchPlayers = () => {
-      const fetchedPlayers = getAllPlayers();
-      console.log("All players fetched:", fetchedPlayers.length);
-      
-      // Filter out only approved players for public display
-      const approvedPlayers = fetchedPlayers.filter(player => 
-        player.status === 'approved'
-      );
-      console.log("Approved players for display:", approvedPlayers.length);
-      
-      // Sort by rating (highest first)
-      const sortedPlayers = [...approvedPlayers].sort((a, b) => b.rating - a.rating);
-      
-      setPlayers(sortedPlayers);
+      setIsLoading(true);
+      try {
+        const fetchedPlayers = getAllPlayers();
+        console.log("All players fetched:", fetchedPlayers.length);
+        
+        // Filter out only approved players for public display
+        const approvedPlayers = fetchedPlayers.filter(player => 
+          player.status === 'approved'
+        );
+        console.log("Approved players for display:", approvedPlayers.length);
+        
+        // Sort by rating (highest first)
+        const sortedPlayers = [...approvedPlayers].sort((a, b) => b.rating - a.rating);
+        
+        setPlayers(sortedPlayers);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching players:", error);
+        setIsLoading(false);
+      }
     };
     
     fetchPlayers();
@@ -104,7 +112,7 @@ const Players = () => {
             <div className="mt-6">
               <h2 className="text-xl font-semibold mb-4">Top Players</h2>
               
-              {players.length === 0 ? (
+              {isLoading ? (
                 <div className="text-center py-10 border rounded-lg">
                   <Search className="h-10 w-10 mx-auto text-gray-400 mb-2" />
                   <h3 className="text-lg font-medium mb-1">Loading Players...</h3>
