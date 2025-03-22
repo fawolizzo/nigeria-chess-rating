@@ -7,7 +7,7 @@ import { Player } from "@/lib/mockData";
 import PlayerProfileContent from "@/components/player/PlayerProfileContent";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
-import { Pencil, ArrowLeft, Check } from "lucide-react";
+import { Pencil, ArrowLeft, Check, Loader2 } from "lucide-react";
 import EditPlayerDialog from "@/components/officer/EditPlayerDialog";
 
 const PlayerProfile = () => {
@@ -52,16 +52,39 @@ const PlayerProfile = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 text-nigeria-green animate-spin mb-4" />
+          <div className="text-lg font-medium">Loading Player Profile...</div>
         </div>
       </div>
     );
   }
 
   if (!player) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        
+        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
+          <Button 
+            variant="ghost" 
+            className="mb-6 text-nigeria-green hover:text-nigeria-green-dark hover:bg-nigeria-green/5 -ml-2" 
+            onClick={handleBackToPlayers}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Players
+          </Button>
+          
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold mb-2">Player Not Found</h1>
+            <p className="text-gray-500 mb-6">The player you are looking for doesn't exist or has been removed.</p>
+            <Button onClick={handleBackToPlayers}>
+              Return to Players List
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Check if player has verified title
@@ -106,13 +129,15 @@ const PlayerProfile = () => {
                       </span>
                     )}
                   </h1>
-                  <div className="flex items-center text-gray-500 dark:text-gray-400 mt-1">
+                  <div className="flex flex-wrap items-center text-gray-500 dark:text-gray-400 mt-1 gap-x-2">
                     <span className="font-medium text-nigeria-green dark:text-nigeria-green-light">Rating: {player.rating}</span>
-                    <span className="mx-2">•</span>
+                    <span className="hidden sm:inline">•</span>
+                    <span>ID: {player.id}</span>
+                    <span className="hidden sm:inline">•</span>
                     <span>{player.country || "Nigeria"}</span>
                     {player.state && (
                       <>
-                        <span className="mx-2">•</span>
+                        <span className="hidden sm:inline">•</span>
                         <span>{player.state}</span>
                       </>
                     )}

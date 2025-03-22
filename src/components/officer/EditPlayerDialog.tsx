@@ -26,8 +26,10 @@ import { useToast } from "@/components/ui/use-toast";
 import PlayerFormFields from "@/components/player/PlayerFormFields";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const playerSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(3, "Name must be at least 3 characters"),
   title: z.string().optional(),
   rating: z.coerce.number().min(800, "Rating must be at least 800"),
@@ -66,6 +68,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
     defaultValues: {
+      id: "",
       name: "",
       title: "none",
       rating: 800,
@@ -83,10 +86,18 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     },
   });
 
+  // Generate a unique NCR ID for the player if not already exists
+  const generateNcrId = () => {
+    const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
+    const timestamp = Date.now().toString().slice(-5); // Last 5 digits of timestamp
+    return `NCR${randomPart}${timestamp}`;
+  };
+
   // Update form when player changes
   useEffect(() => {
     if (player) {
       form.reset({
+        id: player.id,
         name: player.name,
         title: player.title || "none",
         rating: player.rating,
@@ -127,6 +138,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     if (!player) return;
     
     try {
+      // Ensure player has NCR-prefixed ID
+      const playerId = data.id && data.id.startsWith('NCR') ? data.id : player.id.startsWith('NCR') ? player.id : generateNcrId();
+      
       // Adjust games played based on rating status
       const adjustedGamesPlayed = adjustGamesPlayed(data.rating, data.gamesPlayed, data.ratingStatus);
       const adjustedRapidGamesPlayed = adjustGamesPlayed(data.rapidRating, data.rapidGamesPlayed, data.rapidRatingStatus);
@@ -134,6 +148,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       
       const updatedPlayer: Player = {
         ...player,
+        id: playerId,
         name: data.name,
         title: data.title === "none" ? undefined : data.title,
         rating: data.rating,
@@ -232,6 +247,28 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Player ID</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Player ID" 
+                      {...field} 
+                      value={field.value || ""}
+                      disabled={field.value?.startsWith('NCR')} // Prevent editing NCR IDs
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Unique identifier for the player. {!field.value?.startsWith('NCR') && "A new NCR ID will be generated."}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <PlayerFormFields control={form.control} formState={form.formState} />
             
             {/* Rating status section */}

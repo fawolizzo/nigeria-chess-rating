@@ -1,330 +1,230 @@
-
-import { useState, useEffect } from "react";
-import { NavLink, Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, ChevronDown, UserPlus, LogIn, LogOut, User, Shield, Calendar, Bell, Crown } from "lucide-react";
+import React, { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetTrigger 
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Menu, ChevronDown, User, LogOut } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import { toast } from "@/components/ui/use-toast";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import Logo from "@/components/Logo";
 
-interface NavbarProps {
-  notificationCount?: number;
-}
-
-const Navbar = ({ notificationCount = 0 }: NavbarProps) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
   const { currentUser, logout } = useUser();
-  const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
-    };
-
-    document.addEventListener("scroll", handleScroll);
-    return () => {
-      document.removeEventListener("scroll", handleScroll);
-    };
-  }, [scrolled]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-      variant: "default",
-    });
-  };
-
-  const getDashboardLink = () => {
-    if (!currentUser) return null;
-    
-    if (currentUser.role === 'tournament_organizer') {
-      return (
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/organizer/dashboard" className="flex items-center">
-            <Calendar className="mr-1 h-4 w-4" />
-            <span>Dashboard</span>
-          </Link>
-        </Button>
-      );
-    } else if (currentUser.role === 'rating_officer') {
-      return (
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/officer/dashboard" className="flex items-center relative">
-            <Shield className="mr-1 h-4 w-4" />
-            <span>Dashboard</span>
-            {notificationCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-red-500">
-                {notificationCount}
-              </Badge>
-            )}
-          </Link>
-        </Button>
-      );
-    }
-    
-    return null;
-  };
-
-  // Improved active link styling
-  const navLinkClasses = (isActive: boolean) => `
-    relative px-3 py-2 text-base font-medium transition-colors duration-200
-    ${isActive 
-      ? "text-nigeria-green dark:text-nigeria-green-light font-semibold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-nigeria-green dark:after:bg-nigeria-green-light" 
-      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}
-  `;
+  
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <NavLink to="/" className="flex items-center">
-              <div className="flex items-center gap-2 text-2xl font-bold">
-                <Crown className="h-6 w-6 text-nigeria-green animate-float" />
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-nigeria-green-dark to-nigeria-green">
-                  NCR Ratings
-                </span>
-              </div>
-            </NavLink>
-          </div>
-
-          <div className="hidden md:flex items-center space-x-6">
-            <NavLink
-              to="/"
-              className={({ isActive }) => navLinkClasses(isActive)}
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/players"
-              className={({ isActive }) => navLinkClasses(isActive)}
-            >
-              Players
-            </NavLink>
-            <NavLink
-              to="/tournaments"
-              className={({ isActive }) => navLinkClasses(isActive)}
-            >
-              Tournaments
-            </NavLink>
-            <NavLink
-              to="/about"
-              className={({ isActive }) => navLinkClasses(isActive)}
-            >
-              About
-            </NavLink>
-            
-            <div className="flex items-center gap-2 pl-4 border-l border-gray-200 dark:border-gray-700">
-              {currentUser ? (
-                <>
-                  {getDashboardLink()}
-                  <Button variant="default" size="sm" onClick={handleLogout} className="ml-2">
-                    <LogOut className="mr-1 h-4 w-4" />
-                    <span>Logout</span>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" size="sm" asChild className="border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5 hover:border-nigeria-green">
-                    <Link to="/login" className="flex items-center">
-                      <LogIn className="mr-1 h-4 w-4" />
-                      <span>Sign In</span>
-                    </Link>
-                  </Button>
-                  <Button size="sm" asChild className="bg-nigeria-green hover:bg-nigeria-green-dark">
-                    <Link to="/register" className="flex items-center">
-                      <UserPlus className="mr-1 h-4 w-4" />
-                      <span>Register</span>
-                    </Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center md:hidden">
-            {currentUser && currentUser.role === 'rating_officer' && notificationCount > 0 && (
-              <div className="mr-2 relative">
-                <Bell className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 bg-red-500">
-                  {notificationCount}
-                </Badge>
-              </div>
-            )}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-black dark:hover:text-white focus:outline-none"
-              aria-expanded="false"
-            >
-              <span className="sr-only">Open main menu</span>
-              {isMenuOpen ? (
-                <X className="block h-6 w-6" aria-hidden="true" />
-              ) : (
-                <Menu className="block h-6 w-6" aria-hidden="true" />
-              )}
-            </button>
-          </div>
+    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
+      <div className="container flex h-16 items-center justify-between px-4 max-w-7xl mx-auto">
+        <div className="flex items-center">
+          <Logo size="md" />
         </div>
-      </div>
-
-      <div
-        className={`md:hidden transition-all duration-300 ease-in-out ${
-          isMenuOpen
-            ? "max-h-screen opacity-100"
-            : "max-h-0 opacity-0 pointer-events-none"
-        } overflow-hidden`}
-      >
-        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-md">
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-base font-medium ${
-                isActive
-                  ? "text-nigeria-green dark:text-nigeria-green-light font-semibold bg-nigeria-green/5 dark:bg-nigeria-green/10"
-                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`
-            }
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Home
-          </NavLink>
-          <NavLink
-            to="/players"
-            className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-base font-medium ${
-                isActive
-                  ? "text-nigeria-green dark:text-nigeria-green-light font-semibold bg-nigeria-green/5 dark:bg-nigeria-green/10"
-                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`
-            }
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Players
-          </NavLink>
-          <NavLink
-            to="/tournaments"
-            className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-base font-medium ${
-                isActive
-                  ? "text-nigeria-green dark:text-nigeria-green-light font-semibold bg-nigeria-green/5 dark:bg-nigeria-green/10"
-                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`
-            }
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Tournaments
-          </NavLink>
-          <NavLink
-            to="/about"
-            className={({ isActive }) =>
-              `block px-3 py-2 rounded-md text-base font-medium ${
-                isActive
-                  ? "text-nigeria-green dark:text-nigeria-green-light font-semibold bg-nigeria-green/5 dark:bg-nigeria-green/10"
-                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              }`
-            }
-            onClick={() => setIsMenuOpen(false)}
-          >
-            About
-          </NavLink>
+        
+        <nav className="hidden md:flex items-center space-x-1">
+          <Link to="/">
+            <Button variant={isActive('/') ? "default" : "ghost"} size="sm">Home</Button>
+          </Link>
+          <Link to="/tournaments">
+            <Button variant={isActive('/tournaments') ? "default" : "ghost"} size="sm">Tournaments</Button>
+          </Link>
+          <Link to="/players">
+            <Button variant={isActive('/players') ? "default" : "ghost"} size="sm">Players</Button>
+          </Link>
+          <Link to="/about">
+            <Button variant={isActive('/about') ? "default" : "ghost"} size="sm">About</Button>
+          </Link>
           
-          <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700">
-            {currentUser ? (
-              <>
-                {currentUser.role === 'tournament_organizer' && (
-                  <Link
-                    to="/organizer/dashboard"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    onClick={() => setIsMenuOpen(false)}
+          {currentUser ? (
+            <>
+              {currentUser.role === 'tournament_organizer' && (
+                <Link to="/organizer">
+                  <Button 
+                    variant={isActive('/organizer') ? "default" : "ghost"} 
+                    size="sm" 
+                    className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
-                    <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </div>
-                  </Link>
-                )}
-                
-                {currentUser.role === 'rating_officer' && (
-                  <Link
-                    to="/officer/dashboard"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    onClick={() => setIsMenuOpen(false)}
+                    Organizer Dashboard
+                  </Button>
+                </Link>
+              )}
+              
+              {currentUser.role === 'rating_officer' && (
+                <Link to="/officer">
+                  <Button 
+                    variant={isActive('/officer') ? "default" : "ghost"} 
+                    size="sm" 
+                    className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
-                    <div className="flex items-center relative">
-                      <Shield className="mr-2 h-4 w-4" />
-                      Dashboard
-                      {notificationCount > 0 && (
-                        <Badge className="ml-2 bg-red-500">
-                          {notificationCount}
-                        </Badge>
-                      )}
-                    </div>
-                  </Link>
-                )}
-                
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                >
-                  <div className="flex items-center">
+                    Rating Officer Dashboard
+                  </Button>
+                </Link>
+              )}
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 flex items-center gap-2" size="sm">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="bg-nigeria-green text-white">
+                        {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">{currentUser.fullName}</span>
+                    <Badge variant="outline" className="ml-1 text-xs">
+                      {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
+                    </Badge>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="flex items-center text-red-500" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                  </div>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-nigeria-green dark:hover:text-nigeria-green-light hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <div className="flex items-center">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign In
-                  </div>
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="ghost" size="sm">Log In</Button>
+              </Link>
+              <Link to="/register">
+                <Button className="bg-nigeria-green hover:bg-nigeria-green-dark text-white" size="sm">Register</Button>
+              </Link>
+            </>
+          )}
+        </nav>
+        
+        <div className="md:hidden">
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <nav className="flex flex-col space-y-4 mt-6">
+                <Link to="/" onClick={() => setIsOpen(false)}>
+                  <Button 
+                    variant={isActive('/') ? "default" : "ghost"} 
+                    className="w-full justify-start"
+                  >
+                    Home
+                  </Button>
                 </Link>
-                <Link
-                  to="/register"
-                  className="block px-3 py-2 rounded-md text-base font-medium bg-nigeria-green/10 text-nigeria-green dark:bg-nigeria-green/20 dark:text-nigeria-green-light hover:bg-nigeria-green/20 dark:hover:bg-nigeria-green/30"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <div className="flex items-center">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Register
-                  </div>
+                <Link to="/tournaments" onClick={() => setIsOpen(false)}>
+                  <Button 
+                    variant={isActive('/tournaments') ? "default" : "ghost"} 
+                    className="w-full justify-start"
+                  >
+                    Tournaments
+                  </Button>
                 </Link>
-              </>
-            )}
-          </div>
+                <Link to="/players" onClick={() => setIsOpen(false)}>
+                  <Button 
+                    variant={isActive('/players') ? "default" : "ghost"} 
+                    className="w-full justify-start"
+                  >
+                    Players
+                  </Button>
+                </Link>
+                <Link to="/about" onClick={() => setIsOpen(false)}>
+                  <Button 
+                    variant={isActive('/about') ? "default" : "ghost"} 
+                    className="w-full justify-start"
+                  >
+                    About
+                  </Button>
+                </Link>
+                
+                {currentUser ? (
+                  <>
+                    {currentUser.role === 'tournament_organizer' && (
+                      <Link to="/organizer" onClick={() => setIsOpen(false)}>
+                        <Button 
+                          variant={isActive('/organizer') ? "default" : "ghost"} 
+                          className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                        >
+                          Organizer Dashboard
+                        </Button>
+                      </Link>
+                    )}
+                    
+                    {currentUser.role === 'rating_officer' && (
+                      <Link to="/officer" onClick={() => setIsOpen(false)}>
+                        <Button 
+                          variant={isActive('/officer') ? "default" : "ghost"} 
+                          className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                        >
+                          Rating Officer Dashboard
+                        </Button>
+                      </Link>
+                    )}
+                    
+                    <div className="py-2 flex items-center px-2">
+                      <Avatar className="h-8 w-8 mr-2">
+                        <AvatarFallback className="bg-nigeria-green text-white">
+                          {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="text-sm font-medium">{currentUser.fullName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      variant="destructive" 
+                      className="w-full mt-auto"
+                      onClick={() => {
+                        logout();
+                        setIsOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex space-x-2 mt-4">
+                      <Link to="/login" onClick={() => setIsOpen(false)} className="flex-1">
+                        <Button variant="outline" className="w-full">Log In</Button>
+                      </Link>
+                      <Link to="/register" onClick={() => setIsOpen(false)} className="flex-1">
+                        <Button className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white">Register</Button>
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-    </nav>
+    </header>
   );
 };
 

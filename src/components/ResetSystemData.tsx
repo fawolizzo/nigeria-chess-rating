@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Trash2, AlertTriangle, X } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +28,7 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
     
     toast({
       title: "System Reset Successful",
-      description: "All data has been cleared. The system will now reload.",
+      description: "All data has been cleared including registered users, players, and tournaments. You can now register again.",
       variant: "default",
     });
     
@@ -53,7 +53,7 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
             System Reset
           </h3>
           <p className="text-sm text-red-600 dark:text-red-300 mb-4">
-            This action will remove all users, players, tournaments, and registration data from the system.
+            This action will remove all users, players, tournaments, organizers and registration data from the system.
             You will need to register new users after this action.
           </p>
           <Button 
@@ -75,7 +75,8 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
               Confirm System Reset
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. All data including users, players, tournaments, and registrations will be permanently deleted.
+              This action cannot be undone. All data including users, players, tournaments, and organizers will be permanently deleted. 
+              After this action, you will need to register again to use the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

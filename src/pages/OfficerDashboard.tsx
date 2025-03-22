@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
-import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
+import { getAllTournaments, getAllPlayers, getAllUsers } from "@/lib/mockData";
 import ResetSystemData from "@/components/ResetSystemData";
 
 const OfficerDashboard: React.FC = () => {
@@ -29,9 +29,12 @@ const OfficerDashboard: React.FC = () => {
       const pendingPlayers = allPlayers.filter(p => p.status === "pending").length;
       
       // Load pending organizers count
-      const pendingOrganizers = 0; // Assuming this is handled elsewhere
+      const allUsers = getAllUsers();
+      const pendingOrganizers = allUsers.filter(u => 
+        u.role === 'tournament_organizer' && u.status === 'pending'
+      ).length;
       
-      // Set total pending count (include completed tournaments that need processing)
+      // Set total pending count
       setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
     };
     
@@ -65,7 +68,7 @@ const OfficerDashboard: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar notificationCount={pendingCount} />
+      <Navbar />
       
       <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">

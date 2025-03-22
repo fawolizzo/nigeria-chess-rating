@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -25,7 +26,6 @@ import { Button } from "@/components/ui/button";
 import { addPlayer, Player } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 import PlayerFormFields from "@/components/player/PlayerFormFields";
-import { v4 as uuidv4 } from "uuid";
 import FileUploadButton from "@/components/players/FileUploadButton";
 import { 
   Table, 
@@ -106,9 +106,17 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
     }
   };
 
+  // Generate a unique NCR ID for each player
+  const generateNcrId = () => {
+    const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
+    const timestamp = Date.now().toString().slice(-5); // Last 5 digits of timestamp
+    return `NCR${randomPart}${timestamp}`;
+  };
+
   const onSubmit = (data: PlayerFormValues) => {
     try {
       const currentDate = new Date().toISOString();
+      const ncrId = generateNcrId();
       
       // Apply +100 bonus if selected by the rating officer
       let finalClassicalRating = data.rating;
@@ -123,12 +131,12 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
       
       // Set games played based on rating status
       // Established ratings should start at 30 games
-      const classicalGamesPlayed = data.ratingStatus === 'established' ? 30 : 0;
-      const rapidGamesPlayed = data.rapidRatingStatus === 'established' ? 30 : 0;
-      const blitzGamesPlayed = data.blitzRatingStatus === 'established' ? 30 : 0;
+      const classicalGamesPlayed = data.ratingStatus === 'established' || data.apply100Bonus ? 30 : 0;
+      const rapidGamesPlayed = data.rapidRatingStatus === 'established' || data.apply100Bonus ? 30 : 0;
+      const blitzGamesPlayed = data.blitzRatingStatus === 'established' || data.apply100Bonus ? 30 : 0;
       
       const newPlayer: Player = {
-        id: uuidv4(),
+        id: ncrId,
         name: data.name,
         title: data.title === "none" ? undefined : data.title,
         rating: finalClassicalRating,
@@ -137,9 +145,9 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
         gender: data.gender,
         state: data.state,
         birthYear: data.birthYear,
-        ratingStatus: data.ratingStatus,
-        rapidRatingStatus: data.rapidRatingStatus,
-        blitzRatingStatus: data.blitzRatingStatus,
+        ratingStatus: data.apply100Bonus ? 'established' : data.ratingStatus,
+        rapidRatingStatus: data.apply100Bonus ? 'established' : data.rapidRatingStatus,
+        blitzRatingStatus: data.apply100Bonus ? 'established' : data.blitzRatingStatus,
         gamesPlayed: classicalGamesPlayed,
         rapidGamesPlayed: rapidGamesPlayed,
         blitzGamesPlayed: blitzGamesPlayed,
@@ -180,7 +188,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
       
       toast({
         title: "Player created successfully",
-        description: `${data.name} has been added to the system.`,
+        description: `${data.name} has been added to the system with ID: ${ncrId}.`,
       });
       
       form.reset();
@@ -206,7 +214,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
   const handlePlayersImported = (players: Partial<Player>[]) => {
     const playersWithIds = players.map(player => ({
       ...player,
-      tempId: uuidv4()
+      tempId: player.id || generateNcrId()
     })) as ImportPlayerWithTempId[];
     
     setImportedPlayers(playersWithIds);
@@ -228,11 +236,13 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
       const playersToCreate = importedPlayers
         .filter(player => selectedImportIds.includes(player.tempId))
         .map(player => {
+          const ncrId = player.id || generateNcrId();
           const rating = player.rating || 800;
           const currentDate = new Date().toISOString();
           
+          // Players imported already have +100 bonus and are established from FileUploadButton
           return {
-            id: uuidv4(),
+            id: ncrId,
             name: player.name || "Unknown Player",
             title: player.title,
             rating: rating,
@@ -243,13 +253,19 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
             city: player.city,
             gender: player.gender || "M",
             birthYear: player.birthYear,
+            ratingStatus: player.ratingStatus || 'established',
+            rapidRatingStatus: player.rapidRatingStatus,
+            blitzRatingStatus: player.blitzRatingStatus,
+            gamesPlayed: player.gamesPlayed || 30, // Default to 30 games for established ratings
+            rapidGamesPlayed: player.rapidGamesPlayed,
+            blitzGamesPlayed: player.blitzGamesPlayed,
             ratingHistory: [{ 
               date: currentDate, 
               rating: rating,
-              reason: "Initial import"
+              reason: "Initial import with +100 bonus"
             }],
             tournamentResults: [],
-            gamesPlayed: 0
+            status: 'approved'
           } as Player;
         });
       
@@ -495,6 +511,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[50px]"></TableHead>
+                        <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Classical</TableHead>
@@ -513,6 +530,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                               className="h-4 w-4"
                             />
                           </TableCell>
+                          <TableCell>{player.id || "Auto-generated"}</TableCell>
                           <TableCell>{player.name || "Unknown"}</TableCell>
                           <TableCell>{player.title || "-"}</TableCell>
                           <TableCell>{player.rating || "-"}</TableCell>
