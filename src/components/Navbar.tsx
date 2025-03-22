@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import Logo from "@/components/Logo";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,18 +31,7 @@ const Navbar = () => {
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
       <div className="container flex h-16 items-center justify-between px-4 max-w-7xl mx-auto">
         <div className="flex items-center">
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
-              <img 
-                src="/logo.png" 
-                alt="Nigerian Chess Rating" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="hidden md:block">
-              <h1 className="text-xl font-bold">Nigerian Chess Rating</h1>
-            </div>
-          </Link>
+          <Logo size="md" />
         </div>
         
         <nav className="hidden md:flex items-center space-x-1">
