@@ -10,7 +10,7 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-center text-xl">Nigerian Chess Rating System Rules</CardTitle>
+        <CardTitle className="text-center text-xl font-bold">Nigerian Chess Rating System Rules</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="space-y-4">
@@ -19,7 +19,7 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
               1
             </div>
             <div>
-              <span className="font-medium">Floor rating of 800</span>
+              <span className="font-bold">Floor rating of 800</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 New players in any format (Classical, Rapid, Blitz) start with a minimum rating of 800.
               </p>
@@ -31,7 +31,7 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
               2
             </div>
             <div>
-              <span className="font-medium">Separate format tracking</span>
+              <span className="font-bold">Separate format tracking</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Ratings are tracked separately for each format (Classical, Rapid, Blitz).
                 Each format has its own independent rating calculation.
@@ -44,7 +44,7 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
               3
             </div>
             <div>
-              <span className="font-medium">+100 rating bonus</span>
+              <span className="font-bold">+100 rating bonus</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Players with +100 rating suffix are treated as having 30+ games.
                 When a Rating Officer gives a player a +100 bonus, they are immediately considered established.
@@ -57,16 +57,36 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
               4
             </div>
             <div>
-              <span className="font-medium">Variable K-factors</span>
+              <span className="font-bold">Variable K-factors</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 K-factors vary based on rating and experience:
               </p>
-              <ul className="list-disc list-inside pl-2 text-sm text-gray-600 dark:text-gray-400 space-y-1 mt-1">
-                <li>K=40 for new players (less than 10 games) under 2000 rating</li>
-                <li>K=32 for players rated below 2100</li>
-                <li>K=24 for players rated 2100-2399</li>
-                <li>K=16 for higher-rated players (2400+)</li>
-              </ul>
+              <div className="pl-2 text-sm text-gray-600 dark:text-gray-400 space-y-1 mt-1">
+                <div className="flex items-start">
+                  <div className="h-5 w-5 flex items-center justify-center rounded-full bg-nigeria-green/70 text-white text-xs mr-2 flex-shrink-0">
+                    A
+                  </div>
+                  <p>K=40 for new players (less than 10 games) under 2000 rating</p>
+                </div>
+                <div className="flex items-start">
+                  <div className="h-5 w-5 flex items-center justify-center rounded-full bg-nigeria-green/70 text-white text-xs mr-2 flex-shrink-0">
+                    B
+                  </div>
+                  <p>K=32 for players rated below 2100</p>
+                </div>
+                <div className="flex items-start">
+                  <div className="h-5 w-5 flex items-center justify-center rounded-full bg-nigeria-green/70 text-white text-xs mr-2 flex-shrink-0">
+                    C
+                  </div>
+                  <p>K=24 for players rated 2100-2399</p>
+                </div>
+                <div className="flex items-start">
+                  <div className="h-5 w-5 flex items-center justify-center rounded-full bg-nigeria-green/70 text-white text-xs mr-2 flex-shrink-0">
+                    D
+                  </div>
+                  <p>K=16 for higher-rated players (2400+)</p>
+                </div>
+              </div>
             </div>
           </li>
           
@@ -75,10 +95,10 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
               5
             </div>
             <div>
-              <span className="font-medium">Rating establishment</span>
+              <span className="font-bold">Rating establishment</span>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Players need 30 games to establish their rating in each format.
-                Provisional ratings are subject to larger fluctuations.
+                A player begins with 1 game and becomes established after their 30th game.
               </p>
             </div>
           </li>
@@ -86,7 +106,7 @@ const RatingSystemRules: React.FC<RatingSystemRulesProps> = ({ variant = 'detail
         
         {variant === 'detailed' && (
           <div className="mt-6 border-t pt-4">
-            <h3 className="font-medium mb-2">Rating Calculation Formula</h3>
+            <h3 className="font-bold mb-2">Rating Calculation Formula</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
               Nigerian Chess Rating uses the Elo rating system with the following formula:
             </p>

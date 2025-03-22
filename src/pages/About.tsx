@@ -26,12 +26,27 @@ const About = () => {
               <p className="text-gray-700 dark:text-gray-300">
                 The Nigerian Chess Rating (NCR) System aims to provide a comprehensive and reliable rating system for chess players across Nigeria. Our mission is to:
               </p>
-              <ul className="list-disc list-inside mt-4 space-y-2 text-gray-700 dark:text-gray-300">
-                <li>Establish a national standard for chess ratings in Nigeria</li>
-                <li>Support the growth of organized chess across all Nigerian states</li>
-                <li>Provide accessible tournament management tools for organizers</li>
-                <li>Create a reliable and fair rating system for all Nigerian chess players</li>
-                <li>Promote transparency in the rating process</li>
+              <ul className="mt-4 space-y-2 text-gray-700 dark:text-gray-300">
+                <li className="flex items-start">
+                  <div className="h-6 w-6 flex items-center justify-center rounded-full bg-nigeria-green text-white text-sm mr-3 flex-shrink-0 mt-0">1</div>
+                  <span>Establish a national standard for chess ratings in Nigeria</span>
+                </li>
+                <li className="flex items-start">
+                  <div className="h-6 w-6 flex items-center justify-center rounded-full bg-nigeria-green text-white text-sm mr-3 flex-shrink-0 mt-0">2</div>
+                  <span>Support the growth of organized chess across all Nigerian states</span>
+                </li>
+                <li className="flex items-start">
+                  <div className="h-6 w-6 flex items-center justify-center rounded-full bg-nigeria-green text-white text-sm mr-3 flex-shrink-0 mt-0">3</div>
+                  <span>Provide accessible tournament management tools for organizers</span>
+                </li>
+                <li className="flex items-start">
+                  <div className="h-6 w-6 flex items-center justify-center rounded-full bg-nigeria-green text-white text-sm mr-3 flex-shrink-0 mt-0">4</div>
+                  <span>Create a reliable and fair rating system for all Nigerian chess players</span>
+                </li>
+                <li className="flex items-start">
+                  <div className="h-6 w-6 flex items-center justify-center rounded-full bg-nigeria-green text-white text-sm mr-3 flex-shrink-0 mt-0">5</div>
+                  <span>Promote transparency in the rating process</span>
+                </li>
               </ul>
             </CardContent>
           </Card>
