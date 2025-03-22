@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -59,7 +58,6 @@ const formatDate = (dateString: string) => {
 const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) => {
   const [ratingFormat, setRatingFormat] = useState<"classical" | "rapid" | "blitz">("classical");
   
-  // Prepare rating history data for the chart
   const prepareRatingHistory = () => {
     let history: Array<{ date: string; rating: number }> = [];
     let statusLabel = "Provisional";
@@ -91,7 +89,6 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
     return { history, statusLabel, gameCount };
   };
   
-  // Calculate rating changes from history
   const calculateRatingChanges = (): RatingChange[] => {
     let history: any[] = [];
     
@@ -130,14 +127,12 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
   const { history, statusLabel, gameCount } = prepareRatingHistory();
   const ratingChanges = calculateRatingChanges();
   
-  // Get current rating based on format
   const getCurrentRating = () => {
     if (ratingFormat === "rapid") return player.rapidRating || 0;
     if (ratingFormat === "blitz") return player.blitzRating || 0;
     return player.rating || 0;
   };
   
-  // Get tournament results filtered by format
   const getTournamentResults = (): TournamentResult[] => {
     if (!player.tournamentResults) return [];
     
@@ -279,7 +274,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                       <Trophy className="h-5 w-5 text-nigeria-green" />
                     </div>
                     <div>
-                      <h4 className="font-medium">{result.tournamentName}</h4>
+                      <h4 className="font-medium">{result.tournamentName || "Tournament"}</h4>
                       <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center">
                           <CalendarIcon className="h-4 w-4 mr-1" />
@@ -300,7 +295,7 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                       </div>
                       <div className="mt-2">
                         <Badge variant="outline" className="mr-2">
-                          Score: {result.score}/{result.gamesPlayed}
+                          Score: {result.score || "N/A"}/{result.gamesPlayed || "N/A"}
                         </Badge>
                         <Badge variant="outline">
                           Rating change: {result.ratingChange > 0 ? '+' : ''}{result.ratingChange}
@@ -483,9 +478,9 @@ const PlayerProfileContent: React.FC<PlayerProfileContentProps> = ({ player }) =
                   <TableBody>
                     {tournamentResults.map((result, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-medium">{result.tournamentName}</TableCell>
+                        <TableCell className="font-medium">{result.tournamentName || "Tournament"}</TableCell>
                         <TableCell>{result.date ? formatDate(result.date) : "No date"}</TableCell>
-                        <TableCell>{result.score}/{result.gamesPlayed}</TableCell>
+                        <TableCell>{result.score || "N/A"}/{result.gamesPlayed || "N/A"}</TableCell>
                         <TableCell className={
                           result.ratingChange > 0 
                             ? "text-green-600" 

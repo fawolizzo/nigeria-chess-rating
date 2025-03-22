@@ -1,4 +1,3 @@
-
 export interface Player {
   id: string;
   name: string;
@@ -21,11 +20,7 @@ export interface Player {
   blitzRatingStatus?: 'provisional' | 'established';
   achievements?: string[];
   status: 'pending' | 'approved' | 'rejected';
-  tournamentResults: Array<{
-    tournamentId: string;
-    position: number;
-    ratingChange: number;
-  }>;
+  tournamentResults: TournamentResult[];
   ratingHistory: Array<{
     date: string;
     rating: number;
@@ -42,6 +37,18 @@ export interface Player {
     reason: string;
   }>;
   titleVerified?: boolean; // New field to track title verification status
+}
+
+export interface TournamentResult {
+  tournamentId: string;
+  tournamentName?: string;
+  date?: string;
+  location?: string;
+  position: number;
+  ratingChange: number;
+  score?: number;
+  gamesPlayed?: number;
+  format?: 'classical' | 'rapid' | 'blitz';
 }
 
 export interface Tournament {
@@ -83,7 +90,6 @@ export interface Tournament {
   registrationOpen?: boolean;
 }
 
-// Add User interface to match UserContext.tsx definition
 export interface User {
   id: string;
   fullName: string;
@@ -276,7 +282,6 @@ export const rejectPlayer = (playerId: string): void => {
   savePlayers(updatedPlayers);
 };
 
-// Add functions to manage User data
 export const saveUsers = (updatedUsers: User[]): void => {
   localStorage.setItem('users', JSON.stringify(updatedUsers));
 };
