@@ -26,7 +26,7 @@ const Logo: React.FC<LogoProps> = ({ className = "", showText = true, size = "md
   return (
     <Link to="/" className={`flex items-center ${className}`}>
       <img 
-        src="/lovable-uploads/6230bbb1-6c31-468f-a539-e5b1dd982a0a.png" 
+        src="/lovable-uploads/cd12c0fd-5c90-4320-89be-a3d543be8bd9.png" 
         alt="Nigerian Chess Rating System Logo" 
         className={`${sizeClasses[size]}`}
       />

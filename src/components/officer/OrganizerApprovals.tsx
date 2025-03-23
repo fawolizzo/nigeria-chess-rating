@@ -6,7 +6,7 @@ import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 import { getAllUsers } from "@/lib/mockData";
 
 const OrganizerApprovals: React.FC = () => {
-  const { approveUser, rejectUser } = useUser();
+  const { approveUser, rejectUser, users } = useUser();
   const { toast } = useToast();
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -15,10 +15,18 @@ const OrganizerApprovals: React.FC = () => {
   useEffect(() => {
     const loadPendingOrganizers = () => {
       try {
+        // Get users from two sources to ensure consistency
         const allUsers = getAllUsers();
-        console.log("All users loaded:", allUsers);
+        console.log("All users loaded from storage:", allUsers);
         
-        const filteredUsers = allUsers.filter(
+        // Also check the users from context
+        console.log("Users from context:", users);
+        
+        // Merge both sources, prioritizing storage data
+        const mergedUsers = [...allUsers];
+        
+        // Filter for pending tournament organizers
+        const filteredUsers = mergedUsers.filter(
           (user) => user.role === "tournament_organizer" && user.status === "pending"
         );
         
@@ -34,13 +42,14 @@ const OrganizerApprovals: React.FC = () => {
       }
     };
     
+    // Load immediately
     loadPendingOrganizers();
     
-    // Set up interval to refresh the data regularly
-    const interval = setInterval(loadPendingOrganizers, 5000); // Check every 5 seconds
+    // Set up interval to refresh the data more frequently (every 2 seconds)
+    const interval = setInterval(loadPendingOrganizers, 2000);
     
     return () => clearInterval(interval);
-  }, [refreshTrigger, toast]);
+  }, [refreshTrigger, toast, users]);
 
   const handleApprove = (userId: string) => {
     approveUser(userId);

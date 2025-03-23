@@ -22,71 +22,107 @@ const PlayerProfile = () => {
   // Check if the current user is a rating officer
   const isRatingOfficer = currentUser?.role === 'rating_officer';
 
+  // Debugging function
+  const debugPlayer = (player: any) => {
+    console.log("Player data details:", {
+      id: player.id,
+      name: player.name,
+      rating: player.rating,
+      ratingHistory: player.ratingHistory,
+      tournamentResults: player.tournamentResults,
+      rapidRating: player.rapidRating,
+      blitzRating: player.blitzRating
+    });
+  };
+
   useEffect(() => {
+    console.log("PlayerProfile component mounting, player ID:", id);
+    setIsLoading(true);
+    
     if (id) {
       try {
         const loadedPlayer = getPlayerById(id);
-        console.log("Loaded player:", loadedPlayer);
+        console.log("Raw loaded player:", loadedPlayer);
         
         if (loadedPlayer) {
-          // Ensure player has all required fields
+          // Create a deep copy to avoid reference issues
+          const playerCopy = JSON.parse(JSON.stringify(loadedPlayer));
+          
+          // Ensure player has all required fields with proper initialization
           const updatedPlayer = {
-            ...loadedPlayer,
-            // Ensure tournament results exists
-            tournamentResults: loadedPlayer.tournamentResults || [],
-            // Ensure rating histories exist for all formats
-            ratingHistory: loadedPlayer.ratingHistory || [{
-              date: new Date().toISOString(),
-              rating: loadedPlayer.rating || 800,
-              reason: "Initial rating"
-            }]
+            ...playerCopy,
+            // Ensure tournament results exists as an array
+            tournamentResults: Array.isArray(playerCopy.tournamentResults) 
+              ? playerCopy.tournamentResults 
+              : [],
+            
+            // Ensure rating and rating history exist
+            rating: playerCopy.rating || 800,
+            gamesPlayed: playerCopy.gamesPlayed || 0,
+            ratingStatus: playerCopy.ratingStatus || 'provisional',
+            ratingHistory: Array.isArray(playerCopy.ratingHistory) && playerCopy.ratingHistory.length > 0
+              ? playerCopy.ratingHistory
+              : [{
+                  date: new Date().toISOString(),
+                  rating: playerCopy.rating || 800,
+                  reason: "Initial rating"
+                }],
+            
+            // Ensure rapid rating data exists
+            rapidRating: playerCopy.rapidRating || 800,
+            rapidGamesPlayed: playerCopy.rapidGamesPlayed || 0,
+            rapidRatingStatus: playerCopy.rapidRatingStatus || 'provisional',
+            rapidRatingHistory: Array.isArray(playerCopy.rapidRatingHistory) && playerCopy.rapidRatingHistory.length > 0
+              ? playerCopy.rapidRatingHistory
+              : [{
+                  date: new Date().toISOString(),
+                  rating: 800,
+                  reason: "Initial rating"
+                }],
+            
+            // Ensure blitz rating data exists
+            blitzRating: playerCopy.blitzRating || 800,
+            blitzGamesPlayed: playerCopy.blitzGamesPlayed || 0,
+            blitzRatingStatus: playerCopy.blitzRatingStatus || 'provisional',
+            blitzRatingHistory: Array.isArray(playerCopy.blitzRatingHistory) && playerCopy.blitzRatingHistory.length > 0
+              ? playerCopy.blitzRatingHistory
+              : [{
+                  date: new Date().toISOString(),
+                  rating: 800,
+                  reason: "Initial rating"
+                }],
           };
           
-          // Ensure player has rapid rating
-          if (!updatedPlayer.rapidRating) {
-            updatedPlayer.rapidRating = 800;
-            updatedPlayer.rapidGamesPlayed = 0;
-            updatedPlayer.rapidRatingStatus = 'provisional';
-            updatedPlayer.rapidRatingHistory = [{
-              date: new Date().toISOString(),
-              rating: 800,
-              reason: "Initial rating"
-            }];
-          }
-          
-          // Ensure player has blitz rating
-          if (!updatedPlayer.blitzRating) {
-            updatedPlayer.blitzRating = 800;
-            updatedPlayer.blitzGamesPlayed = 0;
-            updatedPlayer.blitzRatingStatus = 'provisional';
-            updatedPlayer.blitzRatingHistory = [{
-              date: new Date().toISOString(),
-              rating: 800,
-              reason: "Initial rating"
-            }];
-          }
+          // Debug the prepared player data
+          debugPlayer(updatedPlayer);
           
           setPlayer(updatedPlayer);
+          setLoadError(null);
         } else {
           console.error("Player not found with ID:", id);
           setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
         }
       } catch (error) {
         console.error("Error loading player:", error);
-        setLoadError("Error loading player data. Please try again.");
+        setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
       }
     } else {
       setLoadError("No player ID provided.");
     }
+    
     setIsLoading(false);
-  }, [id, navigate]);
+  }, [id]);
 
   const handleEditSuccess = () => {
     // Reload player data after successful edit
     if (id) {
-      const updatedPlayer = getPlayerById(id);
-      if (updatedPlayer) {
-        setPlayer(updatedPlayer);
+      try {
+        const updatedPlayer = getPlayerById(id);
+        if (updatedPlayer) {
+          setPlayer(updatedPlayer);
+        }
+      } catch (error) {
+        console.error("Error reloading player after edit:", error);
       }
     }
   };
