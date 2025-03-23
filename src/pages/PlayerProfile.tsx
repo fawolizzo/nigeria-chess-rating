@@ -23,10 +23,46 @@ const PlayerProfile = () => {
 
   useEffect(() => {
     if (id) {
-      const loadedPlayer = getPlayerById(id);
-      if (loadedPlayer) {
-        setPlayer(loadedPlayer);
-      } else {
+      try {
+        const loadedPlayer = getPlayerById(id);
+        console.log("Loaded player:", loadedPlayer);
+        
+        if (loadedPlayer) {
+          // Ensure player has all required fields
+          if (!loadedPlayer.tournamentResults) {
+            loadedPlayer.tournamentResults = [];
+          }
+          
+          // Ensure player has rapid and blitz ratings
+          if (!loadedPlayer.rapidRating) {
+            loadedPlayer.rapidRating = 800;
+            loadedPlayer.rapidGamesPlayed = 0;
+            loadedPlayer.rapidRatingStatus = 'provisional';
+            loadedPlayer.rapidRatingHistory = [{
+              date: new Date().toISOString(),
+              rating: 800,
+              reason: "Initial rating"
+            }];
+          }
+          
+          if (!loadedPlayer.blitzRating) {
+            loadedPlayer.blitzRating = 800;
+            loadedPlayer.blitzGamesPlayed = 0;
+            loadedPlayer.blitzRatingStatus = 'provisional';
+            loadedPlayer.blitzRatingHistory = [{
+              date: new Date().toISOString(),
+              rating: 800,
+              reason: "Initial rating"
+            }];
+          }
+          
+          setPlayer(loadedPlayer);
+        } else {
+          console.error("Player not found with ID:", id);
+          navigate("/players");
+        }
+      } catch (error) {
+        console.error("Error loading player:", error);
         navigate("/players");
       }
     } else {
@@ -159,7 +195,7 @@ const PlayerProfile = () => {
           </div>
           
           <div className="p-6 md:p-8">
-            <PlayerProfileContent player={player} />
+            {player && <PlayerProfileContent player={player} />}
           </div>
         </div>
       </div>

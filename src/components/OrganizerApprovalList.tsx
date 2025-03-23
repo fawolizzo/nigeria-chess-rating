@@ -3,12 +3,10 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserCheck, UserX, User, MapPin, Calendar } from "lucide-react";
-import { User as UserType } from "@/contexts/UserContext";
 import { Badge } from "@/components/ui/badge";
-import StateSelector from "@/components/selectors/StateSelector";
 
 interface OrganizerApprovalListProps {
-  pendingOrganizers: UserType[];
+  pendingOrganizers: any[];
   onApprove: (userId: string) => void;
   onReject: (userId: string) => void;
 }

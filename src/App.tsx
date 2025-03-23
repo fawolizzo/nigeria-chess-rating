@@ -70,9 +70,13 @@ function App() {
       console.error('Local storage is not available. This may affect application functionality.');
     }
     
-    // Log device info for debugging
-    console.log(`Device: ${window.navigator.userAgent}`);
-    console.log(`Screen size: ${window.innerWidth}x${window.innerHeight}`);
+    // Ensure consistent storage across devices and browsers
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'ncr_current_user') {
+        // If the user logged in or out in another tab, reload to reflect those changes
+        window.location.reload();
+      }
+    });
   }, []);
 
   return (

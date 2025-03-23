@@ -23,12 +23,12 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleResetSystem = () => {
-    // Clear all data from localStorage
+    // Clear all data from localStorage, including 'ncr_current_user'
     localStorage.clear();
     
     toast({
       title: "System Reset Successful",
-      description: "All data has been cleared including registered users, players, and tournaments. You can now register again.",
+      description: "All data has been cleared including rating officers, organizers, and players. All users need to register again.",
       variant: "default",
     });
     
@@ -53,8 +53,8 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
             System Reset
           </h3>
           <p className="text-sm text-red-600 dark:text-red-300 mb-4">
-            This action will remove all users, players, tournaments, organizers and registration data from the system.
-            You will need to register new users after this action.
+            This action will remove ALL data including rating officers, organizers, players, tournaments, and registration data.
+            Everyone will need to register again after this action.
           </p>
           <Button 
             variant="outline" 
@@ -75,8 +75,8 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
               Confirm System Reset
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. All data including users, players, tournaments, and organizers will be permanently deleted. 
-              After this action, you will need to register again to use the system.
+              This action cannot be undone. ALL data including rating officers, organizers, players, tournaments will be permanently deleted. 
+              Everyone will need to register again to use the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

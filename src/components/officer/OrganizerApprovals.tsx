@@ -1,18 +1,33 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
+import { getAllUsers } from "@/lib/mockData";
 
 const OrganizerApprovals: React.FC = () => {
-  const { users, approveUser, rejectUser } = useUser();
+  const { approveUser, rejectUser } = useUser();
   const { toast } = useToast();
+  const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Filter tournament organizers with pending status
-  const pendingOrganizers = users.filter(
-    (user) => user.role === "tournament_organizer" && user.status === "pending"
-  );
+  // Load pending organizers directly from storage to ensure we get the latest data
+  useEffect(() => {
+    const loadPendingOrganizers = () => {
+      const allUsers = getAllUsers();
+      const filteredUsers = allUsers.filter(
+        (user) => user.role === "tournament_organizer" && user.status === "pending"
+      );
+      setPendingOrganizers(filteredUsers);
+    };
+    
+    loadPendingOrganizers();
+    
+    // Set up interval to refresh the data regularly
+    const interval = setInterval(loadPendingOrganizers, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [refreshTrigger]);
 
   const handleApprove = (userId: string) => {
     approveUser(userId);

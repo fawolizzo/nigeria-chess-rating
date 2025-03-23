@@ -40,11 +40,12 @@ export const ResetAllData = () => {
   
   // Use useEffect to avoid calling toast during render
   useEffect(() => {
-    clearAllStoredData();
+    // Clear everything in localStorage
+    localStorage.clear();
     
     toast({
       title: "System Completely Reset",
-      description: "All data has been cleared. You can now register new accounts.",
+      description: "All data has been cleared including rating officers, organizers, and players. All users need to register again.",
       duration: 5000,
     });
     

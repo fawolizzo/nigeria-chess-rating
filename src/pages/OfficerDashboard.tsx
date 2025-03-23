@@ -19,29 +19,41 @@ const OfficerDashboard: React.FC = () => {
     
     // Load pending data counts
     const loadPendingCounts = () => {
-      // Load pending tournaments count
-      const allTournaments = getAllTournaments();
-      const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
-      const completedTournaments = allTournaments.filter(t => t.status === "completed").length;
-      
-      // Load pending players count
-      const allPlayers = getAllPlayers();
-      const pendingPlayers = allPlayers.filter(p => p.status === "pending").length;
-      
-      // Load pending organizers count
-      const allUsers = getAllUsers();
-      const pendingOrganizers = allUsers.filter(u => 
-        u.role === 'tournament_organizer' && u.status === 'pending'
-      ).length;
-      
-      // Set total pending count
-      setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
+      try {
+        // Load pending tournaments count
+        const allTournaments = getAllTournaments();
+        const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
+        const completedTournaments = allTournaments.filter(t => t.status === "completed").length;
+        
+        // Load pending players count
+        const allPlayers = getAllPlayers();
+        const pendingPlayers = allPlayers.filter(p => p.status === "pending").length;
+        
+        // Load pending organizers count
+        const allUsers = getAllUsers();
+        const pendingOrganizers = allUsers.filter(u => 
+          u.role === 'tournament_organizer' && u.status === 'pending'
+        ).length;
+        
+        // Set total pending count
+        setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
+        
+        console.log("Pending counts:", {
+          tournaments: pendingTournaments,
+          completed: completedTournaments,
+          players: pendingPlayers,
+          organizers: pendingOrganizers,
+          total: pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments
+        });
+      } catch (error) {
+        console.error("Error loading pending counts:", error);
+      }
     };
     
     loadPendingCounts();
     
     // Set up an interval to refresh the counts
-    const interval = setInterval(loadPendingCounts, 60000); // Update every minute
+    const interval = setInterval(loadPendingCounts, 30000); // Update every 30 seconds
     
     return () => clearInterval(interval);
   }, [currentUser, isLoading, navigate]);

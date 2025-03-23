@@ -1,3 +1,4 @@
+
 export interface Player {
   id: string;
   name: string;
@@ -111,7 +112,7 @@ export const clearAllStoredData = (): void => {
   localStorage.removeItem('users');
   localStorage.removeItem('players');
   localStorage.removeItem('tournaments');
-  localStorage.removeItem('currentUser');
+  localStorage.removeItem('ncr_current_user');
   console.log("All stored data has been cleared");
 };
 
@@ -169,6 +170,39 @@ export const updatePlayer = (updatedPlayer: Player): void => {
 
 export const addPlayer = (newPlayer: Player): void => {
   const allPlayers = getAllPlayers();
+  
+  // Ensure the player has all required fields
+  if (!newPlayer.tournamentResults) {
+    newPlayer.tournamentResults = [];
+  }
+  
+  // Assign floor rating (800) to any missing format ratings
+  if (!newPlayer.rapidRating) {
+    newPlayer.rapidRating = 800;
+    newPlayer.rapidGamesPlayed = 0;
+    newPlayer.rapidRatingStatus = 'provisional';
+    newPlayer.rapidRatingHistory = [{
+      date: new Date().toISOString(),
+      rating: 800,
+      reason: "Initial rating"
+    }];
+  }
+  
+  if (!newPlayer.blitzRating) {
+    newPlayer.blitzRating = 800;
+    newPlayer.blitzGamesPlayed = 0;
+    newPlayer.blitzRatingStatus = 'provisional';
+    newPlayer.blitzRatingHistory = [{
+      date: new Date().toISOString(),
+      rating: 800,
+      reason: "Initial rating"
+    }];
+  }
+  
+  // Generate NCR ID format if not present
+  if (!newPlayer.id.startsWith('NCR')) {
+    newPlayer.id = `NCR${Math.floor(1000 + Math.random() * 9000)}`;
+  }
   
   // Automatically verify titles for titled players
   if (newPlayer.title && 
@@ -245,22 +279,56 @@ export const deleteTournament = (tournamentId: string): void => {
 };
 
 export const createPlayer = (playerData: any): Player => {
+  // Generate a unique NCR ID with 4 digits
+  const ncrId = `NCR${Math.floor(1000 + Math.random() * 9000)}`;
+  
   const newPlayer: Player = {
-    id: `player_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-    name: playerData.fullName,
+    id: ncrId,
+    name: playerData.fullName || playerData.name,
     rating: playerData.rating || 800,
     gender: playerData.gender || 'M',
     state: playerData.state || '',
     city: playerData.city || '',
-    gamesPlayed: 0,
+    gamesPlayed: playerData.gamesPlayed || 0,
     status: playerData.status || 'pending',
     tournamentResults: [],
     ratingHistory: [{
       date: new Date().toISOString(),
       rating: playerData.rating || 800,
       reason: "Initial rating"
+    }],
+    // Add floor ratings for all formats
+    rapidRating: playerData.rapidRating || 800,
+    blitzRating: playerData.blitzRating || 800,
+    rapidGamesPlayed: playerData.rapidGamesPlayed || 0,
+    blitzGamesPlayed: playerData.blitzGamesPlayed || 0,
+    rapidRatingHistory: [{
+      date: new Date().toISOString(),
+      rating: playerData.rapidRating || 800,
+      reason: "Initial rating"
+    }],
+    blitzRatingHistory: [{
+      date: new Date().toISOString(),
+      rating: playerData.blitzRating || 800,
+      reason: "Initial rating"
     }]
   };
+  
+  if (playerData.title) {
+    newPlayer.title = playerData.title;
+    
+    if (["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(playerData.title)) {
+      newPlayer.titleVerified = true;
+    }
+  }
+  
+  if (playerData.birthYear) {
+    newPlayer.birthYear = playerData.birthYear;
+  }
+  
+  if (playerData.club) {
+    newPlayer.club = playerData.club;
+  }
   
   addPlayer(newPlayer);
   return newPlayer;
