@@ -17,6 +17,7 @@ const PlayerProfile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { currentUser } = useUser();
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Check if the current user is a rating officer
   const isRatingOfficer = currentUser?.role === 'rating_officer';
@@ -29,44 +30,53 @@ const PlayerProfile = () => {
         
         if (loadedPlayer) {
           // Ensure player has all required fields
-          if (!loadedPlayer.tournamentResults) {
-            loadedPlayer.tournamentResults = [];
-          }
+          const updatedPlayer = {
+            ...loadedPlayer,
+            // Ensure tournament results exists
+            tournamentResults: loadedPlayer.tournamentResults || [],
+            // Ensure rating histories exist for all formats
+            ratingHistory: loadedPlayer.ratingHistory || [{
+              date: new Date().toISOString(),
+              rating: loadedPlayer.rating || 800,
+              reason: "Initial rating"
+            }]
+          };
           
-          // Ensure player has rapid and blitz ratings
-          if (!loadedPlayer.rapidRating) {
-            loadedPlayer.rapidRating = 800;
-            loadedPlayer.rapidGamesPlayed = 0;
-            loadedPlayer.rapidRatingStatus = 'provisional';
-            loadedPlayer.rapidRatingHistory = [{
+          // Ensure player has rapid rating
+          if (!updatedPlayer.rapidRating) {
+            updatedPlayer.rapidRating = 800;
+            updatedPlayer.rapidGamesPlayed = 0;
+            updatedPlayer.rapidRatingStatus = 'provisional';
+            updatedPlayer.rapidRatingHistory = [{
               date: new Date().toISOString(),
               rating: 800,
               reason: "Initial rating"
             }];
           }
           
-          if (!loadedPlayer.blitzRating) {
-            loadedPlayer.blitzRating = 800;
-            loadedPlayer.blitzGamesPlayed = 0;
-            loadedPlayer.blitzRatingStatus = 'provisional';
-            loadedPlayer.blitzRatingHistory = [{
+          // Ensure player has blitz rating
+          if (!updatedPlayer.blitzRating) {
+            updatedPlayer.blitzRating = 800;
+            updatedPlayer.blitzGamesPlayed = 0;
+            updatedPlayer.blitzRatingStatus = 'provisional';
+            updatedPlayer.blitzRatingHistory = [{
               date: new Date().toISOString(),
               rating: 800,
               reason: "Initial rating"
             }];
           }
           
-          setPlayer(loadedPlayer);
+          setPlayer(updatedPlayer);
         } else {
           console.error("Player not found with ID:", id);
-          navigate("/players");
+          setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
         }
       } catch (error) {
         console.error("Error loading player:", error);
-        navigate("/players");
+        setLoadError("Error loading player data. Please try again.");
       }
     } else {
-      navigate("/players");
+      setLoadError("No player ID provided.");
     }
     setIsLoading(false);
   }, [id, navigate]);
@@ -113,7 +123,7 @@ const PlayerProfile = () => {
           
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold mb-2">Player Not Found</h1>
-            <p className="text-gray-500 mb-6">The player you are looking for doesn't exist or has been removed.</p>
+            <p className="text-gray-500 mb-6">{loadError || "The player you are looking for doesn't exist or has been removed."}</p>
             <Button onClick={handleBackToPlayers}>
               Return to Players List
             </Button>

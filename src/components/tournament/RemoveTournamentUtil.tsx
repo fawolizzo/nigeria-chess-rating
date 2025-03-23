@@ -1,6 +1,5 @@
 
 import { useEffect } from "react";
-import { clearAllStoredData } from "@/lib/mockData";
 import { useToast } from "@/components/ui/use-toast";
 
 /**
@@ -40,8 +39,9 @@ export const ResetAllData = () => {
   
   // Use useEffect to avoid calling toast during render
   useEffect(() => {
-    // Clear everything in localStorage
+    // Clear everything in localStorage and sessionStorage
     localStorage.clear();
+    sessionStorage.clear();
     
     toast({
       title: "System Completely Reset",

@@ -23,12 +23,13 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleResetSystem = () => {
-    // Clear all data from localStorage, including 'ncr_current_user'
+    // Clear literally ALL data from localStorage and sessionStorage
     localStorage.clear();
+    sessionStorage.clear();
     
     toast({
       title: "System Reset Successful",
-      description: "All data has been cleared including rating officers, organizers, and players. All users need to register again.",
+      description: "All data has been completely cleared including rating officers, organizers, and players. All users need to register again.",
       variant: "default",
     });
     

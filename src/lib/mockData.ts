@@ -109,13 +109,24 @@ export const tournaments: Tournament[] = [];
 export const users: User[] = [];
 
 export const clearAllStoredData = (): void => {
+  // Clear all data from both localStorage and sessionStorage
   localStorage.removeItem('users');
   localStorage.removeItem('players');
   localStorage.removeItem('tournaments');
   localStorage.removeItem('ncr_current_user');
-  console.log("All stored data has been cleared");
+  localStorage.removeItem('ncr_users');
+  
+  // Also clear sessionStorage to ensure complete reset
+  sessionStorage.removeItem('users');
+  sessionStorage.removeItem('players');
+  sessionStorage.removeItem('tournaments');
+  sessionStorage.removeItem('ncr_current_user');
+  sessionStorage.removeItem('ncr_users');
+  
+  console.log("All stored data has been completely cleared");
 };
 
+// Update storage helpers to use both localStorage and sessionStorage
 export const getPlayerById = (id: string): Player | undefined => {
   return getAllPlayers().find(player => player.id === id);
 };
@@ -127,11 +138,20 @@ export const getPlayersByTournamentId = (tournamentId: string): Player[] => {
 };
 
 export const savePlayers = (updatedPlayers: Player[]): void => {
-  localStorage.setItem('players', JSON.stringify(updatedPlayers));
+  const playersJSON = JSON.stringify(updatedPlayers);
+  localStorage.setItem('players', playersJSON);
+  sessionStorage.setItem('players', playersJSON); // Also save to sessionStorage
 };
 
 export const getAllPlayers = (): Player[] => {
-  const savedPlayers = localStorage.getItem('players');
+  // Try localStorage first
+  let savedPlayers = localStorage.getItem('players');
+  
+  // If not in localStorage, try sessionStorage
+  if (!savedPlayers) {
+    savedPlayers = sessionStorage.getItem('players');
+  }
+  
   return savedPlayers ? JSON.parse(savedPlayers) : players;
 };
 
@@ -244,11 +264,20 @@ export const getTournamentById = (id: string): Tournament | undefined => {
 };
 
 export const saveTournaments = (updatedTournaments: Tournament[]): void => {
-  localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+  const tournamentsJSON = JSON.stringify(updatedTournaments);
+  localStorage.setItem('tournaments', tournamentsJSON);
+  sessionStorage.setItem('tournaments', tournamentsJSON); // Also save to sessionStorage
 };
 
 export const getAllTournaments = (): Tournament[] => {
-  const savedTournaments = localStorage.getItem('tournaments');
+  // Try localStorage first
+  let savedTournaments = localStorage.getItem('tournaments');
+  
+  // If not in localStorage, try sessionStorage
+  if (!savedTournaments) {
+    savedTournaments = sessionStorage.getItem('tournaments');
+  }
+  
   return savedTournaments ? JSON.parse(savedTournaments) : tournaments;
 };
 
@@ -351,11 +380,20 @@ export const rejectPlayer = (playerId: string): void => {
 };
 
 export const saveUsers = (updatedUsers: User[]): void => {
-  localStorage.setItem('users', JSON.stringify(updatedUsers));
+  const usersJSON = JSON.stringify(updatedUsers);
+  localStorage.setItem('users', usersJSON);
+  sessionStorage.setItem('users', usersJSON); // Also save to sessionStorage
 };
 
 export const getAllUsers = (): User[] => {
-  const savedUsers = localStorage.getItem('users');
+  // Try localStorage first
+  let savedUsers = localStorage.getItem('users');
+  
+  // If not in localStorage, try sessionStorage
+  if (!savedUsers) {
+    savedUsers = sessionStorage.getItem('users');
+  }
+  
   return savedUsers ? JSON.parse(savedUsers) : users;
 };
 

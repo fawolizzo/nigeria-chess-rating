@@ -14,20 +14,33 @@ const OrganizerApprovals: React.FC = () => {
   // Load pending organizers directly from storage to ensure we get the latest data
   useEffect(() => {
     const loadPendingOrganizers = () => {
-      const allUsers = getAllUsers();
-      const filteredUsers = allUsers.filter(
-        (user) => user.role === "tournament_organizer" && user.status === "pending"
-      );
-      setPendingOrganizers(filteredUsers);
+      try {
+        const allUsers = getAllUsers();
+        console.log("All users loaded:", allUsers);
+        
+        const filteredUsers = allUsers.filter(
+          (user) => user.role === "tournament_organizer" && user.status === "pending"
+        );
+        
+        console.log("Filtered pending organizers:", filteredUsers);
+        setPendingOrganizers(filteredUsers);
+      } catch (error) {
+        console.error("Error loading pending organizers:", error);
+        toast({
+          title: "Error Loading Organizers",
+          description: "There was an error loading pending organizer applications.",
+          variant: "destructive"
+        });
+      }
     };
     
     loadPendingOrganizers();
     
     // Set up interval to refresh the data regularly
-    const interval = setInterval(loadPendingOrganizers, 10000); // Check every 10 seconds
+    const interval = setInterval(loadPendingOrganizers, 5000); // Check every 5 seconds
     
     return () => clearInterval(interval);
-  }, [refreshTrigger]);
+  }, [refreshTrigger, toast]);
 
   const handleApprove = (userId: string) => {
     approveUser(userId);
