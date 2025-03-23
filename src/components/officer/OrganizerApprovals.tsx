@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
-import { getAllUsers } from "@/lib/mockData";
+import { getAllUsersFromStorage } from "@/utils/userUtils";
 
 const OrganizerApprovals: React.FC = () => {
   const { approveUser, rejectUser, users } = useUser();
@@ -15,18 +15,15 @@ const OrganizerApprovals: React.FC = () => {
   useEffect(() => {
     const loadPendingOrganizers = () => {
       try {
-        // Get users from two sources to ensure consistency
-        const allUsers = getAllUsers();
+        // Get users from storage
+        const allUsers = getAllUsersFromStorage();
         console.log("All users loaded from storage:", allUsers);
         
         // Also check the users from context
         console.log("Users from context:", users);
         
-        // Merge both sources, prioritizing storage data
-        const mergedUsers = [...allUsers];
-        
         // Filter for pending tournament organizers
-        const filteredUsers = mergedUsers.filter(
+        const filteredUsers = allUsers.filter(
           (user) => user.role === "tournament_organizer" && user.status === "pending"
         );
         

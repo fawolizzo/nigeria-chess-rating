@@ -1,3 +1,4 @@
+import { getAllUsersFromStorage } from "@/utils/userUtils";
 
 export interface Player {
   id: string;
@@ -385,16 +386,8 @@ export const saveUsers = (updatedUsers: User[]): void => {
   sessionStorage.setItem('users', usersJSON); // Also save to sessionStorage
 };
 
-export const getAllUsers = (): User[] => {
-  // Try localStorage first
-  let savedUsers = localStorage.getItem('users');
-  
-  // If not in localStorage, try sessionStorage
-  if (!savedUsers) {
-    savedUsers = sessionStorage.getItem('users');
-  }
-  
-  return savedUsers ? JSON.parse(savedUsers) : users;
+export const getAllUsers = () => {
+  return getAllUsersFromStorage();
 };
 
 export const updateUser = (updatedUser: User): void => {

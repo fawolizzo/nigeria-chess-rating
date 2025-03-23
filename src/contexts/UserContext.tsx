@@ -1,93 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-
-export interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  state: string;
-  role: 'tournament_organizer' | 'rating_officer';
-  status: 'pending' | 'approved' | 'rejected';
-  registrationDate: string;
-  approvalDate?: string;
-  password?: string; // Add password field as optional
-}
-
-interface UserContextType {
-  currentUser: User | null;
-  users: User[];
-  isLoading: boolean;
-  login: (email: string, password: string, role: 'tournament_organizer' | 'rating_officer') => Promise<boolean>;
-  logout: () => void;
-  register: (userData: Omit<User, 'id' | 'status' | 'registrationDate'>) => Promise<boolean>;
-  approveUser: (userId: string) => void;
-  rejectUser: (userId: string) => void;
-  sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;
-  getRatingOfficerEmails: () => string[];
-}
-
-const STORAGE_KEY_USERS = 'ncr_users';
-const STORAGE_KEY_CURRENT_USER = 'ncr_current_user';
-
-// Helper function to safely parse JSON with error handling
-const safeJSONParse = (jsonString: string | null, fallback: any = null) => {
-  if (!jsonString) return fallback;
-  try {
-    return JSON.parse(jsonString);
-  } catch (error) {
-    console.error("Error parsing JSON:", error);
-    return fallback;
-  }
-};
-
-// Helper function to safely stringify JSON with error handling
-const safeJSONStringify = (data: any, fallback: string = '') => {
-  try {
-    return JSON.stringify(data);
-  } catch (error) {
-    console.error("Error stringifying JSON:", error);
-    return fallback;
-  }
-};
-
-// Function to get all users from storage (both localStorage and sessionStorage)
-const getAllUsersFromStorage = (): User[] => {
-  try {
-    // Try localStorage first
-    let usersFromStorage = localStorage.getItem(STORAGE_KEY_USERS);
-    
-    // If not in localStorage, try sessionStorage
-    if (!usersFromStorage) {
-      usersFromStorage = sessionStorage.getItem(STORAGE_KEY_USERS);
-    }
-    
-    if (usersFromStorage) {
-      const parsedUsers = safeJSONParse(usersFromStorage, []);
-      if (Array.isArray(parsedUsers)) {
-        return parsedUsers;
-      }
-    }
-    
-    return [];
-  } catch (error) {
-    console.error("Error getting users from storage:", error);
-    return [];
-  }
-};
-
-// Function to save users to both localStorage and sessionStorage
-const saveUsersToStorage = (users: User[]): void => {
-  try {
-    const usersJSON = safeJSONStringify(users);
-    localStorage.setItem(STORAGE_KEY_USERS, usersJSON);
-    sessionStorage.setItem(STORAGE_KEY_USERS, usersJSON);
-  } catch (error) {
-    console.error("Error saving users to storage:", error);
-  }
-};
+import { User, UserContextType, STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from '@/types/userTypes';
+import { getAllUsersFromStorage, saveUsersToStorage, getRatingOfficerEmails as getOfficerEmails, createOrganizerConfirmationEmail, createRatingOfficerNotificationEmail, createApprovalEmail, createRejectionEmail } from '@/utils/userUtils';
+import { saveToStorage, getFromStorage, removeFromStorage } from '@/utils/storageUtils';
+import { sendEmail } from '@/services/emailService';
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
@@ -106,31 +23,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Load current user from storage
-      const savedCurrentUserJSON = localStorage.getItem(STORAGE_KEY_CURRENT_USER) || 
-                                  sessionStorage.getItem(STORAGE_KEY_CURRENT_USER);
-      
-      if (savedCurrentUserJSON) {
-        const parsedUser = safeJSONParse(savedCurrentUserJSON);
-        setCurrentUser(parsedUser);
-        
-        // Ensure current user is saved to both storage types
-        if (!localStorage.getItem(STORAGE_KEY_CURRENT_USER)) {
-          localStorage.setItem(STORAGE_KEY_CURRENT_USER, savedCurrentUserJSON);
-        }
-        
-        if (!sessionStorage.getItem(STORAGE_KEY_CURRENT_USER)) {
-          sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, savedCurrentUserJSON);
-        }
+      const savedCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
+      if (savedCurrentUser) {
+        setCurrentUser(savedCurrentUser);
       }
     } catch (error) {
       console.error("Error loading saved data:", error);
       // Reset the state if there's an error
       setUsers([]);
       setCurrentUser(null);
-      localStorage.removeItem(STORAGE_KEY_USERS);
-      sessionStorage.removeItem(STORAGE_KEY_USERS);
-      localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
-      sessionStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+      removeFromStorage(STORAGE_KEY_USERS);
+      removeFromStorage(STORAGE_KEY_CURRENT_USER);
     } finally {
       setIsLoading(false);
     }
@@ -147,9 +50,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     try {
       if (currentUser) {
-        const currentUserJSON = safeJSONStringify(currentUser);
-        localStorage.setItem(STORAGE_KEY_CURRENT_USER, currentUserJSON);
-        sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, currentUserJSON);
+        saveToStorage(STORAGE_KEY_CURRENT_USER, currentUser);
       }
     } catch (error) {
       console.error("Error saving current user data:", error);
@@ -161,42 +62,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
-  // Function to send email using our edge function
-  const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
-    try {
-      console.log(`Attempting to send email to ${to} with subject: ${subject}`);
-      const { error } = await supabase.functions.invoke('send-email', {
-        body: { to, subject, html }
-      });
-
-      if (error) {
-        console.error('Error sending email:', error);
-        toast({
-          title: "Email Sending Failed",
-          description: error.message,
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      console.log('Email sent successfully to:', to);
-      return true;
-    } catch (error) {
-      console.error('Error sending email:', error);
-      toast({
-        title: "Email Sending Failed",
-        description: "An unexpected error occurred while sending the email",
-        variant: "destructive"
-      });
-      return false;
-    }
-  };
-
   // Function to get all rating officer emails
   const getRatingOfficerEmails = (): string[] => {
-    return users
-      .filter(user => user.role === 'rating_officer' && user.status === 'approved')
-      .map(user => user.email);
+    return getOfficerEmails(users);
   };
 
   const register = async (userData: Omit<User, 'id' | 'status' | 'registrationDate'>) => {
@@ -229,24 +97,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Send confirmation email to the new organizer
       if (userData.role === 'tournament_organizer') {
-        const organizerEmailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #008751; margin-bottom: 20px;">Nigerian Chess Rating System - Registration Received</h2>
-            <p>Dear ${userData.fullName},</p>
-            <p>Thank you for registering as a Tournament Organizer with the Nigerian Chess Rating System.</p>
-            <p>Your registration is currently <strong>pending approval</strong> by a Rating Officer. You will receive another email once your account has been approved.</p>
-            <p>Registration details:</p>
-            <ul>
-              <li>Name: ${userData.fullName}</li>
-              <li>Email: ${userData.email}</li>
-              <li>State: ${userData.state}</li>
-              <li>Registration Date: ${new Date().toLocaleDateString()}</li>
-            </ul>
-            <p>If you have any questions, please contact our support team.</p>
-            <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
-          </div>
-        `;
-
+        const organizerEmailHtml = createOrganizerConfirmationEmail(newUser);
         await sendEmail(
           userData.email,
           "Registration Confirmation - Nigerian Chess Rating System",
@@ -257,24 +108,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const ratingOfficerEmails = getRatingOfficerEmails();
         
         if (ratingOfficerEmails.length > 0) {
-          const notificationHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-              <h2 style="color: #008751; margin-bottom: 20px;">New Tournament Organizer Registration</h2>
-              <p>A new Tournament Organizer has registered and is waiting for approval:</p>
-              <ul>
-                <li>Name: ${userData.fullName}</li>
-                <li>Email: ${userData.email}</li>
-                <li>State: ${userData.state}</li>
-                <li>Registration Date: ${new Date().toLocaleDateString()}</li>
-              </ul>
-              <p>Please log in to the Nigerian Chess Rating System to review and approve this registration.</p>
-              <div style="margin: 30px 0; text-align: center;">
-                <a href="https://ncr-system.com/login" style="background-color: #008751; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Login to Review</a>
-              </div>
-              <p>Thank you for your attention to this matter.</p>
-            </div>
-          `;
-
+          const notificationHtml = createRatingOfficerNotificationEmail(newUser);
+          
           console.log(`Sending notifications to ${ratingOfficerEmails.length} rating officers`);
           
           // Send notification emails to all rating officers with retry logic
@@ -361,9 +196,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Store user in both localStorage and sessionStorage
-      const userJSON = safeJSONStringify(user);
-      localStorage.setItem(STORAGE_KEY_CURRENT_USER, userJSON);
-      sessionStorage.setItem(STORAGE_KEY_CURRENT_USER, userJSON);
+      saveToStorage(STORAGE_KEY_CURRENT_USER, user);
       
       // Ensure user list is synced across storage
       saveUsersToStorage(latestUsers);
@@ -388,8 +221,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
-    sessionStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+    removeFromStorage(STORAGE_KEY_CURRENT_USER);
     toast({
       title: "Logged Out",
       description: "You have been successfully logged out",
@@ -410,19 +242,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         
         // Send approval email to the organizer
-        const approvalEmailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #008751; margin-bottom: 20px;">Account Approved - Nigerian Chess Rating System</h2>
-            <p>Dear ${user.fullName},</p>
-            <p>Congratulations! Your Tournament Organizer account has been approved.</p>
-            <p>You can now log in to the Nigerian Chess Rating System and start creating tournaments.</p>
-            <div style="margin: 30px 0; text-align: center;">
-              <a href="https://ncr-system.com/login" style="background-color: #008751; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Login Now</a>
-            </div>
-            <p>If you have any questions, please don't hesitate to contact our support team.</p>
-            <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
-          </div>
-        `;
+        const approvalEmailHtml = createApprovalEmail(user);
         
         sendEmail(
           user.email,
@@ -453,15 +273,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         
         // Send rejection email to the organizer
-        const rejectionEmailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #d32f2f; margin-bottom: 20px;">Registration Not Approved - Nigerian Chess Rating System</h2>
-            <p>Dear ${user.fullName},</p>
-            <p>We regret to inform you that your application to become a Tournament Organizer has not been approved at this time.</p>
-            <p>If you believe this is an error or would like more information, please contact our support team.</p>
-            <p style="margin-top: 30px;">Best regards,<br>Nigerian Chess Rating System Team</p>
-          </div>
-        `;
+        const rejectionEmailHtml = createRejectionEmail(user);
         
         sendEmail(
           user.email,
@@ -504,3 +316,5 @@ export const useUser = () => {
   }
   return context;
 };
+
+export { User, UserContextType } from '@/types/userTypes';
