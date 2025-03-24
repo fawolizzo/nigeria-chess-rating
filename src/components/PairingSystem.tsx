@@ -33,6 +33,7 @@ interface PairingDisplayData {
   result?: "1-0" | "0-1" | "1/2-1/2" | "*";
   whiteRatingChange?: number;
   blackRatingChange?: number;
+  boardNumber: number;
 }
 
 interface Round {
@@ -74,10 +75,11 @@ const PairingSystem = ({
     return player.rating; // Default to classical rating
   };
 
-  // Function to convert pairings to display format
+  // Function to convert pairings to display format and sort by player rating
   const getPairingsToDisplay = (): PairingDisplayData[] => {
     if (pairings && pairings.length > 0) {
-      return pairings.map(pair => {
+      // Convert pairings to display format first
+      const displayPairings = pairings.map((pair, index) => {
         const white = players.find(p => p.id === pair.whiteId);
         const black = players.find(p => p.id === pair.blackId);
         
@@ -87,14 +89,36 @@ const PairingSystem = ({
             black,
             result: pair.result,
             whiteRatingChange: pair.whiteRatingChange,
-            blackRatingChange: pair.blackRatingChange
+            blackRatingChange: pair.blackRatingChange,
+            boardNumber: index + 1 // Default board number by array order
           };
         }
         return null;
       }).filter(Boolean) as PairingDisplayData[];
+      
+      // Sort pairings by the highest rated white player to ensure top player on board 1
+      return displayPairings.sort((a, b) => {
+        // Sort by white player rating (descendin) to make highest rated player on first board
+        const aRating = getPlayerRating(a.white);
+        const bRating = getPlayerRating(b.white);
+        return bRating - aRating;
+      }).map((pair, index) => ({
+        ...pair,
+        boardNumber: index + 1 // Reassign board numbers after sorting
+      }));
     }
     
-    return localPairings as PairingDisplayData[];
+    // For local pairings, do the same conversion and sorting
+    return localPairings.map((pair, index) => ({
+      white: pair.white,
+      black: pair.black,
+      boardNumber: index + 1
+    })).sort((a, b) => 
+      getPlayerRating(b.white) - getPlayerRating(a.white)
+    ).map((pair, index) => ({
+      ...pair,
+      boardNumber: index + 1 // Reassign board numbers after sorting
+    }));
   };
 
   // Generate Swiss pairings using our improved algorithm
@@ -177,14 +201,14 @@ const PairingSystem = ({
         {pairingsToDisplay.length > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-2">
-              {pairingsToDisplay.map((pair, index) => (
+              {pairingsToDisplay.map((pair) => (
                 <div 
-                  key={index} 
+                  key={`${pair.white.id}-${pair.black.id}`} 
                   className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-800 rounded-lg"
                 >
                   <div className="flex items-center space-x-4">
                     <div className="font-semibold text-gray-500 dark:text-gray-400 w-8 text-center">
-                      {index + 1}
+                      {pair.boardNumber}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">

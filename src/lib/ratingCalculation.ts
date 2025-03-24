@@ -1,33 +1,23 @@
 
 // Utility function to calculate K-factor for Elo calculation
 export const getKFactor = (rating: number, gamesPlayed: number): number => {
-  // Check if player has a rating ending with +100 (e.g., 1400+100)
-  // These players should be treated as having 30+ games
-  const hasPlus100 = String(rating).endsWith('100');
-  
-  // Players with +100 rating or 30+ games are treated as established players
-  if (hasPlus100 || gamesPlayed >= 30) {
-    // Players below 2100 get K=32
-    if (rating < 2100) {
-      return 32;
-    }
-    
-    // Players 2100-2399 get K=24
-    if (rating >= 2100 && rating <= 2399) {
-      return 24;
-    }
-    
-    // Higher rated players (2400+) get K=16
-    return 16;
-  }
-  
-  // New or provisional players (fewer than 10 rated games)
-  if (gamesPlayed < 10 && rating < 2000) {
+  // New or provisional players (fewer than 30 rated games)
+  if (gamesPlayed < 30) {
     return 40;
   }
   
-  // Default K-factor for other players
-  return 32;
+  // Players below 2100 get K=32
+  if (rating < 2100) {
+    return 32;
+  }
+  
+  // Players 2100-2399 get K=24
+  if (rating >= 2100 && rating <= 2399) {
+    return 24;
+  }
+  
+  // Higher rated players (2400+) get K=16
+  return 16;
 };
 
 // Floor rating constant
@@ -84,15 +74,10 @@ export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
       result
     } = match;
 
-    // Adjust games played for players with +100 ratings
-    const hasWhitePlus100 = String(whiteRating).endsWith('100');
-    const hasBlackPlus100 = String(blackRating).endsWith('100');
-    
-    const adjustedWhiteGamesPlayed = hasWhitePlus100 ? Math.max(31, whiteGamesPlayed) : whiteGamesPlayed;
-    const adjustedBlackGamesPlayed = hasBlackPlus100 ? Math.max(31, blackGamesPlayed) : blackGamesPlayed;
-
-    const kFactorWhite = getKFactor(whiteRating, adjustedWhiteGamesPlayed);
-    const kFactorBlack = getKFactor(blackRating, adjustedBlackGamesPlayed);
+    // Use the correct K-factors based solely on rating and games played
+    // without special handling for +100 ratings
+    const kFactorWhite = getKFactor(whiteRating, whiteGamesPlayed);
+    const kFactorBlack = getKFactor(blackRating, blackGamesPlayed);
 
     const expectedScoreWhite = calculateExpectedScore(whiteRating, blackRating);
     const expectedScoreBlack = calculateExpectedScore(blackRating, whiteRating);

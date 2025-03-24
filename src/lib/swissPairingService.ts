@@ -62,7 +62,11 @@ export function generateSwissPairings(
   // Initialize player data with history from previous rounds
   const playerData: Record<string, PlayerWithScore> = {};
   
-  approvedPlayers.forEach(player => {
+  // Sort players by rating in descending order before initializing player data
+  // This ensures the highest rated player will be at the top of each score group
+  const sortedPlayers = [...approvedPlayers].sort((a, b) => b.rating - a.rating);
+  
+  sortedPlayers.forEach(player => {
     playerData[player.id] = {
       id: player.id,
       score: 0,
@@ -147,29 +151,45 @@ export function generateSwissPairings(
     const playersInGroup = scoreGroups[score.toString()];
     console.log(`Processing score group ${score} with ${playersInGroup.length} players`);
     
-    // Sort each score group by rating
+    // Sort each score group by rating to ensure highest rated plays first
     playersInGroup.sort((a, b) => playerData[b].rating - playerData[a].rating);
     
-    for (let i = 0; i < playersInGroup.length; i++) {
-      const playerId = playersInGroup[i];
+    // Create a copy of players that will be processed in order
+    const playersToPair = [...playersInGroup];
+    
+    while (playersToPair.length >= 2) {
+      // Take the highest rated/seeded player who hasn't been paired yet
+      const playerId = playersToPair.shift()!;
       
       if (pairedPlayers.has(playerId)) continue;
       
-      let foundOpponent = false;
+      let bestOpponentIndex = -1;
+      let bestPenalty = Infinity;
       
-      // Try to find opponent in the same score group
-      for (let j = i + 1; j < playersInGroup.length; j++) {
-        const opponentId = playersInGroup[j];
+      // Find the best opponent for this player
+      for (let j = 0; j < playersToPair.length; j++) {
+        const opponentId = playersToPair[j];
         
         if (pairedPlayers.has(opponentId)) continue;
         
-        // Skip if players have already played each other
-        if (playerData[playerId].opponentIds.includes(opponentId)) {
-          console.log(`Skipping pairing: Players have already played each other`);
+        // Skip if players have already played each other or if it's the same player
+        if (playerData[playerId].opponentIds.includes(opponentId) || playerId === opponentId) {
           continue;
         }
         
-        foundOpponent = true;
+        // Calculate penalty - prefer players closer to the top of the list
+        const penalty = j;
+        
+        if (penalty < bestPenalty) {
+          bestPenalty = penalty;
+          bestOpponentIndex = j;
+        }
+      }
+      
+      if (bestOpponentIndex >= 0) {
+        // Remove this opponent from the list
+        const opponentId = playersToPair.splice(bestOpponentIndex, 1)[0];
+        
         pairedPlayers.add(playerId);
         pairedPlayers.add(opponentId);
         
@@ -200,16 +220,17 @@ export function generateSwissPairings(
         }
         
         pairings.push({ whiteId, blackId });
+      } else {
+        // Couldn't find a suitable opponent in the same score group
+        // Put this player back in the playersToPair list at the front
+        playersToPair.unshift(playerId);
         break;
       }
-      
-      if (!foundOpponent && score > 0) {
-        console.log(`Couldn't find a valid opponent for player in the same score group`);
-      }
     }
-  });
+  }
 
   // Handle unpaired players (they might need to be paired across score groups)
+  // Start with the highest-rated unpaired player
   const unpairedPlayers = approvedPlayers
     .filter(player => !pairedPlayers.has(player.id))
     .sort((a, b) => {
@@ -232,11 +253,16 @@ export function generateSwissPairings(
     for (let i = 0; i < unpairedPlayers.length; i++) {
       const opponentId = unpairedPlayers[i];
       
+      // Never pair a player with themselves
+      if (playerId === opponentId) {
+        continue;
+      }
+      
       let penalty = 0;
       
-      // Heavy penalty for pairing players who have already played
+      // Extremely high penalty for pairing players who have already played
       if (playerData[playerId].opponentIds.includes(opponentId)) {
-        penalty += 1000;
+        penalty += 10000; // Make this effectively impossible
       }
       
       // Penalty for score difference
@@ -253,7 +279,7 @@ export function generateSwissPairings(
       }
     }
     
-    if (bestOpponentIndex >= 0) {
+    if (bestOpponentIndex >= 0 && minPenalty < 9999) { // Only pair if previous match penalty not triggered
       const opponentId = unpairedPlayers.splice(bestOpponentIndex, 1)[0];
       
       // Assign colors based on color balance
@@ -272,6 +298,10 @@ export function generateSwissPairings(
       
       console.log(`Pairing (cross-score): ${approvedPlayers.find(p => p.id === whiteId)?.name || whiteId} (W) vs ${approvedPlayers.find(p => p.id === blackId)?.name || blackId} (B)`);
       pairings.push({ whiteId, blackId });
+    } else {
+      // Couldn't find a good pairing, put this player back
+      unpairedPlayers.unshift(playerId);
+      break;
     }
   }
 
@@ -282,6 +312,13 @@ export function generateSwissPairings(
     // In a real Swiss system, the bye would award a point automatically
     // You would need to handle this in your tournament management logic
   }
+
+  // Sort pairings by player rating to ensure highest rated plays first
+  pairings.sort((a, b) => {
+    const playerARating = approvedPlayers.find(p => p.id === a.whiteId)?.rating || 0;
+    const playerBRating = approvedPlayers.find(p => p.id === b.whiteId)?.rating || 0;
+    return playerBRating - playerARating;
+  });
 
   console.log(`Generated ${pairings.length} pairings for round ${currentRound}`);
   return pairings;
