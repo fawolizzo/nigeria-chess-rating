@@ -31,30 +31,32 @@ const PlayerProfile = () => {
     setIsLoading(true);
     setLoadError(null);
     
-    if (id) {
-      try {
-        const loadedPlayer = getPlayerById(id);
-        console.log("Raw loaded player:", loadedPlayer);
-        
-        if (loadedPlayer) {
-          // Initialize player data with all required fields
-          const updatedPlayer = initializePlayerData(loadedPlayer);
-          
-          // Debug the prepared player data
-          debugPlayer(updatedPlayer);
-          
-          setPlayer(updatedPlayer);
-          setLoadError(null);
-        } else {
-          console.error("Player not found with ID:", id);
-          setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
-        }
-      } catch (error: any) { // Add explicit any type here to fix possible error
-        console.error("Error loading player:", error);
-        setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
-      }
-    } else {
+    if (!id) {
       setLoadError("No player ID provided.");
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      const loadedPlayer = getPlayerById(id);
+      console.log("Raw loaded player:", loadedPlayer);
+      
+      if (loadedPlayer) {
+        // Initialize player data with all required fields
+        const updatedPlayer = initializePlayerData(loadedPlayer);
+        
+        // Debug the prepared player data
+        debugPlayer(updatedPlayer);
+        
+        setPlayer(updatedPlayer);
+        setLoadError(null);
+      } else {
+        console.error("Player not found with ID:", id);
+        setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
+      }
+    } catch (error: any) {
+      console.error("Error loading player:", error);
+      setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
     }
     
     setIsLoading(false);
@@ -68,7 +70,7 @@ const PlayerProfile = () => {
         if (updatedPlayer) {
           setPlayer(initializePlayerData(updatedPlayer));
         }
-      } catch (error: any) { // Add explicit any type here
+      } catch (error: any) {
         console.error("Error reloading player after edit:", error);
       }
     }

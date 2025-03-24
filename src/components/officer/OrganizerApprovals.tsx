@@ -4,6 +4,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 import { getAllUsersFromStorage } from "@/utils/userUtils";
+import { syncStorage } from "@/utils/storageUtils";
 
 const OrganizerApprovals: React.FC = () => {
   const { approveUser, rejectUser, users } = useUser();
@@ -15,6 +16,9 @@ const OrganizerApprovals: React.FC = () => {
   useEffect(() => {
     const loadPendingOrganizers = () => {
       try {
+        // Ensure storage is synced between localStorage and sessionStorage
+        syncStorage('ncr_users');
+        
         // Get users from storage
         const allUsers = getAllUsersFromStorage();
         console.log("All users loaded from storage:", allUsers);
@@ -42,10 +46,23 @@ const OrganizerApprovals: React.FC = () => {
     // Load immediately
     loadPendingOrganizers();
     
-    // Set up interval to refresh the data more frequently (every 2 seconds)
-    const interval = setInterval(loadPendingOrganizers, 2000);
+    // Set up interval to refresh the data more frequently (every 1 second to ensure cross-device updates)
+    const interval = setInterval(loadPendingOrganizers, 1000);
     
-    return () => clearInterval(interval);
+    // Add storage event listener to detect changes from other tabs/windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ncr_users') {
+        console.log("Storage event detected for users, reloading organizers");
+        loadPendingOrganizers();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [refreshTrigger, toast, users]);
 
   const handleApprove = (userId: string) => {

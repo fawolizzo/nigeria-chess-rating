@@ -24,20 +24,19 @@ export const safeJSONStringify = (data: any, fallback: string = '') => {
   }
 };
 
-// Function to get item from both localStorage and sessionStorage
+// Function to get item from local storage with fallback to session storage
 export const getFromStorage = <T>(key: string, fallback: T): T => {
   try {
-    // Try localStorage first
-    let valueFromStorage = localStorage.getItem(key);
-    
-    // If not in localStorage, try sessionStorage
-    if (!valueFromStorage) {
-      valueFromStorage = sessionStorage.getItem(key);
+    // Check localStorage first
+    const localValue = localStorage.getItem(key);
+    if (localValue) {
+      return safeJSONParse(localValue, fallback);
     }
     
-    if (valueFromStorage) {
-      const parsedValue = safeJSONParse(valueFromStorage, fallback);
-      return parsedValue;
+    // If not in localStorage, check sessionStorage
+    const sessionValue = sessionStorage.getItem(key);
+    if (sessionValue) {
+      return safeJSONParse(sessionValue, fallback);
     }
     
     return fallback;
@@ -65,5 +64,50 @@ export const removeFromStorage = (key: string): void => {
     sessionStorage.removeItem(key);
   } catch (error) {
     console.error(`Error removing ${key} from storage:`, error);
+  }
+};
+
+// Function to synchronize data between localStorage and sessionStorage
+export const syncStorage = (key: string): void => {
+  try {
+    // Get from localStorage first
+    const localValue = localStorage.getItem(key);
+    
+    // If exists in localStorage, update sessionStorage
+    if (localValue) {
+      sessionStorage.setItem(key, localValue);
+      return;
+    }
+    
+    // If not in localStorage but in sessionStorage, update localStorage
+    const sessionValue = sessionStorage.getItem(key);
+    if (sessionValue) {
+      localStorage.setItem(key, sessionValue);
+    }
+  } catch (error) {
+    console.error(`Error syncing ${key} between storages:`, error);
+  }
+};
+
+// Function to get all keys in storage
+export const getAllStorageKeys = (): string[] => {
+  try {
+    const keys: string[] = [];
+    // Get keys from localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) keys.push(key);
+    }
+    
+    // Get keys from sessionStorage that aren't already in the array
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && !keys.includes(key)) keys.push(key);
+    }
+    
+    return keys;
+  } catch (error) {
+    console.error("Error getting all storage keys:", error);
+    return [];
   }
 };

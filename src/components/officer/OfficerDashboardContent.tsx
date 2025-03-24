@@ -9,6 +9,7 @@ import ApprovedOrganizers from "./ApprovedOrganizers";
 import { useToast } from "@/components/ui/use-toast";
 import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
 import { getAllUsersFromStorage } from "@/utils/userUtils";
+import { syncStorage } from "@/utils/storageUtils";
 
 const OfficerDashboardContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("organizers"); // Default to organizers tab to highlight approval feature
@@ -22,6 +23,11 @@ const OfficerDashboardContent: React.FC = () => {
   // Function to load all data
   const loadAllData = () => {
     try {
+      // Ensure storage is synced
+      syncStorage('ncr_users');
+      syncStorage('ncr_players');
+      syncStorage('ncr_tournaments');
+      
       // Load tournaments based on their status
       const allTournaments = getAllTournaments();
       setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
@@ -31,7 +37,7 @@ const OfficerDashboardContent: React.FC = () => {
       const allPlayers = getAllPlayers();
       setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
       
-      // Load pending organizers
+      // Load pending organizers directly from storage for the most up-to-date data
       const allUsers = getAllUsersFromStorage();
       const filteredOrganizers = allUsers.filter(
         (user) => user.role === "tournament_organizer" && user.status === "pending"
@@ -48,13 +54,26 @@ const OfficerDashboardContent: React.FC = () => {
     loadAllData();
   }, [refreshKey]);
   
-  // Set up an interval to refresh data periodically
+  // Set up an interval to refresh data periodically and listen for storage events
   useEffect(() => {
     const intervalId = setInterval(() => {
       loadAllData();
-    }, 10000); // Refresh every 10 seconds
+    }, 3000); // Refresh every 3 seconds for real-time updates
     
-    return () => clearInterval(intervalId);
+    // Add event listener for storage changes from other tabs/devices
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
+        console.log(`Storage event detected for ${e.key}, reloading dashboard data`);
+        loadAllData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
   
   const refreshDashboard = () => {

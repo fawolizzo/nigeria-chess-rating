@@ -6,6 +6,7 @@ import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
 import { getAllTournaments, getAllPlayers, getAllUsers } from "@/lib/mockData";
 import ResetSystemData from "@/components/ResetSystemData";
+import { syncStorage } from "@/utils/storageUtils";
 
 const OfficerDashboard: React.FC = () => {
   const { currentUser, isLoading, logout } = useUser();
@@ -16,6 +17,11 @@ const OfficerDashboard: React.FC = () => {
     if (!isLoading && (!currentUser || currentUser.role !== "rating_officer")) {
       navigate("/login");
     }
+    
+    // Ensure storage is synced between localStorage and sessionStorage
+    syncStorage('ncr_users');
+    syncStorage('ncr_players');
+    syncStorage('ncr_tournaments');
     
     // Load pending data counts
     const loadPendingCounts = () => {
@@ -52,10 +58,23 @@ const OfficerDashboard: React.FC = () => {
     
     loadPendingCounts();
     
-    // Set up an interval to refresh the counts
-    const interval = setInterval(loadPendingCounts, 30000); // Update every 30 seconds
+    // Set up an interval to refresh the counts more frequently
+    const interval = setInterval(loadPendingCounts, 5000); // Update every 5 seconds
     
-    return () => clearInterval(interval);
+    // Listen for storage changes from other tabs/devices
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
+        console.log(`Storage event detected for ${e.key}, reloading counts`);
+        loadPendingCounts();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [currentUser, isLoading, navigate]);
   
   const handleSystemReset = () => {
