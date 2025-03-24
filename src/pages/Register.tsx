@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -330,5 +331,108 @@ const Register = () => {
                   )}
                 />
                 
-                {
+                {showAccessCode && (
+                  <div className="space-y-2">
+                    <label htmlFor="accessCode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Access Code
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="accessCode"
+                        type="password"
+                        placeholder="Enter rating officer access code"
+                        className="pl-10"
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Rating Officer registration requires an access code.
+                      Please contact the Nigerian Chess Federation to obtain one.
+                    </p>
+                  </div>
+                )}
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input 
+                            placeholder="Create a password" 
+                            className="pl-10" 
+                            type="password"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input 
+                            placeholder="Confirm your password" 
+                            className="pl-10" 
+                            type="password"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="pt-2">
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center">
+                        <ClipboardCheck className="animate-spin h-4 w-4 mr-2" />
+                        Registering...
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Register Account
+                      </span>
+                    )}
+                  </Button>
+                </div>
+                
+                <div className="text-center mt-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Already have an account?{" "}
+                    <Link to="/login" className="font-medium text-primary hover:underline">
+                      Log in
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            </Form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
+export default Register;
