@@ -317,4 +317,6 @@ export const useUser = () => {
   return context;
 };
 
-export { User, UserContextType } from '@/types/userTypes';
+// Fix the re-export syntax to use 'export type' for types
+export type { User, UserContextType } from '@/types/userTypes';
+
