@@ -112,6 +112,14 @@ function App() {
                 </RequireAuth>
               } 
             />
+            <Route 
+              path="/tournament/:id/manage" 
+              element={
+                <RequireAuth role="tournament_organizer">
+                  <TournamentManagement />
+                </RequireAuth>
+              } 
+            />
             <Route path="/tournaments" element={<Tournaments />} />
             <Route path="/tournament/:id" element={<TournamentDetails />} />
             <Route path="/players" element={<Players />} />

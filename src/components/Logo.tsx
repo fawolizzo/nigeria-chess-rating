@@ -11,16 +11,16 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({ className = "", showText = true, size = "md" }) => {
   const sizeClasses = {
     sm: "h-8",
-    md: "h-10",
-    lg: "h-16",
-    xl: "h-24"
+    md: "h-12", // Increased from h-10
+    lg: "h-20", // Increased from h-16
+    xl: "h-28"  // Increased from h-24
   };
   
   const textSizeClasses = {
     sm: "text-sm",
-    md: "text-base",
-    lg: "text-xl",
-    xl: "text-2xl"
+    md: "text-lg", // Increased from text-base
+    lg: "text-2xl", // Increased from text-xl
+    xl: "text-3xl" // Increased from text-2xl
   };
 
   return (
@@ -31,7 +31,7 @@ const Logo: React.FC<LogoProps> = ({ className = "", showText = true, size = "md
         className={`${sizeClasses[size]}`}
       />
       {showText && (
-        <span className={`ml-2 font-bold ${textSizeClasses[size]} text-nigeria-green`}>
+        <span className={`ml-3 font-bold ${textSizeClasses[size]} text-nigeria-green`}>
           NCR System
         </span>
       )}

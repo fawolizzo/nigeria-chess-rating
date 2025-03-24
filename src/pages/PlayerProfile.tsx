@@ -29,6 +29,7 @@ const PlayerProfile = () => {
   useEffect(() => {
     console.log("PlayerProfile component mounting, player ID:", id);
     setIsLoading(true);
+    setLoadError(null);
     
     if (id) {
       try {
@@ -78,11 +79,25 @@ const PlayerProfile = () => {
   };
 
   if (isLoading) {
-    return <PlayerProfileSkeleton />;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
+          <PlayerProfileSkeleton />
+        </div>
+      </div>
+    );
   }
 
-  if (!player) {
-    return <PlayerProfileError error={loadError} onBackClick={handleBackToPlayers} />;
+  if (!player || loadError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
+          <PlayerProfileError error={loadError} onBackClick={handleBackToPlayers} />
+        </div>
+      </div>
+    );
   }
 
   return (

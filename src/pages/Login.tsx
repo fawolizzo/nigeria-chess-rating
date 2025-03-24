@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle } from "lucide-react";
@@ -12,14 +11,12 @@ import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Form validation schema
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
   role: z.enum(["tournament_organizer", "rating_officer"]),
 });
 
-// Define the form data type based on the schema
 type LoginFormData = z.infer<typeof loginSchema>;
 
 const Login = () => {
@@ -30,7 +27,6 @@ const Login = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const isMobile = useIsMobile();
   
-  // Check if already logged in
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role === "tournament_organizer") {
@@ -59,10 +55,8 @@ const Login = () => {
     try {
       console.log(`Login attempt - Email: ${data.email}, Role: ${data.role}`);
       
-      // Clear any existing error
       setErrorMessage("");
       
-      // Try to login with case-insensitive email
       const normalizedEmail = data.email.toLowerCase().trim();
       
       const success = await login(
@@ -75,19 +69,18 @@ const Login = () => {
         setSuccessMessage("Login successful!");
         console.log("Login successful, redirecting...");
         
-        // Redirect based on role
         setTimeout(() => {
           if (data.role === "tournament_organizer") {
-            navigate("/organizer/dashboard");
+            navigate("/organizer/dashboard", { replace: true });
           } else {
-            navigate("/officer/dashboard");
+            navigate("/officer/dashboard", { replace: true });
           }
-        }, 1000);
+        }, 500);
       } else {
         console.log("Login failed in component");
         setErrorMessage("Invalid credentials or your account is pending approval");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error in component:", error);
       setErrorMessage(error.message || "Login failed. Please try again.");
     } finally {
@@ -125,7 +118,6 @@ const Login = () => {
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                {/* Role Selection */}
                 <div className={isMobile ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-4"}>
                   <div
                     className={`cursor-pointer rounded-md border p-4 flex flex-col items-center justify-center text-center ${
@@ -174,7 +166,6 @@ const Login = () => {
                 
                 <input type="hidden" {...form.register("role")} />
                 
-                {/* Email */}
                 <FormField
                   control={form.control}
                   name="email"
@@ -198,7 +189,6 @@ const Login = () => {
                   )}
                 />
                 
-                {/* Password */}
                 <FormField
                   control={form.control}
                   name="password"
@@ -224,7 +214,6 @@ const Login = () => {
                   )}
                 />
                 
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"

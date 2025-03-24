@@ -19,31 +19,40 @@ const OfficerDashboardContent: React.FC = () => {
   const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   
+  // Function to load all data
+  const loadAllData = () => {
+    try {
+      // Load tournaments based on their status
+      const allTournaments = getAllTournaments();
+      setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
+      setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
+      
+      // Load pending players
+      const allPlayers = getAllPlayers();
+      setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
+      
+      // Load pending organizers
+      const allUsers = getAllUsersFromStorage();
+      const filteredOrganizers = allUsers.filter(
+        (user) => user.role === "tournament_organizer" && user.status === "pending"
+      );
+      setPendingOrganizers(filteredOrganizers);
+      console.log("Pending organizers count:", filteredOrganizers.length);
+    } catch (error) {
+      console.error("Error loading dashboard data:", error);
+    }
+  };
+  
+  // Initial load and refresh when the key changes
   useEffect(() => {
-    // Load tournaments based on their status
-    const allTournaments = getAllTournaments();
-    setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
-    setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
-    
-    // Load pending players
-    const allPlayers = getAllPlayers();
-    setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
-    
-    // Load pending organizers
-    const allUsers = getAllUsersFromStorage();
-    const filteredOrganizers = allUsers.filter(
-      (user) => user.role === "tournament_organizer" && user.status === "pending"
-    );
-    setPendingOrganizers(filteredOrganizers);
-    console.log("Pending organizers count:", filteredOrganizers.length);
-    
+    loadAllData();
   }, [refreshKey]);
   
   // Set up an interval to refresh data periodically
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setRefreshKey(prev => prev + 1);
-    }, 5000); // Refresh every 5 seconds
+      loadAllData();
+    }, 10000); // Refresh every 10 seconds
     
     return () => clearInterval(intervalId);
   }, []);
@@ -60,7 +69,7 @@ const OfficerDashboardContent: React.FC = () => {
     setActiveTab(value);
     
     // Refresh data when switching tabs
-    refreshDashboard();
+    loadAllData();
   };
   
   return (
@@ -88,7 +97,14 @@ const OfficerDashboardContent: React.FC = () => {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="pending-tournaments">Pending Tournaments</TabsTrigger>
+          <TabsTrigger value="pending-tournaments">
+            Pending Tournaments
+            {pendingTournaments.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
+                {pendingTournaments.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="approved-tournaments">
             Tournaments
             {completedTournaments.length > 0 && (
@@ -108,10 +124,16 @@ const OfficerDashboardContent: React.FC = () => {
           <PlayerManagement onPlayerApproval={refreshDashboard} />
         </TabsContent>
         <TabsContent value="pending-tournaments" className="p-4">
-          <PendingTournamentApprovals 
-            tournaments={pendingTournaments}
-            onApprovalUpdate={refreshDashboard} 
-          />
+          {pendingTournaments.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-md">
+              <p className="text-muted-foreground">No pending tournaments to approve</p>
+            </div>
+          ) : (
+            <PendingTournamentApprovals 
+              tournaments={pendingTournaments}
+              onApprovalUpdate={refreshDashboard} 
+            />
+          )}
         </TabsContent>
         <TabsContent value="approved-tournaments" className="p-4">
           <ApprovedTournaments 

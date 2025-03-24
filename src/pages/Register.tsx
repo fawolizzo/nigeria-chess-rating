@@ -25,7 +25,6 @@ import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "@/components/ui/use-toast";
 
-// Nigerian states list
 const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
   "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", 
@@ -35,7 +34,6 @@ const nigerianStates = [
   "Yobe", "Zamfara"
 ];
 
-// Form validation schema
 const registerSchema = z.object({
   fullName: z.string().min(3, "Full name must be at least 3 characters"),
   email: z.string().email("Please enter a valid email address"),
@@ -49,7 +47,6 @@ const registerSchema = z.object({
   path: ["confirmPassword"]
 });
 
-// Define the form data type based on the schema
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
@@ -84,7 +81,6 @@ const Register = () => {
     setIsSubmitting(true);
     setErrorMessage("");
     
-    // Check if trying to register as rating officer but access code is incorrect
     if (data.role === "rating_officer" && accessCode !== "NCR2025") {
       setErrorMessage("Invalid access code for Rating Officer registration");
       setIsSubmitting(false);
@@ -92,13 +88,31 @@ const Register = () => {
     }
     
     try {
+      const normalizedData = {
+        ...data,
+        email: data.email.toLowerCase().trim()
+      };
+      
+      try {
+        const storedUsers = localStorage.getItem('ncr_users');
+        if (storedUsers) {
+          const users = JSON.parse(storedUsers);
+          const filteredUsers = users.filter((user: any) => 
+            user.email.toLowerCase() !== normalizedData.email.toLowerCase()
+          );
+          localStorage.setItem('ncr_users', JSON.stringify(filteredUsers));
+        }
+      } catch (storageError) {
+        console.error("Error cleaning up storage:", storageError);
+      }
+      
       const success = await registerUser({
-        fullName: data.fullName,
-        email: data.email,
-        phoneNumber: data.phoneNumber,
-        state: data.state,
-        role: data.role as 'tournament_organizer' | 'rating_officer',
-        password: data.password // In a real app, you'd hash this
+        fullName: normalizedData.fullName,
+        email: normalizedData.email,
+        phoneNumber: normalizedData.phoneNumber,
+        state: normalizedData.state,
+        role: normalizedData.role as 'tournament_organizer' | 'rating_officer',
+        password: normalizedData.password
       });
       
       if (success) {
@@ -109,7 +123,6 @@ const Register = () => {
             description: "A confirmation email has been sent to your email address.",
           });
 
-          // Show different toast if there are rating officers to notify
           const ratingOfficerEmails = getRatingOfficerEmails();
           if (ratingOfficerEmails.length > 0) {
             toast({
@@ -122,18 +135,16 @@ const Register = () => {
           setSuccessMessage("Rating Officer account created successfully!");
         }
         
-        // Reset form after success
         form.reset();
         setAccessCode("");
         
-        // Redirect to login after short delay
         setTimeout(() => {
           navigate("/login");
         }, 3000);
       } else {
         setErrorMessage("Registration failed. Please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       setErrorMessage(error.message || "Registration failed");
     } finally {
       setIsSubmitting(false);
@@ -170,7 +181,6 @@ const Register = () => {
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                {/* Role Selection */}
                 <div className="grid grid-cols-2 gap-4 mb-2">
                   <div
                     className={`cursor-pointer rounded-md border p-4 flex flex-col items-center justify-center text-center ${
@@ -225,7 +235,6 @@ const Register = () => {
                 
                 <input type="hidden" {...form.register("role")} />
                 
-                {/* Full Name */}
                 <FormField
                   control={form.control}
                   name="fullName"
@@ -247,7 +256,6 @@ const Register = () => {
                   )}
                 />
                 
-                {/* Email */}
                 <FormField
                   control={form.control}
                   name="email"
@@ -270,7 +278,6 @@ const Register = () => {
                   )}
                 />
                 
-                {/* Phone Number */}
                 <FormField
                   control={form.control}
                   name="phoneNumber"
@@ -292,7 +299,6 @@ const Register = () => {
                   )}
                 />
                 
-                {/* State */}
                 <FormField
                   control={form.control}
                   name="state"
@@ -324,111 +330,5 @@ const Register = () => {
                   )}
                 />
                 
-                {/* Access Code for Rating Officer */}
-                {showAccessCode && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Access Code
-                    </label>
-                    <div className="relative">
-                      <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        type="password"
-                        placeholder="Enter Rating Officer access code"
-                        className="pl-10"
-                        value={accessCode}
-                        onChange={(e) => setAccessCode(e.target.value)}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Required for Rating Officer registration
-                    </p>
-                  </div>
-                )}
-                
-                {/* Password */}
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            placeholder="Create a password" 
-                            className="pl-10" 
-                            type="password"
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Confirm Password */}
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            placeholder="Confirm your password" 
-                            className="pl-10" 
-                            type="password"
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Register Account
-                    </>
-                  )}
-                </Button>
-                
-                <div className="mt-4 text-center text-sm">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Already have an account?{" "}
-                    <Link to="/login" className="text-black dark:text-white font-medium hover:underline">
-                      Sign in
-                    </Link>
-                  </p>
-                </div>
-              </form>
-            </Form>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+                {
 
-export default Register;
