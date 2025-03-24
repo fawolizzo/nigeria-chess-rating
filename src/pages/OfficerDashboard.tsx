@@ -6,26 +6,31 @@ import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
 import { getAllTournaments, getAllPlayers, getAllUsers } from "@/lib/mockData";
 import ResetSystemData from "@/components/ResetSystemData";
-import { syncStorage } from "@/utils/storageUtils";
+import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
+import { useToast } from "@/components/ui/use-toast";
 
 const OfficerDashboard: React.FC = () => {
   const { currentUser, isLoading, logout } = useUser();
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
+  const { toast } = useToast();
   
   useEffect(() => {
     if (!isLoading && (!currentUser || currentUser.role !== "rating_officer")) {
       navigate("/login");
     }
     
-    // Ensure storage is synced between localStorage and sessionStorage
-    syncStorage('ncr_users');
-    syncStorage('ncr_players');
-    syncStorage('ncr_tournaments');
+    // Force sync storage on first load to ensure we have the latest data
+    forceSyncAllStorage();
     
     // Load pending data counts
     const loadPendingCounts = () => {
       try {
+        // Ensure storage is synced between localStorage and sessionStorage
+        syncStorage('ncr_users');
+        syncStorage('ncr_players');
+        syncStorage('ncr_tournaments');
+        
         // Load pending tournaments count
         const allTournaments = getAllTournaments();
         const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
@@ -53,18 +58,26 @@ const OfficerDashboard: React.FC = () => {
         });
       } catch (error) {
         console.error("Error loading pending counts:", error);
+        toast({
+          title: "Error Loading Data",
+          description: "There was a problem loading pending approvals.",
+          variant: "destructive"
+        });
       }
     };
     
     loadPendingCounts();
     
     // Set up an interval to refresh the counts more frequently
-    const interval = setInterval(loadPendingCounts, 5000); // Update every 5 seconds
+    const interval = setInterval(loadPendingCounts, 2000); // Update every 2 seconds
     
     // Listen for storage changes from other tabs/devices
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
         console.log(`Storage event detected for ${e.key}, reloading counts`);
+        
+        // Force sync all storage when a storage event is detected
+        forceSyncAllStorage();
         loadPendingCounts();
       }
     };
@@ -75,7 +88,7 @@ const OfficerDashboard: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [currentUser, isLoading, navigate]);
+  }, [currentUser, isLoading, navigate, toast]);
   
   const handleSystemReset = () => {
     // Log out the current user after reset

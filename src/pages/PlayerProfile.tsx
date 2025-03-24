@@ -13,6 +13,8 @@ import PlayerProfileSkeleton from "@/components/player/PlayerProfileSkeleton";
 import PlayerProfileError from "@/components/player/PlayerProfileError";
 import PlayerProfileHeader from "@/components/player/PlayerProfileHeader";
 import { initializePlayerData, debugPlayer } from "@/lib/playerDataUtils";
+import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
+import { useToast } from "@/components/ui/use-toast";
 
 const PlayerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,7 @@ const PlayerProfile = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { currentUser } = useUser();
   const [loadError, setLoadError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Check if the current user is a rating officer
   const isRatingOfficer = currentUser?.role === 'rating_officer';
@@ -37,41 +40,76 @@ const PlayerProfile = () => {
       return;
     }
     
-    try {
-      const loadedPlayer = getPlayerById(id);
-      console.log("Raw loaded player:", loadedPlayer);
-      
-      if (loadedPlayer) {
-        // Initialize player data with all required fields
-        const updatedPlayer = initializePlayerData(loadedPlayer);
-        
-        // Debug the prepared player data
-        debugPlayer(updatedPlayer);
-        
-        setPlayer(updatedPlayer);
-        setLoadError(null);
-      } else {
-        console.error("Player not found with ID:", id);
-        setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
-      }
-    } catch (error: any) {
-      console.error("Error loading player:", error);
-      setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
-    }
+    // Force sync all storage to ensure we have the latest data
+    forceSyncAllStorage();
     
-    setIsLoading(false);
-  }, [id]);
+    // Add a small delay to ensure data is synchronized
+    const loadPlayerTimer = setTimeout(() => {
+      try {
+        // Specifically sync the players data
+        syncStorage('ncr_players');
+        
+        const loadedPlayer = getPlayerById(id);
+        console.log("Raw loaded player:", loadedPlayer);
+        
+        if (loadedPlayer) {
+          // Initialize player data with all required fields
+          const updatedPlayer = initializePlayerData(loadedPlayer);
+          
+          // Debug the prepared player data
+          debugPlayer(updatedPlayer);
+          
+          setPlayer(updatedPlayer);
+          setLoadError(null);
+        } else {
+          console.error("Player not found with ID:", id);
+          setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
+          
+          toast({
+            title: "Player Not Found",
+            description: "The player you're looking for doesn't exist or has been removed.",
+            variant: "destructive",
+          });
+        }
+      } catch (error: any) {
+        console.error("Error loading player:", error);
+        setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
+        
+        toast({
+          title: "Error Loading Profile",
+          description: `${error.message || "An unknown error occurred"}. Please try again.`,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+    
+    return () => clearTimeout(loadPlayerTimer);
+  }, [id, toast]);
 
   const handleEditSuccess = () => {
-    // Reload player data after successful edit
+    // Force sync and reload player data after successful edit
+    forceSyncAllStorage();
+    
     if (id) {
       try {
         const updatedPlayer = getPlayerById(id);
         if (updatedPlayer) {
           setPlayer(initializePlayerData(updatedPlayer));
+          
+          toast({
+            title: "Profile Updated",
+            description: "The player profile has been successfully updated.",
+          });
         }
       } catch (error: any) {
         console.error("Error reloading player after edit:", error);
+        toast({
+          title: "Update Error",
+          description: "Could not reload player data after update.",
+          variant: "destructive",
+        });
       }
     }
   };

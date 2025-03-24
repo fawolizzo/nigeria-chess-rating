@@ -23,6 +23,12 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
 
   const isTitleVerified = player.titleVerified && player.title;
   
+  // Ensure player has a valid ID
+  if (!player.id) {
+    console.error("Player missing ID:", player);
+    return null;
+  }
+  
   return (
     <Link
       to={`/player/${player.id}`}

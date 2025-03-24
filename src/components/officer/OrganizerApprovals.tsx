@@ -4,7 +4,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 import { getAllUsersFromStorage } from "@/utils/userUtils";
-import { syncStorage } from "@/utils/storageUtils";
+import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
 
 const OrganizerApprovals: React.FC = () => {
   const { approveUser, rejectUser, users } = useUser();
@@ -16,7 +16,10 @@ const OrganizerApprovals: React.FC = () => {
   useEffect(() => {
     const loadPendingOrganizers = () => {
       try {
-        // Ensure storage is synced between localStorage and sessionStorage
+        // Force sync all storage first to ensure cross-device compatibility
+        forceSyncAllStorage();
+        
+        // Specifically sync the users data
         syncStorage('ncr_users');
         
         // Get users from storage
@@ -53,6 +56,7 @@ const OrganizerApprovals: React.FC = () => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'ncr_users') {
         console.log("Storage event detected for users, reloading organizers");
+        forceSyncAllStorage();
         loadPendingOrganizers();
       }
     };
@@ -71,6 +75,8 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer approved",
       description: "The tournament organizer has been approved successfully.",
     });
+    // Force sync after approval
+    forceSyncAllStorage();
     setRefreshTrigger(prev => prev + 1); // Trigger re-render
   };
 
@@ -80,6 +86,8 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer rejected",
       description: "The tournament organizer has been rejected.",
     });
+    // Force sync after rejection
+    forceSyncAllStorage();
     setRefreshTrigger(prev => prev + 1); // Trigger re-render
   };
 

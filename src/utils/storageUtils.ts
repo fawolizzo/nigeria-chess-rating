@@ -89,6 +89,35 @@ export const syncStorage = (key: string): void => {
   }
 };
 
+// Force sync of all storage between localStorage and sessionStorage
+export const forceSyncAllStorage = (): void => {
+  try {
+    // Get all keys from localStorage
+    const localKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) localKeys.push(key);
+    }
+    
+    // Get all keys from sessionStorage
+    const sessionKeys = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key) sessionKeys.push(key);
+    }
+    
+    // Combine unique keys
+    const allKeys = [...new Set([...localKeys, ...sessionKeys])];
+    
+    // Sync each key
+    allKeys.forEach(key => syncStorage(key));
+    
+    console.log("All storage synchronized between localStorage and sessionStorage");
+  } catch (error) {
+    console.error("Error syncing all storage:", error);
+  }
+};
+
 // Function to get all keys in storage
 export const getAllStorageKeys = (): string[] => {
   try {
