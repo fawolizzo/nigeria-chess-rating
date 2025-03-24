@@ -227,7 +227,7 @@ export function generateSwissPairings(
         break;
       }
     }
-  }
+  });
 
   // Handle unpaired players (they might need to be paired across score groups)
   // Start with the highest-rated unpaired player
