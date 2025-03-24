@@ -48,7 +48,7 @@ const PlayerProfile = () => {
           console.error("Player not found with ID:", id);
           setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
         }
-      } catch (error) {
+      } catch (error: any) { // Add explicit any type here to fix possible error
         console.error("Error loading player:", error);
         setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
       }
@@ -67,7 +67,7 @@ const PlayerProfile = () => {
         if (updatedPlayer) {
           setPlayer(initializePlayerData(updatedPlayer));
         }
-      } catch (error) {
+      } catch (error: any) { // Add explicit any type here
         console.error("Error reloading player after edit:", error);
       }
     }

@@ -8,14 +8,16 @@ import ApprovedTournaments from "./ApprovedTournaments";
 import ApprovedOrganizers from "./ApprovedOrganizers";
 import { useToast } from "@/components/ui/use-toast";
 import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
+import { getAllUsersFromStorage } from "@/utils/userUtils";
 
 const OfficerDashboardContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("players"); // Default to players tab to highlight import feature
+  const [activeTab, setActiveTab] = useState<string>("organizers"); // Default to organizers tab to highlight approval feature
   const { toast } = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
   const [pendingTournaments, setPendingTournaments] = useState<any[]>([]);
   const [completedTournaments, setCompletedTournaments] = useState<any[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
+  const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   
   useEffect(() => {
     // Load tournaments based on their status
@@ -26,7 +28,25 @@ const OfficerDashboardContent: React.FC = () => {
     // Load pending players
     const allPlayers = getAllPlayers();
     setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
+    
+    // Load pending organizers
+    const allUsers = getAllUsersFromStorage();
+    const filteredOrganizers = allUsers.filter(
+      (user) => user.role === "tournament_organizer" && user.status === "pending"
+    );
+    setPendingOrganizers(filteredOrganizers);
+    console.log("Pending organizers count:", filteredOrganizers.length);
+    
   }, [refreshKey]);
+  
+  // Set up an interval to refresh data periodically
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, []);
   
   const refreshDashboard = () => {
     setRefreshKey(prev => prev + 1);
@@ -39,29 +59,27 @@ const OfficerDashboardContent: React.FC = () => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     
-    // Refresh data when switching to the tournaments tab
-    if (value === "approved-tournaments") {
-      const allTournaments = getAllTournaments();
-      setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
-    }
-    
-    // Refresh data when switching to the players tab
-    if (value === "players") {
-      const allPlayers = getAllPlayers();
-      setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
-    }
+    // Refresh data when switching tabs
+    refreshDashboard();
   };
   
   return (
     <div>
       <Tabs 
-        defaultValue="players" 
+        defaultValue="organizers" 
         value={activeTab} 
         onValueChange={handleTabChange}
         className="w-full"
       >
         <TabsList className="grid grid-cols-4 mb-0 border-b rounded-none w-full">
-          <TabsTrigger value="organizers">Organizers</TabsTrigger>
+          <TabsTrigger value="organizers">
+            Organizers
+            {pendingOrganizers.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
+                {pendingOrganizers.length}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="players">
             Players
             {pendingPlayers.length > 0 && (

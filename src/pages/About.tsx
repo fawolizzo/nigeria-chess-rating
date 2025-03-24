@@ -112,7 +112,7 @@ const About = () => {
             <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
               <div className="p-4 rounded-lg border">
                 <h3 className="font-semibold mb-2">Email</h3>
-                <p className="text-gray-600 dark:text-gray-400">contact@nigerianrating.org</p>
+                <p className="text-gray-600 dark:text-gray-400">nigeriachessrating@gmail.com</p>
               </div>
               
               <div className="p-4 rounded-lg border">
