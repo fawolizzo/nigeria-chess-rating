@@ -1,9 +1,8 @@
 
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { Player } from "@/lib/mockData";
 import { ArrowUp, ArrowDown, Check, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { forceSyncAllStorage } from "@/utils/storageUtils";
 
@@ -14,6 +13,7 @@ interface PlayerCardProps {
 
 const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   const { toast } = useToast();
+  const [isNavigating, setIsNavigating] = useState(false);
   const [hasError, setHasError] = useState(false);
   
   // Validate player data before displaying
@@ -29,7 +29,6 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
     latestRating;
     
   const ratingChange = latestRating - previousRating;
-
   const isTitleVerified = player.titleVerified && player.title;
   
   // Handle invalid player data
@@ -64,20 +63,43 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   
   const handlePlayerClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    console.log("[PlayerCard] Clicked on player:", player.id, player);
     
-    // Force storage sync before navigation
-    forceSyncAllStorage();
+    // Prevent multiple rapid clicks
+    if (isNavigating) return;
     
-    // Store the player ID in sessionStorage for faster loading
+    setIsNavigating(true);
+    console.log("[PlayerCard] Initiating navigation to player profile:", player.id);
+    
     try {
-      sessionStorage.setItem('last_viewed_player_id', player.id);
-      sessionStorage.setItem('last_viewed_player', JSON.stringify(player));
+      // Force storage sync before navigation
+      forceSyncAllStorage();
       
-      // Navigate to player profile
-      window.location.href = `/player/${player.id}`;
+      // Store the player data in sessionStorage for faster loading
+      try {
+        const playerJson = JSON.stringify(player);
+        sessionStorage.setItem('last_viewed_player_id', player.id);
+        sessionStorage.setItem('last_viewed_player', playerJson);
+        console.log("[PlayerCard] Successfully cached player data:", player.id);
+      } catch (cacheError) {
+        console.error("[PlayerCard] Failed to cache player data:", cacheError);
+        // Continue anyway - this is just an optimization
+      }
+      
+      // Show loading toast
+      toast({
+        title: "Loading Profile",
+        description: `Opening ${player.name}'s profile...`,
+      });
+      
+      // Use direct navigation instead of React Router to ensure a clean state
+      setTimeout(() => {
+        window.location.href = `/player/${player.id}`;
+      }, 50);
+      
     } catch (error) {
-      console.error("Error preparing navigation:", error);
+      console.error("[PlayerCard] Navigation error:", error);
+      setIsNavigating(false);
+      
       toast({
         title: "Navigation Error",
         description: "There was a problem opening this player profile. Please try again.",
@@ -88,7 +110,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   
   return (
     <Card 
-      className="h-full relative overflow-hidden transition-all duration-300 border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-nigeria-green/40 dark:hover:border-nigeria-green-light/30 cursor-pointer"
+      className={`h-full relative overflow-hidden transition-all duration-300 border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-nigeria-green/40 dark:hover:border-nigeria-green-light/30 cursor-pointer ${isNavigating ? 'opacity-70 pointer-events-none' : ''}`}
       onClick={handlePlayerClick}
     >
       <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-nigeria-green via-nigeria-green-light to-nigeria-yellow opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

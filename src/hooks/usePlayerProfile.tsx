@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Player } from "@/lib/mockData";
 import { getPlayerById } from "@/lib/mockData";
 import { initializePlayerData } from "@/lib/playerDataUtils";
@@ -20,11 +21,24 @@ export const usePlayerProfile = (playerId: string | undefined) => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const loadingTimerRef = useRef<number | null>(null);
   const { toast } = useToast();
+
+  // Function to clear any pending timers
+  const clearLoadingTimers = useCallback(() => {
+    if (loadingTimerRef.current !== null) {
+      clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+  }, []);
 
   // Function to load player data, can be called for retries
   const loadPlayerData = useCallback(() => {
     console.log(`[usePlayerProfile] Loading player data for ID: ${playerId}, attempt: ${loadAttempts + 1}`);
+    
+    // Clear any existing timers
+    clearLoadingTimers();
+    
     setIsLoading(true);
     setLoadError(null);
     setLoadAttempts(prev => prev + 1);
@@ -43,6 +57,8 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     const cachedPlayerId = sessionStorage.getItem('last_viewed_player_id');
     const cachedPlayerJSON = sessionStorage.getItem('last_viewed_player');
     
+    console.log(`[usePlayerProfile] Checking cache: ID ${cachedPlayerId}, Data exists: ${!!cachedPlayerJSON}`);
+    
     // If we have a cached player that matches the requested ID, use it immediately
     // but still load from main storage in the background
     let cachedPlayer: Player | null = null;
@@ -51,14 +67,16 @@ export const usePlayerProfile = (playerId: string | undefined) => {
       try {
         cachedPlayer = safeJSONParse(cachedPlayerJSON, null);
         if (cachedPlayer && validatePlayerData(cachedPlayer)) {
-          console.log("[usePlayerProfile] Using cached player data:", cachedPlayer.id);
+          console.log("[usePlayerProfile] Using cached player data:", cachedPlayer.id, cachedPlayer.name);
           
           // Initialize player data with all required fields
           const initializedPlayer = initializePlayerData(cachedPlayer);
           
           // Set player data immediately to improve perceived performance
           setPlayer(initializedPlayer);
-          // Keep loading to fetch the latest data from main storage
+          // Continue with regular loading to fetch the latest data from main storage
+        } else {
+          console.warn("[usePlayerProfile] Cached player data failed validation");
         }
       } catch (error) {
         console.warn("[usePlayerProfile] Error parsing cached player:", error);
@@ -67,13 +85,22 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     }
     
     // Add a small delay to ensure data is synchronized
-    const loadPlayerTimer = setTimeout(() => {
+    loadingTimerRef.current = window.setTimeout(() => {
       try {
         // Specifically sync the players data
         syncStorage('ncr_players');
         
-        const loadedPlayer = getPlayerById(playerId);
-        console.log("[usePlayerProfile] Raw loaded player:", loadedPlayer);
+        // Try to get player from storage first
+        let loadedPlayer: Player | null = null;
+        
+        try {
+          loadedPlayer = getPlayerById(playerId);
+          console.log("[usePlayerProfile] Raw loaded player:", loadedPlayer ? "Found" : "Not found", 
+            loadedPlayer ? `(ID: ${loadedPlayer.id}, Name: ${loadedPlayer.name})` : "");
+        } catch (storageError) {
+          console.error("[usePlayerProfile] Error accessing storage:", storageError);
+          throw new Error("Could not access player data storage. Please reload the page.");
+        }
         
         if (loadedPlayer) {
           // Validate player data
@@ -84,7 +111,7 @@ export const usePlayerProfile = (playerId: string | undefined) => {
           
           // Initialize player data with all required fields
           const updatedPlayer = initializePlayerData(loadedPlayer);
-          console.log("[usePlayerProfile] Initialized player:", updatedPlayer);
+          console.log("[usePlayerProfile] Initialized player:", updatedPlayer.id, updatedPlayer.name);
           
           setPlayer(updatedPlayer);
           setLoadError(null);
@@ -102,6 +129,8 @@ export const usePlayerProfile = (playerId: string | undefined) => {
           // If we're using cached data but couldn't find the player in storage,
           // keep using the cached player but show a warning
           if (cachedPlayer) {
+            console.log("[usePlayerProfile] Falling back to cached data");
+            
             toast({
               title: "Using Cached Data",
               description: "Showing cached player data. Some information may not be current.",
@@ -109,6 +138,7 @@ export const usePlayerProfile = (playerId: string | undefined) => {
             });
           } else {
             setLoadError("Player not found. The player might have been deleted or the ID is incorrect.");
+            setPlayer(null);
             
             toast({
               title: "Player Not Found",
@@ -130,6 +160,7 @@ export const usePlayerProfile = (playerId: string | undefined) => {
           });
         } else {
           setLoadError(`Error loading player data: ${error.message || "Unknown error"}. Please try again.`);
+          setPlayer(null);
           
           toast({
             title: "Error Loading Profile",
@@ -139,11 +170,16 @@ export const usePlayerProfile = (playerId: string | undefined) => {
         }
       } finally {
         setIsLoading(false);
+        loadingTimerRef.current = null;
       }
     }, 300); // Shorter delay for better responsiveness
     
-    return () => clearTimeout(loadPlayerTimer);
-  }, [playerId, loadAttempts, toast]);
+    return () => {
+      if (loadingTimerRef.current !== null) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    };
+  }, [playerId, loadAttempts, toast, clearLoadingTimers]);
 
   // Load player data after ID changes
   useEffect(() => {
@@ -160,8 +196,9 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      clearLoadingTimers();
     };
-  }, [playerId, loadPlayerData]);
+  }, [playerId, loadPlayerData, clearLoadingTimers]);
 
   // Function to update player data (e.g., after edits)
   const refreshPlayerData = useCallback(() => {
