@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getPlayerById } from "@/lib/mockData";
 import Navbar from "@/components/Navbar";
@@ -13,7 +13,12 @@ import PlayerProfileSkeleton from "@/components/player/PlayerProfileSkeleton";
 import PlayerProfileError from "@/components/player/PlayerProfileError";
 import PlayerProfileHeader from "@/components/player/PlayerProfileHeader";
 import { initializePlayerData, debugPlayer } from "@/lib/playerDataUtils";
-import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
+import { 
+  syncStorage, 
+  forceSyncAllStorage, 
+  initializeStorageListeners,
+  validatePlayerData
+} from "@/utils/storageUtils";
 import { useToast } from "@/components/ui/use-toast";
 
 const PlayerProfile = () => {
@@ -24,15 +29,23 @@ const PlayerProfile = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { currentUser } = useUser();
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempts, setLoadAttempts] = useState(0);
   const { toast } = useToast();
 
   // Check if the current user is a rating officer
   const isRatingOfficer = currentUser?.role === 'rating_officer';
 
+  // Initialize storage listeners on mount
   useEffect(() => {
-    console.log("PlayerProfile component mounting, player ID:", id);
+    initializeStorageListeners();
+  }, []);
+
+  // Function to load player data, can be called for retries
+  const loadPlayerData = useCallback(() => {
+    console.log(`Loading player data for ID: ${id}, attempt: ${loadAttempts + 1}`);
     setIsLoading(true);
     setLoadError(null);
+    setLoadAttempts(prev => prev + 1);
     
     if (!id) {
       setLoadError("No player ID provided.");
@@ -53,6 +66,11 @@ const PlayerProfile = () => {
         console.log("Raw loaded player:", loadedPlayer);
         
         if (loadedPlayer) {
+          // Validate player data
+          if (!validatePlayerData(loadedPlayer)) {
+            throw new Error("Player data is incomplete or invalid");
+          }
+          
           // Initialize player data with all required fields
           const updatedPlayer = initializePlayerData(loadedPlayer);
           
@@ -83,10 +101,16 @@ const PlayerProfile = () => {
       } finally {
         setIsLoading(false);
       }
-    }, 300);
+    }, 500); // Increased delay for better chance of data synchronization
     
     return () => clearTimeout(loadPlayerTimer);
-  }, [id, toast]);
+  }, [id, loadAttempts, toast]);
+
+  // Load player data when component mounts or ID changes
+  useEffect(() => {
+    console.log("PlayerProfile component mounting or ID changing, player ID:", id);
+    loadPlayerData();
+  }, [id, loadPlayerData]);
 
   const handleEditSuccess = () => {
     // Force sync and reload player data after successful edit
@@ -118,25 +142,23 @@ const PlayerProfile = () => {
     navigate("/players");
   };
 
+  // Handle retry logic
+  const handleRetry = () => {
+    console.log("Retrying player data load...");
+    loadPlayerData();
+  };
+
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
-          <PlayerProfileSkeleton />
-        </div>
-      </div>
-    );
+    return <PlayerProfileSkeleton onBackClick={handleBackToPlayers} />;
   }
 
   if (!player || loadError) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
-          <PlayerProfileError error={loadError} onBackClick={handleBackToPlayers} />
-        </div>
-      </div>
+      <PlayerProfileError 
+        error={loadError} 
+        onBackClick={handleBackToPlayers} 
+        onRetry={handleRetry}
+      />
     );
   }
 

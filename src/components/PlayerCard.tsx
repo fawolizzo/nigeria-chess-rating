@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Player } from "@/lib/mockData";
 import { ArrowUp, ArrowDown, Check, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface PlayerCardProps {
   player: Player;
@@ -10,6 +12,9 @@ interface PlayerCardProps {
 }
 
 const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
+  const { toast } = useToast();
+  const [hasError, setHasError] = useState(false);
+  
   const ratingHistory = player.ratingHistory || [];
   const latestRating = ratingHistory.length > 0 ? 
     ratingHistory[ratingHistory.length - 1].rating : 
@@ -26,13 +31,47 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   // Ensure player has a valid ID
   if (!player.id) {
     console.error("Player missing ID:", player);
-    return null;
+    
+    if (!hasError) {
+      setHasError(true);
+      toast({
+        title: "Invalid Player Data",
+        description: "This player has incomplete information and cannot be viewed.",
+        variant: "destructive"
+      });
+    }
+    
+    return (
+      <Card className="h-full opacity-50 border-red-200 dark:border-red-800">
+        <CardContent className="p-5">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+              <User className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium">Invalid Player Data</h3>
+              <p className="text-sm text-red-500">Missing required information</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
   
   return (
     <Link
       to={`/player/${player.id}`}
       className="group block transition-all duration-300"
+      onClick={() => {
+        console.log("Navigating to player profile:", player.id, player);
+        // Force storage sync before navigation
+        try {
+          const storageEvent = new Event('storage');
+          window.dispatchEvent(storageEvent);
+        } catch (e) {
+          console.error("Could not dispatch storage event:", e);
+        }
+      }}
     >
       <Card className="h-full relative overflow-hidden transition-all duration-300 border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-nigeria-green/40 dark:hover:border-nigeria-green-light/30">
         <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-nigeria-green via-nigeria-green-light to-nigeria-yellow opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

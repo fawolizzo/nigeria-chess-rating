@@ -52,6 +52,19 @@ export const saveToStorage = (key: string, data: any): void => {
     const dataJSON = safeJSONStringify(data);
     localStorage.setItem(key, dataJSON);
     sessionStorage.setItem(key, dataJSON);
+    
+    // Attempt to trigger a storage event to notify other tabs
+    try {
+      // This is a hack to trigger storage events manually
+      // The storage event only fires when another tab changes storage
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframe.contentWindow?.localStorage.setItem(`sync_${key}`, Date.now().toString());
+      setTimeout(() => document.body.removeChild(iframe), 100);
+    } catch (e) {
+      console.error("Could not dispatch cross-tab notification:", e);
+    }
   } catch (error) {
     console.error(`Error saving ${key} to storage:`, error);
   }
@@ -70,6 +83,7 @@ export const removeFromStorage = (key: string): void => {
 // Function to synchronize data between localStorage and sessionStorage
 export const syncStorage = (key: string): void => {
   try {
+    console.log(`Syncing storage for key: ${key}`);
     // Get from localStorage first
     const localValue = localStorage.getItem(key);
     
@@ -84,6 +98,8 @@ export const syncStorage = (key: string): void => {
     if (sessionValue) {
       localStorage.setItem(key, sessionValue);
     }
+    
+    console.log(`Storage sync complete for key: ${key}`);
   } catch (error) {
     console.error(`Error syncing ${key} between storages:`, error);
   }
@@ -92,6 +108,7 @@ export const syncStorage = (key: string): void => {
 // Force sync of all storage between localStorage and sessionStorage
 export const forceSyncAllStorage = (): void => {
   try {
+    console.log("Starting forceSyncAllStorage...");
     // Get all keys from localStorage
     const localKeys = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -108,9 +125,15 @@ export const forceSyncAllStorage = (): void => {
     
     // Combine unique keys
     const allKeys = [...new Set([...localKeys, ...sessionKeys])];
+    console.log("All storage keys to sync:", allKeys);
     
     // Sync each key
-    allKeys.forEach(key => syncStorage(key));
+    allKeys.forEach(key => {
+      // Only sync NCR data
+      if (key.startsWith('ncr_')) {
+        syncStorage(key);
+      }
+    });
     
     console.log("All storage synchronized between localStorage and sessionStorage");
   } catch (error) {
@@ -139,4 +162,39 @@ export const getAllStorageKeys = (): string[] => {
     console.error("Error getting all storage keys:", error);
     return [];
   }
+};
+
+// Initialize storage event listeners
+export const initializeStorageListeners = (): void => {
+  try {
+    console.log("Initializing storage event listeners");
+    
+    // Listen for storage events from other tabs/windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith('ncr_')) {
+        console.log(`Storage event detected for key: ${e.key}`);
+        syncStorage(e.key);
+      }
+    };
+    
+    // Remove any existing listeners to prevent duplicates
+    window.removeEventListener('storage', handleStorageChange);
+    
+    // Add the listener
+    window.addEventListener('storage', handleStorageChange);
+    
+    console.log("Storage event listeners initialized");
+  } catch (error) {
+    console.error("Error initializing storage listeners:", error);
+  }
+};
+
+// Function to validate that a player object is complete
+export const validatePlayerData = (player: any): boolean => {
+  if (!player) return false;
+  if (!player.id) return false;
+  if (!player.name) return false;
+  if (typeof player.rating !== 'number') return false;
+  
+  return true;
 };
