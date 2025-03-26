@@ -1,4 +1,5 @@
 import { getAllUsersFromStorage } from "@/utils/userUtils";
+import { FLOOR_RATING } from "./ratingCalculation";
 
 export interface Player {
   id: string;
@@ -199,23 +200,23 @@ export const addPlayer = (newPlayer: Player): void => {
   
   // Assign floor rating (800) to any missing format ratings without adding any bonus
   if (newPlayer.rapidRating === undefined) {
-    newPlayer.rapidRating = 800;
+    newPlayer.rapidRating = FLOOR_RATING;
     newPlayer.rapidGamesPlayed = 0;
     newPlayer.rapidRatingStatus = 'provisional';
     newPlayer.rapidRatingHistory = [{
       date: new Date().toISOString(),
-      rating: 800,
+      rating: FLOOR_RATING,
       reason: "Initial rating"
     }];
   }
   
   if (newPlayer.blitzRating === undefined) {
-    newPlayer.blitzRating = 800;
+    newPlayer.blitzRating = FLOOR_RATING;
     newPlayer.blitzGamesPlayed = 0;
     newPlayer.blitzRatingStatus = 'provisional';
     newPlayer.blitzRatingHistory = [{
       date: new Date().toISOString(),
-      rating: 800,
+      rating: FLOOR_RATING,
       reason: "Initial rating"
     }];
   }
@@ -315,7 +316,7 @@ export const createPlayer = (playerData: any): Player => {
   const newPlayer: Player = {
     id: ncrId,
     name: playerData.fullName || playerData.name,
-    rating: playerData.rating || 800,
+    rating: playerData.rating || FLOOR_RATING,
     gender: playerData.gender || 'M',
     state: playerData.state || '',
     city: playerData.city || '',
@@ -324,22 +325,22 @@ export const createPlayer = (playerData: any): Player => {
     tournamentResults: [],
     ratingHistory: [{
       date: new Date().toISOString(),
-      rating: playerData.rating || 800,
+      rating: playerData.rating || FLOOR_RATING,
       reason: "Initial rating"
     }],
     // Add floor ratings for all formats without adding any bonus
-    rapidRating: playerData.rapidRating || 800,
-    blitzRating: playerData.blitzRating || 800,
+    rapidRating: playerData.rapidRating || FLOOR_RATING,
+    blitzRating: playerData.blitzRating || FLOOR_RATING,
     rapidGamesPlayed: playerData.rapidGamesPlayed || 0,
     blitzGamesPlayed: playerData.blitzGamesPlayed || 0,
     rapidRatingHistory: [{
       date: new Date().toISOString(),
-      rating: playerData.rapidRating || 800,
+      rating: playerData.rapidRating || FLOOR_RATING,
       reason: "Initial rating"
     }],
     blitzRatingHistory: [{
       date: new Date().toISOString(),
-      rating: playerData.blitzRating || 800,
+      rating: playerData.blitzRating || FLOOR_RATING,
       reason: "Initial rating"
     }]
   };
@@ -408,4 +409,3 @@ export const deleteUser = (userId: string): void => {
   const filteredUsers = allUsers.filter(user => user.id !== userId);
   saveUsers(filteredUsers);
 };
-

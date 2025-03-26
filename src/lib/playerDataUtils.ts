@@ -1,5 +1,6 @@
 
 import { Player } from "@/lib/mockData";
+import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
 // Debug function to log player data details
 export const debugPlayer = (player: any) => {
@@ -29,38 +30,38 @@ export const initializePlayerData = (playerData: any): Player => {
       : [],
     
     // Ensure rating and rating history exist
-    rating: playerCopy.rating || 800,
+    rating: playerCopy.rating || FLOOR_RATING,
     gamesPlayed: playerCopy.gamesPlayed || 0,
     ratingStatus: playerCopy.ratingStatus || 'provisional',
     ratingHistory: Array.isArray(playerCopy.ratingHistory) && playerCopy.ratingHistory.length > 0
       ? playerCopy.ratingHistory
       : [{
           date: new Date().toISOString(),
-          rating: playerCopy.rating || 800,
+          rating: playerCopy.rating || FLOOR_RATING,
           reason: "Initial rating"
         }],
     
-    // Ensure rapid rating data exists - use 800 as floor rating with no bonus
-    rapidRating: playerCopy.rapidRating !== undefined ? playerCopy.rapidRating : 800,
+    // Ensure rapid rating data exists - use FLOOR_RATING without any bonus
+    rapidRating: playerCopy.rapidRating !== undefined ? playerCopy.rapidRating : FLOOR_RATING,
     rapidGamesPlayed: playerCopy.rapidGamesPlayed || 0,
     rapidRatingStatus: playerCopy.rapidRatingStatus || 'provisional',
     rapidRatingHistory: Array.isArray(playerCopy.rapidRatingHistory) && playerCopy.rapidRatingHistory.length > 0
       ? playerCopy.rapidRatingHistory
       : [{
           date: new Date().toISOString(),
-          rating: 800,
+          rating: FLOOR_RATING,
           reason: "Initial rating"
         }],
     
-    // Ensure blitz rating data exists - use 800 as floor rating with no bonus
-    blitzRating: playerCopy.blitzRating !== undefined ? playerCopy.blitzRating : 800,
+    // Ensure blitz rating data exists - use FLOOR_RATING without any bonus
+    blitzRating: playerCopy.blitzRating !== undefined ? playerCopy.blitzRating : FLOOR_RATING,
     blitzGamesPlayed: playerCopy.blitzGamesPlayed || 0,
     blitzRatingStatus: playerCopy.blitzRatingStatus || 'provisional',
     blitzRatingHistory: Array.isArray(playerCopy.blitzRatingHistory) && playerCopy.blitzRatingHistory.length > 0
       ? playerCopy.blitzRatingHistory
       : [{
           date: new Date().toISOString(),
-          rating: 800,
+          rating: FLOOR_RATING,
           reason: "Initial rating"
         }],
   };

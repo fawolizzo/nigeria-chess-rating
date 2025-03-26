@@ -65,18 +65,6 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
   const minRating = Math.max(Math.floor((lowestRating - 50) / 100) * 100, FLOOR_RATING); // Never go below floor rating
   const maxRating = Math.ceil((highestRating + 50) / 100) * 100;
 
-  // Adjust games played for display if player has a +100 rating
-  const getDisplayedGamesPlayed = () => {
-    const hasPlus100 = String(currentRating).endsWith('100');
-    const actualGamesPlayed = getGamesPlayed();
-    
-    // If player has +100 rating, ensure displayed games count starts at 31
-    if (hasPlus100) {
-      return Math.max(31, actualGamesPlayed);
-    }
-    return actualGamesPlayed;
-  };
-
   // Get K-factor description based on rating and games played
   const getKFactorDescription = (rating: number, gamesPlayed: number = 0) => {
     // If rating ends with 100, treat as experienced player
@@ -101,7 +89,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
   };
 
   // Calculate displayed games played
-  const displayedGamesPlayed = getDisplayedGamesPlayed();
+  const displayedGamesPlayed = getGamesPlayed();
 
   return (
     <Card className={className}>
@@ -177,7 +165,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
           </>
         ) : (
           <div className="flex items-center justify-center h-72 text-gray-500">
-            {currentRating === FLOOR_RATING && ratingHistory.length === 0 
+            {currentRating === FLOOR_RATING && ratingHistory.length <= 1 
               ? `No ${ratingType} rating history yet. Starting at floor rating ${FLOOR_RATING}.`
               : `Insufficient ${ratingType} rating history data to display chart`
             }
