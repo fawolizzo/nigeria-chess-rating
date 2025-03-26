@@ -22,7 +22,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
     
     if (format === "classical") {
       history = player.ratingHistory?.map(entry => ({
-        date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
+        date: entry.date ? new Date(entry.date).toLocaleDateString() : "Unknown",
         rating: entry.rating
       })) || [];
       statusLabel = player.ratingStatus || "Provisional";
@@ -30,7 +30,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
       currentRating = player.rating || 0;
     } else if (format === "rapid") {
       history = player.rapidRatingHistory?.map(entry => ({
-        date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
+        date: entry.date ? new Date(entry.date).toLocaleDateString() : "Unknown",
         rating: entry.rating
       })) || [];
       statusLabel = player.rapidRatingStatus || "Provisional";
@@ -38,7 +38,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
       currentRating = player.rapidRating || 0;
     } else if (format === "blitz") {
       history = player.blitzRatingHistory?.map(entry => ({
-        date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
+        date: entry.date ? new Date(entry.date).toLocaleDateString() : "Unknown",
         rating: entry.rating
       })) || [];
       statusLabel = player.blitzRatingStatus || "Provisional";
