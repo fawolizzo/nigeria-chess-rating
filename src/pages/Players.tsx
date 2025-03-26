@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ const Players = () => {
   const [displayCount, setDisplayCount] = useState(10);
   const [nigerianStatesList, setNigerianStatesList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Load states
@@ -51,11 +49,6 @@ const Players = () => {
     };
     
     fetchPlayers();
-    
-    // Set up interval to periodically refresh player data
-    const intervalId = setInterval(fetchPlayers, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(intervalId);
   }, []);
 
   const filteredPlayers = players.filter(player => {
@@ -70,10 +63,6 @@ const Players = () => {
     
     return matchesSearch && matchesState;
   });
-
-  const handleViewPlayerProfile = (playerId: string) => {
-    navigate(`/player/${playerId}`);
-  };
 
   // Early loading state
   if (isLoading && players.length === 0) {
