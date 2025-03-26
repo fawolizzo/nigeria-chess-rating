@@ -16,6 +16,8 @@ const PlayerProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [initialLoadAttempted, setInitialLoadAttempted] = useState(false);
+  const [maxRetryAttempts] = useState(3);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Use the custom hook
   const { 
@@ -35,7 +37,12 @@ const PlayerProfile = () => {
     console.log("[PlayerProfile] Cached player ID in session storage:", cachedPlayerId);
     
     // Sync storage and load data
-    forceSyncAllStorage();
+    try {
+      forceSyncAllStorage();
+    } catch (storageError) {
+      console.error("[PlayerProfile] Error syncing storage:", storageError);
+      // Continue anyway and let the hook handle errors
+    }
     
     // Check if ID exists in the URL
     if (!id) {
@@ -54,13 +61,7 @@ const PlayerProfile = () => {
       const checkPlayer = getPlayerById(id);
       if (!checkPlayer) {
         console.error("[PlayerProfile] Player ID not found in database:", id);
-        toast({
-          title: "Player Not Found",
-          description: "The requested player could not be found. Redirecting to players list.",
-          variant: "destructive",
-        });
-        navigate("/players");
-        return;
+        // Don't redirect - let the standard error handling show the error message
       }
     } catch (error) {
       console.warn("[PlayerProfile] Error checking player existence:", error);
@@ -81,6 +82,7 @@ const PlayerProfile = () => {
     hasError: !!loadError, 
     hasPlayer: !!player,
     initialLoadAttempted,
+    retryCount,
     playerData: player ? `${player.id} - ${player.name}` : 'null'
   });
 
@@ -96,6 +98,37 @@ const PlayerProfile = () => {
     }
   }, [isLoading, initialLoadAttempted, loadPlayerData]);
 
+  // Handle retry with retry count limit
+  const handleRetry = () => {
+    if (retryCount >= maxRetryAttempts) {
+      console.warn("[PlayerProfile] Max retry attempts reached");
+      toast({
+        title: "Too Many Attempts",
+        description: "Please return to the players list and try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log("[PlayerProfile] Manual retry initiated by user, attempt:", retryCount + 1);
+    setRetryCount(prev => prev + 1);
+    
+    // Clear session storage cache to ensure fresh data
+    sessionStorage.removeItem('last_viewed_player_id');
+    sessionStorage.removeItem('last_viewed_player');
+    
+    // Ensure storage is synced before retry
+    forceSyncAllStorage(); 
+    
+    // Attempt to load data again
+    loadPlayerData();
+    
+    toast({
+      title: "Retrying",
+      description: `Attempt ${retryCount + 1} of ${maxRetryAttempts} to load player data...`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -109,21 +142,13 @@ const PlayerProfile = () => {
         <PlayerProfileError 
           error={loadError} 
           onBackClick={handleBackClick} 
-          onRetry={() => {
-            console.log("[PlayerProfile] Manual retry initiated by user");
-            forceSyncAllStorage(); // Ensure storage is synced before retry
-            loadPlayerData();
-          }}
+          onRetry={handleRetry}
         />
       ) : !player ? (
         <PlayerProfileError 
           error="Could not load player data. Please try again." 
           onBackClick={handleBackClick} 
-          onRetry={() => {
-            console.log("[PlayerProfile] Manual retry for missing player data");
-            forceSyncAllStorage();
-            loadPlayerData();
-          }}
+          onRetry={handleRetry}
         />
       ) : (
         <PlayerProfileContainer 

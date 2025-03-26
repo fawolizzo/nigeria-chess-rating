@@ -71,6 +71,11 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
     console.log("[PlayerCard] Initiating navigation to player profile:", player.id);
     
     try {
+      // Ensure the player data is valid
+      if (!validatePlayerData(player)) {
+        throw new Error("Invalid player data");
+      }
+      
       // Force storage sync before navigation
       forceSyncAllStorage();
       
@@ -82,7 +87,12 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
         console.log("[PlayerCard] Successfully cached player data:", player.id);
       } catch (cacheError) {
         console.error("[PlayerCard] Failed to cache player data:", cacheError);
-        // Continue anyway - this is just an optimization
+        // Show error but continue anyway - this is just an optimization
+        toast({
+          title: "Cache Warning",
+          description: "Could not cache player data, profile may load slower.",
+          variant: "warning",
+        });
       }
       
       // Show loading toast
@@ -91,9 +101,9 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
         description: `Opening ${player.name}'s profile...`,
       });
       
-      // Use direct navigation instead of React Router to ensure a clean state
+      // Use direct navigation and include timestamp to prevent caching issues
       setTimeout(() => {
-        window.location.href = `/player/${player.id}`;
+        window.location.href = `/player/${player.id}?t=${Date.now()}`;
       }, 50);
       
     } catch (error) {
@@ -107,6 +117,15 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
       });
     }
   };
+  
+  // Helper function to validate player data
+  function validatePlayerData(player: any): boolean {
+    if (!player) return false;
+    if (!player.id) return false;
+    if (!player.name) return false;
+    if (typeof player.rating !== 'number') return false;
+    return true;
+  }
   
   return (
     <Card 

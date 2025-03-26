@@ -22,13 +22,18 @@ export const usePlayerProfile = (playerId: string | undefined) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const loadingTimerRef = useRef<number | null>(null);
+  const timeoutTimerRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   // Function to clear any pending timers
-  const clearLoadingTimers = useCallback(() => {
+  const clearAllTimers = useCallback(() => {
     if (loadingTimerRef.current !== null) {
       clearTimeout(loadingTimerRef.current);
       loadingTimerRef.current = null;
+    }
+    if (timeoutTimerRef.current !== null) {
+      clearTimeout(timeoutTimerRef.current);
+      timeoutTimerRef.current = null;
     }
   }, []);
 
@@ -37,7 +42,7 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     console.log(`[usePlayerProfile] Loading player data for ID: ${playerId}, attempt: ${loadAttempts + 1}`);
     
     // Clear any existing timers
-    clearLoadingTimers();
+    clearAllTimers();
     
     setIsLoading(true);
     setLoadError(null);
@@ -83,6 +88,32 @@ export const usePlayerProfile = (playerId: string | undefined) => {
         // Continue with regular loading if cache fails
       }
     }
+    
+    // Set a timeout to handle cases where data loading takes too long
+    timeoutTimerRef.current = window.setTimeout(() => {
+      if (isLoading) {
+        console.warn("[usePlayerProfile] Data loading timeout occurred");
+        
+        // If we have cached data, use it and show a warning
+        if (cachedPlayer) {
+          setIsLoading(false);
+          toast({
+            title: "Using Cached Data",
+            description: "Could not refresh with latest data. Using cached version instead.",
+            variant: "warning",
+          });
+        } else {
+          // No cached data available, show error
+          setIsLoading(false);
+          setLoadError("Loading timed out. Please try again.");
+          toast({
+            title: "Loading Timeout",
+            description: "Player data took too long to load. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
+    }, 8000); // 8 second timeout
     
     // Add a small delay to ensure data is synchronized
     loadingTimerRef.current = window.setTimeout(() => {
@@ -171,15 +202,18 @@ export const usePlayerProfile = (playerId: string | undefined) => {
       } finally {
         setIsLoading(false);
         loadingTimerRef.current = null;
+        // Clear the timeout timer since we're done loading
+        if (timeoutTimerRef.current !== null) {
+          clearTimeout(timeoutTimerRef.current);
+          timeoutTimerRef.current = null;
+        }
       }
     }, 300); // Shorter delay for better responsiveness
     
     return () => {
-      if (loadingTimerRef.current !== null) {
-        clearTimeout(loadingTimerRef.current);
-      }
+      clearAllTimers();
     };
-  }, [playerId, loadAttempts, toast, clearLoadingTimers]);
+  }, [playerId, loadAttempts, toast, clearAllTimers]);
 
   // Load player data after ID changes
   useEffect(() => {
@@ -196,9 +230,9 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearLoadingTimers();
+      clearAllTimers();
     };
-  }, [playerId, loadPlayerData, clearLoadingTimers]);
+  }, [playerId, loadPlayerData, clearAllTimers]);
 
   // Function to update player data (e.g., after edits)
   const refreshPlayerData = useCallback(() => {

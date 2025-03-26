@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertTriangle, RefreshCw, Home, HelpCircle } from "lucide-react";
+import { ArrowLeft, AlertTriangle, RefreshCw, Home, HelpCircle, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { forceSyncAllStorage } from "@/utils/storageUtils";
@@ -28,6 +28,23 @@ const PlayerProfileError: React.FC<PlayerProfileErrorProps> = ({
     
     // Check storage state
     try {
+      // Test storage access
+      try {
+        localStorage.setItem('diagnostic_test', 'test');
+        localStorage.removeItem('diagnostic_test');
+        
+        sessionStorage.setItem('diagnostic_test', 'test');
+        sessionStorage.removeItem('diagnostic_test');
+      } catch (storageAccessError) {
+        console.error("[DIAGNOSTICS] Storage access failed:", storageAccessError);
+        toast({
+          title: "Storage Access Error",
+          description: "Your browser is blocking access to local storage. Try disabling private browsing mode.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Force sync storage
       forceSyncAllStorage();
       
@@ -35,19 +52,49 @@ const PlayerProfileError: React.FC<PlayerProfileErrorProps> = ({
       const diagnosticReport = {
         url: window.location.href,
         playerId: window.location.pathname.split('/').pop(),
+        browserInfo: {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          cookiesEnabled: navigator.cookieEnabled,
+          isOnline: navigator.onLine,
+        },
         localStorage: {
           keys: Object.keys(localStorage).filter(key => key.startsWith('ncr_')),
           playersExists: !!localStorage.getItem('ncr_players'),
+          playersSize: localStorage.getItem('ncr_players')?.length || 0,
         },
         sessionStorage: {
           keys: Object.keys(sessionStorage),
           cachedPlayerId: sessionStorage.getItem('last_viewed_player_id'),
           hasCachedPlayer: !!sessionStorage.getItem('last_viewed_player'),
+          cachedPlayerSize: sessionStorage.getItem('last_viewed_player')?.length || 0,
         },
-        error: error
+        error: error,
+        timestamp: new Date().toISOString()
       };
       
       console.log("[DIAGNOSTICS] Player Profile Error Report:", diagnosticReport);
+      
+      // Attempt to repair the cached data
+      const cachedPlayerId = sessionStorage.getItem('last_viewed_player_id');
+      if (cachedPlayerId) {
+        try {
+          const players = JSON.parse(localStorage.getItem('ncr_players') || '[]');
+          const matchingPlayer = Array.isArray(players) ? 
+            players.find(p => p.id === cachedPlayerId) : null;
+            
+          if (matchingPlayer) {
+            console.log("[DIAGNOSTICS] Found matching player in storage, updating cache");
+            sessionStorage.setItem('last_viewed_player', JSON.stringify(matchingPlayer));
+            toast({
+              title: "Cache Repaired",
+              description: "Successfully repaired player cache data.",
+            });
+          }
+        } catch (repairError) {
+          console.error("[DIAGNOSTICS] Cache repair failed:", repairError);
+        }
+      }
       
       toast({
         title: "Diagnostics Complete",
@@ -66,6 +113,46 @@ const PlayerProfileError: React.FC<PlayerProfileErrorProps> = ({
         variant: "destructive",
       });
     }
+  };
+  
+  const clearCacheAndRetry = () => {
+    console.log("[PlayerProfileError] Clearing cache and retrying");
+    
+    // Clear session storage cache
+    try {
+      sessionStorage.removeItem('last_viewed_player_id');
+      sessionStorage.removeItem('last_viewed_player');
+      
+      toast({
+        title: "Cache Cleared",
+        description: "Temporary data has been cleared. Retrying...",
+      });
+      
+      // After clearing cache, retry if function provided
+      if (onRetry) {
+        setTimeout(onRetry, 300);
+      }
+    } catch (error) {
+      console.error("[PlayerProfileError] Error clearing cache:", error);
+      toast({
+        title: "Error",
+        description: "Could not clear cache. Please try refreshing the page.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const hardRefresh = () => {
+    console.log("[PlayerProfileError] Performing hard refresh");
+    toast({
+      title: "Refreshing Page",
+      description: "Reloading the page from server...",
+    });
+    
+    // Force a reload from server
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
   
   return (
@@ -100,6 +187,11 @@ const PlayerProfileError: React.FC<PlayerProfileErrorProps> = ({
             </Button>
           )}
           
+          <Button onClick={clearCacheAndRetry} variant="secondary" className="flex items-center gap-2">
+            <RotateCcw className="h-4 w-4" />
+            Clear Cache & Retry
+          </Button>
+          
           <Link to="/">
             <Button variant="secondary">
               <Home className="h-4 w-4 mr-2" />
@@ -108,14 +200,25 @@ const PlayerProfileError: React.FC<PlayerProfileErrorProps> = ({
           </Link>
         </div>
         
-        <Button 
-          variant="link" 
-          className="text-nigeria-green hover:text-nigeria-green-dark mt-2"
-          onClick={runDiagnostics}
-        >
-          <HelpCircle className="h-4 w-4 mr-1" />
-          Run Diagnostics
-        </Button>
+        <div className="flex justify-center gap-3 mt-4">
+          <Button 
+            variant="link" 
+            className="text-nigeria-green hover:text-nigeria-green-dark"
+            onClick={runDiagnostics}
+          >
+            <HelpCircle className="h-4 w-4 mr-1" />
+            Run Diagnostics
+          </Button>
+          
+          <Button 
+            variant="link" 
+            className="text-nigeria-green hover:text-nigeria-green-dark"
+            onClick={hardRefresh}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Hard Refresh
+          </Button>
+        </div>
       </div>
     </div>
   );
