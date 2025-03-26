@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Player } from "@/lib/mockData";
 import { ArrowUp, ArrowDown, Check, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { forceSyncAllStorage } from "@/utils/storageUtils";
+import { useNavigate } from "react-router-dom";
 
 interface PlayerCardProps {
   player: Player;
@@ -13,6 +12,7 @@ interface PlayerCardProps {
 
 const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isNavigating, setIsNavigating] = useState(false);
   const [hasError, setHasError] = useState(false);
   
@@ -61,6 +61,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
     );
   }
   
+  // Improved player click handler using React Router
   const handlePlayerClick = (e: React.MouseEvent) => {
     e.preventDefault();
     
@@ -68,44 +69,19 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
     if (isNavigating) return;
     
     setIsNavigating(true);
-    console.log("[PlayerCard] Initiating navigation to player profile:", player.id);
+    console.log("[PlayerCard] Navigating to player profile:", player.id);
     
     try {
-      // Ensure the player data is valid
-      if (!validatePlayerData(player)) {
-        throw new Error("Invalid player data");
-      }
-      
-      // Force storage sync before navigation
-      forceSyncAllStorage();
-      
-      // Store the player data in sessionStorage for faster loading
+      // Cache the player data directly in localStorage for faster access
+      const playerJson = JSON.stringify(player);
       try {
-        const playerJson = JSON.stringify(player);
-        sessionStorage.setItem('last_viewed_player_id', player.id);
-        sessionStorage.setItem('last_viewed_player', playerJson);
-        console.log("[PlayerCard] Successfully cached player data:", player.id);
+        localStorage.setItem(`player_${player.id}`, playerJson);
       } catch (cacheError) {
-        console.error("[PlayerCard] Failed to cache player data:", cacheError);
-        // Show error but continue anyway - this is just an optimization
-        toast({
-          title: "Cache Warning",
-          description: "Could not cache player data, profile may load slower.",
-          variant: "warning",
-        });
+        console.warn("[PlayerCard] Failed to cache player data:", cacheError);
       }
       
-      // Show loading toast
-      toast({
-        title: "Loading Profile",
-        description: `Opening ${player.name}'s profile...`,
-      });
-      
-      // Use direct navigation and include timestamp to prevent caching issues
-      setTimeout(() => {
-        window.location.href = `/player/${player.id}?t=${Date.now()}`;
-      }, 50);
-      
+      // Use React Router for navigation instead of direct window.location
+      navigate(`/player/${player.id}`);
     } catch (error) {
       console.error("[PlayerCard] Navigation error:", error);
       setIsNavigating(false);
@@ -117,15 +93,6 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
       });
     }
   };
-  
-  // Helper function to validate player data
-  function validatePlayerData(player: any): boolean {
-    if (!player) return false;
-    if (!player.id) return false;
-    if (!player.name) return false;
-    if (typeof player.rating !== 'number') return false;
-    return true;
-  }
   
   return (
     <Card 

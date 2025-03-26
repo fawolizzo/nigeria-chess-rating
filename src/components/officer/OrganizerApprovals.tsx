@@ -3,8 +3,6 @@ import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/components/ui/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
-import { getAllUsersFromStorage } from "@/utils/userUtils";
-import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
 
 const OrganizerApprovals: React.FC = () => {
   const { approveUser, rejectUser, users } = useUser();
@@ -12,29 +10,16 @@ const OrganizerApprovals: React.FC = () => {
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load pending organizers directly from storage to ensure we get the latest data
+  // Load pending organizers directly from context
   useEffect(() => {
     const loadPendingOrganizers = () => {
       try {
-        // Force sync all storage first to ensure cross-device compatibility
-        forceSyncAllStorage();
-        
-        // Specifically sync the users data
-        syncStorage('ncr_users');
-        
-        // Get users from storage
-        const allUsers = getAllUsersFromStorage();
-        console.log("All users loaded from storage:", allUsers);
-        
-        // Also check the users from context
-        console.log("Users from context:", users);
-        
-        // Filter for pending tournament organizers
-        const filteredUsers = allUsers.filter(
+        // Filter for pending tournament organizers directly from context
+        const filteredUsers = users.filter(
           (user) => user.role === "tournament_organizer" && user.status === "pending"
         );
         
-        console.log("Filtered pending organizers:", filteredUsers);
+        console.log("Filtered pending organizers:", filteredUsers.length);
         setPendingOrganizers(filteredUsers);
       } catch (error) {
         console.error("Error loading pending organizers:", error);
@@ -49,23 +34,11 @@ const OrganizerApprovals: React.FC = () => {
     // Load immediately
     loadPendingOrganizers();
     
-    // Set up interval to refresh the data more frequently (every 1 second to ensure cross-device updates)
-    const interval = setInterval(loadPendingOrganizers, 1000);
-    
-    // Add storage event listener to detect changes from other tabs/windows
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'ncr_users') {
-        console.log("Storage event detected for users, reloading organizers");
-        forceSyncAllStorage();
-        loadPendingOrganizers();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
+    // Set up interval to refresh the data (every 2 seconds to ensure updates)
+    const interval = setInterval(loadPendingOrganizers, 2000);
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
     };
   }, [refreshTrigger, toast, users]);
 
@@ -75,8 +48,6 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer approved",
       description: "The tournament organizer has been approved successfully.",
     });
-    // Force sync after approval
-    forceSyncAllStorage();
     setRefreshTrigger(prev => prev + 1); // Trigger re-render
   };
 
@@ -86,8 +57,6 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer rejected",
       description: "The tournament organizer has been rejected.",
     });
-    // Force sync after rejection
-    forceSyncAllStorage();
     setRefreshTrigger(prev => prev + 1); // Trigger re-render
   };
 

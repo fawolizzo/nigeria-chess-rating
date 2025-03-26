@@ -69,6 +69,16 @@ const Login = () => {
         setSuccessMessage("Login successful!");
         console.log("Login successful, redirecting...");
         
+        try {
+          const usersData = localStorage.getItem('ncr_users');
+          if (usersData) {
+            const users = JSON.parse(usersData);
+            console.log(`[Login] Found ${users.length} users in localStorage`);
+          }
+        } catch (storageError) {
+          console.error("[Login] Error checking storage:", storageError);
+        }
+        
         setTimeout(() => {
           if (data.role === "tournament_organizer") {
             navigate("/organizer/dashboard", { replace: true });
