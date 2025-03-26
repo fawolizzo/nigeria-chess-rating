@@ -14,13 +14,13 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
   const [activeTab, setActiveTab] = useState("overview");
   
   // Prepare rating data directly in the component
-  const prepareRatingData = (format: "classical" | "rapid" | "blitz") => {
+  const prepareRatingData = (timeFormat: "classical" | "rapid" | "blitz") => {
     let history = [];
     let statusLabel = "Provisional";
     let gameCount = 0;
     let currentRating = 0;
     
-    if (format === "classical") {
+    if (timeFormat === "classical") {
       history = player.ratingHistory?.map(entry => ({
         date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
         rating: entry.rating
@@ -28,7 +28,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
       statusLabel = player.ratingStatus || "Provisional";
       gameCount = player.gamesPlayed || 0;
       currentRating = player.rating || 0;
-    } else if (format === "rapid") {
+    } else if (timeFormat === "rapid") {
       history = player.rapidRatingHistory?.map(entry => ({
         date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
         rating: entry.rating
@@ -36,7 +36,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
       statusLabel = player.rapidRatingStatus || "Provisional";
       gameCount = player.rapidGamesPlayed || 0;
       currentRating = player.rapidRating || 0;
-    } else if (format === "blitz") {
+    } else if (timeFormat === "blitz") {
       history = player.blitzRatingHistory?.map(entry => ({
         date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
         rating: entry.rating
@@ -66,8 +66,8 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
     
     // Filter tournament results for this format
     const tournamentResults = player.tournamentResults?.filter(result => {
-      if (format === "rapid") return result.format === "rapid";
-      if (format === "blitz") return result.format === "blitz";
+      if (timeFormat === "rapid") return result.format === "rapid";
+      if (timeFormat === "blitz") return result.format === "blitz";
       return result.format === "classical" || !result.format;
     }) || [];
     
