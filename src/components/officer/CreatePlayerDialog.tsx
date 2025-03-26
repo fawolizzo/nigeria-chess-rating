@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -106,10 +105,9 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
     }
   };
 
-  // Generate a unique NCR ID for each player
   const generateNcrId = () => {
-    const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
-    const timestamp = Date.now().toString().slice(-5); // Last 5 digits of timestamp
+    const randomPart = Math.floor(10000 + Math.random() * 90000);
+    const timestamp = Date.now().toString().slice(-5);
     return `NCR${randomPart}${timestamp}`;
   };
 
@@ -118,22 +116,21 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
       const currentDate = new Date().toISOString();
       const ncrId = generateNcrId();
       
-      // Apply +100 bonus if selected by the rating officer
       let finalClassicalRating = data.rating;
       let finalRapidRating = data.rapidRating;
       let finalBlitzRating = data.blitzRating;
       
       if (data.apply100Bonus) {
         finalClassicalRating += 100;
-        if (finalRapidRating) finalRapidRating += 100;
-        if (finalBlitzRating) finalBlitzRating += 100;
+        if (finalRapidRating !== undefined) finalRapidRating += 100;
+        if (finalBlitzRating !== undefined) finalBlitzRating += 100;
       }
       
-      // Set games played based on rating status
-      // Established ratings should start at 30 games
       const classicalGamesPlayed = data.ratingStatus === 'established' || data.apply100Bonus ? 30 : 0;
-      const rapidGamesPlayed = data.rapidRatingStatus === 'established' || data.apply100Bonus ? 30 : 0;
-      const blitzGamesPlayed = data.blitzRatingStatus === 'established' || data.apply100Bonus ? 30 : 0;
+      const rapidGamesPlayed = (data.rapidRatingStatus === 'established' && finalRapidRating !== undefined) || 
+                               (data.apply100Bonus && finalRapidRating !== undefined) ? 30 : 0;
+      const blitzGamesPlayed = (data.blitzRatingStatus === 'established' && finalBlitzRating !== undefined) || 
+                              (data.apply100Bonus && finalBlitzRating !== undefined) ? 30 : 0;
       
       const newPlayer: Player = {
         id: ncrId,
@@ -146,8 +143,12 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
         state: data.state,
         birthYear: data.birthYear,
         ratingStatus: data.apply100Bonus ? 'established' : data.ratingStatus,
-        rapidRatingStatus: data.apply100Bonus ? 'established' : data.rapidRatingStatus,
-        blitzRatingStatus: data.apply100Bonus ? 'established' : data.blitzRatingStatus,
+        rapidRatingStatus: finalRapidRating !== undefined ? 
+                          (data.apply100Bonus ? 'established' : data.rapidRatingStatus) : 
+                          'provisional',
+        blitzRatingStatus: finalBlitzRating !== undefined ? 
+                          (data.apply100Bonus ? 'established' : data.blitzRatingStatus) : 
+                          'provisional',
         gamesPlayed: classicalGamesPlayed,
         rapidGamesPlayed: rapidGamesPlayed,
         blitzGamesPlayed: blitzGamesPlayed,
@@ -162,8 +163,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
         tournamentResults: [],
       };
       
-      // Add rapid rating history if applicable
-      if (finalRapidRating) {
+      if (finalRapidRating !== undefined) {
         newPlayer.rapidRatingHistory = [
           {
             date: currentDate,
@@ -173,8 +173,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
         ];
       }
       
-      // Add blitz rating history if applicable
-      if (finalBlitzRating) {
+      if (finalBlitzRating !== undefined) {
         newPlayer.blitzRatingHistory = [
           {
             date: currentDate,
@@ -240,7 +239,6 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
           const rating = player.rating || 800;
           const currentDate = new Date().toISOString();
           
-          // Players imported already have +100 bonus and are established from FileUploadButton
           return {
             id: ncrId,
             name: player.name || "Unknown Player",
@@ -256,7 +254,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
             ratingStatus: player.ratingStatus || 'established',
             rapidRatingStatus: player.rapidRatingStatus,
             blitzRatingStatus: player.blitzRatingStatus,
-            gamesPlayed: player.gamesPlayed || 30, // Default to 30 games for established ratings
+            gamesPlayed: player.gamesPlayed || 30,
             rapidGamesPlayed: player.rapidGamesPlayed,
             blitzGamesPlayed: player.blitzGamesPlayed,
             ratingHistory: [{ 
@@ -332,7 +330,6 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <PlayerFormFields control={form.control} formState={form.formState} />
                 
-                {/* Rating status section */}
                 <div className="border rounded-md p-4 space-y-4">
                   <h3 className="font-medium">Rating Status</h3>
                   
@@ -370,7 +367,6 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                             value={field.value}
                             onValueChange={(value) => {
                               field.onChange(value);
-                              // If +100 bonus is checked, all ratings should be established
                               if (form.watch('apply100Bonus')) {
                                 form.setValue('ratingStatus', 'established');
                               }
@@ -412,7 +408,6 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                // If +100 bonus is checked, all ratings should be established
                                 if (form.watch('apply100Bonus')) {
                                   form.setValue('rapidRatingStatus', 'established');
                                 }
@@ -450,7 +445,6 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                // If +100 bonus is checked, all ratings should be established
                                 if (form.watch('apply100Bonus')) {
                                   form.setValue('blitzRatingStatus', 'established');
                                 }

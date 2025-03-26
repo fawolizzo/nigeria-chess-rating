@@ -40,8 +40,8 @@ export const initializePlayerData = (playerData: any): Player => {
           reason: "Initial rating"
         }],
     
-    // Ensure rapid rating data exists
-    rapidRating: playerCopy.rapidRating || 800,
+    // Ensure rapid rating data exists - use 800 as floor rating with no bonus
+    rapidRating: playerCopy.rapidRating !== undefined ? playerCopy.rapidRating : 800,
     rapidGamesPlayed: playerCopy.rapidGamesPlayed || 0,
     rapidRatingStatus: playerCopy.rapidRatingStatus || 'provisional',
     rapidRatingHistory: Array.isArray(playerCopy.rapidRatingHistory) && playerCopy.rapidRatingHistory.length > 0
@@ -52,8 +52,8 @@ export const initializePlayerData = (playerData: any): Player => {
           reason: "Initial rating"
         }],
     
-    // Ensure blitz rating data exists
-    blitzRating: playerCopy.blitzRating || 800,
+    // Ensure blitz rating data exists - use 800 as floor rating with no bonus
+    blitzRating: playerCopy.blitzRating !== undefined ? playerCopy.blitzRating : 800,
     blitzGamesPlayed: playerCopy.blitzGamesPlayed || 0,
     blitzRatingStatus: playerCopy.blitzRatingStatus || 'provisional',
     blitzRatingHistory: Array.isArray(playerCopy.blitzRatingHistory) && playerCopy.blitzRatingHistory.length > 0

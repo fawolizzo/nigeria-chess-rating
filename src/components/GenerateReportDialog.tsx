@@ -57,9 +57,11 @@ const GenerateReportDialog = ({
         // Get the appropriate rating based on tournament category
         const getCurrentRating = () => {
           if (tournament.category === 'rapid') {
-            return player.rapidRating ?? FLOOR_RATING;
+            // If player has no rapid rating, use floor rating without any bonus
+            return player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
           } else if (tournament.category === 'blitz') {
-            return player.blitzRating ?? FLOOR_RATING;
+            // If player has no blitz rating, use floor rating without any bonus
+            return player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
           }
           return player.rating;
         };

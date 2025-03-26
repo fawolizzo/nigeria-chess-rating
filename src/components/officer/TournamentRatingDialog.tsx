@@ -24,10 +24,8 @@ const TournamentRatingDialog = ({
 
   if (!tournament) return null;
 
-  // Get all registered players for this tournament
   const allPlayers = getAllPlayers();
   
-  // First try to get players from the players array in the tournament
   let tournamentPlayers: Player[] = [];
   if (tournament.players && tournament.players.length > 0) {
     tournamentPlayers = tournament.players.map(playerId => {
@@ -36,11 +34,9 @@ const TournamentRatingDialog = ({
     }).filter((player): player is Player => player !== undefined);
   }
   
-  // If no players found, try to find players from the pairings
   if (tournamentPlayers.length === 0 && tournament.pairings && tournament.pairings.length > 0) {
     const playerIds = new Set<string>();
     
-    // Collect all player IDs from pairings
     tournament.pairings.forEach(round => {
       round.matches.forEach(match => {
         playerIds.add(match.whiteId);
@@ -54,14 +50,12 @@ const TournamentRatingDialog = ({
     }).filter((player): player is Player => player !== undefined);
   }
   
-  // As a last resort, try the tournament results in player objects
   if (tournamentPlayers.length === 0) {
     tournamentPlayers = allPlayers.filter(player => 
       player.tournamentResults.some(result => result.tournamentId === tournament.id)
     );
   }
   
-  // Check if tournament can be processed
   const hasNoPlayers = tournamentPlayers.length === 0;
   const isNotCompleted = tournament.status !== 'completed';
   const cannotProcess = hasNoPlayers || isNotCompleted;
@@ -70,7 +64,6 @@ const TournamentRatingDialog = ({
     setIsProcessing(true);
     
     try {
-      // Double-check if tournament is in a valid state for processing
       if (cannotProcess) {
         throw new Error(
           hasNoPlayers 
@@ -79,21 +72,15 @@ const TournamentRatingDialog = ({
         );
       }
       
-      // Process each round of matches if tournament has pairings
       if (tournament.pairings && tournament.pairings.length > 0) {
-        // Track all players that participated in the tournament
         const participantIds: Record<string, boolean> = {};
         
-        // Process each round and calculate rating changes
         const processedRounds = tournament.pairings.map(round => {
-          // For each match in the round, calculate rating changes
           const processedMatches = calculatePostRoundRatings(
             round.matches.map(match => {
-              // Add players to participants
               participantIds[match.whiteId] = true;
               participantIds[match.blackId] = true;
               
-              // Find players
               let whitePlayer = allPlayers.find(p => p.id === match.whiteId);
               let blackPlayer = allPlayers.find(p => p.id === match.blackId);
               
@@ -102,19 +89,15 @@ const TournamentRatingDialog = ({
                 throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}. Please ensure all players exist in the system.`);
               }
               
-              // Get the appropriate rating based on tournament category
               const getPlayerRating = (player: Player) => {
                 if (tournament.category === 'rapid') {
-                  // Use floor rating if player has no rapid rating
                   return player.rapidRating ?? FLOOR_RATING;
                 } else if (tournament.category === 'blitz') {
-                  // Use floor rating if player has no blitz rating
                   return player.blitzRating ?? FLOOR_RATING;
                 }
                 return player.rating;
               };
               
-              // Helper function to get rating status
               const getPlayerRatingStatus = (player: Player) => {
                 if (tournament.category === 'rapid') {
                   return player.rapidRatingStatus || 'provisional';
@@ -129,13 +112,9 @@ const TournamentRatingDialog = ({
                 const ratingStatus = getPlayerRatingStatus(player);
                 
                 if (tournament.category === 'rapid') {
-                  // Start at 0 games if player has no rapid rating history
-                  const gamesPlayed = player.rapidGamesPlayed ?? 0;
-                  return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
+                  return player.rapidGamesPlayed ?? 0;
                 } else if (tournament.category === 'blitz') {
-                  // Start at 0 games if player has no blitz rating history
-                  const gamesPlayed = player.blitzGamesPlayed ?? 0;
-                  return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
+                  return player.blitzGamesPlayed ?? 0;
                 }
                 const gamesPlayed = player.gamesPlayed || 0;
                 return ratingStatus === 'established' ? Math.max(30, gamesPlayed) : gamesPlayed;
@@ -158,7 +137,6 @@ const TournamentRatingDialog = ({
           };
         });
         
-        // Calculate player rating changes
         const playerUpdates: Record<string, { 
           ratingChange: number,
           gamesPlayed: number
@@ -167,46 +145,36 @@ const TournamentRatingDialog = ({
         processedRounds.forEach(round => {
           round.matches.forEach(match => {
             if (match.result !== "*") {
-              // Track white player updates
               if (!playerUpdates[match.whiteId]) {
                 playerUpdates[match.whiteId] = { ratingChange: 0, gamesPlayed: 0 };
               }
               
-              // Track black player updates
               if (!playerUpdates[match.blackId]) {
                 playerUpdates[match.blackId] = { ratingChange: 0, gamesPlayed: 0 };
               }
               
-              // Add rating changes
               playerUpdates[match.whiteId].ratingChange += match.whiteRatingChange || 0;
               playerUpdates[match.blackId].ratingChange += match.blackRatingChange || 0;
               
-              // Increment games played
               playerUpdates[match.whiteId].gamesPlayed += 1;
               playerUpdates[match.blackId].gamesPlayed += 1;
             }
           });
         });
         
-        // Apply updates to players
         Object.entries(playerUpdates).forEach(([playerId, update]) => {
           const player = allPlayers.find(p => p.id === playerId);
           if (player) {
-            // Calculate final position based on score
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
             const updatePlayerBasedOnTournamentType = (player: Player) => {
               if (tournament.category === 'rapid') {
-                // Update rapid rating
-                // If no rapid rating yet, start with floor rating
-                const currentRapidRating = player.rapidRating ?? FLOOR_RATING;
+                const currentRapidRating = player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
                 const newRapidRating = currentRapidRating + update.ratingChange;
                 
-                // Update rapid games played
                 const currentRapidGamesPlayed = player.rapidGamesPlayed ?? 0;
                 const newRapidGamesPlayed = currentRapidGamesPlayed + update.gamesPlayed;
                 
-                // Determine if rating status should change
                 let newRapidRatingStatus = player.rapidRatingStatus || 'provisional';
                 if (newRapidRatingStatus === 'provisional' && newRapidGamesPlayed >= 30) {
                   newRapidRatingStatus = 'established';
@@ -227,16 +195,12 @@ const TournamentRatingDialog = ({
                   ]
                 };
               } else if (tournament.category === 'blitz') {
-                // Update blitz rating
-                // If no blitz rating yet, start with floor rating
-                const currentBlitzRating = player.blitzRating ?? FLOOR_RATING;
+                const currentBlitzRating = player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
                 const newBlitzRating = currentBlitzRating + update.ratingChange;
                 
-                // Update blitz games played
                 const currentBlitzGamesPlayed = player.blitzGamesPlayed ?? 0;
                 const newBlitzGamesPlayed = currentBlitzGamesPlayed + update.gamesPlayed;
                 
-                // Determine if rating status should change
                 let newBlitzRatingStatus = player.blitzRatingStatus || 'provisional';
                 if (newBlitzRatingStatus === 'provisional' && newBlitzGamesPlayed >= 30) {
                   newBlitzRatingStatus = 'established';
@@ -257,15 +221,12 @@ const TournamentRatingDialog = ({
                   ]
                 };
               } else {
-                // Default to classical rating
                 const currentRating = player.rating;
                 const newRating = currentRating + update.ratingChange;
                 
-                // Update classical games played
                 const currentGamesPlayed = player.gamesPlayed || 0;
                 const newGamesPlayed = currentGamesPlayed + update.gamesPlayed;
                 
-                // Determine if rating status should change
                 let newRatingStatus = player.ratingStatus || 'provisional';
                 if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
                   newRatingStatus = 'established';
@@ -288,10 +249,8 @@ const TournamentRatingDialog = ({
               }
             };
             
-            // Update the player with the appropriate rating changes
             const updatedPlayer = updatePlayerBasedOnTournamentType(player);
             
-            // Add tournament result
             const updatedPlayerWithResults = {
               ...updatedPlayer,
               tournamentResults: [
@@ -304,12 +263,10 @@ const TournamentRatingDialog = ({
               ]
             };
             
-            // Update player in system
             updatePlayer(updatedPlayerWithResults);
           }
         });
         
-        // Mark tournament as processed and store the processing details
         const updatedTournament = {
           ...tournament,
           status: 'processed' as Tournament['status'],
@@ -339,14 +296,11 @@ const TournamentRatingDialog = ({
     }
   };
 
-  // Helper function to calculate a player's position in the tournament
   const calculatePlayerPosition = (playerId: string, processedRounds: any[]): number => {
-    // Calculate total score for each player
     const playerScores: Record<string, number> = {};
     
     processedRounds.forEach(round => {
       round.matches.forEach((match: any) => {
-        // Initialize player scores if not already done
         if (!playerScores[match.whiteId]) {
           playerScores[match.whiteId] = 0;
         }
@@ -362,21 +316,17 @@ const TournamentRatingDialog = ({
           playerScores[match.whiteId] += 0.5;
           playerScores[match.blackId] += 0.5;
         }
-        // Note: 0F-0F (double forfeit) - both players get 0, so no score to add
       });
     });
     
-    // Convert scores to array and sort by score (descending)
     const sortedPlayers = Object.entries(playerScores)
       .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
       .map(([id]) => id);
     
-    // Find position of this player (1-based index)
     const position = sortedPlayers.indexOf(playerId) + 1;
-    return position > 0 ? position : sortedPlayers.length; // Default to last if not found
+    return position > 0 ? position : sortedPlayers.length;
   };
 
-  // Function to get appropriate rating based on tournament type
   const getDisplayRating = (player: Player) => {
     if (tournament.category === 'rapid') {
       return player.rapidRating ?? FLOOR_RATING;
@@ -386,7 +336,6 @@ const TournamentRatingDialog = ({
     return player.rating;
   };
 
-  // Function to get the rating status icon
   const getRatingStatusIcon = (player: Player) => {
     let ratingStatus: string | undefined;
     
@@ -463,7 +412,6 @@ const TournamentRatingDialog = ({
                       </thead>
                       <tbody>
                         {tournamentPlayers.map((player) => {
-                          // Get appropriate rating and status for display
                           let displayRating: number;
                           let gamesPlayed: number;
                           let statusText: string;

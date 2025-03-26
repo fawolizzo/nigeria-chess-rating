@@ -197,8 +197,8 @@ export const addPlayer = (newPlayer: Player): void => {
     newPlayer.tournamentResults = [];
   }
   
-  // Assign floor rating (800) to any missing format ratings
-  if (!newPlayer.rapidRating) {
+  // Assign floor rating (800) to any missing format ratings without adding any bonus
+  if (newPlayer.rapidRating === undefined) {
     newPlayer.rapidRating = 800;
     newPlayer.rapidGamesPlayed = 0;
     newPlayer.rapidRatingStatus = 'provisional';
@@ -209,7 +209,7 @@ export const addPlayer = (newPlayer: Player): void => {
     }];
   }
   
-  if (!newPlayer.blitzRating) {
+  if (newPlayer.blitzRating === undefined) {
     newPlayer.blitzRating = 800;
     newPlayer.blitzGamesPlayed = 0;
     newPlayer.blitzRatingStatus = 'provisional';
@@ -327,7 +327,7 @@ export const createPlayer = (playerData: any): Player => {
       rating: playerData.rating || 800,
       reason: "Initial rating"
     }],
-    // Add floor ratings for all formats
+    // Add floor ratings for all formats without adding any bonus
     rapidRating: playerData.rapidRating || 800,
     blitzRating: playerData.blitzRating || 800,
     rapidGamesPlayed: playerData.rapidGamesPlayed || 0,
@@ -408,3 +408,4 @@ export const deleteUser = (userId: string): void => {
   const filteredUsers = allUsers.filter(user => user.id !== userId);
   saveUsers(filteredUsers);
 };
+

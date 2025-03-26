@@ -70,11 +70,11 @@ const TournamentRatingProcessor = ({
             // Use the appropriate rating based on tournament type
             const getPlayerRating = (player: Player) => {
               if (tournamentType === 'rapid') {
-                // If player has no rapid rating, use floor rating
-                return player.rapidRating ?? FLOOR_RATING;
+                // Use floor rating without bonus if player has no rapid rating
+                return player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
               } else if (tournamentType === 'blitz') {
-                // If player has no blitz rating, use floor rating
-                return player.blitzRating ?? FLOOR_RATING;
+                // Use floor rating without bonus if player has no blitz rating
+                return player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
               }
               // For classical, always use the player's classical rating (which should always exist)
               return player.rating;
