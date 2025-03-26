@@ -12,7 +12,7 @@ export interface User {
   role: 'tournament_organizer' | 'rating_officer';
   status: 'pending' | 'approved' | 'rejected';
   registrationDate: string;
-  approvalDate?: string;
+  approvalDate?: string; // Add approvalDate field as optional
   password?: string; // Add password field as optional
 }
 

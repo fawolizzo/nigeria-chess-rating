@@ -225,7 +225,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Approve a user
   const approveUser = (userId: string) => {
     const updatedUsers = users.map(user => 
-      user.id === userId ? { ...user, status: "approved" as const } : user
+      user.id === userId ? { 
+        ...user, 
+        status: "approved" as const,
+        approvalDate: new Date().toISOString() // Add approval date
+      } : user
     );
     setUsers(updatedUsers);
     localStorage.setItem('ncr_users', JSON.stringify(updatedUsers));

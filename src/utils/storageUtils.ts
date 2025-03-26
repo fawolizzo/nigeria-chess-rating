@@ -77,6 +77,26 @@ export const forceSyncAllStorage = (): void => {
   console.log("Storage system updated");
 };
 
+// Added missing syncStorage function that's being imported
+export const syncStorage = (key: string): void => {
+  try {
+    const localValue = localStorage.getItem(key);
+    if (localValue) {
+      // Sync localStorage value to sessionStorage
+      sessionStorage.setItem(key, localValue);
+    } else {
+      // Check if value exists in sessionStorage but not localStorage
+      const sessionValue = sessionStorage.getItem(key);
+      if (sessionValue) {
+        localStorage.setItem(key, sessionValue);
+      }
+    }
+    console.log(`Storage synchronization completed for: ${key}`);
+  } catch (error) {
+    console.error(`Error syncing storage for ${key}:`, error);
+  }
+};
+
 // Initialize storage event listeners (simplified version)
 export const initializeStorageListeners = (): void => {
   console.log("Storage event listeners initialized");
