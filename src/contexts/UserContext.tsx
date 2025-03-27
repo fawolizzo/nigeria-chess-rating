@@ -13,14 +13,6 @@ import {
   SyncEventType
 } from '@/types/userTypes';
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  getFromStorage, 
-  saveToStorage, 
-  removeFromStorage, 
-  forceSyncAllStorage, 
-  checkStorageHealth,
-  clearAllData
-} from '@/utils/storageUtils';
 import { useToast } from "@/hooks/use-toast";
 import { 
   createOrganizerConfirmationEmail, 
@@ -29,13 +21,15 @@ import {
   createRejectionEmail,
   getRatingOfficerEmails as getOfficerEmails,
 } from '@/utils/userUtils';
-import { 
-  sendSyncEvent, 
-  listenForSyncEvents, 
-  checkResetStatus, 
-  clearResetStatus, 
-  forceGlobalSync
-} from "@/utils/storageSync";
+import {
+  getDataFromStorage,
+  saveDataToStorage,
+  setupSyncListeners,
+  syncData,
+  syncAuthData,
+  requestDataSync,
+  performFullSystemReset
+} from '@/utils/deviceSync';
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
@@ -51,36 +45,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       
       try {
-        // Check for system reset
-        if (checkResetStatus()) {
-          console.log("[UserContext] System reset detected, clearing reset status");
-          clearResetStatus();
-          
-          toast({
-            title: "System Reset Detected",
-            description: "The system has been reset. You'll need to log in again.",
-            duration: 5000
-          });
-          
-          // Clear current user
-          setCurrentUser(null);
-          removeFromStorage(STORAGE_KEY_CURRENT_USER);
-        }
-        
-        // Check storage health and repair if needed
-        await checkStorageHealth();
-        
-        // Force sync storage for latest user data
-        await forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
-        
-        // Then get the data
-        const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
-        const storedCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
+        // Get data from storage
+        const storedUsers = getDataFromStorage<User[]>(STORAGE_KEY_USERS, []);
+        const storedCurrentUser = getDataFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
         
         console.log(`[UserContext] Loaded ${storedUsers.length} users and current user: ${storedCurrentUser?.email || 'none'}`);
         
         setUsers(storedUsers);
         setCurrentUser(storedCurrentUser);
+        
+        // Request sync from other devices
+        requestDataSync();
       } catch (error) {
         console.error("[UserContext] Error loading users from storage:", error);
         
@@ -97,7 +72,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadUsers();
     
     // Set up sync listeners
-    const cleanup = listenForSyncEvents(
+    const cleanup = setupSyncListeners(
       // Reset handler
       () => {
         console.log("[UserContext] Reset event received");
@@ -114,13 +89,43 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Refresh page to reset app state
         window.location.reload();
       },
-      // Update handler
-      async (key) => {
-        console.log(`[UserContext] Update event received for ${key}`);
+      // Sync handler
+      async (data) => {
+        console.log("[UserContext] Sync event received", data);
         
-        if (key === STORAGE_KEY_USERS || key === STORAGE_KEY_CURRENT_USER) {
+        // If we received specific data
+        if (data && data.users) {
+          setUsers(data.users);
+          saveDataToStorage(STORAGE_KEY_USERS, data.users);
+        }
+        
+        if (data && data.currentUser) {
+          setCurrentUser(data.currentUser);
+          saveDataToStorage(STORAGE_KEY_CURRENT_USER, data.currentUser);
+        }
+        
+        if (!data) {
+          // Request fresh data
           await refreshUserData();
         }
+      },
+      // Login handler
+      async (userData) => {
+        console.log("[UserContext] Login event received", userData);
+        
+        if (userData) {
+          setCurrentUser(userData);
+          saveDataToStorage(STORAGE_KEY_CURRENT_USER, userData);
+        }
+        
+        // Refresh user data
+        await refreshUserData();
+        
+        toast({
+          title: "Account Activity",
+          description: "Your account has been logged in from another device.",
+          duration: 5000
+        });
       },
       // Logout handler
       () => {
@@ -134,14 +139,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Clear current user
         setCurrentUser(null);
-        removeFromStorage(STORAGE_KEY_CURRENT_USER);
-      },
-      // Login handler
-      async () => {
-        console.log("[UserContext] Login event received");
-        
-        // Refresh user data
-        await refreshUserData();
+        saveDataToStorage(STORAGE_KEY_CURRENT_USER, null);
       },
       // Approval handler
       async (userId) => {
@@ -158,13 +156,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
             duration: 5000
           });
         }
-      },
-      // Force sync handler
-      async () => {
-        console.log("[UserContext] Force sync event received");
-        
-        // Refresh user data
-        await refreshUserData();
       }
     );
     
@@ -181,15 +172,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log("[UserContext] Registering new user:", userData.email);
       
-      // Force sync storage before registration
-      await forceSyncAllStorage([STORAGE_KEY_USERS]);
-      
       // Get latest users
-      const existingUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      const existingUsers = getDataFromStorage<User[]>(STORAGE_KEY_USERS, []);
       
       // Check if the email is already registered
       const normalizedEmail = userData.email.toLowerCase().trim();
-      if (existingUsers.some(user => user.email.toLowerCase() === normalizedEmail)) {
+      const emailExists = existingUsers.some(user => {
+        return user.email && user.email.toLowerCase() === normalizedEmail;
+      });
+      
+      if (emailExists) {
         console.log(`[UserContext] Email ${normalizedEmail} is already registered`);
         
         toast({
@@ -214,10 +206,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUsers = [...existingUsers, newUser];
       
       // Save to storage
-      saveToStorage(STORAGE_KEY_USERS, updatedUsers);
+      saveDataToStorage(STORAGE_KEY_USERS, updatedUsers);
       
       // Update state
       setUsers(updatedUsers);
+      
+      // Sync with other devices
+      syncData(STORAGE_KEY_USERS, updatedUsers);
       
       // Send confirmation email to the organizer
       const confirmationEmail = createOrganizerConfirmationEmail(newUser);
@@ -239,10 +234,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await sendEmail(officerEmail, "New Tournament Organizer Registration", notificationEmail);
         }
       }
-      
-      // Sync with other devices
-      sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEY_USERS);
-      forceGlobalSync();
       
       toast({
         title: "Registration Successful",
@@ -270,7 +261,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`[UserContext] Approving user: ${userId}`);
       
       // Get latest users
-      const existingUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      const existingUsers = getDataFromStorage<User[]>(STORAGE_KEY_USERS, []);
       
       // Update user status
       const updatedUsers = existingUsers.map(user => {
@@ -292,14 +283,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Save to storage
-      saveToStorage(STORAGE_KEY_USERS, updatedUsers);
+      saveDataToStorage(STORAGE_KEY_USERS, updatedUsers);
       
       // Update state
       setUsers(updatedUsers);
       
       // Sync with other devices
-      sendSyncEvent(SyncEventType.APPROVAL, userId);
-      forceGlobalSync();
+      syncData(STORAGE_KEY_USERS, updatedUsers);
       
       toast({
         title: "User Approved",
@@ -321,7 +311,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`[UserContext] Rejecting user: ${userId}`);
       
       // Get latest users
-      const existingUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      const existingUsers = getDataFromStorage<User[]>(STORAGE_KEY_USERS, []);
       
       // Update user status
       const updatedUsers = existingUsers.map(user => {
@@ -343,14 +333,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Save to storage
-      saveToStorage(STORAGE_KEY_USERS, updatedUsers);
+      saveDataToStorage(STORAGE_KEY_USERS, updatedUsers);
       
       // Update state
       setUsers(updatedUsers);
       
       // Sync with other devices
-      sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEY_USERS);
-      forceGlobalSync();
+      syncData(STORAGE_KEY_USERS, updatedUsers);
       
       toast({
         title: "User Rejected",
@@ -398,18 +387,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[UserContext] Login attempt for ${email} as ${role}`);
       
-      // Force sync storage before login
-      await forceSyncAllStorage([STORAGE_KEY_USERS]);
+      // Request sync from other devices first
+      requestDataSync();
+      
+      // Wait a bit to allow sync to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Get latest users
-      const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      const storedUsers = getDataFromStorage<User[]>(STORAGE_KEY_USERS, []);
       
       // Normalize email for case-insensitive comparison
       const normalizedEmail = email.toLowerCase().trim();
       
       // Find matching user
       const user = storedUsers.find(u => 
-        u.email.toLowerCase() === normalizedEmail && 
+        u.email && u.email.toLowerCase() === normalizedEmail && 
         u.role === role
       );
       
@@ -461,12 +453,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { password: _, ...secureUser } = userWithTimestamp;
       
       // Save to storage and state
-      saveToStorage(STORAGE_KEY_CURRENT_USER, secureUser);
+      saveDataToStorage(STORAGE_KEY_CURRENT_USER, secureUser);
       setCurrentUser(secureUser);
       
       // Sync with other devices
-      sendSyncEvent(SyncEventType.LOGIN);
-      forceGlobalSync();
+      syncAuthData();
       
       toast({
         title: "Login Successful",
@@ -495,11 +486,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Clear current user
       setCurrentUser(null);
-      removeFromStorage(STORAGE_KEY_CURRENT_USER);
+      saveDataToStorage(STORAGE_KEY_CURRENT_USER, null);
       
       // Sync with other devices
-      sendSyncEvent(SyncEventType.LOGOUT);
-      forceGlobalSync();
+      syncAuthData();
       
       toast({
         title: "Logged Out",
@@ -520,12 +510,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log("[UserContext] Refreshing user data");
       
-      // Force sync storage
-      await forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
+      // Request sync from other devices
+      requestDataSync();
+      
+      // Wait a bit to allow sync to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Get latest data
-      const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
-      const latestCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
+      const latestUsers = getDataFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      const latestCurrentUser = getDataFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
       
       // Update state
       setUsers(latestUsers);
@@ -544,8 +537,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log("[UserContext] Forcing global sync");
       
-      // Force sync with other devices
-      return await forceGlobalSync();
+      // Request data from other devices
+      requestDataSync();
+      
+      // Wait a bit to allow sync to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Refresh local data
+      await refreshUserData();
+      
+      return true;
     } catch (error) {
       console.error("[UserContext] Error during force sync:", error);
       return false;
@@ -556,16 +557,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log("[UserContext] Clearing all user data");
       
-      // Clear all data
-      const success = await clearAllData();
+      // Reset all data
+      const success = performFullSystemReset();
       
       if (success) {
         // Update state
         setCurrentUser(null);
         setUsers([]);
-        
-        // Sync with other devices
-        sendSyncEvent(SyncEventType.CLEAR_DATA);
       }
       
       return success;

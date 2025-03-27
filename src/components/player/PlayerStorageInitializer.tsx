@@ -1,19 +1,14 @@
 
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  forceSyncAllStorage, 
-  checkStorageHealth 
-} from "@/utils/storageUtils";
-import { 
-  checkResetStatus, 
-  clearResetStatus, 
-  processSystemReset,
-  listenForSyncEvents,
-  SyncEventType,
-  forceGlobalSync
-} from "@/utils/storageSync";
-import { STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS } from "@/types/userTypes";
+import { STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS, SyncEventType } from "@/types/userTypes";
+import {
+  setupSyncListeners,
+  requestDataSync,
+  getDataFromStorage,
+  saveDataToStorage
+} from "@/utils/deviceSync";
+import { useUser } from "@/contexts/UserContext";
 
 /**
  * Component to initialize storage and handle sync events on mount
@@ -21,6 +16,7 @@ import { STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS } from "@/types/userTypes";
 const PlayerStorageInitializer: React.FC = () => {
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
+  const { refreshUserData } = useUser();
   
   useEffect(() => {
     console.log("[PlayerStorageInitializer] Component mounting");
@@ -28,23 +24,6 @@ const PlayerStorageInitializer: React.FC = () => {
     try {
       // Define an initialization function
       const initialize = async () => {
-        // Check for system reset
-        if (checkResetStatus()) {
-          console.log("[PlayerStorageInitializer] System reset detected, processing reset");
-          // Clear reset status first to prevent loops
-          clearResetStatus();
-          
-          // Show toast
-          toast({
-            title: "System Reset Detected",
-            description: "The system has been reset. All account data has been cleared.",
-          });
-          
-          // Process the reset
-          processSystemReset();
-          return; // Early return to prevent other initializations
-        }
-        
         // Test storage availability
         try {
           localStorage.setItem('storage_test', 'test');
@@ -62,27 +41,13 @@ const PlayerStorageInitializer: React.FC = () => {
           throw new Error("Storage access failed");
         }
         
-        // Check storage health
-        await checkStorageHealth();
+        // Request sync from other devices
+        requestDataSync();
         
-        // Force sync storage with critical auth data prioritized
-        try {
-          // First sync critical auth data
-          await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
-          
-          // Then sync everything else
-          await forceGlobalSync();
-          
-          console.log("[PlayerStorageInitializer] Storage synced successfully");
-        } catch (syncError) {
-          console.error("[PlayerStorageInitializer] Storage sync error:", syncError);
-          
-          toast({
-            title: "Sync Error",
-            description: "Failed to synchronize data. Some features may not work correctly.",
-            variant: "warning",
-          });
-        }
+        // Refresh user data
+        await refreshUserData();
+        
+        console.log("[PlayerStorageInitializer] Initialization complete");
       };
       
       // Run initialization
@@ -93,8 +58,8 @@ const PlayerStorageInitializer: React.FC = () => {
         setIsInitialized(true); // Set initialized anyway to allow the app to function
       });
       
-      // Listen for sync events from other devices/tabs
-      const cleanupListener = listenForSyncEvents(
+      // Set up sync listeners
+      const cleanup = setupSyncListeners(
         // Reset handler
         () => {
           console.log("[PlayerStorageInitializer] Reset event received");
@@ -109,14 +74,31 @@ const PlayerStorageInitializer: React.FC = () => {
             window.location.reload();
           }, 1000);
         },
-        // Update handler
-        async (key) => {
-          console.log(`[PlayerStorageInitializer] Update event received for ${key}`);
+        // Sync handler
+        async (data) => {
+          console.log(`[PlayerStorageInitializer] Sync event received`, data);
           
-          if (key === STORAGE_KEY_USERS || key === STORAGE_KEY_CURRENT_USER) {
-            // If it's a critical auth update, sync immediately
-            await forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
+          if (data && data.key) {
+            // Handle data if available
+            saveDataToStorage(data.key, data.data);
           }
+          
+          await refreshUserData();
+        },
+        // Login handler
+        async (userData) => {
+          console.log("[PlayerStorageInitializer] Login event received", userData);
+          
+          if (userData) {
+            saveDataToStorage(STORAGE_KEY_CURRENT_USER, userData);
+          }
+          
+          await refreshUserData();
+          
+          toast({
+            title: "Login Detected",
+            description: "Your account has been logged in from another device.",
+          });
         },
         // Logout handler
         () => {
@@ -136,68 +118,22 @@ const PlayerStorageInitializer: React.FC = () => {
             window.location.reload();
           }, 1000);
         },
-        // Login handler
-        () => {
-          console.log("[PlayerStorageInitializer] Login event received");
-          
-          toast({
-            title: "Login Detected",
-            description: "Your account has been logged in from another device.",
-          });
-          
-          // Sync storage to get the latest user data
-          forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
-        },
         // Approval handler
-        () => {
-          console.log("[PlayerStorageInitializer] Approval event received");
+        async (userId) => {
+          console.log("[PlayerStorageInitializer] Approval event received for:", userId);
           
           toast({
             title: "Account Status Updated",
             description: "Your account status has been updated. Please refresh the page.",
           });
           
-          // Sync storage to get the latest user data
-          forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
-        },
-        // Force sync handler
-        async () => {
-          console.log("[PlayerStorageInitializer] Force sync event received");
-          await forceGlobalSync();
-        },
-        // Clear data handler
-        () => {
-          console.log("[PlayerStorageInitializer] Clear data event received");
-          
-          toast({
-            title: "Data Cleared",
-            description: "All data has been cleared from another device. The page will reload.",
-            duration: 3000,
-          });
-          
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
+          // Refresh user data
+          await refreshUserData();
         }
       );
       
-      // Add a listener for online events to sync when connection is restored
-      const handleOnline = () => {
-        console.log("[PlayerStorageInitializer] Device came online");
-        
-        toast({
-          title: "Connection Restored",
-          description: "You're back online. Synchronizing data...",
-        });
-        
-        forceGlobalSync();
-      };
-      
-      window.addEventListener('online', handleOnline);
-      
       return () => {
-        window.removeEventListener('online', handleOnline);
-        cleanupListener();
+        cleanup();
         console.log("[PlayerStorageInitializer] Component unmounting");
       };
     } catch (error) {
@@ -211,7 +147,7 @@ const PlayerStorageInitializer: React.FC = () => {
       
       setIsInitialized(true);
     }
-  }, [toast]);
+  }, [toast, refreshUserData]);
 
   return null; // This component doesn't render anything
 };

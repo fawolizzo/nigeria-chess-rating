@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Wifi, WifiOff, AlertCircle, Check } from "lucide-react";
-import { forceSyncAllStorage } from "@/utils/storageUtils";
-import { forceGlobalSync } from "@/utils/storageSync";
+import { Wifi, WifiOff, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { requestDataSync } from "@/utils/deviceSync";
+import { useUser } from "@/contexts/UserContext";
 
 interface SyncStatusIndicatorProps {
   className?: string;
@@ -22,6 +22,7 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const { toast } = useToast();
+  const { forceSync } = useUser();
 
   useEffect(() => {
     const handleOnline = () => {
@@ -52,8 +53,11 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
       setIsSyncing(true);
       setSyncStatus('syncing');
       
-      // Use the global sync to ensure all devices are updated
-      const success = await forceGlobalSync();
+      // Request sync from other devices
+      requestDataSync();
+      
+      // Force local sync
+      const success = await forceSync();
       
       if (success) {
         setLastSynced(new Date());
