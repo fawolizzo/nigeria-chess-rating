@@ -1,3 +1,4 @@
+
 import { 
   TimestampedData, 
   generateDeviceId,
@@ -24,6 +25,11 @@ declare global {
     ncrIsResetting: boolean;
   }
 }
+
+// Add the missing syncStorage function
+export const syncStorage = async (key: string): Promise<boolean> => {
+  return forceSyncStorage(key);
+};
 
 /**
  * Get the device ID or generate a new one if it doesn't exist
