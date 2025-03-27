@@ -10,7 +10,16 @@ import {
   migrateLegacyStorage
 } from "@/utils/storageUtils";
 import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import {
+  initBroadcastChannel,
+  closeBroadcastChannel,
+  listenForSyncEvents,
+  SyncEventType,
+  sendSyncEvent,
+  checkResetStatus,
+  clearResetStatus
+} from "@/utils/storageSync";
 
 // Define types
 type UserRole = "tournament_organizer" | "rating_officer";
@@ -25,6 +34,11 @@ interface User {
   phoneNumber: string;
   registrationDate?: string;
   approvalDate?: string;
+}
+
+interface TimestampedData<T> {
+  data: T;
+  timestamp: number;
 }
 
 interface RegistrationData {
@@ -58,9 +72,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Initialize storage utilities and check health
+  // Initialize BroadcastChannel and storage utilities
   useEffect(() => {
-    console.log("[UserContext] Initializing storage and health checks");
+    console.log("[UserContext] Initializing BroadcastChannel and storage utilities");
+    
+    // Initialize broadcast channel for cross-tab/cross-device communication
+    initBroadcastChannel();
     
     // Check storage health and migrate legacy data
     checkStorageHealth();
@@ -71,6 +88,58 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Force sync all storage to ensure consistency
     forceSyncAllStorage();
+    
+    // Check if a reset has happened
+    if (checkResetStatus()) {
+      console.log("[UserContext] System reset detected. Clearing all data and state.");
+      setCurrentUser(null);
+      setUsers([]);
+      clearResetStatus();
+    }
+    
+    return () => {
+      // Close BroadcastChannel when component unmounts
+      closeBroadcastChannel();
+    };
+  }, []);
+
+  // Set up listening for sync events
+  useEffect(() => {
+    const cleanup = listenForSyncEvents(
+      // onReset handler
+      () => {
+        console.log("[UserContext] Reset event received, clearing state");
+        setCurrentUser(null);
+        setUsers([]);
+        window.location.reload(); // Force reload to clean state
+      },
+      // onUpdate handler
+      (key, newData) => {
+        console.log(`[UserContext] Update event received for ${key}`);
+        if (key === STORAGE_KEY_USERS) {
+          setUsers(newData);
+        } else if (key === STORAGE_KEY_CURRENT_USER) {
+          setCurrentUser(newData);
+        }
+      },
+      // onLogout handler
+      () => {
+        console.log("[UserContext] Logout event received");
+        setCurrentUser(null);
+      },
+      // onLogin handler
+      (userData) => {
+        console.log("[UserContext] Login event received");
+        setCurrentUser(userData);
+      },
+      // onApproval handler
+      (userId) => {
+        console.log(`[UserContext] Approval event received for user ${userId}`);
+        refreshUserData();
+      }
+    );
+    
+    return cleanup;
   }, []);
 
   // Function to refresh all user data from storage
@@ -91,26 +160,46 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Load current user from storage
       const storedUserData = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
-      if (storedUserData?.data) {
-        setCurrentUser(storedUserData.data);
-        console.log("[UserContext] Current user refreshed from storage:", storedUserData.data.email);
-      } else if (storedUserData) {
-        // Legacy format without timestamp wrapper
-        setCurrentUser(storedUserData);
-        console.log("[UserContext] Current user refreshed from storage (legacy format):", storedUserData.email);
+      
+      // Handle different data formats safely
+      if (storedUserData) {
+        if (typeof storedUserData === 'object' && storedUserData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUserData && 'timestamp' in storedUserData) {
+            setCurrentUser(storedUserData.data);
+            console.log("[UserContext] Current user refreshed from storage:", storedUserData.data.email);
+          }
+          // Legacy format without timestamp wrapper
+          else {
+            setCurrentUser(storedUserData);
+            console.log("[UserContext] Current user refreshed from storage (legacy format):", storedUserData.email);
+          }
+        } else {
+          console.log("[UserContext] Invalid current user data format in storage");
+        }
       } else {
         console.log("[UserContext] No current user found in storage during refresh");
       }
       
       // Load all users from storage
       const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
-      if (storedUsersData?.data) {
-        setUsers(storedUsersData.data);
-        console.log(`[UserContext] ${storedUsersData.data.length} users refreshed from storage`);
-      } else if (Array.isArray(storedUsersData)) {
-        // Legacy format without timestamp wrapper
-        setUsers(storedUsersData);
-        console.log(`[UserContext] ${storedUsersData.length} users refreshed from storage (legacy format)`);
+      
+      // Handle different data formats safely
+      if (storedUsersData) {
+        if (typeof storedUsersData === 'object' && storedUsersData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUsersData && 'timestamp' in storedUsersData && Array.isArray(storedUsersData.data)) {
+            setUsers(storedUsersData.data);
+            console.log(`[UserContext] ${storedUsersData.data.length} users refreshed from storage`);
+          }
+          // Legacy format without timestamp wrapper
+          else if (Array.isArray(storedUsersData)) {
+            setUsers(storedUsersData);
+            console.log(`[UserContext] ${storedUsersData.length} users refreshed from storage (legacy format)`);
+          }
+        } else {
+          console.log("[UserContext] Invalid users data format in storage");
+        }
       } else {
         console.log("[UserContext] No valid users data found in storage during refresh");
       }
@@ -124,7 +213,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]);
 
-  // Load initial data - with improved error handling and storage syncing
+  // Load initial data with improved error handling and storage syncing
   useEffect(() => {
     try {
       console.log("[UserContext] Initializing user data...");
@@ -135,28 +224,53 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Load current user from storage
       const storedUserData = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
-      if (storedUserData?.data) {
-        setCurrentUser(storedUserData.data);
-        console.log("[UserContext] Current user loaded from storage:", storedUserData.data.email);
-      } else if (storedUserData) {
-        // Legacy format without timestamp wrapper
-        setCurrentUser(storedUserData);
-        console.log("[UserContext] Current user loaded from storage (legacy format):", storedUserData.email);
+      
+      // Handle different data formats safely
+      if (storedUserData) {
+        if (typeof storedUserData === 'object' && storedUserData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUserData && 'timestamp' in storedUserData) {
+            setCurrentUser(storedUserData.data);
+            console.log("[UserContext] Current user loaded from storage:", storedUserData.data.email);
+          }
+          // Legacy format without timestamp wrapper
+          else {
+            setCurrentUser(storedUserData);
+            console.log("[UserContext] Current user loaded from storage (legacy format):", storedUserData.email);
+          }
+        }
       } else {
         console.log("[UserContext] No current user found in storage");
       }
       
       // Load all users from storage
       const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
-      if (storedUsersData?.data && storedUsersData.data.length > 0) {
-        setUsers(storedUsersData.data);
-        console.log(`[UserContext] ${storedUsersData.data.length} users loaded from storage`);
-      } else if (Array.isArray(storedUsersData) && storedUsersData.length > 0) {
-        // Legacy format without timestamp wrapper
-        setUsers(storedUsersData);
-        console.log(`[UserContext] ${storedUsersData.length} users loaded from storage (legacy format)`);
-      } else {
-        // Initialize with default users if none exist
+      
+      // Handle different data formats safely
+      let loadedUsers: User[] = [];
+      let needsInitialization = false;
+      
+      if (storedUsersData) {
+        if (typeof storedUsersData === 'object' && storedUsersData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUsersData && 'timestamp' in storedUsersData && Array.isArray(storedUsersData.data)) {
+            loadedUsers = storedUsersData.data;
+            console.log(`[UserContext] ${loadedUsers.length} users loaded from storage`);
+          }
+          // Legacy format without timestamp wrapper
+          else if (Array.isArray(storedUsersData)) {
+            loadedUsers = storedUsersData;
+            console.log(`[UserContext] ${loadedUsers.length} users loaded from storage (legacy format)`);
+          }
+        }
+      }
+      
+      // Initialize with default users if none exist
+      if (loadedUsers.length === 0) {
+        needsInitialization = true;
+        console.log("[UserContext] No users found, initializing with defaults");
+        
+        // Default users
         const defaultUsers: User[] = [
           {
             id: "1",
@@ -185,6 +299,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsers(defaultUsers);
         saveToStorage(STORAGE_KEY_USERS, defaultUsers);
         console.log("[UserContext] Default users created");
+      } else {
+        setUsers(loadedUsers);
+      }
+      
+      // If we just initialized with default users, broadcast this to other tabs/devices
+      if (needsInitialization) {
+        sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEY_USERS, users);
       }
     } catch (error) {
       console.error("[UserContext] Error initializing user data:", error);
@@ -197,64 +318,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   }, [toast]);
-
-  // Add listener for storage changes from other tabs/windows/devices
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      console.log(`[UserContext] Storage event detected for key: ${e.key}`);
-      
-      if (e.key === STORAGE_KEY_USERS && e.newValue) {
-        try {
-          const parsedData = JSON.parse(e.newValue);
-          
-          // Handle both new format (with timestamp) and legacy format
-          if (parsedData.data && Array.isArray(parsedData.data)) {
-            console.log(`[UserContext] Updating users from storage event (${parsedData.data.length} users)`);
-            setUsers(parsedData.data);
-          } else if (Array.isArray(parsedData)) {
-            console.log(`[UserContext] Updating users from storage event (legacy format, ${parsedData.length} users)`);
-            setUsers(parsedData);
-          }
-        } catch (error) {
-          console.error("[UserContext] Error parsing users from storage event:", error);
-        }
-      }
-      
-      if (e.key === STORAGE_KEY_CURRENT_USER) {
-        if (e.newValue) {
-          try {
-            const parsedData = JSON.parse(e.newValue);
-            
-            // Handle both new format (with timestamp) and legacy format
-            if (parsedData.data) {
-              console.log(`[UserContext] Updating current user from storage event: ${parsedData.data.email}`);
-              setCurrentUser(parsedData.data);
-            } else {
-              console.log(`[UserContext] Updating current user from storage event (legacy format): ${parsedData.email}`);
-              setCurrentUser(parsedData);
-            }
-          } catch (error) {
-            console.error("[UserContext] Error parsing current user from storage event:", error);
-          }
-        } else {
-          // User logged out in another tab/device
-          console.log("[UserContext] Current user removed in another tab/device, logging out");
-          setCurrentUser(null);
-        }
-      }
-    };
-    
-    // Listen for storage events from other tabs/windows
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also set up a periodic refresh for cross-device consistency
-    const refreshInterval = setInterval(refreshUserData, 30000); // Refresh every 30 seconds
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(refreshInterval);
-    };
-  }, [refreshUserData]);
 
   // Save users whenever they change
   useEffect(() => {
@@ -274,8 +337,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Reload users from storage to ensure we have the latest data
       const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
-      const latestUsers = Array.isArray(storedUsersData.data) ? storedUsersData.data : 
-                          Array.isArray(storedUsersData) ? storedUsersData : [];
+      
+      // Handle different data formats safely
+      let latestUsers: User[] = [];
+      
+      if (storedUsersData) {
+        if (typeof storedUsersData === 'object' && storedUsersData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUsersData && 'timestamp' in storedUsersData && Array.isArray(storedUsersData.data)) {
+            latestUsers = storedUsersData.data;
+          }
+          // Legacy format without timestamp wrapper
+          else if (Array.isArray(storedUsersData)) {
+            latestUsers = storedUsersData;
+          }
+        }
+      }
       
       // Check if email already exists (case-insensitive)
       const normalizedEmail = data.email.toLowerCase().trim();
@@ -311,6 +388,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         saveToStorage(STORAGE_KEY_USERS, updatedUsers);
         setUsers(updatedUsers);
         console.log(`[UserContext] User registered successfully: ${newUser.email} (${newUser.role})`);
+        
+        // Broadcast the update to other tabs/devices
+        sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEY_USERS, updatedUsers);
         
         toast({
           title: "Registration Successful",
@@ -354,22 +434,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get the latest users data from storage
       const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
       
-      // Check if we have the expected data structure and extract users
+      // Handle different data formats safely
       let latestUsers: User[] = [];
-      if (storedUsersData?.data && Array.isArray(storedUsersData.data)) {
-        latestUsers = storedUsersData.data;
-        console.log(`[UserContext] Found ${latestUsers.length} users in storage (timestamped format)`);
-      } else if (Array.isArray(storedUsersData)) {
-        latestUsers = storedUsersData;
-        console.log(`[UserContext] Found ${latestUsers.length} users in storage (legacy format)`);
-      } else {
-        console.error("[UserContext] Invalid users data format in storage");
-        toast({
-          title: "Login Error",
-          description: "There was a problem accessing user data. Please try again.",
-          variant: "destructive",
-        });
-        return false;
+      
+      if (storedUsersData) {
+        if (typeof storedUsersData === 'object' && storedUsersData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUsersData && 'timestamp' in storedUsersData && Array.isArray(storedUsersData.data)) {
+            latestUsers = storedUsersData.data;
+            console.log(`[UserContext] Found ${latestUsers.length} users in storage (timestamped format)`);
+          }
+          // Legacy format without timestamp wrapper
+          else if (Array.isArray(storedUsersData)) {
+            latestUsers = storedUsersData;
+            console.log(`[UserContext] Found ${latestUsers.length} users in storage (legacy format)`);
+          }
+        } else {
+          console.error("[UserContext] Invalid users data format in storage");
+          toast({
+            title: "Login Error",
+            description: "There was a problem accessing user data. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+        }
       }
       
       if (latestUsers.length === 0) {
@@ -404,6 +492,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             saveToStorage(STORAGE_KEY_CURRENT_USER, user);
             console.log(`[UserContext] User logged in successfully: ${user.email} (${user.role})`);
+            
+            // Broadcast login event to other tabs/devices
+            sendSyncEvent(SyncEventType.LOGIN, undefined, user);
             
             toast({
               title: "Login Successful",
@@ -482,6 +573,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeFromStorage(STORAGE_KEY_CURRENT_USER);
         console.log("[UserContext] User logged out successfully");
         
+        // Broadcast logout event to other tabs/devices
+        sendSyncEvent(SyncEventType.LOGOUT);
+        
         toast({
           title: "Logged Out",
           description: "You have been successfully logged out.",
@@ -511,15 +605,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get the latest users data from storage
       const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
       
-      // Check if we have the expected data structure and extract users
+      // Handle different data formats safely
       let latestUsers: User[] = [];
-      if (storedUsersData?.data && Array.isArray(storedUsersData.data)) {
-        latestUsers = storedUsersData.data;
-      } else if (Array.isArray(storedUsersData)) {
-        latestUsers = storedUsersData;
-      } else {
-        console.error("[UserContext] Invalid users data format in storage");
-        return;
+      
+      if (storedUsersData) {
+        if (typeof storedUsersData === 'object' && storedUsersData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUsersData && 'timestamp' in storedUsersData && Array.isArray(storedUsersData.data)) {
+            latestUsers = storedUsersData.data;
+          }
+          // Legacy format without timestamp wrapper
+          else if (Array.isArray(storedUsersData)) {
+            latestUsers = storedUsersData;
+          }
+        } else {
+          console.error("[UserContext] Invalid users data format in storage");
+          return;
+        }
       }
       
       // Find the user to approve
@@ -541,6 +643,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Save the updated users list
       saveToStorage(STORAGE_KEY_USERS, updatedUsers);
       setUsers(updatedUsers);
+      
+      // Broadcast approval event to other tabs/devices
+      sendSyncEvent(SyncEventType.APPROVAL, undefined, userId);
       
       console.log(`[UserContext] User ${userToApprove.email} approved successfully`);
       
@@ -570,15 +675,23 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get the latest users data from storage
       const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
       
-      // Check if we have the expected data structure and extract users
+      // Handle different data formats safely
       let latestUsers: User[] = [];
-      if (storedUsersData?.data && Array.isArray(storedUsersData.data)) {
-        latestUsers = storedUsersData.data;
-      } else if (Array.isArray(storedUsersData)) {
-        latestUsers = storedUsersData;
-      } else {
-        console.error("[UserContext] Invalid users data format in storage");
-        return;
+      
+      if (storedUsersData) {
+        if (typeof storedUsersData === 'object' && storedUsersData !== null) {
+          // New format with timestamp wrapper
+          if ('data' in storedUsersData && 'timestamp' in storedUsersData && Array.isArray(storedUsersData.data)) {
+            latestUsers = storedUsersData.data;
+          }
+          // Legacy format without timestamp wrapper
+          else if (Array.isArray(storedUsersData)) {
+            latestUsers = storedUsersData;
+          }
+        } else {
+          console.error("[UserContext] Invalid users data format in storage");
+          return;
+        }
       }
       
       // Find the user to reject

@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Trash2, AlertTriangle } from "lucide-react";
 import {
@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { performSystemReset } from "@/utils/storageSync";
 
 interface ResetSystemDataProps {
   onReset?: () => void;
@@ -21,26 +22,38 @@ interface ResetSystemDataProps {
 const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
   const { toast } = useToast();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleResetSystem = () => {
-    // Clear literally ALL data from localStorage and sessionStorage
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    toast({
-      title: "System Reset Successful",
-      description: "All data has been completely cleared including rating officers, organizers, and players. All users need to register again.",
-      variant: "default",
-    });
-    
-    if (onReset) {
-      onReset();
+    try {
+      setIsResetting(true);
+      
+      // Call the enhanced system reset function
+      performSystemReset();
+      
+      toast({
+        title: "System Reset Successful",
+        description: "All data has been completely cleared including rating officers, organizers, and players. All users need to register again.",
+        variant: "default",
+      });
+      
+      if (onReset) {
+        onReset();
+      }
+      
+      // Redirect to homepage after a brief delay
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+    } catch (error) {
+      console.error("Error during system reset:", error);
+      toast({
+        title: "Reset Failed",
+        description: "An error occurred during the reset. Please try again.",
+        variant: "destructive",
+      });
+      setIsResetting(false);
     }
-    
-    // Redirect to homepage after a brief delay
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 1500);
   };
 
   return (
@@ -61,9 +74,10 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
             variant="outline" 
             className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
             onClick={() => setIsConfirmOpen(true)}
+            disabled={isResetting}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Reset System Data
+            {isResetting ? "Resetting..." : "Reset System Data"}
           </Button>
         </div>
       </div>
@@ -85,6 +99,7 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
             <AlertDialogAction
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
               onClick={handleResetSystem}
+              disabled={isResetting}
             >
               Yes, Reset All Data
             </AlertDialogAction>
