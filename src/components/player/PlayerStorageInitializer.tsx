@@ -39,13 +39,17 @@ const PlayerStorageInitializer: React.FC = () => {
         throw new Error("Storage access failed");
       }
       
-      // Force sync storage - fix the Promise approach
+      // Force sync storage - fixing the Promise approach
       const syncStorage = async () => {
-        const success = await forceSyncAllStorage();
-        if (!success) {
-          console.warn("[PlayerStorageInitializer] Storage sync issues detected");
-        } else {
-          console.log("[PlayerStorageInitializer] Storage synced successfully");
+        try {
+          const success = await forceSyncAllStorage();
+          if (!success) {
+            console.warn("[PlayerStorageInitializer] Storage sync issues detected");
+          } else {
+            console.log("[PlayerStorageInitializer] Storage synced successfully");
+          }
+        } catch (error) {
+          console.error("[PlayerStorageInitializer] Storage sync error:", error);
         }
       };
       
@@ -61,7 +65,10 @@ const PlayerStorageInitializer: React.FC = () => {
           title: "Connection Restored",
           description: "You're back online.",
         });
-        forceSyncAllStorage();
+        // Need to properly handle the async function here too
+        forceSyncAllStorage().catch(error => {
+          console.error("[PlayerStorageInitializer] Error syncing after coming online:", error);
+        });
       };
       
       window.addEventListener('online', handleOnline);

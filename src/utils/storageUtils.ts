@@ -1,3 +1,4 @@
+
 import { TimestampedData } from "@/types/userTypes";
 
 /**
@@ -111,3 +112,9 @@ export const forceSyncAllStorage = async (): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Alias for forceSyncAllStorage to maintain compatibility with existing code
+ * @deprecated Use forceSyncAllStorage instead
+ */
+export const syncStorage = forceSyncAllStorage;
