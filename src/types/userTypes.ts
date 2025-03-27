@@ -27,6 +27,7 @@ export interface UserContextType {
   rejectUser: (userId: string) => void;
   sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;
   getRatingOfficerEmails: () => string[];
+  refreshUserData: () => void; // Added the missing function
 }
 
 // Add this interface for storage with timestamps

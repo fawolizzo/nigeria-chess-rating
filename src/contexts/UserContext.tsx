@@ -1,3 +1,4 @@
+
 import React, { 
   createContext, 
   useState, 
@@ -97,7 +98,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Notify rating officers about the new registration
-      const ratingOfficerEmails = getRatingOfficerEmails(users);
+      const ratingOfficerEmails = getRatingOfficerEmails();
       if (ratingOfficerEmails.length > 0) {
         const notificationEmail = createRatingOfficerNotificationEmail(newUser);
         for (const officerEmail of ratingOfficerEmails) {
@@ -131,7 +132,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user.id === userId && user.status === 'pending') {
         return {
           ...user,
-          status: 'approved',
+          status: 'approved' as const,
           approvalDate: new Date().toISOString()
         };
       }
@@ -161,7 +162,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user.id === userId && user.status === 'pending') {
         return {
           ...user,
-          status: 'rejected',
+          status: 'rejected' as const,
           approvalDate: new Date().toISOString()
         };
       }
