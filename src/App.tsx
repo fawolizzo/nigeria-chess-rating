@@ -5,6 +5,8 @@ import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
 import { useToast } from '@/components/ui/use-toast';
+import { forceSyncAllStorage, getFromStorage } from '@/utils/storageUtils';
+import { STORAGE_KEY_CURRENT_USER } from '@/types/userTypes';
 
 // Import pages
 import Index from './pages/Index';
@@ -20,12 +22,19 @@ import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
 import NotFound from './pages/NotFound';
 
-// Higher-order component for protected routes
+// Higher-order component for protected routes with improved auth checking
 const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournament_organizer' | 'rating_officer' }) => {
-  const userJSON = localStorage.getItem('ncr_current_user');
   const { toast } = useToast();
+
+  // Force sync storage to ensure we have the latest user data
+  forceSyncAllStorage();
   
-  if (!userJSON) {
+  // Get the current user from storage directly (not from context)
+  // This ensures we always have the latest user status, even across devices
+  const user = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
+  
+  if (!user) {
+    console.log("[RequireAuth] No user found in storage, redirecting to login");
     toast({
       title: "Authentication Required",
       description: "Please log in to access this page",
@@ -34,29 +43,40 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
     return <Navigate to="/login" replace />;
   }
   
-  try {
-    const user = JSON.parse(userJSON);
-    if (user.role !== role) {
-      toast({
-        title: "Access Denied",
-        description: `This page is only accessible to ${role === 'tournament_organizer' ? 'Tournament Organizers' : 'Rating Officers'}`,
-        variant: "destructive",
-      });
-      return <Navigate to="/login" replace />;
-    }
-    
-    return children;
-  } catch (error) {
-    console.error("Error parsing user data:", error);
-    localStorage.removeItem('ncr_current_user');
+  // Check if the user has the required role
+  if (user.role !== role) {
+    console.log(`[RequireAuth] User role (${user.role}) doesn't match required role (${role}), redirecting to login`);
+    toast({
+      title: "Access Denied",
+      description: `This page is only accessible to ${role === 'tournament_organizer' ? 'Tournament Organizers' : 'Rating Officers'}`,
+      variant: "destructive",
+    });
     return <Navigate to="/login" replace />;
   }
+  
+  // Check if the user status is approved
+  if (role === 'tournament_organizer' && user.status !== 'approved') {
+    console.log(`[RequireAuth] Tournament organizer not approved (status: ${user.status}), redirecting to login`);
+    toast({
+      title: "Account Pending Approval",
+      description: "Your account is pending approval by a Rating Officer",
+      variant: "destructive",
+    });
+    return <Navigate to="/login" replace />;
+  }
+  
+  console.log(`[RequireAuth] Access granted to ${role} page for ${user.email}`);
+  return children;
 };
 
 // Main App component with error boundary and device detection
 function App() {
-  // Check for mobile devices to apply optimizations
+  // Force sync storage on app load
   useEffect(() => {
+    forceSyncAllStorage();
+    console.log("[App] Storage synced on app load");
+    
+    // Check for mobile devices to apply optimizations
     const isMobile = window.innerWidth < 768;
     if (isMobile) {
       document.body.classList.add('mobile-optimized', 'safari-fix');
@@ -72,7 +92,7 @@ function App() {
     
     // Ensure consistent storage across devices and browsers
     window.addEventListener('storage', (event) => {
-      if (event.key === 'ncr_current_user') {
+      if (event.key === STORAGE_KEY_CURRENT_USER) {
         // If the user logged in or out in another tab, reload to reflect those changes
         window.location.reload();
       }

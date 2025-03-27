@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle } from "lucide-react";
@@ -7,9 +8,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { forceSyncAllStorage } from "@/utils/storageUtils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -21,11 +24,18 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 const Login = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { login, currentUser } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const isMobile = useIsMobile();
+  
+  // Force sync storage on page load to ensure cross-device consistency
+  useEffect(() => {
+    forceSyncAllStorage();
+    console.log("[Login] Storage synced on page load");
+  }, []);
   
   useEffect(() => {
     if (currentUser) {
@@ -53,7 +63,10 @@ const Login = () => {
     setErrorMessage("");
     
     try {
-      console.log(`Login attempt - Email: ${data.email}, Role: ${data.role}`);
+      console.log(`[Login] Login attempt - Email: ${data.email}, Role: ${data.role}`);
+      
+      // Ensure storage is synced before login attempt
+      forceSyncAllStorage();
       
       setErrorMessage("");
       
@@ -67,17 +80,13 @@ const Login = () => {
       
       if (success) {
         setSuccessMessage("Login successful!");
-        console.log("Login successful, redirecting...");
+        console.log("[Login] Login successful, redirecting...");
         
-        try {
-          const usersData = localStorage.getItem('ncr_users');
-          if (usersData) {
-            const users = JSON.parse(usersData);
-            console.log(`[Login] Found ${users.length} users in localStorage`);
-          }
-        } catch (storageError) {
-          console.error("[Login] Error checking storage:", storageError);
-        }
+        toast({
+          title: "Login Successful",
+          description: "Welcome to the Nigerian Chess Rating System",
+          variant: "default",
+        });
         
         setTimeout(() => {
           if (data.role === "tournament_organizer") {
@@ -87,12 +96,24 @@ const Login = () => {
           }
         }, 500);
       } else {
-        console.log("Login failed in component");
+        console.log("[Login] Login failed in component");
         setErrorMessage("Invalid credentials or your account is pending approval");
+        
+        toast({
+          title: "Login Failed",
+          description: "Invalid credentials or your account is pending approval",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
-      console.error("Login error in component:", error);
+      console.error("[Login] Login error in component:", error);
       setErrorMessage(error.message || "Login failed. Please try again.");
+      
+      toast({
+        title: "Login Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

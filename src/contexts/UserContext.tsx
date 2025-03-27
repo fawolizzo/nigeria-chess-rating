@@ -1,6 +1,7 @@
 
-import React, { createContext, useState, useContext, useEffect } from "react";
-import { saveToStorage, getFromStorage } from "@/utils/storageUtils";
+import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
+import { saveToStorage, getFromStorage, removeFromStorage, forceSyncAllStorage, initializeStorageListeners } from "@/utils/storageUtils";
+import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
 
 // Define types
 type UserRole = "tournament_organizer" | "rating_officer";
@@ -44,34 +45,31 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial data
+  // Initialize storage listeners
+  useEffect(() => {
+    initializeStorageListeners();
+  }, []);
+
+  // Load initial data - with improved error handling and storage syncing
   useEffect(() => {
     try {
       console.log("[UserContext] Initializing...");
+      forceSyncAllStorage(); // Force sync all storage before loading data
       
-      // Load current user from localStorage
-      const storedUser = localStorage.getItem('ncr_current_user');
+      // Load current user from storage
+      const storedUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
       if (storedUser) {
-        try {
-          setCurrentUser(JSON.parse(storedUser));
-          console.log("[UserContext] Current user loaded from localStorage");
-        } catch (parseError) {
-          console.error("[UserContext] Error parsing user:", parseError);
-          localStorage.removeItem('ncr_current_user');
-        }
+        setCurrentUser(storedUser);
+        console.log("[UserContext] Current user loaded from storage:", storedUser.email);
+      } else {
+        console.log("[UserContext] No current user found in storage");
       }
       
-      // Load all users from localStorage
-      const storedUsers = localStorage.getItem('ncr_users');
-      if (storedUsers) {
-        try {
-          setUsers(JSON.parse(storedUsers));
-          console.log("[UserContext] Users loaded from localStorage");
-        } catch (parseError) {
-          console.error("[UserContext] Error parsing users:", parseError);
-          localStorage.removeItem('ncr_users');
-          setUsers([]);
-        }
+      // Load all users from storage
+      const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      if (storedUsers && storedUsers.length > 0) {
+        setUsers(storedUsers);
+        console.log(`[UserContext] ${storedUsers.length} users loaded from storage`);
       } else {
         // Initialize with default users if none exist
         const defaultUsers: User[] = [
@@ -96,7 +94,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ];
         
         setUsers(defaultUsers);
-        localStorage.setItem('ncr_users', JSON.stringify(defaultUsers));
+        saveToStorage(STORAGE_KEY_USERS, defaultUsers);
         console.log("[UserContext] Default users created");
       }
     } catch (error) {
@@ -109,7 +107,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Add listener for storage changes from other tabs/windows
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'ncr_users' && e.newValue) {
+      if (e.key === STORAGE_KEY_USERS && e.newValue) {
         console.log("[UserContext] Storage event for users detected");
         try {
           const updatedUsers = JSON.parse(e.newValue);
@@ -119,7 +117,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      if (e.key === 'ncr_current_user') {
+      if (e.key === STORAGE_KEY_CURRENT_USER) {
         console.log("[UserContext] Storage event for current user detected");
         if (e.newValue) {
           try {
@@ -145,16 +143,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Save users whenever they change
   useEffect(() => {
     if (users.length > 0) {
-      localStorage.setItem('ncr_users', JSON.stringify(users));
-      console.log("[UserContext] Users saved to localStorage");
+      saveToStorage(STORAGE_KEY_USERS, users);
+      console.log("[UserContext] Users saved to storage");
     }
   }, [users]);
 
   // Registration function
   const register = async (data: RegistrationData): Promise<boolean> => {
     try {
+      // First, sync storage to ensure we have the latest user data
+      forceSyncAllStorage();
+      
+      // Reload users from storage
+      const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      
       // Check if email already exists
-      const emailExists = users.some(user => user.email.toLowerCase() === data.email.toLowerCase());
+      const emailExists = latestUsers.some(user => user.email.toLowerCase() === data.email.toLowerCase());
       if (emailExists) {
         console.error("[UserContext] Registration failed: Email already exists");
         return false;
@@ -172,8 +176,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       // Add user to users array
-      const updatedUsers = [...users, newUser];
-      localStorage.setItem('ncr_users', JSON.stringify(updatedUsers));
+      const updatedUsers = [...latestUsers, newUser];
+      saveToStorage(STORAGE_KEY_USERS, updatedUsers);
       setUsers(updatedUsers);
       console.log("[UserContext] User registered:", newUser.email, newUser.role);
       
@@ -184,22 +188,37 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Login function
+  // Login function with enhanced storage handling
   const login = async (email: string, password: string, role: UserRole): Promise<boolean> => {
     try {
+      // Force sync storage before login attempt
+      forceSyncAllStorage();
+      
+      // Reload users from storage
+      const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+      console.log(`[UserContext] Login attempt for ${email} as ${role}`);
+      console.log(`[UserContext] Found ${latestUsers.length} users in storage`);
+      
       // For demonstration purposes, accept any password
       // In a real app, you would check against stored password hash
       
-      // Find user by email and role
-      const user = users.find(u => 
-        u.email.toLowerCase() === email.toLowerCase() && 
+      // Find user by email and role (case-insensitive)
+      const normalizedEmail = email.toLowerCase().trim();
+      const user = latestUsers.find(u => 
+        u.email.toLowerCase() === normalizedEmail && 
         u.role === role
       );
+      
+      if (user) {
+        console.log(`[UserContext] Found user: ${user.email}, status: ${user.status}`);
+      } else {
+        console.log(`[UserContext] No user found with email: ${normalizedEmail} and role: ${role}`);
+      }
       
       // Check if user exists and is approved
       if (user && (role === "rating_officer" || user.status === "approved")) {
         setCurrentUser(user);
-        localStorage.setItem('ncr_current_user', JSON.stringify(user));
+        saveToStorage(STORAGE_KEY_CURRENT_USER, user);
         console.log("[UserContext] User logged in:", user.email, user.role);
         return true;
       } else if (user && user.status === "pending") {
@@ -216,50 +235,64 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Logout function
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null);
-    localStorage.removeItem('ncr_current_user');
+    removeFromStorage(STORAGE_KEY_CURRENT_USER);
     console.log("[UserContext] User logged out");
-  };
+  }, []);
 
   // Approve a user
-  const approveUser = (userId: string) => {
-    const updatedUsers = users.map(user => 
+  const approveUser = useCallback((userId: string) => {
+    // First, sync storage to ensure we have the latest user data
+    forceSyncAllStorage();
+    
+    // Reload users from storage
+    const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+    
+    const updatedUsers = latestUsers.map(user => 
       user.id === userId ? { 
         ...user, 
         status: "approved" as const,
         approvalDate: new Date().toISOString() // Add approval date
       } : user
     );
+    
     setUsers(updatedUsers);
-    localStorage.setItem('ncr_users', JSON.stringify(updatedUsers));
+    saveToStorage(STORAGE_KEY_USERS, updatedUsers);
     console.log("[UserContext] User approved:", userId);
-  };
+  }, []);
 
   // Reject a user
-  const rejectUser = (userId: string) => {
-    const updatedUsers = users.map(user => 
+  const rejectUser = useCallback((userId: string) => {
+    // First, sync storage to ensure we have the latest user data
+    forceSyncAllStorage();
+    
+    // Reload users from storage
+    const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
+    
+    const updatedUsers = latestUsers.map(user => 
       user.id === userId ? { ...user, status: "rejected" as const } : user
     );
+    
     setUsers(updatedUsers);
-    localStorage.setItem('ncr_users', JSON.stringify(updatedUsers));
+    saveToStorage(STORAGE_KEY_USERS, updatedUsers);
     console.log("[UserContext] User rejected:", userId);
-  };
+  }, []);
 
   // Get rating officer emails
-  const getRatingOfficerEmails = () => {
+  const getRatingOfficerEmails = useCallback(() => {
     return users
       .filter(user => user.role === "rating_officer" && user.status === "approved")
       .map(user => user.email);
-  };
+  }, [users]);
 
   // Get pending tournament organizers
-  const getPendingTournamentOrganizers = () => {
+  const getPendingTournamentOrganizers = useCallback(() => {
     return users.filter(user => 
       user.role === "tournament_organizer" && 
       user.status === "pending"
     );
-  };
+  }, [users]);
 
   return (
     <UserContext.Provider value={{

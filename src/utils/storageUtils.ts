@@ -24,15 +24,26 @@ export const safeJSONStringify = (data: any, fallback: string = '') => {
   }
 };
 
-// Function to get item from local storage
+// Function to get item from local storage with session storage fallback
 export const getFromStorage = <T>(key: string, fallback: T): T => {
   try {
-    // Check localStorage only
+    // First check localStorage
     const localValue = localStorage.getItem(key);
     if (localValue) {
+      console.log(`[Storage] Retrieved ${key} from localStorage`);
       return safeJSONParse(localValue, fallback);
     }
     
+    // Then check sessionStorage as fallback
+    const sessionValue = sessionStorage.getItem(key);
+    if (sessionValue) {
+      console.log(`[Storage] Retrieved ${key} from sessionStorage`);
+      // Sync to localStorage for future retrievals
+      localStorage.setItem(key, sessionValue);
+      return safeJSONParse(sessionValue, fallback);
+    }
+    
+    console.log(`[Storage] No ${key} found, using fallback`);
     return fallback;
   } catch (error) {
     console.error(`Error getting ${key} from storage:`, error);
@@ -40,11 +51,16 @@ export const getFromStorage = <T>(key: string, fallback: T): T => {
   }
 };
 
-// Function to save item to localStorage
+// Function to save item to both localStorage and sessionStorage
 export const saveToStorage = (key: string, data: any): void => {
   try {
     const dataJSON = safeJSONStringify(data);
+    
+    // Save to both storage types for redundancy
     localStorage.setItem(key, dataJSON);
+    sessionStorage.setItem(key, dataJSON);
+    
+    console.log(`[Storage] Saved ${key} to localStorage and sessionStorage`);
     
     // Attempt to broadcast storage change event
     try {
@@ -63,43 +79,46 @@ export const saveToStorage = (key: string, data: any): void => {
   }
 };
 
-// Function to remove item from localStorage
+// Function to remove item from both localStorage and sessionStorage
 export const removeFromStorage = (key: string): void => {
   try {
     localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+    console.log(`[Storage] Removed ${key} from localStorage and sessionStorage`);
   } catch (error) {
     console.error(`Error removing ${key} from storage:`, error);
   }
 };
 
-// Force sync of all storage (simplified version)
-export const forceSyncAllStorage = (): void => {
-  console.log("Storage system updated");
-};
-
-// Added missing syncStorage function that's being imported
+// Sync storage between localStorage and sessionStorage
 export const syncStorage = (key: string): void => {
   try {
     const localValue = localStorage.getItem(key);
+    const sessionValue = sessionStorage.getItem(key);
+    
     if (localValue) {
       // Sync localStorage value to sessionStorage
       sessionStorage.setItem(key, localValue);
-    } else {
-      // Check if value exists in sessionStorage but not localStorage
-      const sessionValue = sessionStorage.getItem(key);
-      if (sessionValue) {
-        localStorage.setItem(key, sessionValue);
-      }
+      console.log(`[Storage] Synced ${key} from localStorage to sessionStorage`);
+    } else if (sessionValue) {
+      // Sync sessionStorage value to localStorage
+      localStorage.setItem(key, sessionValue);
+      console.log(`[Storage] Synced ${key} from sessionStorage to localStorage`);
     }
-    console.log(`Storage synchronization completed for: ${key}`);
   } catch (error) {
     console.error(`Error syncing storage for ${key}:`, error);
   }
 };
 
-// Initialize storage event listeners (simplified version)
-export const initializeStorageListeners = (): void => {
-  console.log("Storage event listeners initialized");
+// Force sync of all common storage keys
+export const forceSyncAllStorage = (): void => {
+  const commonKeys = ['ncr_users', 'ncr_current_user', 'ncr_players', 'ncr_tournaments'];
+  
+  commonKeys.forEach(key => {
+    syncStorage(key);
+  });
+  
+  console.log("[Storage] Forced sync of all common storage keys");
 };
 
 // Function to validate that a player object is complete
@@ -110,4 +129,22 @@ export const validatePlayerData = (player: any): boolean => {
   if (typeof player.rating !== 'number') return false;
   
   return true;
+};
+
+// Initialize storage event listeners for cross-tab syncing
+export const initializeStorageListeners = (): void => {
+  window.addEventListener('storage', (event) => {
+    if (!event.key || !event.newValue) return;
+    
+    // When a storage event is detected, sync that key to the other storage type
+    const currentStorage = event.storageArea === localStorage ? 'localStorage' : 'sessionStorage';
+    const targetStorage = currentStorage === 'localStorage' ? sessionStorage : localStorage;
+    
+    console.log(`[Storage] Storage event detected for ${event.key} in ${currentStorage}`);
+    
+    // Update the other storage type
+    targetStorage.setItem(event.key, event.newValue);
+  });
+  
+  console.log("[Storage] Storage event listeners initialized");
 };
