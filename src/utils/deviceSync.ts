@@ -1,4 +1,3 @@
-
 /**
  * Device Synchronization Utility
  * Handles cross-device synchronization with robust error recovery
@@ -181,7 +180,7 @@ export const setupSyncListeners = (
   onLogin: (data: any) => void,
   onLogout: () => void,
   onApproval: (userId: string) => void
-): () => void => {
+): (() => void) => {
   // Initialize device ID and channels
   ensureDeviceId();
   initSyncChannels();

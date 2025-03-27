@@ -26,10 +26,10 @@ const OfficerDashboard: React.FC = () => {
     // Load pending data counts
     const loadPendingCounts = async () => {
       try {
-        // Ensure storage is synced between localStorage and sessionStorage
-        await syncStorage('ncr_users');
-        await syncStorage('ncr_players');
-        await syncStorage('ncr_tournaments');
+        // Ensure storage is synced between localStorage and sessionStorage - use arrays
+        await syncStorage(['ncr_users']);
+        await syncStorage(['ncr_players']);
+        await syncStorage(['ncr_tournaments']);
         
         // Load pending tournaments count
         const allTournaments = getAllTournaments();
