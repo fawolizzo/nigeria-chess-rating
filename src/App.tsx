@@ -5,7 +5,7 @@ import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
 import { useToast } from '@/components/ui/use-toast';
-import { forceSyncAllStorage, getFromStorage } from '@/utils/storageUtils';
+import { forceSyncAllStorage, getFromStorage, checkStorageHealth, initializeStorageListeners } from '@/utils/storageUtils';
 import { STORAGE_KEY_CURRENT_USER } from '@/types/userTypes';
 
 // Import pages
@@ -22,16 +22,29 @@ import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
 import NotFound from './pages/NotFound';
 
-// Higher-order component for protected routes with improved auth checking
+// Higher-order component for protected routes with robust cross-device auth checking
 const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournament_organizer' | 'rating_officer' }) => {
   const { toast } = useToast();
 
-  // Force sync storage to ensure we have the latest user data
-  forceSyncAllStorage();
+  // Force sync storage and check health to ensure we have the latest user data
+  const syncResult = forceSyncAllStorage();
+  
+  if (!syncResult) {
+    console.warn("[RequireAuth] Storage sync issues detected");
+  }
   
   // Get the current user from storage directly (not from context)
-  // This ensures we always have the latest user status, even across devices
-  const user = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
+  // Extract from either new format (with timestamp) or legacy format
+  const storedUserData = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
+  
+  let user = null;
+  if (storedUserData?.data) {
+    // New format with timestamp
+    user = storedUserData.data;
+  } else if (storedUserData) {
+    // Legacy format
+    user = storedUserData;
+  }
   
   if (!user) {
     console.log("[RequireAuth] No user found in storage, redirecting to login");
@@ -69,35 +82,91 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
   return children;
 };
 
-// Main App component with error boundary and device detection
+// Main App component with enhanced error boundary and improved device detection
 function App() {
-  // Force sync storage on app load
+  const { toast } = useToast();
+  
+  // Initialize app on load with better storage handling
   useEffect(() => {
-    forceSyncAllStorage();
-    console.log("[App] Storage synced on app load");
+    console.log("[App] Initializing application");
     
-    // Check for mobile devices to apply optimizations
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-      document.body.classList.add('mobile-optimized', 'safari-fix');
-    }
-    
-    // Check browser storage availability to ensure data persistence
     try {
-      localStorage.setItem('storage_test', 'test');
-      localStorage.removeItem('storage_test');
-    } catch (e) {
-      console.error('Local storage is not available. This may affect application functionality.');
-    }
-    
-    // Ensure consistent storage across devices and browsers
-    window.addEventListener('storage', (event) => {
-      if (event.key === STORAGE_KEY_CURRENT_USER) {
-        // If the user logged in or out in another tab, reload to reflect those changes
-        window.location.reload();
+      // Initialize storage event listeners
+      initializeStorageListeners();
+      
+      // Check storage health and recover if needed
+      checkStorageHealth();
+      
+      // Force sync storage on app load
+      const syncResult = forceSyncAllStorage();
+      if (!syncResult) {
+        console.warn("[App] Storage sync issues detected at initialization");
+        toast({
+          title: "Storage Sync Warning",
+          description: "There may be issues with data synchronization across devices. If you experience login issues, try clearing your browser cache.",
+          variant: "warning"
+        });
       }
-    });
-  }, []);
+      
+      // Check for mobile devices to apply optimizations
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        document.body.classList.add('mobile-optimized', 'safari-fix');
+        console.log("[App] Mobile device detected, optimizations applied");
+      }
+      
+      // Check browser storage availability to ensure data persistence
+      try {
+        localStorage.setItem('storage_test', 'test');
+        localStorage.removeItem('storage_test');
+        console.log("[App] Storage availability check passed");
+      } catch (e) {
+        console.error('[App] Local storage is not available. This may affect application functionality.', e);
+        toast({
+          title: "Storage Access Error",
+          description: "Your browser may be blocking access to local storage. Try disabling private browsing mode or clearing cookies.",
+          variant: "destructive",
+        });
+      }
+      
+      // Listen for online/offline events
+      window.addEventListener('online', () => {
+        console.log("[App] Device came online");
+        toast({
+          title: "Back Online",
+          description: "Your internet connection has been restored. Data will now synchronize.",
+        });
+        forceSyncAllStorage();
+      });
+      
+      window.addEventListener('offline', () => {
+        console.log("[App] Device went offline");
+        toast({
+          title: "Offline Mode",
+          description: "You are currently offline. Some features may be limited.",
+          variant: "warning",
+        });
+      });
+      
+      // Ensure consistent storage across devices and browsers
+      window.addEventListener('storage', (event) => {
+        console.log(`[App] Storage event detected for ${event.key}`);
+        
+        if (event.key === STORAGE_KEY_CURRENT_USER) {
+          console.log("[App] Current user changed in another tab/window, reloading");
+          // If the user logged in or out in another tab, reload to reflect those changes
+          window.location.reload();
+        }
+      });
+    } catch (error) {
+      console.error("[App] Error initializing application:", error);
+      toast({
+        title: "Initialization Error",
+        description: "There was a problem starting the application. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   return (
     <UserProvider>

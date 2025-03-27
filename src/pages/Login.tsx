@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle } from "lucide-react";
+import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { forceSyncAllStorage } from "@/utils/storageUtils";
+import { forceSyncAllStorage, checkStorageHealth } from "@/utils/storageUtils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -25,20 +25,50 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, currentUser } = useUser();
+  const { login, currentUser, refreshUserData } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
   const isMobile = useIsMobile();
   
-  // Force sync storage on page load to ensure cross-device consistency
+  // Force sync storage and check health on page load
   useEffect(() => {
-    forceSyncAllStorage();
-    console.log("[Login] Storage synced on page load");
-  }, []);
+    const initializeLogin = async () => {
+      console.log("[Login] Initializing login page");
+      setIsSyncing(true);
+      
+      try {
+        // Check storage health
+        checkStorageHealth();
+        
+        // Force sync all storage
+        const syncResult = forceSyncAllStorage();
+        
+        if (!syncResult) {
+          console.warn("[Login] Storage sync issues detected");
+          toast({
+            title: "Storage Sync Warning",
+            description: "There may be issues with data synchronization. If login fails, try clearing your browser cache.",
+            variant: "warning"
+          });
+        } else {
+          console.log("[Login] Storage synced successfully");
+        }
+      } catch (error) {
+        console.error("[Login] Error initializing login page:", error);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+    
+    initializeLogin();
+  }, [toast]);
   
+  // Handle redirect if user is already logged in
   useEffect(() => {
     if (currentUser) {
+      console.log(`[Login] User already logged in: ${currentUser.email}, redirecting...`);
       if (currentUser.role === "tournament_organizer") {
         navigate("/organizer/dashboard");
       } else {
@@ -58,6 +88,44 @@ const Login = () => {
   
   const selectedRole = form.watch("role");
   
+  // Manual sync button handler
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    
+    try {
+      // Check storage health
+      checkStorageHealth();
+      
+      // Force sync all storage
+      const syncResult = forceSyncAllStorage();
+      
+      // Refresh user data from context
+      refreshUserData();
+      
+      if (syncResult) {
+        toast({
+          title: "Sync Complete",
+          description: "User data has been synchronized successfully.",
+        });
+      } else {
+        toast({
+          title: "Sync Issues",
+          description: "There were some issues synchronizing data. You may want to try clearing your browser cache.",
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error("[Login] Error during manual sync:", error);
+      toast({
+        title: "Sync Failed",
+        description: "There was a problem synchronizing your data. Please try again or clear your browser cache.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+  
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
@@ -66,7 +134,16 @@ const Login = () => {
       console.log(`[Login] Login attempt - Email: ${data.email}, Role: ${data.role}`);
       
       // Ensure storage is synced before login attempt
-      forceSyncAllStorage();
+      const syncResult = forceSyncAllStorage();
+      
+      if (!syncResult) {
+        console.warn("[Login] Storage sync issues detected during login attempt");
+        toast({
+          title: "Storage Sync Warning",
+          description: "There may be issues with data synchronization. If login fails, try using the 'Sync Data' button.",
+          variant: "warning"
+        });
+      }
       
       setErrorMessage("");
       
@@ -82,12 +159,7 @@ const Login = () => {
         setSuccessMessage("Login successful!");
         console.log("[Login] Login successful, redirecting...");
         
-        toast({
-          title: "Login Successful",
-          description: "Welcome to the Nigerian Chess Rating System",
-          variant: "default",
-        });
-        
+        // Slight delay to allow state to update
         setTimeout(() => {
           if (data.role === "tournament_organizer") {
             navigate("/organizer/dashboard", { replace: true });
@@ -99,11 +171,7 @@ const Login = () => {
         console.log("[Login] Login failed in component");
         setErrorMessage("Invalid credentials or your account is pending approval");
         
-        toast({
-          title: "Login Failed",
-          description: "Invalid credentials or your account is pending approval",
-          variant: "destructive",
-        });
+        // No toast here as the login function already shows one
       }
     } catch (error: any) {
       console.error("[Login] Login error in component:", error);
@@ -130,6 +198,19 @@ const Login = () => {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Login</h1>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Sign in to your Nigeria Chess Rating System account
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2" 
+                onClick={handleManualSync}
+                disabled={isSyncing}
+              >
+                <RefreshCw className={`mr-1 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? "Syncing..." : "Sync Data"}
+              </Button>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                Use this if you're having trouble logging in on a different device
               </p>
             </div>
             
@@ -248,7 +329,7 @@ const Login = () => {
                 <Button
                   type="submit"
                   className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isSyncing}
                 >
                   {isSubmitting ? (
                     <>
