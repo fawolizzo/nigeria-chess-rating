@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { forceSyncAllStorage, checkStorageHealth } from "@/utils/storageUtils";
-import { checkResetStatus, clearResetStatus, processSystemReset } from "@/utils/storageSync";
+import { checkResetStatus, clearResetStatus, processSystemReset, forceGlobalSync } from "@/utils/storageSync";
 
 /**
  * Component to initialize storage and handle sync events on mount
@@ -58,6 +58,9 @@ const PlayerStorageInitializer: React.FC = () => {
           } else {
             console.log("[PlayerStorageInitializer] Storage synced successfully");
           }
+          
+          // Force a global sync to ensure all devices are synced
+          forceGlobalSync();
         } catch (error) {
           console.error("[PlayerStorageInitializer] Storage sync error:", error);
           toast({
@@ -98,6 +101,9 @@ const PlayerStorageInitializer: React.FC = () => {
           setTimeout(() => {
             window.location.reload();
           }, 1000);
+        } else if (event.key === 'ncr_force_sync') {
+          console.log("[PlayerStorageInitializer] Force sync event detected");
+          syncStorage();
         }
       };
       
