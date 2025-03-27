@@ -1,3 +1,4 @@
+
 /**
  * Device Synchronization Utility
  * Handles cross-device synchronization with robust error recovery
@@ -353,7 +354,7 @@ export const requestDataSync = (): void => {
 };
 
 // Initialize device sync system
-export const initializeDeviceSync = (): void => {
+export const initializeDeviceSync = (): (() => void) => {
   ensureDeviceId();
   initSyncChannels();
   

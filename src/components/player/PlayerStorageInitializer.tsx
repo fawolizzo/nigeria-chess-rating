@@ -16,12 +16,23 @@ import { useUser } from "@/contexts/UserContext";
 const PlayerStorageInitializer: React.FC = () => {
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
-  const { refreshUserData } = useUser();
+  const { refreshUserData, clearAllData } = useUser();
   
   useEffect(() => {
     console.log("[PlayerStorageInitializer] Component mounting");
     
     try {
+      // Initialize global functions for cross-device sync
+      window.ncrForceSyncFunction = async (keys?: string[]) => {
+        console.log("[PlayerStorageInitializer] Global force sync triggered", keys);
+        return await refreshUserData();
+      };
+      
+      window.ncrClearAllData = async () => {
+        console.log("[PlayerStorageInitializer] Global clear data triggered");
+        return await clearAllData();
+      };
+      
       // Define an initialization function
       const initialize = async () => {
         // Test storage availability
@@ -133,6 +144,12 @@ const PlayerStorageInitializer: React.FC = () => {
       );
       
       return () => {
+        // Clean up global functions
+        delete window.ncrForceSyncFunction;
+        delete window.ncrClearAllData;
+        window.ncrIsResetting = false;
+        
+        // Cleanup sync listeners
         cleanup();
         console.log("[PlayerStorageInitializer] Component unmounting");
       };
@@ -147,7 +164,7 @@ const PlayerStorageInitializer: React.FC = () => {
       
       setIsInitialized(true);
     }
-  }, [toast, refreshUserData]);
+  }, [toast, refreshUserData, clearAllData]);
 
   return null; // This component doesn't render anything
 };
