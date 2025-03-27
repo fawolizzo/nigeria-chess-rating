@@ -16,7 +16,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
   // Prepare rating data directly in the component
   const prepareRatingData = (timeFormat: "classical" | "rapid" | "blitz") => {
     let history = [];
-    let statusLabel = "Provisional";
+    let statusLabel = "";
     let gameCount = 0;
     let currentRating = 0;
     
@@ -25,24 +25,24 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
         date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
         rating: entry.rating
       })) || [];
-      statusLabel = player.ratingStatus || "Provisional";
       gameCount = player.gamesPlayed || 0;
+      statusLabel = gameCount >= 30 ? "established" : "provisional";
       currentRating = player.rating || 0;
     } else if (timeFormat === "rapid") {
       history = player.rapidRatingHistory?.map(entry => ({
         date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
         rating: entry.rating
       })) || [];
-      statusLabel = player.rapidRatingStatus || "Provisional";
       gameCount = player.rapidGamesPlayed || 0;
+      statusLabel = gameCount >= 30 ? "established" : "provisional";
       currentRating = player.rapidRating || 0;
     } else if (timeFormat === "blitz") {
       history = player.blitzRatingHistory?.map(entry => ({
         date: entry.date ? format(new Date(entry.date), "MMM yyyy") : "Unknown",
         rating: entry.rating
       })) || [];
-      statusLabel = player.blitzRatingStatus || "Provisional";
       gameCount = player.blitzGamesPlayed || 0;
+      statusLabel = gameCount >= 30 ? "established" : "provisional";
       currentRating = player.blitzRating || 0;
     }
     

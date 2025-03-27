@@ -278,10 +278,10 @@ const MultiFormatRatingChart = ({ player, height = 350 }: MultiFormatRatingChart
           <ul className="list-disc list-outside ml-4 space-y-1">
             <li>Floor rating of {FLOOR_RATING} for new players in any format</li>
             <li>Ratings are tracked separately for each format (Classical, Rapid, Blitz)</li>
-            <li>Players with +100 rating suffix are treated as having 30+ games</li>
+            <li>Players need 30 games to achieve an established rating</li>
             <li>Variable K-factors based on rating and experience:</li>
             <ul className="list-disc list-outside ml-6 mt-1">
-              <li>K=40 for new players (less than 10 games) under 2000 rating</li>
+              <li>K=40 for new players (less than 30 games)</li>
               <li>K=32 for players rated below 2100</li>
               <li>K=24 for players rated 2100-2399</li>
               <li>K=16 for higher-rated players (2400+)</li>

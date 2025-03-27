@@ -1,3 +1,4 @@
+
 import { getAllUsersFromStorage } from "@/utils/userUtils";
 import { FLOOR_RATING } from "./ratingCalculation";
 
@@ -184,6 +185,17 @@ export const updatePlayer = (updatedPlayer: Player): void => {
     updatedPlayer.titleVerified = true;
   }
   
+  // Check if rating status needs to be updated
+  updatedPlayer.ratingStatus = (updatedPlayer.gamesPlayed || 0) >= 30 ? 'established' : 'provisional';
+  
+  if (updatedPlayer.rapidRating !== undefined) {
+    updatedPlayer.rapidRatingStatus = (updatedPlayer.rapidGamesPlayed || 0) >= 30 ? 'established' : 'provisional';
+  }
+  
+  if (updatedPlayer.blitzRating !== undefined) {
+    updatedPlayer.blitzRatingStatus = (updatedPlayer.blitzGamesPlayed || 0) >= 30 ? 'established' : 'provisional';
+  }
+  
   const updatedPlayers = allPlayers.map(player => 
     player.id === updatedPlayer.id ? updatedPlayer : player
   );
@@ -198,7 +210,7 @@ export const addPlayer = (newPlayer: Player): void => {
     newPlayer.tournamentResults = [];
   }
   
-  // Assign floor rating (800) to any missing format ratings without adding any bonus
+  // Assign exact floor rating (800) to any missing format ratings without adding any bonus
   if (newPlayer.rapidRating === undefined) {
     newPlayer.rapidRating = FLOOR_RATING;
     newPlayer.rapidGamesPlayed = 0;
@@ -220,6 +232,9 @@ export const addPlayer = (newPlayer: Player): void => {
       reason: "Initial rating"
     }];
   }
+  
+  // Set rating statuses based on games played
+  newPlayer.ratingStatus = (newPlayer.gamesPlayed || 0) >= 30 ? 'established' : 'provisional';
   
   // Generate NCR ID format if not present
   if (!newPlayer.id.startsWith('NCR')) {
@@ -328,11 +343,15 @@ export const createPlayer = (playerData: any): Player => {
       rating: playerData.rating || FLOOR_RATING,
       reason: "Initial rating"
     }],
-    // Add floor ratings for all formats without adding any bonus
+    // Add exact floor ratings for all formats with no bonus
     rapidRating: playerData.rapidRating || FLOOR_RATING,
     blitzRating: playerData.blitzRating || FLOOR_RATING,
     rapidGamesPlayed: playerData.rapidGamesPlayed || 0,
     blitzGamesPlayed: playerData.blitzGamesPlayed || 0,
+    // Set rating status based on games played
+    ratingStatus: (playerData.gamesPlayed || 0) >= 30 ? 'established' : 'provisional',
+    rapidRatingStatus: (playerData.rapidGamesPlayed || 0) >= 30 ? 'established' : 'provisional',
+    blitzRatingStatus: (playerData.blitzGamesPlayed || 0) >= 30 ? 'established' : 'provisional',
     rapidRatingHistory: [{
       date: new Date().toISOString(),
       rating: playerData.rapidRating || FLOOR_RATING,

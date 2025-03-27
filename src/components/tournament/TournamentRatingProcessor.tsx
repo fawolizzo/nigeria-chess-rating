@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Dialog, 
@@ -69,10 +70,10 @@ const TournamentRatingProcessor = ({
             // Use the appropriate rating based on tournament type
             const getPlayerRating = (player: Player) => {
               if (tournamentType === 'rapid') {
-                // Use floor rating without bonus if player has no rapid rating
+                // Use exact floor rating if player has no rapid rating
                 return player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
               } else if (tournamentType === 'blitz') {
-                // Use floor rating without bonus if player has no blitz rating
+                // Use exact floor rating if player has no blitz rating
                 return player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
               }
               // For classical, always use the player's classical rating (which should always exist)
@@ -91,29 +92,14 @@ const TournamentRatingProcessor = ({
               return player.gamesPlayed || 0;
             };
             
-            // Check if player has an established rating (+100 or 30+ games)
+            // A player is established if they've played 30+ games
             const isEstablishedRating = (player: Player) => {
-              const playerRating = getPlayerRating(player);
               const gamesPlayed = getPlayerGamesPlayed(player);
-              const ratingStatus = tournamentType === 'rapid' 
-                ? player.rapidRatingStatus 
-                : tournamentType === 'blitz'
-                ? player.blitzRatingStatus
-                : player.ratingStatus;
-                
-              return ratingStatus === 'established' || gamesPlayed >= 30 || String(playerRating).endsWith('100');
+              return gamesPlayed >= 30;
             };
             
-            // If player has a +100 rating or is established, ensure they're treated as established
-            const adjustGamesPlayed = (player: Player, games: number) => {
-              if (isEstablishedRating(player)) {
-                return Math.max(30, games);
-              }
-              return games;
-            };
-            
-            const whiteGamesPlayed = adjustGamesPlayed(whitePlayer, getPlayerGamesPlayed(whitePlayer));
-            const blackGamesPlayed = adjustGamesPlayed(blackPlayer, getPlayerGamesPlayed(blackPlayer));
+            const whiteGamesPlayed = getPlayerGamesPlayed(whitePlayer);
+            const blackGamesPlayed = getPlayerGamesPlayed(blackPlayer);
             
             return {
               ...match,
@@ -183,11 +169,10 @@ const TournamentRatingProcessor = ({
               <div className="font-medium">Rating System Parameters:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                 <li>Floor rating of {FLOOR_RATING} for new players</li>
-                <li>K=40 for new players (less than 10 games) under 2000 rating</li>
+                <li>K=40 for new players (less than 30 games)</li>
                 <li>K=32 for players rated below 2100</li>
                 <li>K=24 for players rated 2100-2399</li>
                 <li>K=16 for higher-rated players (2400+)</li>
-                <li>Players with +100 ratings are treated as having 30+ games</li>
                 <li>Players need 30 games to achieve an established rating</li>
               </ul>
             </div>

@@ -10,9 +10,6 @@ interface PlayerRatingsProps {
 }
 
 const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
-  // Check if the player has a +100 rating (provisional rating)
-  const hasPlus100Rating = (rating: number) => String(rating).endsWith('100');
-  
   // Get K-factor for classical rating
   const classicalKFactor = getKFactor(player.rating, player.gamesPlayed || 0);
   
@@ -64,14 +61,12 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
   const rapidRatingChange = player.rapidRating ? calculateRecentRapidChange() : 0;
   const blitzRatingChange = player.blitzRating ? calculateRecentBlitzChange() : 0;
   
-  // Determine the player's rating status text
-  const getRatingStatusText = (rating: number, gamesPlayed: number = 0, ratingStatus?: string) => {
-    if (ratingStatus === 'established' || hasPlus100Rating(rating) || gamesPlayed >= 30) {
+  // Determine the player's rating status text based on games played
+  const getRatingStatusText = (gamesPlayed: number = 0) => {
+    if (gamesPlayed >= 30) {
       return "Established rating";
-    } else if (gamesPlayed < 30) {
-      return `${30 - gamesPlayed} more games until established`;
     } else {
-      return "Provisional rating";
+      return `${30 - gamesPlayed} more games until established`;
     }
   };
   
@@ -99,7 +94,7 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
             </div>
             <div className="text-sm text-gray-500 mt-1">K-factor: {classicalKFactor}</div>
             <div className="text-sm text-gray-500">
-              {getRatingStatusText(player.rating, player.gamesPlayed, player.ratingStatus)}
+              {getRatingStatusText(player.gamesPlayed)}
             </div>
           </div>
           
@@ -124,7 +119,7 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
                   K-factor: {getKFactor(player.rapidRating, player.rapidGamesPlayed || 0)}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {getRatingStatusText(player.rapidRating, player.rapidGamesPlayed, player.rapidRatingStatus)}
+                  {getRatingStatusText(player.rapidGamesPlayed || 0)}
                 </div>
               </>
             )}
@@ -151,7 +146,7 @@ const PlayerRatings: React.FC<PlayerRatingsProps> = ({ player }) => {
                   K-factor: {getKFactor(player.blitzRating, player.blitzGamesPlayed || 0)}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {getRatingStatusText(player.blitzRating, player.blitzGamesPlayed, player.blitzRatingStatus)}
+                  {getRatingStatusText(player.blitzGamesPlayed || 0)}
                 </div>
               </>
             )}

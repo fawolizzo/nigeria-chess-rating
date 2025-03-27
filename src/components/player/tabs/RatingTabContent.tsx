@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { TournamentResult } from "@/lib/mockData";
+import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
 interface RatingTabContentProps {
   format: "classical" | "rapid" | "blitz";
@@ -58,6 +59,7 @@ const RatingTabContent: React.FC<RatingTabContentProps> = ({
   tournamentResults
 }) => {
   const formatLabel = format.charAt(0).toUpperCase() + format.slice(1);
+  const isEstablished = gameCount >= 30;
   
   return (
     <>
@@ -83,11 +85,16 @@ const RatingTabContent: React.FC<RatingTabContentProps> = ({
             <div className="flex items-center gap-4">
               <div className="text-4xl font-bold">{currentRating}</div>
               <div>
-                <Badge variant={statusLabel === "established" ? "default" : "outline"}>
-                  {statusLabel}
+                <Badge variant={isEstablished ? "default" : "outline"}>
+                  {isEstablished ? "Established" : "Provisional"}
                 </Badge>
                 <div className="text-sm text-muted-foreground mt-1">
                   {gameCount} games played
+                  {!isEstablished && (
+                    <span className="block text-xs">
+                      {30 - gameCount} more until established
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -108,11 +115,11 @@ const RatingTabContent: React.FC<RatingTabContentProps> = ({
                       tick={{ fontSize: 12 }}
                     />
                     <YAxis 
-                      domain={[(dataMin: number) => Math.max(700, dataMin - 100), (dataMax: number) => dataMax + 100]} 
+                      domain={[(dataMin: number) => Math.max(FLOOR_RATING - 100, dataMin - 100), (dataMax: number) => dataMax + 100]} 
                       tick={{ fontSize: 12 }}
                     />
                     <Tooltip formatter={(value) => [`${value} points`, 'Rating']} />
-                    <ReferenceLine y={800} stroke="#FF7E67" strokeDasharray="3 3" />
+                    <ReferenceLine y={FLOOR_RATING} stroke="#FF7E67" strokeDasharray="3 3" label={{ value: 'Floor Rating', position: 'insideTopRight', fill: '#FF7E67' }} />
                     <Line 
                       type="monotone" 
                       dataKey="rating" 

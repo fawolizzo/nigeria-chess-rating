@@ -29,10 +29,10 @@ export const initializePlayerData = (playerData: any): Player => {
       ? playerCopy.tournamentResults 
       : [],
     
-    // Ensure rating and rating history exist
+    // Ensure classical rating and rating history exist
     rating: playerCopy.rating || FLOOR_RATING,
     gamesPlayed: playerCopy.gamesPlayed || 0,
-    ratingStatus: playerCopy.ratingStatus || 'provisional',
+    ratingStatus: playerCopy.gamesPlayed >= 30 ? 'established' : 'provisional',
     ratingHistory: Array.isArray(playerCopy.ratingHistory) && playerCopy.ratingHistory.length > 0
       ? playerCopy.ratingHistory
       : [{
@@ -44,7 +44,7 @@ export const initializePlayerData = (playerData: any): Player => {
     // Ensure rapid rating data exists - use FLOOR_RATING without any bonus
     rapidRating: playerCopy.rapidRating !== undefined ? playerCopy.rapidRating : FLOOR_RATING,
     rapidGamesPlayed: playerCopy.rapidGamesPlayed || 0,
-    rapidRatingStatus: playerCopy.rapidRatingStatus || 'provisional',
+    rapidRatingStatus: playerCopy.rapidGamesPlayed >= 30 ? 'established' : 'provisional',
     rapidRatingHistory: Array.isArray(playerCopy.rapidRatingHistory) && playerCopy.rapidRatingHistory.length > 0
       ? playerCopy.rapidRatingHistory
       : [{
@@ -56,7 +56,7 @@ export const initializePlayerData = (playerData: any): Player => {
     // Ensure blitz rating data exists - use FLOOR_RATING without any bonus
     blitzRating: playerCopy.blitzRating !== undefined ? playerCopy.blitzRating : FLOOR_RATING,
     blitzGamesPlayed: playerCopy.blitzGamesPlayed || 0,
-    blitzRatingStatus: playerCopy.blitzRatingStatus || 'provisional',
+    blitzRatingStatus: playerCopy.blitzGamesPlayed >= 30 ? 'established' : 'provisional',
     blitzRatingHistory: Array.isArray(playerCopy.blitzRatingHistory) && playerCopy.blitzRatingHistory.length > 0
       ? playerCopy.blitzRatingHistory
       : [{

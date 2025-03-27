@@ -46,6 +46,15 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
     return player.gamesPlayed || 0;
   };
   
+  // Get the rating status based on rating type and games played
+  const getRatingStatus = () => {
+    const gamesPlayed = getGamesPlayed();
+    if (gamesPlayed >= 30) {
+      return 'established';
+    }
+    return 'provisional';
+  };
+  
   // Transform rating history for chart display
   const ratingHistory = getRatingHistory();
   const chartData = ratingHistory.map(entry => ({
@@ -67,12 +76,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
 
   // Get K-factor description based on rating and games played
   const getKFactorDescription = (rating: number, gamesPlayed: number = 0) => {
-    // If rating ends with 100, treat as experienced player
-    if (String(rating).endsWith('100')) {
-      return "K=32 (Established player)";
-    }
-    
-    if (gamesPlayed < 10) return "K=40 (New player)";
+    if (gamesPlayed < 30) return "K=40 (New player)";
     if (rating < 2100) return "K=32";
     if (rating < 2400) return "K=24";
     return "K=16";
@@ -90,6 +94,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
 
   // Calculate displayed games played
   const displayedGamesPlayed = getGamesPlayed();
+  const ratingStatus = getRatingStatus();
 
   return (
     <Card className={className}>
@@ -99,7 +104,12 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({
           <span className="text-lg font-bold">{currentRating}</span>
         </CardTitle>
         <CardDescription>
-          K-factor: {getKFactorDescription(currentRating, getGamesPlayed())}
+          K-factor: {getKFactorDescription(currentRating, displayedGamesPlayed)}
+          {displayedGamesPlayed < 30 && (
+            <span className="block text-xs text-muted-foreground mt-1">
+              {30 - displayedGamesPlayed} more games until established
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
