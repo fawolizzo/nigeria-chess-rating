@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
   ClipboardCheck, 
@@ -13,7 +12,8 @@ import {
   Mail, 
   Lock, 
   Check, 
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import * as z from "zod";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "@/components/ui/use-toast";
+import { forceSyncAllStorage } from "@/utils/storageUtils";
+import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 
 const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
@@ -58,6 +60,7 @@ const Register = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -72,15 +75,55 @@ const Register = () => {
     }
   });
   
+  useEffect(() => {
+    const initialSync = async () => {
+      setIsSyncing(true);
+      try {
+        await forceSyncAllStorage();
+        console.log("Initial data sync completed");
+      } catch (error) {
+        console.error("Error during initial sync:", error);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+    
+    initialSync();
+  }, []);
+  
   const selectedRole = form.watch("role");
   
   const handleShowAccessCode = (role: string) => {
     setShowAccessCode(role === "rating_officer");
   };
   
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    setErrorMessage("");
+    
+    try {
+      await forceSyncAllStorage();
+      toast({
+        title: "Data Synchronized",
+        description: "Your device has been synchronized with the latest data.",
+      });
+    } catch (error) {
+      console.error("Error during manual sync:", error);
+      setErrorMessage("Failed to synchronize data. Please try again before registering.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+  
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
+    
+    try {
+      await forceSyncAllStorage();
+    } catch (syncError) {
+      console.error("Error syncing before registration:", syncError);
+    }
     
     if (data.role === "rating_officer" && accessCode !== "NCR2025") {
       setErrorMessage("Invalid access code for Rating Officer registration");
@@ -164,6 +207,10 @@ const Register = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Join the Nigeria Chess Rating System
               </p>
+              
+              <div className="mt-2 flex justify-center">
+                <SyncStatusIndicator showButton={true} />
+              </div>
             </div>
             
             {successMessage && (
@@ -176,7 +223,21 @@ const Register = () => {
             {errorMessage && (
               <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-start">
                 <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="ml-3 text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+                  {errorMessage.includes("Email has already registered") && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 h-8 text-xs"
+                      onClick={handleManualSync}
+                      disabled={isSyncing}
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+                      {isSyncing ? "Syncing..." : "Sync Data & Try Again"}
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
             
@@ -402,7 +463,7 @@ const Register = () => {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isSyncing}
                   >
                     {isSubmitting ? (
                       <span className="flex items-center">

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,23 +28,22 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
     try {
       setIsResetting(true);
       
+      toast({
+        title: "System Reset Started",
+        description: "Clearing all data across devices. This may take a few moments...",
+        duration: 3000,
+      });
+      
       // Call the enhanced system reset function
       performSystemReset();
       
-      toast({
-        title: "System Reset Successful",
-        description: "All data has been completely cleared including rating officers, organizers, and players. All users need to register again.",
-        variant: "default",
-      });
-      
+      // Execute the onReset callback if provided
       if (onReset) {
         onReset();
       }
       
-      // Redirect to homepage after a brief delay
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1500);
+      // Note: The page will automatically reload from performSystemReset
+      // so we don't need additional reload logic here
     } catch (error) {
       console.error("Error during system reset:", error);
       toast({
@@ -67,7 +66,7 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
             System Reset
           </h3>
           <p className="text-sm text-red-600 dark:text-red-300 mb-4">
-            This action will remove ALL data including rating officers, organizers, players, tournaments, and registration data.
+            This action will remove ALL data on ALL connected devices including rating officers, organizers, players, tournaments, and registration data.
             Everyone will need to register again after this action.
           </p>
           <Button 
@@ -76,8 +75,12 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
             onClick={() => setIsConfirmOpen(true)}
             disabled={isResetting}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {isResetting ? "Resetting..." : "Reset System Data"}
+            {isResetting ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {isResetting ? "Resetting All Devices..." : "Reset System Data (All Devices)"}
           </Button>
         </div>
       </div>
@@ -90,7 +93,7 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
               Confirm System Reset
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. ALL data including rating officers, organizers, players, tournaments will be permanently deleted. 
+              This action cannot be undone. ALL data including rating officers, organizers, players, tournaments will be permanently deleted from ALL devices. 
               Everyone will need to register again to use the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -101,7 +104,14 @@ const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
               onClick={handleResetSystem}
               disabled={isResetting}
             >
-              Yes, Reset All Data
+              {isResetting ? (
+                <span className="flex items-center">
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Resetting...
+                </span>
+              ) : (
+                "Yes, Reset All Data"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

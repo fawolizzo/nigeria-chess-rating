@@ -33,11 +33,102 @@ export const initBroadcastChannel = (): void => {
     if (typeof BroadcastChannel !== 'undefined') {
       broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
       console.log("[StorageSync] BroadcastChannel initialized");
+      
+      // Set up the reset event handler immediately
+      broadcastChannel.addEventListener('message', (event) => {
+        if (event.data?.type === SyncEventType.RESET) {
+          console.log("[StorageSync] Reset event received, processing...");
+          // Handle reset directly here to ensure it's processed even if listeners aren't set up yet
+          processSystemReset();
+        }
+      });
     } else {
       console.warn("[StorageSync] BroadcastChannel not supported in this browser");
+      // Fallback for browsers that don't support BroadcastChannel
+      setupStorageEventListener();
     }
   } catch (error) {
     console.error("[StorageSync] Failed to initialize BroadcastChannel:", error);
+    // Fallback to storage events
+    setupStorageEventListener();
+  }
+};
+
+// Setup storage event listener as fallback for BroadcastChannel
+const setupStorageEventListener = (): void => {
+  console.log("[StorageSync] Setting up storage event listener fallback");
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'ncr_system_reset') {
+      console.log("[StorageSync] Reset event detected via storage event, processing...");
+      processSystemReset();
+    }
+  });
+};
+
+// Process a system reset - can be called directly or via events
+export const processSystemReset = (): void => {
+  try {
+    console.log("[StorageSync] Processing system reset");
+    
+    // Clear all data from localStorage and sessionStorage
+    clearAllStorageData();
+    
+    // Set the reset timestamp again after clearing
+    const resetTimestamp = Date.now();
+    localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
+    sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
+    
+    // Force page reload to ensure clean application state
+    console.log("[StorageSync] Reloading page to complete reset");
+    window.location.reload();
+  } catch (error) {
+    console.error("[StorageSync] Error during system reset processing:", error);
+  }
+};
+
+// Helper function to clear all storage data
+const clearAllStorageData = (): void => {
+  try {
+    console.log("[StorageSync] Clearing all storage data");
+    
+    // Clear specific keys first to ensure critical data is removed
+    SYNC_KEYS.forEach(key => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+    
+    // Then clear everything else
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Try to clear IndexedDB if available
+    clearIndexedDBData();
+    
+    console.log("[StorageSync] All storage data cleared");
+  } catch (error) {
+    console.error("[StorageSync] Error clearing storage data:", error);
+  }
+};
+
+// Attempt to clear IndexedDB data
+const clearIndexedDBData = (): void => {
+  try {
+    if (window.indexedDB) {
+      // List of possible database names to clear
+      const possibleDBNames = ['ncr-db', 'ncrdb', 'chess-rating-db'];
+      
+      possibleDBNames.forEach(dbName => {
+        try {
+          const request = indexedDB.deleteDatabase(dbName);
+          request.onsuccess = () => console.log(`[StorageSync] Successfully deleted IndexedDB: ${dbName}`);
+          request.onerror = () => console.error(`[StorageSync] Error deleting IndexedDB: ${dbName}`);
+        } catch (e) {
+          console.error(`[StorageSync] Error attempting to delete IndexedDB: ${dbName}`, e);
+        }
+      });
+    }
+  } catch (error) {
+    console.error("[StorageSync] Error clearing IndexedDB data:", error);
   }
 };
 
@@ -56,8 +147,27 @@ export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): vo
     try {
       broadcastChannel.postMessage({ type, key, data, timestamp: Date.now() });
       console.log(`[StorageSync] Sent ${type} event${key ? ` for ${key}` : ''}`);
+      
+      // Special handling for RESET events to ensure they propagate
+      if (type === SyncEventType.RESET) {
+        // Also set the reset flag in localStorage to help with cross-device sync
+        localStorage.setItem('ncr_system_reset', Date.now().toString());
+        sessionStorage.setItem('ncr_system_reset', Date.now().toString());
+      }
     } catch (error) {
       console.error(`[StorageSync] Failed to send ${type} event:`, error);
+      
+      // Fallback for RESET events if BroadcastChannel fails
+      if (type === SyncEventType.RESET) {
+        localStorage.setItem('ncr_system_reset', Date.now().toString());
+        sessionStorage.setItem('ncr_system_reset', Date.now().toString());
+      }
+    }
+  } else {
+    // Fallback for browsers without BroadcastChannel support
+    if (type === SyncEventType.RESET) {
+      localStorage.setItem('ncr_system_reset', Date.now().toString());
+      sessionStorage.setItem('ncr_system_reset', Date.now().toString());
     }
   }
 };
@@ -71,7 +181,15 @@ export const listenForSyncEvents = (
   onApproval: (userId: string) => void
 ): (() => void) => {
   if (!broadcastChannel) {
-    return () => {}; // Return empty cleanup function if no channel
+    // Set up storage event listener as fallback
+    const storageListener = (event: StorageEvent) => {
+      if (event.key === 'ncr_system_reset') {
+        onReset();
+      }
+    };
+    
+    window.addEventListener('storage', storageListener);
+    return () => window.removeEventListener('storage', storageListener);
   }
 
   const handleMessage = (event: MessageEvent) => {
@@ -160,19 +278,23 @@ export const performSystemReset = (): void => {
     localStorage.setItem('ncr_system_reset', Date.now().toString());
     sessionStorage.setItem('ncr_system_reset', Date.now().toString());
     
+    // Broadcast the reset event to other tabs/devices
+    sendSyncEvent(SyncEventType.RESET);
+    
     // Clear all data from localStorage and sessionStorage
-    localStorage.clear();
-    sessionStorage.clear();
+    clearAllStorageData();
     
     // Set the reset timestamp again after clearing
     const resetTimestamp = Date.now();
     localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
     sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
     
-    // Broadcast the reset event to other tabs/devices
-    sendSyncEvent(SyncEventType.RESET);
+    console.log("[StorageSync] System reset completed, reloading page");
     
-    console.log("[StorageSync] System reset completed");
+    // Force page reload to ensure clean application state
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   } catch (error) {
     console.error("[StorageSync] Error during system reset:", error);
   }
@@ -184,9 +306,9 @@ export const checkResetStatus = (): boolean => {
     const localReset = localStorage.getItem('ncr_system_reset');
     const sessionReset = sessionStorage.getItem('ncr_system_reset');
     
-    if (localReset && sessionReset) {
-      const localTimestamp = parseInt(localReset, 10);
-      const sessionTimestamp = parseInt(sessionReset, 10);
+    if (localReset || sessionReset) {
+      const localTimestamp = localReset ? parseInt(localReset, 10) : 0;
+      const sessionTimestamp = sessionReset ? parseInt(sessionReset, 10) : 0;
       const now = Date.now();
       
       // Check if reset happened within the last minute

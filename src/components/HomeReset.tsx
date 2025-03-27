@@ -12,28 +12,22 @@ const HomeReset: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
 
   const handleResetSystem = () => {
-    if (window.confirm("Are you sure you want to reset all system data? This will remove all users, players, and tournaments. This action cannot be undone.")) {
+    if (window.confirm("Are you sure you want to reset all system data? This will remove all users, players, and tournaments across ALL devices. This action cannot be undone.")) {
       try {
         setIsResetting(true);
         console.log("Starting complete system reset...");
         
+        toast({
+          title: "System Reset Started",
+          description: "Clearing all data across devices. Please wait...",
+          duration: 3000,
+        });
+        
         // Use the enhanced system reset function
         performSystemReset();
         
-        console.log("Storage cleared successfully");
-        
-        toast({
-          title: "System Reset Successful",
-          description: "All data has been completely cleared. The page will now reload.",
-          variant: "default",
-        });
-        
-        // Refresh the page after a short delay to allow the toast to be seen
-        setTimeout(() => {
-          console.log("Reloading page after reset...");
-          navigate("/");
-          window.location.reload();
-        }, 1500);
+        // Note: The page will automatically reload from performSystemReset
+        // so we don't need additional reload logic here
       } catch (error) {
         console.error("Error during system reset:", error);
         toast({
@@ -55,10 +49,10 @@ const HomeReset: React.FC = () => {
         disabled={isResetting}
       >
         <RefreshCw className={`h-4 w-4 mr-2 ${isResetting ? 'animate-spin' : ''}`} />
-        {isResetting ? "Resetting..." : "Reset System Data"}
+        {isResetting ? "Resetting All Devices..." : "Reset System Data (All Devices)"}
       </Button>
       <p className="text-xs text-gray-500 mt-2">
-        This will clear all data and allow you to start fresh.
+        This will clear all data on all connected devices and allow you to start fresh.
       </p>
     </div>
   );

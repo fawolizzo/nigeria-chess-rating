@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { forceSyncAllStorage, checkStorageHealth } from "@/utils/storageUtils";
-import { checkResetStatus, clearResetStatus } from "@/utils/storageSync";
+import { checkResetStatus, clearResetStatus, processSystemReset } from "@/utils/storageSync";
 
 /**
  * Component to initialize storage and handle sync events on mount
@@ -16,12 +16,17 @@ const PlayerStorageInitializer: React.FC = () => {
     try {
       // Check for system reset
       if (checkResetStatus()) {
-        console.log("[PlayerStorageInitializer] System reset detected, clearing reset status");
+        console.log("[PlayerStorageInitializer] System reset detected, processing reset");
+        // Clear reset status first to prevent loops
         clearResetStatus();
+        // Show toast
         toast({
           title: "System Reset Detected",
           description: "The system has been reset. All account data has been cleared.",
         });
+        // Process the reset
+        processSystemReset();
+        return; // Early return to prevent other initializations
       }
       
       // Test storage availability
@@ -39,17 +44,27 @@ const PlayerStorageInitializer: React.FC = () => {
         throw new Error("Storage access failed");
       }
       
-      // Force sync storage - fixing the Promise approach
+      // Force sync storage
       const syncStorage = async () => {
         try {
           const success = await forceSyncAllStorage();
           if (!success) {
             console.warn("[PlayerStorageInitializer] Storage sync issues detected");
+            toast({
+              title: "Sync Warning",
+              description: "There were issues syncing your data. Some features may not work correctly.",
+              variant: "warning",
+            });
           } else {
             console.log("[PlayerStorageInitializer] Storage synced successfully");
           }
         } catch (error) {
           console.error("[PlayerStorageInitializer] Storage sync error:", error);
+          toast({
+            title: "Sync Error",
+            description: "Failed to synchronize data. Please reload the page.",
+            variant: "destructive",
+          });
         }
       };
       
@@ -63,21 +78,43 @@ const PlayerStorageInitializer: React.FC = () => {
         console.log("[PlayerStorageInitializer] Device came online");
         toast({
           title: "Connection Restored",
-          description: "You're back online.",
+          description: "You're back online. Synchronizing data...",
         });
         // Need to properly handle the async function here too
-        forceSyncAllStorage().catch(error => {
-          console.error("[PlayerStorageInitializer] Error syncing after coming online:", error);
-        });
+        syncStorage();
+      };
+      
+      // Add a listener for storage events related to resets
+      const handleStorageEvent = (event: StorageEvent) => {
+        if (event.key === 'ncr_system_reset' && event.newValue) {
+          console.log("[PlayerStorageInitializer] Reset event detected via storage");
+          toast({
+            title: "System Reset",
+            description: "The system has been reset from another device. The page will reload.",
+            duration: 3000,
+          });
+          
+          // Reload after a short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
       };
       
       window.addEventListener('online', handleOnline);
+      window.addEventListener('storage', handleStorageEvent);
       
       return () => {
         window.removeEventListener('online', handleOnline);
+        window.removeEventListener('storage', handleStorageEvent);
       };
     } catch (error) {
       console.error("[PlayerStorageInitializer] Error initializing storage:", error);
+      toast({
+        title: "Initialization Error",
+        description: "There was a problem initializing the application. Please refresh the page.",
+        variant: "destructive",
+      });
     }
     
     return () => {

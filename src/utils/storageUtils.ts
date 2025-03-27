@@ -13,6 +13,11 @@ export function saveToStorage<T>(key: string, data: T): void {
       timestamp: Date.now()
     };
     localStorage.setItem(key, JSON.stringify(timestampedData));
+    
+    // Also store in sessionStorage for redundancy
+    sessionStorage.setItem(key, JSON.stringify(timestampedData));
+    
+    console.log(`[storageUtils] Saved ${key} to storage with timestamp ${timestampedData.timestamp}`);
   } catch (error) {
     console.error(`Error saving ${key} to storage:`, error);
   }
@@ -26,13 +31,40 @@ export function saveToStorage<T>(key: string, data: T): void {
  */
 export function getFromStorage<T>(key: string, defaultValue: T): T {
   try {
-    const item = localStorage.getItem(key);
+    // Try to get from localStorage first
+    let item = localStorage.getItem(key);
+    
+    // If not in localStorage, try sessionStorage as backup
     if (item === null) {
+      console.log(`[storageUtils] Key ${key} not found in localStorage, trying sessionStorage`);
+      item = sessionStorage.getItem(key);
+    }
+    
+    // If still null, return default value
+    if (item === null) {
+      console.log(`[storageUtils] Key ${key} not found in any storage, returning default`);
       return defaultValue;
     }
-    return JSON.parse(item) as T;
+    
+    // Try to parse the item
+    try {
+      const parsed = JSON.parse(item);
+      
+      // Check if it has the timestamped data format
+      if (parsed && typeof parsed === 'object' && 'data' in parsed && 'timestamp' in parsed) {
+        console.log(`[storageUtils] Retrieved ${key} from storage, timestamp: ${parsed.timestamp}`);
+        return parsed.data as T;
+      } else {
+        // Legacy format without timestamp
+        console.log(`[storageUtils] Retrieved ${key} from storage (legacy format)`);
+        return parsed as T;
+      }
+    } catch (parseError) {
+      console.error(`[storageUtils] Error parsing ${key} from storage:`, parseError);
+      return defaultValue;
+    }
   } catch (error) {
-    console.error(`Error getting ${key} from storage:`, error);
+    console.error(`[storageUtils] Error getting ${key} from storage:`, error);
     return defaultValue;
   }
 }
@@ -44,8 +76,10 @@ export function getFromStorage<T>(key: string, defaultValue: T): T {
 export function removeFromStorage(key: string): void {
   try {
     localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+    console.log(`[storageUtils] Removed ${key} from storage`);
   } catch (error) {
-    console.error(`Error removing ${key} from storage:`, error);
+    console.error(`[storageUtils] Error removing ${key} from storage:`, error);
   }
 }
 
@@ -55,6 +89,12 @@ export function removeFromStorage(key: string): void {
 export function initializeStorageListeners(): void {
   window.addEventListener('storage', (event) => {
     console.log(`[storageUtils] Storage event detected: ${event.key}`);
+    
+    // If the event is a system reset, reload the page
+    if (event.key === 'ncr_system_reset') {
+      console.log(`[storageUtils] System reset detected, reloading page`);
+      window.location.reload();
+    }
   });
 }
 
@@ -67,6 +107,22 @@ export function checkStorageHealth(): void {
     localStorage.setItem('storage_health_check', 'ok');
     localStorage.removeItem('storage_health_check');
     console.log("[storageUtils] Storage health check passed");
+    
+    // Check for incomplete reset
+    const resetFlag = localStorage.getItem('ncr_system_reset');
+    if (resetFlag) {
+      const resetTime = parseInt(resetFlag, 10);
+      const now = Date.now();
+      
+      // If reset flag is older than 5 minutes, it might be stale
+      if (now - resetTime > 300000) {
+        localStorage.removeItem('ncr_system_reset');
+        sessionStorage.removeItem('ncr_system_reset');
+        console.log("[storageUtils] Removed stale reset flag");
+      } else {
+        console.log("[storageUtils] Recent reset flag found, might need processing");
+      }
+    }
   } catch (error) {
     console.error("[storageUtils] Storage health check failed:", error);
   }
@@ -78,7 +134,33 @@ export function checkStorageHealth(): void {
 export function migrateLegacyStorage(): void {
   try {
     console.log("[storageUtils] Checking for legacy storage formats");
-    // Implementation would check for old formats and convert them
+    
+    // List of keys that might need migration
+    const keysToCheck = [
+      'ncr_users', 
+      'ncr_current_user', 
+      'ncr_players', 
+      'ncr_tournaments',
+      'ncr_tournament_players'
+    ];
+    
+    for (const key of keysToCheck) {
+      try {
+        const item = localStorage.getItem(key);
+        if (item) {
+          const parsed = JSON.parse(item);
+          
+          // Check if it already has the timestamped format
+          if (parsed && typeof parsed === 'object' && !('data' in parsed && 'timestamp' in parsed)) {
+            // It's in the legacy format, migrate it
+            console.log(`[storageUtils] Migrating legacy format for ${key}`);
+            saveToStorage(key, parsed);
+          }
+        }
+      } catch (e) {
+        console.error(`[storageUtils] Error migrating ${key}:`, e);
+      }
+    }
   } catch (error) {
     console.error("[storageUtils] Error during storage migration:", error);
   }
@@ -98,13 +180,44 @@ export const forceSyncAllStorage = async (): Promise<boolean> => {
       return false;
     }
     
-    // Trigger storage events to sync across tabs
-    const testKey = `sync_trigger_${Date.now()}`;
-    localStorage.setItem(testKey, Date.now().toString());
-    localStorage.removeItem(testKey);
+    // Sync between localStorage and sessionStorage
+    const keysToSync = [
+      'ncr_users', 
+      'ncr_current_user', 
+      'ncr_players', 
+      'ncr_tournaments',
+      'ncr_tournament_players',
+      'ncr_system_reset'
+    ];
     
-    // Additional sync logic would go here for cross-device sync
-    // This might involve API calls or other mechanisms
+    for (const key of keysToSync) {
+      try {
+        // Get from localStorage
+        const localItem = localStorage.getItem(key);
+        const sessionItem = sessionStorage.getItem(key);
+        
+        if (localItem && (!sessionItem || shouldOverwrite(localItem, sessionItem))) {
+          // localStorage has newer data, copy to sessionStorage
+          sessionStorage.setItem(key, localItem);
+          console.log(`[storageUtils] Synced ${key} from localStorage to sessionStorage`);
+        } else if (sessionItem && (!localItem || shouldOverwrite(sessionItem, localItem))) {
+          // sessionStorage has newer data, copy to localStorage
+          localStorage.setItem(key, sessionItem);
+          console.log(`[storageUtils] Synced ${key} from sessionStorage to localStorage`);
+        }
+        
+        // Trigger storage events for cross-tab sync
+        const item = localStorage.getItem(key);
+        if (item) {
+          // Use a slight delay to prevent collisions
+          localStorage.setItem(`${key}_sync_trigger`, Date.now().toString());
+          await new Promise(resolve => setTimeout(resolve, 10));
+          localStorage.removeItem(`${key}_sync_trigger`);
+        }
+      } catch (e) {
+        console.error(`[storageUtils] Error syncing ${key}:`, e);
+      }
+    }
     
     return true; // Return success
   } catch (error) {
@@ -112,6 +225,28 @@ export const forceSyncAllStorage = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// Helper function to determine if a value should overwrite another
+function shouldOverwrite(newValue: string, oldValue: string): boolean {
+  try {
+    const newParsed = JSON.parse(newValue);
+    const oldParsed = JSON.parse(oldValue);
+    
+    // Check if both have timestamp format
+    if (newParsed?.timestamp && oldParsed?.timestamp) {
+      return newParsed.timestamp > oldParsed.timestamp;
+    }
+    
+    // If only one has timestamp, prefer the timestamped one
+    if (newParsed?.timestamp) return true;
+    if (oldParsed?.timestamp) return false;
+    
+    // Default to false if can't determine
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
 
 /**
  * Sync specific storage key or all storage if no key provided
