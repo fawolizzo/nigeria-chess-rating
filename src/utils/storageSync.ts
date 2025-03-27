@@ -4,11 +4,12 @@ import {
   STORAGE_KEY_GLOBAL_RESET,
   STORAGE_KEY_DEVICE_RESET_PROCESSED,
   STORAGE_KEY_USERS,
-  STORAGE_KEY_CURRENT_USER
+  STORAGE_KEY_CURRENT_USER,
+  SyncEventType
 } from "@/types/userTypes";
 
-// Export the SyncEventType enum from types so it can be imported elsewhere
-export { SyncEventType } from "@/types/userTypes";
+// Re-export the SyncEventType enum so it can be imported elsewhere
+export { SyncEventType };
 
 // Constant for the broadcast channel name
 const BROADCAST_CHANNEL_NAME = 'ncr_broadcast_channel';
