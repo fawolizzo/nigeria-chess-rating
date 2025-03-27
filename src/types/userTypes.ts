@@ -12,8 +12,8 @@ export interface User {
   role: 'tournament_organizer' | 'rating_officer';
   status: 'pending' | 'approved' | 'rejected';
   registrationDate: string;
-  approvalDate?: string; // Add approvalDate field as optional
-  password?: string; // Add password field as optional
+  approvalDate?: string;
+  password?: string;
 }
 
 export interface UserContextType {
@@ -27,6 +27,12 @@ export interface UserContextType {
   rejectUser: (userId: string) => void;
   sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;
   getRatingOfficerEmails: () => string[];
+}
+
+// Add this interface for storage with timestamps
+export interface TimestampedData<T> {
+  data: T;
+  timestamp: number;
 }
 
 export const STORAGE_KEY_USERS = 'ncr_users';

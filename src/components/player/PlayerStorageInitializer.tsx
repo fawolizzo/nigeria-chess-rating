@@ -39,14 +39,17 @@ const PlayerStorageInitializer: React.FC = () => {
         throw new Error("Storage access failed");
       }
       
-      // Force sync storage
-      forceSyncAllStorage().then(success => {
+      // Force sync storage - fix the Promise approach
+      const syncStorage = async () => {
+        const success = await forceSyncAllStorage();
         if (!success) {
           console.warn("[PlayerStorageInitializer] Storage sync issues detected");
         } else {
           console.log("[PlayerStorageInitializer] Storage synced successfully");
         }
-      });
+      };
+      
+      syncStorage();
       
       // Check storage health
       checkStorageHealth();

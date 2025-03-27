@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
 import { 
   saveToStorage, 
@@ -9,7 +8,12 @@ import {
   checkStorageHealth,
   migrateLegacyStorage
 } from "@/utils/storageUtils";
-import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
+import { 
+  STORAGE_KEY_USERS, 
+  STORAGE_KEY_CURRENT_USER, 
+  User, 
+  TimestampedData 
+} from "@/types/userTypes";
 import { useToast } from "@/hooks/use-toast";
 import {
   initBroadcastChannel,
@@ -23,23 +27,6 @@ import {
 
 // Define types
 type UserRole = "tournament_organizer" | "rating_officer";
-
-interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  status: "pending" | "approved" | "rejected";
-  state: string;
-  phoneNumber: string;
-  registrationDate?: string;
-  approvalDate?: string;
-}
-
-interface TimestampedData<T> {
-  data: T;
-  timestamp: number;
-}
 
 interface RegistrationData {
   fullName: string;
@@ -159,7 +146,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Load current user from storage
-      const storedUserData = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
+      const storedUserData = getFromStorage<TimestampedData<User> | User | null>(STORAGE_KEY_CURRENT_USER, null);
       
       // Handle different data formats safely
       if (storedUserData) {
@@ -171,8 +158,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           // Legacy format without timestamp wrapper
           else {
-            setCurrentUser(storedUserData);
-            console.log("[UserContext] Current user refreshed from storage (legacy format):", storedUserData.email);
+            setCurrentUser(storedUserData as User);
+            console.log("[UserContext] Current user refreshed from storage (legacy format):", (storedUserData as User).email);
           }
         } else {
           console.log("[UserContext] Invalid current user data format in storage");
@@ -182,7 +169,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Load all users from storage
-      const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
+      const storedUsersData = getFromStorage<TimestampedData<User[]> | User[] | null>(STORAGE_KEY_USERS, []);
       
       // Handle different data formats safely
       if (storedUsersData) {
@@ -223,7 +210,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       forceSyncAllStorage();
       
       // Load current user from storage
-      const storedUserData = getFromStorage(STORAGE_KEY_CURRENT_USER, null);
+      const storedUserData = getFromStorage<TimestampedData<User> | User | null>(STORAGE_KEY_CURRENT_USER, null);
       
       // Handle different data formats safely
       if (storedUserData) {
@@ -235,8 +222,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           // Legacy format without timestamp wrapper
           else {
-            setCurrentUser(storedUserData);
-            console.log("[UserContext] Current user loaded from storage (legacy format):", storedUserData.email);
+            setCurrentUser(storedUserData as User);
+            console.log("[UserContext] Current user loaded from storage (legacy format):", (storedUserData as User).email);
           }
         }
       } else {
@@ -244,7 +231,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Load all users from storage
-      const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
+      const storedUsersData = getFromStorage<TimestampedData<User[]> | User[] | null>(STORAGE_KEY_USERS, []);
       
       // Handle different data formats safely
       let loadedUsers: User[] = [];
@@ -336,7 +323,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       forceSyncAllStorage();
       
       // Reload users from storage to ensure we have the latest data
-      const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
+      const storedUsersData = getFromStorage<TimestampedData<User[]> | User[] | null>(STORAGE_KEY_USERS, []);
       
       // Handle different data formats safely
       let latestUsers: User[] = [];
@@ -432,7 +419,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Get the latest users data from storage
-      const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
+      const storedUsersData = getFromStorage<TimestampedData<User[]> | User[] | null>(STORAGE_KEY_USERS, []);
       
       // Handle different data formats safely
       let latestUsers: User[] = [];
@@ -603,7 +590,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       forceSyncAllStorage();
       
       // Get the latest users data from storage
-      const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
+      const storedUsersData = getFromStorage<TimestampedData<User[]> | User[] | null>(STORAGE_KEY_USERS, []);
       
       // Handle different data formats safely
       let latestUsers: User[] = [];
@@ -673,7 +660,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       forceSyncAllStorage();
       
       // Get the latest users data from storage
-      const storedUsersData = getFromStorage(STORAGE_KEY_USERS, []);
+      const storedUsersData = getFromStorage<TimestampedData<User[]> | User[] | null>(STORAGE_KEY_USERS, []);
       
       // Handle different data formats safely
       let latestUsers: User[] = [];
