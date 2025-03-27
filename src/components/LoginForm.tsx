@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle, RefreshCw } from "lucide-react";
@@ -11,8 +10,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { forceSyncAllStorage, checkStorageHealth } from "@/utils/storageUtils";
-import { checkResetStatus, clearResetStatus } from "@/utils/storageSync";
+import { 
+  forceSyncAllStorage, 
+  checkStorageHealth, 
+  removeFromStorage, 
+  saveToStorage 
+} from "@/utils/storageUtils";
+import { 
+  checkResetStatus, 
+  clearResetStatus, 
+  sendSyncEvent, 
+  SyncEventType 
+} from "@/utils/storageSync";
+import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -30,6 +40,7 @@ const LoginForm = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const isMobile = useIsMobile();
   
   // Force sync storage and check health on page load
@@ -52,7 +63,10 @@ const LoginForm = () => {
         // Check storage health
         await checkStorageHealth();
         
-        // Force sync all storage
+        // Force sync critical auth data first
+        await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
+        
+        // Then sync all storage
         const syncResult = await forceSyncAllStorage();
         
         if (!syncResult) {
@@ -64,7 +78,14 @@ const LoginForm = () => {
           });
         } else {
           console.log("[LoginForm] Storage synced successfully");
+          setLastSyncTime(new Date());
         }
+        
+        // Notify other devices about the sync attempt
+        sendSyncEvent(SyncEventType.FORCE_SYNC);
+        
+        // Refresh user context data
+        refreshUserData();
       } catch (error) {
         console.error("[LoginForm] Error initializing login form:", error);
       } finally {
@@ -73,7 +94,7 @@ const LoginForm = () => {
     };
     
     initializeLogin();
-  }, [toast]);
+  }, [toast, refreshUserData]);
   
   // Handle redirect if user is already logged in
   useEffect(() => {
@@ -107,17 +128,40 @@ const LoginForm = () => {
       // Check storage health
       await checkStorageHealth();
       
-      // Force sync all storage
+      // Try a deep clean of any stale data
+      try {
+        const rawUsersData = localStorage.getItem(STORAGE_KEY_USERS);
+        if (rawUsersData) {
+          const usersData = JSON.parse(rawUsersData);
+          // Ensure we're saving the clean data format
+          if (usersData && Array.isArray(usersData.data)) {
+            saveToStorage(STORAGE_KEY_USERS, usersData.data);
+          } else if (usersData && Array.isArray(usersData)) {
+            saveToStorage(STORAGE_KEY_USERS, usersData);
+          }
+        }
+      } catch (e) {
+        console.error("[LoginForm] Error during deep clean:", e);
+      }
+      
+      // Force sync critical auth data first
+      await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
+      
+      // Then sync all storage
       const syncResult = await forceSyncAllStorage();
       
       // Refresh user data from context
       refreshUserData();
       
       if (syncResult) {
+        setLastSyncTime(new Date());
         toast({
           title: "Sync Complete",
           description: "User data has been synchronized successfully.",
         });
+        
+        // Notify other devices to also sync their data
+        sendSyncEvent(SyncEventType.FORCE_SYNC);
       } else {
         toast({
           title: "Sync Issues",
@@ -144,6 +188,9 @@ const LoginForm = () => {
     try {
       console.log(`[LoginForm] Login attempt - Email: ${data.email}, Role: ${data.role}`);
       
+      // Force sync critical auth data before login attempt
+      await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
+      
       // Ensure storage is synced before login attempt
       const syncResult = await forceSyncAllStorage();
       
@@ -169,6 +216,9 @@ const LoginForm = () => {
       if (success) {
         setSuccessMessage("Login successful!");
         console.log("[LoginForm] Login successful, redirecting...");
+        
+        // Notify other devices about the login
+        sendSyncEvent(SyncEventType.LOGIN);
         
         // Slight delay to allow state to update
         setTimeout(() => {

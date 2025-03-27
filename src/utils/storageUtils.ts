@@ -4,7 +4,7 @@ import { TimestampedData } from "@/types/userTypes";
 // Make the forceSyncAllStorage function available globally to avoid circular dependencies
 declare global {
   interface Window {
-    ncrForceSyncFunction: () => Promise<boolean>;
+    ncrForceSyncFunction: (priorityKeys?: string[]) => Promise<boolean>;
   }
 }
 
@@ -25,6 +25,17 @@ export function saveToStorage<T>(key: string, data: T): void {
     sessionStorage.setItem(key, JSON.stringify(timestampedData));
     
     console.log(`[storageUtils] Saved ${key} to storage with timestamp ${timestampedData.timestamp}`);
+    
+    // Trigger a storage event for cross-device sync
+    try {
+      const syncTrigger = `${key}_sync_trigger`;
+      localStorage.setItem(syncTrigger, Date.now().toString());
+      setTimeout(() => {
+        localStorage.removeItem(syncTrigger);
+      }, 100);
+    } catch (e) {
+      // Ignore errors when triggering the sync event
+    }
   } catch (error) {
     console.error(`Error saving ${key} to storage:`, error);
   }
@@ -108,6 +119,12 @@ export function initializeStorageListeners(): void {
       console.log(`[storageUtils] Force sync detected, syncing data`);
       forceSyncAllStorage().catch(console.error);
     }
+    
+    // If the event is an auth-related change, trigger force sync
+    if (event.key?.includes('ncr_users') || event.key?.includes('ncr_current_user')) {
+      console.log(`[storageUtils] Auth data change detected, syncing data`);
+      forceSyncAllStorage().catch(console.error);
+    }
   });
 }
 
@@ -139,8 +156,100 @@ export function checkStorageHealth(): void {
     
     // Check if there was a global reset while this device was offline
     checkForGlobalReset();
+    
+    // Check for data integrity and fix if needed
+    checkDataIntegrity();
   } catch (error) {
     console.error("[storageUtils] Storage health check failed:", error);
+  }
+}
+
+// Check data integrity and fix any issues
+function checkDataIntegrity(): void {
+  try {
+    const keysToCheck = [
+      'ncr_users', 
+      'ncr_current_user', 
+      'ncr_players', 
+      'ncr_tournaments',
+      'ncr_tournament_players'
+    ];
+    
+    for (const key of keysToCheck) {
+      try {
+        const localItem = localStorage.getItem(key);
+        const sessionItem = sessionStorage.getItem(key);
+        
+        // Check localStorage format
+        if (localItem) {
+          try {
+            const parsed = JSON.parse(localItem);
+            // Fix if not in timestamped format
+            if (parsed && typeof parsed === 'object' && !('data' in parsed && 'timestamp' in parsed)) {
+              saveToStorage(key, parsed);
+              console.log(`[storageUtils] Fixed format for ${key} in localStorage`);
+            }
+          } catch (e) {
+            console.error(`[storageUtils] Data integrity issue with ${key} in localStorage:`, e);
+            // If localStorage item is corrupt, try to recover from sessionStorage
+            if (sessionItem) {
+              try {
+                const parsed = JSON.parse(sessionItem);
+                localStorage.setItem(key, sessionItem);
+                console.log(`[storageUtils] Recovered ${key} from sessionStorage`);
+              } catch (e2) {
+                // Both are corrupt, remove both
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+                console.log(`[storageUtils] Removed corrupt data for ${key}`);
+              }
+            } else {
+              // No backup, remove corrupt data
+              localStorage.removeItem(key);
+              console.log(`[storageUtils] Removed corrupt data for ${key}`);
+            }
+          }
+        }
+        
+        // Check sessionStorage format
+        if (sessionItem) {
+          try {
+            const parsed = JSON.parse(sessionItem);
+            // Fix if not in timestamped format
+            if (parsed && typeof parsed === 'object' && !('data' in parsed && 'timestamp' in parsed)) {
+              sessionStorage.setItem(key, JSON.stringify({
+                data: parsed,
+                timestamp: Date.now()
+              }));
+              console.log(`[storageUtils] Fixed format for ${key} in sessionStorage`);
+            }
+          } catch (e) {
+            console.error(`[storageUtils] Data integrity issue with ${key} in sessionStorage:`, e);
+            // If sessionStorage item is corrupt, try to recover from localStorage
+            if (localItem) {
+              try {
+                const parsed = JSON.parse(localItem);
+                sessionStorage.setItem(key, localItem);
+                console.log(`[storageUtils] Recovered ${key} from localStorage`);
+              } catch (e2) {
+                // Both are corrupt, remove both
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+                console.log(`[storageUtils] Removed corrupt data for ${key}`);
+              }
+            } else {
+              // No backup, remove corrupt data
+              sessionStorage.removeItem(key);
+              console.log(`[storageUtils] Removed corrupt data for ${key}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.error(`[storageUtils] Error checking integrity for ${key}:`, e);
+      }
+    }
+  } catch (error) {
+    console.error("[storageUtils] Error during data integrity check:", error);
   }
 }
 
@@ -213,9 +322,10 @@ export function migrateLegacyStorage(): void {
 
 /**
  * Force synchronization of all storage across tabs and devices
+ * @param priorityKeys Optional array of keys to sync first (for critical data)
  * @returns A Promise that resolves to a boolean indicating success
  */
-export const forceSyncAllStorage = async (): Promise<boolean> => {
+export const forceSyncAllStorage = async (priorityKeys?: string[]): Promise<boolean> => {
   try {
     console.log("[storageUtils] Forcing synchronization of all storage");
     
@@ -234,7 +344,19 @@ export const forceSyncAllStorage = async (): Promise<boolean> => {
     const deviceResetProcessed = sessionStorage.getItem('ncr_device_reset_processed');
     console.log(`[storageUtils] Last reset: ${lastReset}, Device processed: ${deviceResetProcessed}`);
     
-    // Sync between localStorage and sessionStorage
+    // Sync specified priority keys first if provided
+    if (priorityKeys && priorityKeys.length > 0) {
+      console.log(`[storageUtils] Syncing priority keys first: ${priorityKeys.join(', ')}`);
+      for (const key of priorityKeys) {
+        try {
+          await syncStorage(key);
+        } catch (e) {
+          console.error(`[storageUtils] Error syncing priority key ${key}:`, e);
+        }
+      }
+    }
+    
+    // Then sync all other keys
     const keysToSync = [
       'ncr_users', 
       'ncr_current_user', 
@@ -246,30 +368,14 @@ export const forceSyncAllStorage = async (): Promise<boolean> => {
       'ncr_global_reset_timestamp'
     ];
     
-    for (const key of keysToSync) {
+    // Filter out any keys that were already synced as priority
+    const remainingKeys = priorityKeys 
+      ? keysToSync.filter(key => !priorityKeys.includes(key)) 
+      : keysToSync;
+    
+    for (const key of remainingKeys) {
       try {
-        // Get from localStorage
-        const localItem = localStorage.getItem(key);
-        const sessionItem = sessionStorage.getItem(key);
-        
-        if (localItem && (!sessionItem || shouldOverwrite(localItem, sessionItem))) {
-          // localStorage has newer data, copy to sessionStorage
-          sessionStorage.setItem(key, localItem);
-          console.log(`[storageUtils] Synced ${key} from localStorage to sessionStorage`);
-        } else if (sessionItem && (!localItem || shouldOverwrite(sessionItem, localItem))) {
-          // sessionStorage has newer data, copy to localStorage
-          localStorage.setItem(key, sessionItem);
-          console.log(`[storageUtils] Synced ${key} from sessionStorage to localStorage`);
-        }
-        
-        // Trigger storage events for cross-tab sync
-        const item = localStorage.getItem(key);
-        if (item) {
-          // Use a slight delay to prevent collisions
-          localStorage.setItem(`${key}_sync_trigger`, Date.now().toString());
-          await new Promise(resolve => setTimeout(resolve, 10));
-          localStorage.removeItem(`${key}_sync_trigger`);
-        }
+        await syncStorage(key);
       } catch (e) {
         console.error(`[storageUtils] Error syncing ${key}:`, e);
       }
@@ -381,12 +487,7 @@ function getDeviceFingerprint(): string {
  * @param key The storage key to synchronize
  * @returns A Promise that resolves to a boolean indicating success
  */
-export const syncStorage = async (key?: string): Promise<boolean> => {
-  if (!key) {
-    // If no key is provided, sync all storage
-    return forceSyncAllStorage();
-  }
-  
+export const syncStorage = async (key: string): Promise<boolean> => {
   try {
     console.log(`[storageUtils] Syncing key: ${key}`);
     

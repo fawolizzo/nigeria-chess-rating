@@ -51,6 +51,24 @@ export const initBroadcastChannel = (): void => {
               forceSyncAllStorage().catch(console.error);
             }
           }, 0);
+        } else if (event.data?.type === SyncEventType.APPROVAL) {
+          console.log("[StorageSync] Approval event received, syncing user data...");
+          // Prioritize syncing user data
+          setTimeout(() => {
+            const forceSyncAllStorage = window.ncrForceSyncFunction;
+            if (typeof forceSyncAllStorage === 'function') {
+              forceSyncAllStorage(['ncr_users', 'ncr_current_user']).catch(console.error);
+            }
+          }, 0);
+        } else if (event.data?.type === SyncEventType.LOGIN) {
+          console.log("[StorageSync] Login event received, syncing user data...");
+          // Prioritize syncing user data
+          setTimeout(() => {
+            const forceSyncAllStorage = window.ncrForceSyncFunction;
+            if (typeof forceSyncAllStorage === 'function') {
+              forceSyncAllStorage(['ncr_users', 'ncr_current_user']).catch(console.error);
+            }
+          }, 0);
         }
       });
     } else {
@@ -72,6 +90,18 @@ const setupStorageEventListener = (): void => {
     if (event.key === 'ncr_system_reset') {
       console.log("[StorageSync] Reset event detected via storage event, processing...");
       processSystemReset();
+    } else if (event.key === 'ncr_force_sync') {
+      console.log("[StorageSync] Force sync event detected via storage event");
+      const forceSyncAllStorage = window.ncrForceSyncFunction;
+      if (typeof forceSyncAllStorage === 'function') {
+        forceSyncAllStorage().catch(console.error);
+      }
+    } else if (event.key === 'ncr_users' || event.key === 'ncr_current_user') {
+      console.log("[StorageSync] Auth data changed, syncing...");
+      const forceSyncAllStorage = window.ncrForceSyncFunction;
+      if (typeof forceSyncAllStorage === 'function') {
+        forceSyncAllStorage(['ncr_users', 'ncr_current_user']).catch(console.error);
+      }
     }
   });
 };
@@ -174,6 +204,11 @@ export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): vo
     const eventId = `${type}_${Date.now()}`;
     sessionStorage.setItem('ncr_last_event_initiated', eventId);
     
+    // For login and approval events, also store a flag in localStorage
+    if (type === SyncEventType.LOGIN || type === SyncEventType.APPROVAL) {
+      localStorage.setItem(`ncr_auth_event_${type.toLowerCase()}`, Date.now().toString());
+    }
+    
     if (broadcastChannel) {
       try {
         broadcastChannel.postMessage({ 
@@ -203,12 +238,19 @@ export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): vo
       } catch (error) {
         console.error(`[StorageSync] Failed to send ${type} event:`, error);
         
-        // Fallback for RESET events if BroadcastChannel fails
+        // Fallback for events if BroadcastChannel fails
         if (type === SyncEventType.RESET) {
           const resetTimestamp = Date.now();
           localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
           sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
           localStorage.setItem('ncr_last_reset', resetTimestamp.toString());
+        } else if (type === SyncEventType.FORCE_SYNC) {
+          localStorage.setItem('ncr_force_sync', Date.now().toString());
+          setTimeout(() => localStorage.removeItem('ncr_force_sync'), 100);
+        } else if (type === SyncEventType.LOGIN) {
+          localStorage.setItem('ncr_auth_event_login', Date.now().toString());
+        } else if (type === SyncEventType.APPROVAL) {
+          localStorage.setItem('ncr_auth_event_approval', Date.now().toString());
         }
       }
     } else {
@@ -222,6 +264,10 @@ export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): vo
         // Trigger a storage event for force sync
         localStorage.setItem('ncr_force_sync', Date.now().toString());
         setTimeout(() => localStorage.removeItem('ncr_force_sync'), 100);
+      } else if (type === SyncEventType.LOGIN) {
+        localStorage.setItem('ncr_auth_event_login', Date.now().toString());
+      } else if (type === SyncEventType.APPROVAL) {
+        localStorage.setItem('ncr_auth_event_approval', Date.now().toString());
       }
     }
   } catch (error) {
@@ -238,6 +284,37 @@ export const listenForSyncEvents = (
   onApproval: (userId: string) => void,
   onForceSync?: () => Promise<void>
 ): (() => void) => {
+  // Set up storage event listener for auth events
+  const handleStorageEvent = (event: StorageEvent) => {
+    if (event.key === 'ncr_auth_event_login') {
+      console.log("[StorageSync] Login event detected via storage event");
+      // Prioritize syncing user data
+      const forceSyncAllStorage = window.ncrForceSyncFunction;
+      if (typeof forceSyncAllStorage === 'function') {
+        forceSyncAllStorage(['ncr_users', 'ncr_current_user'])
+          .then(() => {
+            // Call the login handler after syncing
+            onLogin({});
+          })
+          .catch(console.error);
+      }
+    } else if (event.key === 'ncr_auth_event_approval') {
+      console.log("[StorageSync] Approval event detected via storage event");
+      // Prioritize syncing user data
+      const forceSyncAllStorage = window.ncrForceSyncFunction;
+      if (typeof forceSyncAllStorage === 'function') {
+        forceSyncAllStorage(['ncr_users', 'ncr_current_user'])
+          .then(() => {
+            // Call the approval handler after syncing
+            onApproval("");
+          })
+          .catch(console.error);
+      }
+    }
+  };
+  
+  window.addEventListener('storage', handleStorageEvent);
+  
   if (!broadcastChannel) {
     // Set up storage event listener as fallback
     const storageListener = (event: StorageEvent) => {
@@ -249,7 +326,10 @@ export const listenForSyncEvents = (
     };
     
     window.addEventListener('storage', storageListener);
-    return () => window.removeEventListener('storage', storageListener);
+    return () => {
+      window.removeEventListener('storage', storageListener);
+      window.removeEventListener('storage', handleStorageEvent);
+    };
   }
 
   const handleMessage = (event: MessageEvent) => {
@@ -277,14 +357,22 @@ export const listenForSyncEvents = (
         onLogout();
         break;
       case SyncEventType.LOGIN:
-        if (data) {
-          onLogin(data);
-        }
+        // Prioritize syncing user data first
+        window.ncrForceSyncFunction?.(['ncr_users', 'ncr_current_user'])
+          .then(() => {
+            // Then call the login handler
+            onLogin(data);
+          })
+          .catch(console.error);
         break;
       case SyncEventType.APPROVAL:
-        if (data) {
-          onApproval(data);
-        }
+        // Prioritize syncing user data first
+        window.ncrForceSyncFunction?.(['ncr_users', 'ncr_current_user'])
+          .then(() => {
+            // Then call the approval handler
+            onApproval(data);
+          })
+          .catch(console.error);
         break;
       case SyncEventType.FORCE_SYNC:
         if (onForceSync) {
@@ -305,6 +393,7 @@ export const listenForSyncEvents = (
     if (broadcastChannel) {
       broadcastChannel.removeEventListener('message', handleMessage);
     }
+    window.removeEventListener('storage', handleStorageEvent);
   };
 };
 
