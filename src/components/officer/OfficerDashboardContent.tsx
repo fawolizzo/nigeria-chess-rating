@@ -21,12 +21,12 @@ const OfficerDashboardContent: React.FC = () => {
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   
   // Function to load all data
-  const loadAllData = () => {
+  const loadAllData = async () => {
     try {
       // Ensure storage is synced
-      syncStorage('ncr_users');
-      syncStorage('ncr_players');
-      syncStorage('ncr_tournaments');
+      await syncStorage('ncr_users');
+      await syncStorage('ncr_players');
+      await syncStorage('ncr_tournaments');
       
       // Load tournaments based on their status
       const allTournaments = getAllTournaments();

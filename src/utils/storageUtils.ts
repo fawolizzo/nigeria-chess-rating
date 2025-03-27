@@ -114,7 +114,27 @@ export const forceSyncAllStorage = async (): Promise<boolean> => {
 };
 
 /**
- * Alias for forceSyncAllStorage to maintain compatibility with existing code
- * @deprecated Use forceSyncAllStorage instead
+ * Sync specific storage key or all storage if no key provided
+ * @param key Optional storage key to synchronize
+ * @returns A Promise that resolves to a boolean indicating success
  */
-export const syncStorage = forceSyncAllStorage;
+export const syncStorage = async (key?: string): Promise<boolean> => {
+  try {
+    if (key) {
+      // If a key is provided, just trigger a storage event for that key
+      console.log(`[storageUtils] Syncing specific key: ${key}`);
+      const item = localStorage.getItem(key);
+      if (item) {
+        // Re-set the item to trigger storage events
+        localStorage.setItem(key, item);
+      }
+      return true;
+    } else {
+      // If no key provided, use the forceSyncAllStorage function
+      return await forceSyncAllStorage();
+    }
+  } catch (error) {
+    console.error(`[storageUtils] Error syncing storage${key ? ` for key ${key}` : ''}:`, error);
+    return false;
+  }
+};
