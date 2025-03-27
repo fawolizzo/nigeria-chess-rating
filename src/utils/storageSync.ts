@@ -1,76 +1,34 @@
 
-/**
- * Enhanced cross-device storage synchronization utilities
- * Handles data propagation, resets, and authentication status across devices
- */
+import { 
+  SyncEventType, 
+  STORAGE_KEY_RESET_FLAG,
+  STORAGE_KEY_GLOBAL_RESET,
+  STORAGE_KEY_DEVICE_RESET_PROCESSED,
+  STORAGE_KEY_USERS,
+  STORAGE_KEY_CURRENT_USER
+} from "@/types/userTypes";
 
 // Constant for the broadcast channel name
 const BROADCAST_CHANNEL_NAME = 'ncr_broadcast_channel';
 let broadcastChannel: BroadcastChannel | null = null;
 
-// Storage keys that need cross-device syncing
-export const SYNC_KEYS = [
-  'ncr_users',
-  'ncr_current_user',
-  'ncr_players',
-  'ncr_tournaments',
-  'ncr_tournament_players',
-  'ncr_system_reset'
-];
+// Initialize reset flag
+window.ncrIsResetting = false;
 
-// Event types for cross-device communication
-export enum SyncEventType {
-  RESET = 'RESET',
-  UPDATE = 'UPDATE',
-  LOGOUT = 'LOGOUT',
-  LOGIN = 'LOGIN',
-  APPROVAL = 'APPROVAL',
-  FORCE_SYNC = 'FORCE_SYNC'
-}
-
-// Initialize the broadcast channel for cross-tab/cross-device communication
+// Initialize the broadcast channel for cross-device communication
 export const initBroadcastChannel = (): void => {
   try {
     if (typeof BroadcastChannel !== 'undefined') {
+      // Close existing channel if it exists
+      if (broadcastChannel) {
+        broadcastChannel.close();
+      }
+      
       broadcastChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
       console.log("[StorageSync] BroadcastChannel initialized");
       
-      // Set up the reset event handler immediately
-      broadcastChannel.addEventListener('message', (event) => {
-        if (event.data?.type === SyncEventType.RESET) {
-          console.log("[StorageSync] Reset event received, processing...");
-          // Handle reset directly here to ensure it's processed even if listeners aren't set up yet
-          processSystemReset();
-        } else if (event.data?.type === SyncEventType.FORCE_SYNC) {
-          console.log("[StorageSync] Force sync event received, syncing...");
-          // Import would create circular dependency
-          // Use setTimeout to break the synchronous execution
-          setTimeout(() => {
-            const forceSyncAllStorage = window.ncrForceSyncFunction;
-            if (typeof forceSyncAllStorage === 'function') {
-              forceSyncAllStorage().catch(console.error);
-            }
-          }, 0);
-        } else if (event.data?.type === SyncEventType.APPROVAL) {
-          console.log("[StorageSync] Approval event received, syncing user data...");
-          // Prioritize syncing user data
-          setTimeout(() => {
-            const forceSyncAllStorage = window.ncrForceSyncFunction;
-            if (typeof forceSyncAllStorage === 'function') {
-              forceSyncAllStorage(['ncr_users', 'ncr_current_user']).catch(console.error);
-            }
-          }, 0);
-        } else if (event.data?.type === SyncEventType.LOGIN) {
-          console.log("[StorageSync] Login event received, syncing user data...");
-          // Prioritize syncing user data
-          setTimeout(() => {
-            const forceSyncAllStorage = window.ncrForceSyncFunction;
-            if (typeof forceSyncAllStorage === 'function') {
-              forceSyncAllStorage(['ncr_users', 'ncr_current_user']).catch(console.error);
-            }
-          }, 0);
-        }
-      });
+      // Set up the event handler
+      broadcastChannel.addEventListener('message', handleBroadcastMessage);
     } else {
       console.warn("[StorageSync] BroadcastChannel not supported in this browser");
       // Fallback for browsers that don't support BroadcastChannel
@@ -83,52 +41,127 @@ export const initBroadcastChannel = (): void => {
   }
 };
 
-// Setup storage event listener as fallback for BroadcastChannel
+// Handle broadcast messages
+const handleBroadcastMessage = (event: MessageEvent) => {
+  if (!event.data || !event.data.type) return;
+  
+  console.log(`[StorageSync] Received broadcast message: ${event.data.type}`);
+  
+  switch (event.data.type) {
+    case SyncEventType.RESET:
+      console.log("[StorageSync] Reset event received, processing...");
+      processSystemReset();
+      break;
+      
+    case SyncEventType.FORCE_SYNC:
+      console.log("[StorageSync] Force sync event received, syncing...");
+      // Use the global sync function to avoid circular dependencies
+      if (typeof window.ncrForceSyncFunction === 'function') {
+        window.ncrForceSyncFunction().catch(console.error);
+      }
+      break;
+      
+    case SyncEventType.CLEAR_DATA:
+      console.log("[StorageSync] Clear data event received, clearing...");
+      if (typeof window.ncrClearAllData === 'function') {
+        window.ncrClearAllData().then(() => {
+          window.location.reload();
+        });
+      }
+      break;
+      
+    case SyncEventType.UPDATE:
+      if (event.data.key) {
+        console.log(`[StorageSync] Update event received for ${event.data.key}`);
+        // Prioritize syncing user data
+        if (event.data.key === STORAGE_KEY_USERS || event.data.key === STORAGE_KEY_CURRENT_USER) {
+          if (typeof window.ncrForceSyncFunction === 'function') {
+            window.ncrForceSyncFunction([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]).catch(console.error);
+          }
+        }
+      }
+      break;
+      
+    case SyncEventType.LOGIN:
+    case SyncEventType.LOGOUT:
+    case SyncEventType.APPROVAL:
+      console.log(`[StorageSync] ${event.data.type} event received, syncing auth data...`);
+      if (typeof window.ncrForceSyncFunction === 'function') {
+        window.ncrForceSyncFunction([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]).catch(console.error);
+      }
+      break;
+  }
+};
+
+// Setup storage event listener as fallback
 const setupStorageEventListener = (): void => {
   console.log("[StorageSync] Setting up storage event listener fallback");
+  
   window.addEventListener('storage', (event) => {
-    if (event.key === 'ncr_system_reset') {
+    if (!event.key) return;
+    
+    console.log(`[StorageSync] Storage event detected: ${event.key}`);
+    
+    if (event.key === STORAGE_KEY_RESET_FLAG || event.key === STORAGE_KEY_GLOBAL_RESET) {
       console.log("[StorageSync] Reset event detected via storage event, processing...");
       processSystemReset();
-    } else if (event.key === 'ncr_force_sync') {
-      console.log("[StorageSync] Force sync event detected via storage event");
-      const forceSyncAllStorage = window.ncrForceSyncFunction;
-      if (typeof forceSyncAllStorage === 'function') {
-        forceSyncAllStorage().catch(console.error);
-      }
-    } else if (event.key === 'ncr_users' || event.key === 'ncr_current_user') {
-      console.log("[StorageSync] Auth data changed, syncing...");
-      const forceSyncAllStorage = window.ncrForceSyncFunction;
-      if (typeof forceSyncAllStorage === 'function') {
-        forceSyncAllStorage(['ncr_users', 'ncr_current_user']).catch(console.error);
+    } else if (event.key === STORAGE_KEY_USERS || event.key === STORAGE_KEY_CURRENT_USER) {
+      console.log("[StorageSync] Auth data change detected, syncing...");
+      if (typeof window.ncrForceSyncFunction === 'function') {
+        window.ncrForceSyncFunction([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]).catch(console.error);
       }
     }
   });
 };
 
-// Process a system reset - can be called directly or via events
+// Process a system reset
 export const processSystemReset = (): void => {
   try {
     console.log("[StorageSync] Processing system reset");
     
-    // Clear all data from localStorage and sessionStorage
-    clearAllStorageData();
+    // Set reset flag to prevent operations during reset
+    window.ncrIsResetting = true;
     
-    // Set the reset timestamp again after clearing
-    const resetTimestamp = Date.now();
-    localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-    sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-    
-    // Set a flag in sessionStorage to indicate this device has been reset
-    sessionStorage.setItem('ncr_device_reset_processed', resetTimestamp.toString());
-    
-    // Force page reload to ensure clean application state
-    console.log("[StorageSync] Reloading page to complete reset");
-    setTimeout(() => {
+    // Clear all data
+    if (typeof window.ncrClearAllData === 'function') {
+      window.ncrClearAllData().then(() => {
+        // Force page reload after reset
+        window.location.reload();
+      });
+    } else {
+      // Fallback if clearAllData is not available
+      clearAllStorageData();
+      
+      // Force page reload
       window.location.reload();
-    }, 500);
+    }
   } catch (error) {
     console.error("[StorageSync] Error during system reset processing:", error);
+    window.ncrIsResetting = false;
+  }
+};
+
+// Perform a system reset
+export const performSystemReset = (): void => {
+  try {
+    console.log("[StorageSync] Performing system reset");
+    
+    // Set reset timestamp
+    const resetTimestamp = Date.now();
+    
+    // Set reset flags
+    localStorage.setItem(STORAGE_KEY_RESET_FLAG, resetTimestamp.toString());
+    sessionStorage.setItem(STORAGE_KEY_RESET_FLAG, resetTimestamp.toString());
+    localStorage.setItem(STORAGE_KEY_GLOBAL_RESET, resetTimestamp.toString());
+    sessionStorage.setItem(STORAGE_KEY_GLOBAL_RESET, resetTimestamp.toString());
+    
+    // Broadcast reset event to other tabs/devices
+    sendSyncEvent(SyncEventType.RESET);
+    
+    // Process reset on this device
+    processSystemReset();
+  } catch (error) {
+    console.error("[StorageSync] Error during system reset:", error);
   }
 };
 
@@ -137,28 +170,18 @@ const clearAllStorageData = (): void => {
   try {
     console.log("[StorageSync] Clearing all storage data");
     
-    // Clear specific keys first to ensure critical data is removed
-    SYNC_KEYS.forEach(key => {
-      try {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-        console.log(`[StorageSync] Removed ${key} from storage`);
-      } catch (e) {
-        console.error(`[StorageSync] Error removing ${key}:`, e);
-      }
-    });
+    // Mark device as processing reset
+    const resetTimestamp = Date.now();
+    localStorage.setItem(STORAGE_KEY_DEVICE_RESET_PROCESSED, resetTimestamp.toString());
+    sessionStorage.setItem(STORAGE_KEY_DEVICE_RESET_PROCESSED, resetTimestamp.toString());
     
-    // Then clear everything else
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      console.log("[StorageSync] Cleared localStorage and sessionStorage");
-    } catch (e) {
-      console.error("[StorageSync] Error clearing storage:", e);
-    }
+    // Clear localStorage and sessionStorage
+    localStorage.clear();
+    sessionStorage.clear();
     
-    // Try to clear IndexedDB if available
-    clearIndexedDBData();
+    // Set device processed flag again (since we just cleared it)
+    localStorage.setItem(STORAGE_KEY_DEVICE_RESET_PROCESSED, resetTimestamp.toString());
+    sessionStorage.setItem(STORAGE_KEY_DEVICE_RESET_PROCESSED, resetTimestamp.toString());
     
     console.log("[StorageSync] All storage data cleared");
   } catch (error) {
@@ -166,361 +189,15 @@ const clearAllStorageData = (): void => {
   }
 };
 
-// Attempt to clear IndexedDB data
-const clearIndexedDBData = (): void => {
-  try {
-    if (window.indexedDB) {
-      // List of possible database names to clear
-      const possibleDBNames = ['ncr-db', 'ncrdb', 'chess-rating-db'];
-      
-      possibleDBNames.forEach(dbName => {
-        try {
-          const request = indexedDB.deleteDatabase(dbName);
-          request.onsuccess = () => console.log(`[StorageSync] Successfully deleted IndexedDB: ${dbName}`);
-          request.onerror = () => console.error(`[StorageSync] Error deleting IndexedDB: ${dbName}`);
-        } catch (e) {
-          console.error(`[StorageSync] Error attempting to delete IndexedDB: ${dbName}`, e);
-        }
-      });
-    }
-  } catch (error) {
-    console.error("[StorageSync] Error clearing IndexedDB data:", error);
-  }
-};
-
-// Close the broadcast channel
-export const closeBroadcastChannel = (): void => {
-  if (broadcastChannel) {
-    broadcastChannel.close();
-    broadcastChannel = null;
-    console.log("[StorageSync] BroadcastChannel closed");
-  }
-};
-
-// Send a sync event through the broadcast channel
-export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): void => {
-  try {
-    // First set a flag in sessionStorage to indicate this device initiated the event
-    const eventId = `${type}_${Date.now()}`;
-    sessionStorage.setItem('ncr_last_event_initiated', eventId);
-    
-    // For login and approval events, also store a flag in localStorage
-    if (type === SyncEventType.LOGIN || type === SyncEventType.APPROVAL) {
-      localStorage.setItem(`ncr_auth_event_${type.toLowerCase()}`, Date.now().toString());
-    }
-    
-    if (broadcastChannel) {
-      try {
-        broadcastChannel.postMessage({ 
-          type, 
-          key, 
-          data, 
-          timestamp: Date.now(),
-          eventId 
-        });
-        console.log(`[StorageSync] Sent ${type} event${key ? ` for ${key}` : ''} with ID ${eventId}`);
-        
-        // Special handling for RESET events to ensure they propagate
-        if (type === SyncEventType.RESET) {
-          // Also set the reset flag in localStorage to help with cross-device sync
-          const resetTimestamp = Date.now();
-          localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-          sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-          localStorage.setItem('ncr_last_reset', resetTimestamp.toString());
-          
-          // Set server-wide notification (useful for devices that were offline)
-          try {
-            window.localStorage.setItem('ncr_global_reset_timestamp', resetTimestamp.toString());
-          } catch (e) {
-            console.error("[StorageSync] Error setting global reset timestamp:", e);
-          }
-        }
-      } catch (error) {
-        console.error(`[StorageSync] Failed to send ${type} event:`, error);
-        
-        // Fallback for events if BroadcastChannel fails
-        if (type === SyncEventType.RESET) {
-          const resetTimestamp = Date.now();
-          localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-          sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-          localStorage.setItem('ncr_last_reset', resetTimestamp.toString());
-        } else if (type === SyncEventType.FORCE_SYNC) {
-          localStorage.setItem('ncr_force_sync', Date.now().toString());
-          setTimeout(() => localStorage.removeItem('ncr_force_sync'), 100);
-        } else if (type === SyncEventType.LOGIN) {
-          localStorage.setItem('ncr_auth_event_login', Date.now().toString());
-        } else if (type === SyncEventType.APPROVAL) {
-          localStorage.setItem('ncr_auth_event_approval', Date.now().toString());
-        }
-      }
-    } else {
-      // Fallback for browsers without BroadcastChannel support
-      if (type === SyncEventType.RESET) {
-        const resetTimestamp = Date.now();
-        localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-        sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-        localStorage.setItem('ncr_last_reset', resetTimestamp.toString());
-      } else if (type === SyncEventType.FORCE_SYNC) {
-        // Trigger a storage event for force sync
-        localStorage.setItem('ncr_force_sync', Date.now().toString());
-        setTimeout(() => localStorage.removeItem('ncr_force_sync'), 100);
-      } else if (type === SyncEventType.LOGIN) {
-        localStorage.setItem('ncr_auth_event_login', Date.now().toString());
-      } else if (type === SyncEventType.APPROVAL) {
-        localStorage.setItem('ncr_auth_event_approval', Date.now().toString());
-      }
-    }
-  } catch (error) {
-    console.error(`[StorageSync] Error in sendSyncEvent for ${type}:`, error);
-  }
-};
-
-// Listen for sync events
-export const listenForSyncEvents = (
-  onReset: () => void,
-  onUpdate: (key: string, data: any) => void,
-  onLogout: () => void,
-  onLogin: (userData: any) => void,
-  onApproval: (userId: string) => void,
-  onForceSync?: () => Promise<void>
-): (() => void) => {
-  // Set up storage event listener for auth events
-  const handleStorageEvent = (event: StorageEvent) => {
-    if (event.key === 'ncr_auth_event_login') {
-      console.log("[StorageSync] Login event detected via storage event");
-      // Prioritize syncing user data
-      const forceSyncAllStorage = window.ncrForceSyncFunction;
-      if (typeof forceSyncAllStorage === 'function') {
-        forceSyncAllStorage(['ncr_users', 'ncr_current_user'])
-          .then(() => {
-            // Call the login handler after syncing
-            onLogin({});
-          })
-          .catch(console.error);
-      }
-    } else if (event.key === 'ncr_auth_event_approval') {
-      console.log("[StorageSync] Approval event detected via storage event");
-      // Prioritize syncing user data
-      const forceSyncAllStorage = window.ncrForceSyncFunction;
-      if (typeof forceSyncAllStorage === 'function') {
-        forceSyncAllStorage(['ncr_users', 'ncr_current_user'])
-          .then(() => {
-            // Call the approval handler after syncing
-            onApproval("");
-          })
-          .catch(console.error);
-      }
-    }
-  };
-  
-  window.addEventListener('storage', handleStorageEvent);
-  
-  if (!broadcastChannel) {
-    // Set up storage event listener as fallback
-    const storageListener = (event: StorageEvent) => {
-      if (event.key === 'ncr_system_reset') {
-        onReset();
-      } else if (event.key === 'ncr_force_sync') {
-        onForceSync?.();
-      }
-    };
-    
-    window.addEventListener('storage', storageListener);
-    return () => {
-      window.removeEventListener('storage', storageListener);
-      window.removeEventListener('storage', handleStorageEvent);
-    };
-  }
-
-  const handleMessage = (event: MessageEvent) => {
-    const { type, key, data, eventId } = event.data;
-    
-    // Skip processing events that this device initiated
-    const lastEventInitiated = sessionStorage.getItem('ncr_last_event_initiated');
-    if (lastEventInitiated === eventId) {
-      console.log(`[StorageSync] Skipping ${type} event that this device initiated`);
-      return;
-    }
-    
-    console.log(`[StorageSync] Received ${type} event${key ? ` for ${key}` : ''}`);
-    
-    switch (type) {
-      case SyncEventType.RESET:
-        onReset();
-        break;
-      case SyncEventType.UPDATE:
-        if (key && data !== undefined) {
-          onUpdate(key, data);
-        }
-        break;
-      case SyncEventType.LOGOUT:
-        onLogout();
-        break;
-      case SyncEventType.LOGIN:
-        // Prioritize syncing user data first
-        window.ncrForceSyncFunction?.(['ncr_users', 'ncr_current_user'])
-          .then(() => {
-            // Then call the login handler
-            onLogin(data);
-          })
-          .catch(console.error);
-        break;
-      case SyncEventType.APPROVAL:
-        // Prioritize syncing user data first
-        window.ncrForceSyncFunction?.(['ncr_users', 'ncr_current_user'])
-          .then(() => {
-            // Then call the approval handler
-            onApproval(data);
-          })
-          .catch(console.error);
-        break;
-      case SyncEventType.FORCE_SYNC:
-        if (onForceSync) {
-          onForceSync().catch(error => {
-            console.error("[StorageSync] Error in force sync handler:", error);
-          });
-        }
-        break;
-      default:
-        console.warn(`[StorageSync] Unknown event type: ${type}`);
-    }
-  };
-
-  broadcastChannel.addEventListener('message', handleMessage);
-  
-  // Return cleanup function
-  return () => {
-    if (broadcastChannel) {
-      broadcastChannel.removeEventListener('message', handleMessage);
-    }
-    window.removeEventListener('storage', handleStorageEvent);
-  };
-};
-
-// Function to check if IndexedDB is available and working
-export const checkIndexedDBSupport = async (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if (!window.indexedDB) {
-      console.warn("[StorageSync] IndexedDB not supported");
-      resolve(false);
-      return;
-    }
-    
-    try {
-      const request = indexedDB.open('ncr_test_db', 1);
-      
-      request.onerror = () => {
-        console.error("[StorageSync] IndexedDB test failed");
-        resolve(false);
-      };
-      
-      request.onsuccess = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        db.close();
-        // Attempt to delete the test database
-        try {
-          indexedDB.deleteDatabase('ncr_test_db');
-        } catch (e) {
-          // Ignore deletion errors
-        }
-        resolve(true);
-      };
-    } catch (error) {
-      console.error("[StorageSync] IndexedDB test exception:", error);
-      resolve(false);
-    }
-  });
-};
-
-// Reset function that properly propagates across devices
-export const performSystemReset = (): void => {
-  try {
-    console.log("[StorageSync] Performing system reset");
-    
-    // Set a reset flag first to help with cross-device sync
-    const resetTimestamp = Date.now();
-    localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-    sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-    localStorage.setItem('ncr_last_reset', resetTimestamp.toString());
-    
-    // Set server-wide notification for devices that might be offline
-    try {
-      window.localStorage.setItem('ncr_global_reset_timestamp', resetTimestamp.toString());
-    } catch (e) {
-      console.error("[StorageSync] Error setting global reset timestamp:", e);
-    }
-    
-    // Broadcast the reset event to other tabs/devices
-    sendSyncEvent(SyncEventType.RESET);
-    
-    // Clear all data from localStorage and sessionStorage
-    clearAllStorageData();
-    
-    // Set the reset timestamp again after clearing
-    localStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-    sessionStorage.setItem('ncr_system_reset', resetTimestamp.toString());
-    localStorage.setItem('ncr_last_reset', resetTimestamp.toString());
-    
-    // Set a flag in sessionStorage to indicate this device has been reset
-    sessionStorage.setItem('ncr_device_reset_processed', resetTimestamp.toString());
-    
-    console.log("[StorageSync] System reset completed, reloading page");
-    
-    // Force page reload to ensure clean application state
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
-  } catch (error) {
-    console.error("[StorageSync] Error during system reset:", error);
-  }
-};
-
-// Enhanced verification of reset status
+// Check if there's a pending reset
 export const checkResetStatus = (): boolean => {
   try {
-    // Check for global reset indicator
-    const globalReset = localStorage.getItem('ncr_global_reset_timestamp');
-    const localReset = localStorage.getItem('ncr_system_reset');
-    const sessionReset = sessionStorage.getItem('ncr_system_reset');
-    const lastReset = localStorage.getItem('ncr_last_reset');
+    const resetFlag = localStorage.getItem(STORAGE_KEY_RESET_FLAG);
+    const globalReset = localStorage.getItem(STORAGE_KEY_GLOBAL_RESET);
     
-    // Get the most recent reset timestamp from all sources
-    const globalResetTime = globalReset ? parseInt(globalReset, 10) : 0;
-    const localResetTime = localReset ? parseInt(localReset, 10) : 0;
-    const sessionResetTime = sessionReset ? parseInt(sessionReset, 10) : 0;
-    const lastResetTime = lastReset ? parseInt(lastReset, 10) : 0;
-    
-    // Calculate the most recent reset timestamp
-    const mostRecentReset = Math.max(
-      globalResetTime,
-      localResetTime,
-      sessionResetTime,
-      lastResetTime
-    );
-    
-    if (mostRecentReset > 0) {
-      const now = Date.now();
-      
-      // Check if this device has already processed this reset
-      const resetProcessed = sessionStorage.getItem('ncr_device_reset_processed');
-      const resetProcessedTime = resetProcessed ? parseInt(resetProcessed, 10) : 0;
-      
-      // If this device has already processed a reset more recent than the most recent reset,
-      // then we don't need to process it again
-      if (resetProcessedTime >= mostRecentReset) {
-        console.log("[StorageSync] Reset already processed on this device");
-        return false;
-      }
-      
-      // Check if reset happened within the last 15 minutes
-      // This helps prevent false positives for old reset flags
-      // but also ensures that devices that were offline can catch up
-      const isRecentReset = now - mostRecentReset < 15 * 60 * 1000; // 15 minutes
-      
-      if (isRecentReset) {
-        console.log(`[StorageSync] Recent system reset detected (${new Date(mostRecentReset).toISOString()})`);
-        return true;
-      }
+    if (resetFlag || globalReset) {
+      console.log("[StorageSync] Reset status check: Reset flag found");
+      return true;
     }
     
     return false;
@@ -530,32 +207,211 @@ export const checkResetStatus = (): boolean => {
   }
 };
 
-// Safely clear the reset status after it's been processed
+// Clear reset status
 export const clearResetStatus = (): void => {
   try {
-    // Don't remove the last reset timestamp, as it's useful for devices that were offline
-    // Just mark this reset as processed on this device
-    const lastReset = localStorage.getItem('ncr_last_reset');
-    if (lastReset) {
-      sessionStorage.setItem('ncr_device_reset_processed', lastReset);
-    }
+    console.log("[StorageSync] Clearing reset status");
     
-    // Remove the immediate reset flags
-    localStorage.removeItem('ncr_system_reset');
-    sessionStorage.removeItem('ncr_system_reset');
+    const resetTimestamp = Date.now();
     
-    console.log("[StorageSync] Reset status cleared");
+    localStorage.removeItem(STORAGE_KEY_RESET_FLAG);
+    sessionStorage.removeItem(STORAGE_KEY_RESET_FLAG);
+    
+    // Mark this device as having processed the reset
+    localStorage.setItem(STORAGE_KEY_DEVICE_RESET_PROCESSED, resetTimestamp.toString());
+    sessionStorage.setItem(STORAGE_KEY_DEVICE_RESET_PROCESSED, resetTimestamp.toString());
   } catch (error) {
     console.error("[StorageSync] Error clearing reset status:", error);
   }
 };
 
-// Force a sync across all devices
-export const forceGlobalSync = (): void => {
+// Trigger a global sync across all tabs/devices
+export const forceGlobalSync = async (): Promise<boolean> => {
   try {
-    console.log("[StorageSync] Forcing global sync across all devices");
+    console.log("[StorageSync] Forcing global sync");
+    
+    // Broadcast sync event
     sendSyncEvent(SyncEventType.FORCE_SYNC);
+    
+    // Force sync on this device
+    if (typeof window.ncrForceSyncFunction === 'function') {
+      return await window.ncrForceSyncFunction();
+    }
+    
+    return false;
   } catch (error) {
-    console.error("[StorageSync] Error forcing global sync:", error);
+    console.error("[StorageSync] Error during global sync:", error);
+    return false;
+  }
+};
+
+// Send a sync event through the broadcast channel
+export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): void => {
+  try {
+    // Use BroadcastChannel if available
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type, key, data });
+      console.log(`[StorageSync] Sent ${type} event through BroadcastChannel`);
+    } else {
+      // Fallback to storage events
+      const eventKey = `ncr_event_${type.toLowerCase()}`;
+      const eventData = JSON.stringify({ type, key, data, timestamp: Date.now() });
+      
+      localStorage.setItem(eventKey, eventData);
+      setTimeout(() => {
+        localStorage.removeItem(eventKey);
+      }, 100);
+      
+      console.log(`[StorageSync] Sent ${type} event through storage event`);
+    }
+    
+    // For critical events, also set specific storage flags
+    if (type === SyncEventType.RESET) {
+      const resetTimestamp = Date.now();
+      localStorage.setItem(STORAGE_KEY_RESET_FLAG, resetTimestamp.toString());
+      sessionStorage.setItem(STORAGE_KEY_RESET_FLAG, resetTimestamp.toString());
+      localStorage.setItem(STORAGE_KEY_GLOBAL_RESET, resetTimestamp.toString());
+      sessionStorage.setItem(STORAGE_KEY_GLOBAL_RESET, resetTimestamp.toString());
+    }
+  } catch (error) {
+    console.error(`[StorageSync] Error sending ${type} event:`, error);
+  }
+};
+
+// Listen for sync events and call appropriate handlers
+export const listenForSyncEvents = (
+  resetHandler: () => void,
+  updateHandler: (key: string, data: any) => void,
+  logoutHandler: () => void,
+  loginHandler: (userData: any) => void,
+  approvalHandler: (userId: string) => void,
+  forceSyncHandler: () => void,
+  clearDataHandler?: () => void
+): (() => void) => {
+  try {
+    console.log("[StorageSync] Setting up sync event listeners");
+    
+    // Initialize BroadcastChannel if not already done
+    if (!broadcastChannel) {
+      initBroadcastChannel();
+    }
+    
+    // Handler for broadcast messages
+    const messageHandler = (event: MessageEvent) => {
+      if (!event.data || !event.data.type) return;
+      
+      console.log(`[StorageSync] Received event: ${event.data.type}`);
+      
+      switch (event.data.type) {
+        case SyncEventType.RESET:
+          resetHandler();
+          break;
+          
+        case SyncEventType.UPDATE:
+          if (event.data.key) {
+            updateHandler(event.data.key, event.data.data);
+          }
+          break;
+          
+        case SyncEventType.LOGOUT:
+          logoutHandler();
+          break;
+          
+        case SyncEventType.LOGIN:
+          loginHandler(event.data.data);
+          break;
+          
+        case SyncEventType.APPROVAL:
+          if (event.data.key) {
+            approvalHandler(event.data.key);
+          }
+          break;
+          
+        case SyncEventType.FORCE_SYNC:
+          forceSyncHandler();
+          break;
+          
+        case SyncEventType.CLEAR_DATA:
+          if (clearDataHandler) {
+            clearDataHandler();
+          }
+          break;
+      }
+    };
+    
+    // Add listener to BroadcastChannel
+    if (broadcastChannel) {
+      broadcastChannel.addEventListener('message', messageHandler);
+    }
+    
+    // Storage event handler as fallback
+    const storageHandler = (event: StorageEvent) => {
+      if (!event.key) return;
+      
+      if (event.key === STORAGE_KEY_RESET_FLAG || event.key === STORAGE_KEY_GLOBAL_RESET) {
+        resetHandler();
+      } else if (event.key.startsWith('ncr_event_')) {
+        try {
+          const eventData = JSON.parse(event.newValue || '{}');
+          
+          switch (eventData.type) {
+            case SyncEventType.RESET:
+              resetHandler();
+              break;
+              
+            case SyncEventType.UPDATE:
+              if (eventData.key) {
+                updateHandler(eventData.key, eventData.data);
+              }
+              break;
+              
+            case SyncEventType.LOGOUT:
+              logoutHandler();
+              break;
+              
+            case SyncEventType.LOGIN:
+              loginHandler(eventData.data);
+              break;
+              
+            case SyncEventType.APPROVAL:
+              if (eventData.key) {
+                approvalHandler(eventData.key);
+              }
+              break;
+              
+            case SyncEventType.FORCE_SYNC:
+              forceSyncHandler();
+              break;
+              
+            case SyncEventType.CLEAR_DATA:
+              if (clearDataHandler) {
+                clearDataHandler();
+              }
+              break;
+          }
+        } catch (e) {
+          console.error("[StorageSync] Error parsing event data:", e);
+        }
+      }
+    };
+    
+    // Add storage event listener
+    window.addEventListener('storage', storageHandler);
+    
+    // Return cleanup function
+    return () => {
+      if (broadcastChannel) {
+        broadcastChannel.removeEventListener('message', messageHandler);
+      }
+      
+      window.removeEventListener('storage', storageHandler);
+      
+      console.log("[StorageSync] Removed sync event listeners");
+    };
+  } catch (error) {
+    console.error("[StorageSync] Error setting up sync event listeners:", error);
+    
+    // Return empty cleanup function
+    return () => {};
   }
 };

@@ -1,28 +1,32 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, AlertCircle, Check } from "lucide-react";
 import { forceSyncAllStorage } from "@/utils/storageUtils";
+import { forceGlobalSync } from "@/utils/storageSync";
 import { useToast } from "@/hooks/use-toast";
 
 interface SyncStatusIndicatorProps {
   className?: string;
   showButton?: boolean;
+  onSyncComplete?: () => void;
 }
 
 const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({ 
   className = "", 
-  showButton = true 
+  showButton = true,
+  onSyncComplete
 }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
   const { toast } = useToast();
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      handleSync();
+      handleSync(false);
     };
     
     const handleOffline = () => {
@@ -46,26 +50,51 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
     
     try {
       setIsSyncing(true);
+      setSyncStatus('syncing');
       
-      const success = await forceSyncAllStorage();
+      // Use the global sync to ensure all devices are updated
+      const success = await forceGlobalSync();
       
       if (success) {
         setLastSynced(new Date());
+        setSyncStatus('success');
+        
         if (showToast) {
           toast({
             title: "Sync Successful",
             description: "Your data has been synchronized across all devices.",
           });
         }
-      } else if (showToast) {
-        toast({
-          title: "Sync Warning",
-          description: "Synchronization completed with warnings. Some data may not be up to date.",
-          variant: "warning",
-        });
+        
+        // Call the onSyncComplete callback if provided
+        if (onSyncComplete) {
+          onSyncComplete();
+        }
+        
+        // Reset success status after 3 seconds
+        setTimeout(() => {
+          setSyncStatus('idle');
+        }, 3000);
+      } else {
+        setSyncStatus('error');
+        
+        if (showToast) {
+          toast({
+            title: "Sync Warning",
+            description: "Synchronization completed with warnings. Some data may not be up to date.",
+            variant: "warning",
+          });
+        }
+        
+        // Reset error status after 3 seconds
+        setTimeout(() => {
+          setSyncStatus('idle');
+        }, 3000);
       }
     } catch (error) {
       console.error("Error during manual sync:", error);
+      setSyncStatus('error');
+      
       if (showToast) {
         toast({
           title: "Sync Failed",
@@ -73,6 +102,11 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           variant: "destructive",
         });
       }
+      
+      // Reset error status after 3 seconds
+      setTimeout(() => {
+        setSyncStatus('idle');
+      }, 3000);
     } finally {
       setIsSyncing(false);
     }
@@ -100,12 +134,28 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="ml-2 h-6 px-2 text-xs"
+          className={`ml-2 h-6 px-2 text-xs ${
+            syncStatus === 'success' ? 'text-green-500' : 
+            syncStatus === 'error' ? 'text-red-500' : ''
+          }`}
           onClick={() => handleSync()}
           disabled={isSyncing || !isOnline}
         >
-          <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? "Syncing..." : "Sync Now"}
+          {syncStatus === 'syncing' && (
+            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+          )}
+          {syncStatus === 'success' && (
+            <Check className="h-3 w-3 mr-1 text-green-500" />
+          )}
+          {syncStatus === 'error' && (
+            <AlertCircle className="h-3 w-3 mr-1 text-red-500" />
+          )}
+          {syncStatus === 'idle' && !isSyncing && (
+            <RefreshCw className="h-3 w-3 mr-1" />
+          )}
+          {syncStatus === 'syncing' ? "Syncing..." : 
+           syncStatus === 'success' ? "Synced" : 
+           syncStatus === 'error' ? "Try Again" : "Sync Now"}
         </Button>
       )}
     </div>

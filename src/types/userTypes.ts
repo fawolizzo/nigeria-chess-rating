@@ -14,6 +14,7 @@ export interface User {
   registrationDate: string;
   approvalDate?: string;
   password?: string;
+  lastModified: number; // Timestamp for conflict resolution
 }
 
 export interface UserContextType {
@@ -22,19 +23,67 @@ export interface UserContextType {
   isLoading: boolean;
   login: (email: string, password: string, role: 'tournament_organizer' | 'rating_officer') => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'status' | 'registrationDate'>) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'status' | 'registrationDate' | 'lastModified'>) => Promise<boolean>;
   approveUser: (userId: string) => void;
   rejectUser: (userId: string) => void;
   sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;
   getRatingOfficerEmails: () => string[];
-  refreshUserData: () => void; // Added the missing function
+  refreshUserData: () => Promise<boolean>;
+  forceSync: () => Promise<boolean>;
+  clearAllData: () => Promise<boolean>;
 }
 
 // Add this interface for storage with timestamps
 export interface TimestampedData<T> {
   data: T;
   timestamp: number;
+  deviceId: string; // To track which device last updated the data
+  version: number; // To track data versions for conflict resolution
 }
 
+// Storage keys constants
 export const STORAGE_KEY_USERS = 'ncr_users';
 export const STORAGE_KEY_CURRENT_USER = 'ncr_current_user';
+export const STORAGE_KEY_SYNC_VERSION = 'ncr_sync_version';
+export const STORAGE_KEY_DEVICE_ID = 'ncr_device_id';
+export const STORAGE_KEY_LAST_SYNC = 'ncr_last_sync';
+export const STORAGE_KEY_RESET_FLAG = 'ncr_system_reset';
+export const STORAGE_KEY_GLOBAL_RESET = 'ncr_global_reset_timestamp';
+export const STORAGE_KEY_DEVICE_RESET_PROCESSED = 'ncr_device_reset_processed';
+
+// Sync events enum
+export enum SyncEventType {
+  RESET = 'RESET',
+  UPDATE = 'UPDATE',
+  LOGOUT = 'LOGOUT',
+  LOGIN = 'LOGIN',
+  APPROVAL = 'APPROVAL',
+  FORCE_SYNC = 'FORCE_SYNC',
+  CLEAR_DATA = 'CLEAR_DATA'
+}
+
+// Function to generate a unique device ID
+export const generateDeviceId = (): string => {
+  const nav = window.navigator;
+  const screen = window.screen;
+  
+  // Create components for the device fingerprint
+  const components = [
+    nav.userAgent,
+    screen.width,
+    screen.height,
+    screen.colorDepth,
+    new Date().getTimezoneOffset(),
+    Math.random().toString(36).substring(2, 15) // Add some randomness
+  ].join('|');
+  
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < components.length; i++) {
+    const char = components.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  return 'device_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(36);
+};

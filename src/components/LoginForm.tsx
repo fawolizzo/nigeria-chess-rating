@@ -1,6 +1,17 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogIn, Mail, Lock, Calendar, Shield, Check, AlertCircle, RefreshCw } from "lucide-react";
+import { 
+  LogIn, 
+  Mail, 
+  Lock, 
+  Calendar, 
+  Shield, 
+  Check, 
+  AlertCircle, 
+  RefreshCw,
+  Loader2
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -10,17 +21,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { 
-  forceSyncAllStorage, 
   checkStorageHealth, 
-  removeFromStorage, 
-  saveToStorage 
+  forceSyncAllStorage
 } from "@/utils/storageUtils";
 import { 
   checkResetStatus, 
   clearResetStatus, 
-  sendSyncEvent, 
-  SyncEventType 
+  forceGlobalSync
 } from "@/utils/storageSync";
 import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
 
@@ -35,15 +44,15 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const LoginForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, currentUser, refreshUserData } = useUser();
+  const { login, currentUser, refreshUserData, forceSync } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [initComplete, setInitComplete] = useState(false);
   const isMobile = useIsMobile();
   
-  // Force sync storage and check health on page load
+  // Initialize login form
   useEffect(() => {
     const initializeLogin = async () => {
       console.log("[LoginForm] Initializing login form");
@@ -54,6 +63,7 @@ const LoginForm = () => {
         if (checkResetStatus()) {
           console.log("[LoginForm] System reset detected, clearing reset status");
           clearResetStatus();
+          
           toast({
             title: "System Reset Detected",
             description: "The system has been reset. All account data has been cleared.",
@@ -67,46 +77,41 @@ const LoginForm = () => {
         await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
         
         // Then sync all storage
-        const syncResult = await forceSyncAllStorage();
-        
-        if (!syncResult) {
-          console.warn("[LoginForm] Storage sync issues detected");
-          toast({
-            title: "Storage Sync Warning",
-            description: "There may be issues with data synchronization. If login fails, try clearing your browser cache.",
-            variant: "warning"
-          });
-        } else {
-          console.log("[LoginForm] Storage synced successfully");
-          setLastSyncTime(new Date());
-        }
-        
-        // Notify other devices about the sync attempt
-        sendSyncEvent(SyncEventType.FORCE_SYNC);
+        await forceGlobalSync();
         
         // Refresh user context data
-        refreshUserData();
+        await refreshUserData();
+        
+        console.log("[LoginForm] Login form initialization complete");
       } catch (error) {
         console.error("[LoginForm] Error initializing login form:", error);
+        
+        toast({
+          title: "Initialization Error",
+          description: "Failed to initialize login form. Please try refreshing the page.",
+          variant: "destructive"
+        });
       } finally {
         setIsSyncing(false);
+        setInitComplete(true);
       }
     };
     
     initializeLogin();
-  }, [toast, refreshUserData]);
+  }, [toast, refreshUserData, forceSync]);
   
   // Handle redirect if user is already logged in
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && initComplete) {
       console.log(`[LoginForm] User already logged in: ${currentUser.email}, redirecting...`);
+      
       if (currentUser.role === "tournament_organizer") {
-        navigate("/organizer/dashboard");
+        navigate("/organizer/dashboard", { replace: true });
       } else {
-        navigate("/officer/dashboard");
+        navigate("/officer/dashboard", { replace: true });
       }
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, initComplete]);
   
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -119,61 +124,36 @@ const LoginForm = () => {
   
   const selectedRole = form.watch("role");
   
-  // Manual sync button handler
+  // Handle manual sync
   const handleManualSync = async () => {
     setIsSyncing(true);
     setErrorMessage("");
     
     try {
-      // Check storage health
-      await checkStorageHealth();
-      
-      // Try a deep clean of any stale data
-      try {
-        const rawUsersData = localStorage.getItem(STORAGE_KEY_USERS);
-        if (rawUsersData) {
-          const usersData = JSON.parse(rawUsersData);
-          // Ensure we're saving the clean data format
-          if (usersData && Array.isArray(usersData.data)) {
-            saveToStorage(STORAGE_KEY_USERS, usersData.data);
-          } else if (usersData && Array.isArray(usersData)) {
-            saveToStorage(STORAGE_KEY_USERS, usersData);
-          }
-        }
-      } catch (e) {
-        console.error("[LoginForm] Error during deep clean:", e);
-      }
-      
-      // Force sync critical auth data first
-      await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
-      
-      // Then sync all storage
-      const syncResult = await forceSyncAllStorage();
-      
-      // Refresh user data from context
-      refreshUserData();
+      // Perform global sync
+      const syncResult = await forceSync();
       
       if (syncResult) {
-        setLastSyncTime(new Date());
+        // Refresh user data
+        await refreshUserData();
+        
         toast({
           title: "Sync Complete",
-          description: "User data has been synchronized successfully.",
+          description: "Data has been synchronized successfully across all devices.",
         });
-        
-        // Notify other devices to also sync their data
-        sendSyncEvent(SyncEventType.FORCE_SYNC);
       } else {
         toast({
           title: "Sync Issues",
-          description: "There were some issues synchronizing data. You may want to try clearing your browser cache.",
+          description: "There were some issues synchronizing data. Please try again.",
           variant: "warning"
         });
       }
     } catch (error) {
       console.error("[LoginForm] Error during manual sync:", error);
+      
       toast({
         title: "Sync Failed",
-        description: "There was a problem synchronizing your data. Please try again or clear your browser cache.",
+        description: "Failed to synchronize data. Please try again later.",
         variant: "destructive"
       });
     } finally {
@@ -181,9 +161,11 @@ const LoginForm = () => {
     }
   };
   
+  // Handle login form submission
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
+    setSuccessMessage("");
     
     try {
       console.log(`[LoginForm] Login attempt - Email: ${data.email}, Role: ${data.role}`);
@@ -191,22 +173,10 @@ const LoginForm = () => {
       // Force sync critical auth data before login attempt
       await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
       
-      // Ensure storage is synced before login attempt
-      const syncResult = await forceSyncAllStorage();
-      
-      if (!syncResult) {
-        console.warn("[LoginForm] Storage sync issues detected during login attempt");
-        toast({
-          title: "Storage Sync Warning",
-          description: "There may be issues with data synchronization. If login fails, try using the 'Sync Data' button.",
-          variant: "warning"
-        });
-      }
-      
-      setErrorMessage("");
-      
+      // Normalize email
       const normalizedEmail = data.email.toLowerCase().trim();
       
+      // Attempt login
       const success = await login(
         normalizedEmail, 
         data.password, 
@@ -217,8 +187,8 @@ const LoginForm = () => {
         setSuccessMessage("Login successful!");
         console.log("[LoginForm] Login successful, redirecting...");
         
-        // Notify other devices about the login
-        sendSyncEvent(SyncEventType.LOGIN);
+        // Force global sync
+        await forceGlobalSync();
         
         // Slight delay to allow state to update
         setTimeout(() => {
@@ -229,13 +199,12 @@ const LoginForm = () => {
           }
         }, 500);
       } else {
-        console.log("[LoginForm] Login failed in component");
+        console.log("[LoginForm] Login failed");
         setErrorMessage("Invalid credentials or your account is pending approval");
-        
-        // No toast here as the login function already shows one
       }
     } catch (error: any) {
-      console.error("[LoginForm] Login error in component:", error);
+      console.error("[LoginForm] Login error:", error);
+      
       setErrorMessage(error.message || "Login failed. Please try again.");
       
       toast({
@@ -248,6 +217,17 @@ const LoginForm = () => {
     }
   };
 
+  if (!initComplete) {
+    return (
+      <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">
+          Initializing login system...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 sm:p-8">
       <div className="text-center mb-8">
@@ -255,19 +235,10 @@ const LoginForm = () => {
         <p className="mt-2 text-gray-600 dark:text-gray-400">
           Sign in to your Nigeria Chess Rating System account
         </p>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="mt-2" 
-          onClick={handleManualSync}
-          disabled={isSyncing}
-        >
-          <RefreshCw className={`mr-1 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? "Syncing..." : "Sync Data"}
-        </Button>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          Use this if you're having trouble logging in on a different device
-        </p>
+        
+        <div className="mt-3 flex justify-center">
+          <SyncStatusIndicator showButton={true} />
+        </div>
       </div>
       
       {successMessage && (
@@ -280,7 +251,19 @@ const LoginForm = () => {
       {errorMessage && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-start">
           <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="ml-3 text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+          <div className="ml-3">
+            <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2 h-8 text-xs"
+              onClick={handleManualSync}
+              disabled={isSyncing}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? "Syncing..." : "Sync Data & Try Again"}
+            </Button>
+          </div>
         </div>
       )}
       
@@ -389,10 +372,7 @@ const LoginForm = () => {
           >
             {isSubmitting ? (
               <>
-                <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
               </>
             ) : (
