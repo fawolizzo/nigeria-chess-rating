@@ -23,7 +23,7 @@ export interface UserContextType {
   isLoading: boolean;
   login: (email: string, password: string, role: 'tournament_organizer' | 'rating_officer') => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'status' | 'registrationDate' | 'lastModified'>) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }) => Promise<boolean>;
   approveUser: (userId: string) => void;
   rejectUser: (userId: string) => void;
   sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;

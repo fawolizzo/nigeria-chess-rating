@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -149,15 +150,21 @@ const Register = () => {
       
       const isAutoApproved = data.role === "rating_officer" && isAccessCodeValid;
       
-      const success = await registerUser({
+      const userData = {
         fullName: normalizedData.fullName,
         email: normalizedData.email,
         phoneNumber: normalizedData.phoneNumber,
         state: normalizedData.state,
         role: normalizedData.role as 'tournament_organizer' | 'rating_officer',
         password: normalizedData.password,
-        status: isAutoApproved ? 'approved' : 'pending'
-      });
+      };
+      
+      // If the user should be auto-approved, add the status property
+      if (isAutoApproved) {
+        Object.assign(userData, { status: 'approved' as const });
+      }
+      
+      const success = await registerUser(userData);
       
       if (success) {
         logUserEvent("Registration successful", undefined, { 
