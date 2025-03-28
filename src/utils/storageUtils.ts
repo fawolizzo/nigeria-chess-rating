@@ -142,7 +142,6 @@ export const forceSyncAllStorage = async (keysToSync?: string[]): Promise<boolea
   }
 };
 
-// Export ensureDeviceId function to fix the import errors
 // Function to get the device ID from storage or generate a new one
 export const ensureDeviceId = (): string => {
   let deviceId = localStorage.getItem('ncr_device_id');
@@ -211,7 +210,6 @@ export const initializeStorageListeners = (): void => {
   });
 };
 
-// Add export for checkStorageHealth
 // This is needed by src/App.tsx
 export const checkStorageHealth = async (): Promise<boolean> => {
   try {

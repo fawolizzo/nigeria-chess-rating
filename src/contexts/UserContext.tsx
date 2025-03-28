@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { User, UserContextType, STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER, SyncEventType, generateAccessCode } from '@/types/userTypes';
@@ -8,12 +7,9 @@ import { logMessage, LogLevel, logUserEvent } from '@/utils/debugLogger';
 import { monitorSync } from '@/utils/monitorSync';
 import { sendEmail } from '@/services/emailService';
 
-// Create context
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Register global functions for cross-device communication
 if (typeof window !== 'undefined') {
-  // This allows access from broadcast channel handlers
   window.ncrForceSyncFunction = forceSyncAllStorage;
   window.ncrClearAllData = clearAllStorageData;
 }
@@ -28,16 +24,13 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Initialize user data
   useEffect(() => {
     const initializeUserData = async () => {
       try {
         setIsLoading(true);
         
-        // Force sync storage first to get the latest data
         await forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
         
-        // Get users data from storage
         const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
         const storedCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
         
@@ -57,7 +50,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     initializeUserData();
   }, []);
   
-  // Sync user data when updated
   useEffect(() => {
     if (isInitialized) {
       logMessage(LogLevel.INFO, 'UserContext', 'Syncing user data to storage');
@@ -65,7 +57,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   }, [users, isInitialized]);
   
-  // Sync current user when updated
   useEffect(() => {
     if (isInitialized && currentUser !== null) {
       logMessage(LogLevel.INFO, 'UserContext', `Syncing current user to storage: ${currentUser.email}`);
@@ -76,22 +67,18 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   }, [currentUser, isInitialized]);
   
-  // Login function
   const login = async (email: string, authValue: string, role: 'tournament_organizer' | 'rating_officer'): Promise<boolean> => {
     return monitorSync('login', `${email}_${role}`, async () => {
       try {
         setIsLoading(true);
         
-        // Force sync to get the latest user data
         await forceSyncAllStorage([STORAGE_KEY_USERS]);
         
-        // Get updated users data
         const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
         setUsers(latestUsers);
         
         logUserEvent('login-attempt', undefined, { email, role });
         
-        // Check case-insensitive email match and role
         const user = latestUsers.find(
           u => u.email.toLowerCase() === email.toLowerCase() && u.role === role
         );
@@ -101,22 +88,18 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           return false;
         }
         
-        // Different authentication for different roles
         let isAuthenticated = false;
         
         if (role === 'tournament_organizer') {
-          // Tournament organizers authenticate with password
           if (user.password === authValue) {
             isAuthenticated = true;
           }
         } else if (role === 'rating_officer') {
-          // Rating officers authenticate with access code
           if (user.accessCode === authValue) {
             isAuthenticated = true;
           }
         }
         
-        // Check if user is approved (only for tournament organizers)
         if (role === 'tournament_organizer' && user.status !== 'approved') {
           logMessage(LogLevel.WARNING, 'UserContext', `Login failed: User ${email} is not approved (status: ${user.status})`);
           return false;
@@ -125,11 +108,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         if (isAuthenticated) {
           logMessage(LogLevel.INFO, 'UserContext', `Login successful for ${email} with role ${role}`);
           
-          // Set current user
           setCurrentUser(user);
           saveToStorage(STORAGE_KEY_CURRENT_USER, user);
           
-          // Broadcast login event for cross-device sync
           sendSyncEvent(SyncEventType.LOGIN, STORAGE_KEY_CURRENT_USER, user);
           
           return true;
@@ -146,31 +127,25 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     });
   };
   
-  // Logout function
   const logout = () => {
     setCurrentUser(null);
     saveToStorage(STORAGE_KEY_CURRENT_USER, null);
     
-    // Broadcast logout event
     sendSyncEvent(SyncEventType.LOGOUT);
     
     logUserEvent('logout', currentUser?.id);
   };
   
-  // Register function
   const register = async (userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }): Promise<boolean> => {
     return monitorSync('register', userData.email, async () => {
       try {
         setIsLoading(true);
         
-        // Force sync to get the latest user data
         await forceSyncAllStorage([STORAGE_KEY_USERS]);
         
-        // Get updated users data
         const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
         setUsers(latestUsers);
         
-        // Check if email already exists
         const emailExists = latestUsers.some(user => 
           user.email.toLowerCase() === userData.email.toLowerCase()
         );
@@ -179,22 +154,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           throw new Error('Email is already registered');
         }
         
-        // Generate a unique ID
         const id = uuidv4();
         
-        // Set registrationDate
         const registrationDate = new Date().toISOString();
         
-        // Generate access code for rating officers
         let accessCode: string | undefined;
         if (userData.role === 'rating_officer') {
           accessCode = generateAccessCode();
         }
         
-        // Auto-approve rating officers, but tournament organizers need approval
         const status = userData.status || (userData.role === 'rating_officer' ? 'approved' as const : 'pending' as const);
         
-        // Create new user
         const newUser: User = {
           ...userData,
           id,
@@ -204,14 +174,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           lastModified: Date.now()
         };
         
-        // Add user to users array
         const updatedUsers = [...latestUsers, newUser];
         
-        // Save updated users array
         setUsers(updatedUsers);
         saveToStorage(STORAGE_KEY_USERS, updatedUsers);
         
-        // Broadcast update event
         sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEY_USERS, updatedUsers);
         
         logUserEvent('register', id, { 
@@ -220,7 +187,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           status
         });
         
-        // If rating officer, send email with access code
         if (userData.role === 'rating_officer' && accessCode) {
           try {
             await sendEmail(
@@ -234,11 +200,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             );
           } catch (emailError) {
             logMessage(LogLevel.ERROR, 'UserContext', 'Failed to send access code email:', emailError);
-            // Continue registration even if email fails
           }
         }
         
-        // If tournament organizer, send email to rating officers
         if (userData.role === 'tournament_organizer') {
           try {
             const ratingOfficerEmails = getRatingOfficerEmails();
@@ -259,7 +223,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             }
           } catch (emailError) {
             logMessage(LogLevel.ERROR, 'UserContext', 'Failed to send notification email to rating officers:', emailError);
-            // Continue registration even if email fails
           }
         }
         
@@ -273,7 +236,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     });
   };
   
-  // Approve user
   const approveUser = (userId: string) => {
     const updatedUsers = users.map(user => {
       if (user.id === userId) {
@@ -289,12 +251,10 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     
     setUsers(updatedUsers);
     
-    // Broadcast approval event
     sendSyncEvent(SyncEventType.APPROVAL, userId);
     
     logUserEvent('approve-user', userId);
     
-    // Try to send email notification
     const approvedUser = updatedUsers.find(u => u.id === userId);
     if (approvedUser) {
       try {
@@ -313,7 +273,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   };
   
-  // Reject user
   const rejectUser = (userId: string) => {
     const updatedUsers = users.map(user => {
       if (user.id === userId) {
@@ -330,7 +289,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     
     logUserEvent('reject-user', userId);
     
-    // Try to send email notification
     const rejectedUser = updatedUsers.find(u => u.id === userId);
     if (rejectedUser) {
       try {
@@ -350,20 +308,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   };
   
-  // Get all rating officer emails
   const getRatingOfficerEmails = (): string[] => {
     return users
       .filter(user => user.role === 'rating_officer' && user.status === 'approved')
       .map(user => user.email);
   };
   
-  // Force sync all user data
   const forceSync = async (): Promise<boolean> => {
     setIsLoading(true);
     try {
       const result = await forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
       
-      // Refresh states with latest data
       const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
       const latestCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
       
@@ -381,14 +336,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   };
   
-  // Refresh user data
   const refreshUserData = async (): Promise<boolean> => {
     try {
-      // Get latest data without showing loading state
       const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
       const latestCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
       
-      // Update state if different
       if (JSON.stringify(latestUsers) !== JSON.stringify(users)) {
         setUsers(latestUsers);
       }
@@ -427,7 +379,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   );
 };
 
-// Custom hook to use the User context
 export const useUser = (): UserContextType => {
   const context = useContext(UserContext);
   if (context === undefined) {

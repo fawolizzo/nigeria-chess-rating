@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -41,7 +40,6 @@ const nigerianStates = [
   "Yobe", "Zamfara"
 ];
 
-// Fixed access code - should be moved to environment variables in production
 const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
 const registerSchema = z.object({
@@ -88,8 +86,6 @@ const Register = () => {
       try {
         ensureDeviceId();
         await forceSyncAllStorage(['ncr_users']);
-        await refreshUserData();
-        await forceSync();
         
         logUserEvent("Register page initialized successfully");
       } catch (error) {
@@ -130,7 +126,6 @@ const Register = () => {
       
       setRegistrationAttempts(prev => prev + 1);
       
-      // Force sync to ensure we have the latest data
       await forceSyncAllStorage(['ncr_users']);
       
       if (data.role === "rating_officer") {
@@ -195,7 +190,6 @@ const Register = () => {
         setAccessCode("");
         setIsAccessCodeValid(false);
         
-        // Force sync to ensure data is available across devices
         await forceSyncAllStorage(['ncr_users']);
         
         setTimeout(() => {

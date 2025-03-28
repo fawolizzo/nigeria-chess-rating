@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Loader2, UserCheck, Shield, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { toast } from "@/components/ui/use-toast";
 import { forceSyncAllStorage } from "@/utils/storageUtils";
 import { logUserEvent } from "@/utils/debugLogger";
 import SyncStatusIndicator from "./SyncStatusIndicator";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 // Schema for login form with conditional validation
 const loginSchema = z.object({
@@ -57,11 +56,16 @@ const LoginForm = () => {
     }
   });
   
-  // Initial sync
+  // Optimize initial sync - only run once and use a more efficient approach
   useEffect(() => {
     const syncUserData = async () => {
-      await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
-      await refreshUserData();
+      try {
+        // Only sync critical data needed for login
+        await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+        await refreshUserData();
+      } catch (error) {
+        console.error("Error during initial data sync:", error);
+      }
     };
     
     syncUserData();
@@ -78,6 +82,21 @@ const LoginForm = () => {
   };
   
   const selectedRole = form.watch("role");
+  
+  // Memoize role change handler to prevent unnecessary re-renders
+  const handleRoleChange = useMemo(() => (role: "tournament_organizer" | "rating_officer") => {
+    form.setValue("role", role);
+    
+    // Clear the appropriate field when switching roles
+    if (role === "tournament_organizer") {
+      form.setValue("code", "");
+    } else {
+      form.setValue("password", "");
+    }
+    
+    // Reset error state when changing roles
+    setError("");
+  }, [form]);
   
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -109,9 +128,15 @@ const LoginForm = () => {
         ? normalizedData.password 
         : normalizedData.code;
       
+      if (!authValue) {
+        throw new Error(normalizedData.role === "tournament_organizer" 
+          ? "Password is required" 
+          : "Access code is required");
+      }
+      
       const success = await login(
         normalizedData.email, 
-        authValue || "", 
+        authValue, 
         normalizedData.role
       );
       
@@ -194,7 +219,7 @@ const LoginForm = () => {
                   ? "border-nigeria-green bg-nigeria-green/5"
                   : "border-gray-200 dark:border-gray-700"
               }`}
-              onClick={() => form.setValue("role", "tournament_organizer")}
+              onClick={() => handleRoleChange("tournament_organizer")}
             >
               <UserCheck className={`h-6 w-6 mb-2 ${
                 selectedRole === "tournament_organizer"
@@ -216,7 +241,7 @@ const LoginForm = () => {
                   ? "border-nigeria-green bg-nigeria-green/5"
                   : "border-gray-200 dark:border-gray-700"
               }`}
-              onClick={() => form.setValue("role", "rating_officer")}
+              onClick={() => handleRoleChange("rating_officer")}
             >
               <Shield className={`h-6 w-6 mb-2 ${
                 selectedRole === "rating_officer"
