@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -14,8 +13,7 @@ import {
   Lock, 
   Check, 
   AlertCircle,
-  RefreshCw,
-  Loader2
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +25,8 @@ import * as z from "zod";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "@/components/ui/use-toast";
+import { forceSyncAllStorage } from "@/utils/storageUtils";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
-import { requestDataSync } from "@/utils/deviceSync";
 
 const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
@@ -56,14 +54,13 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register: registerUser, getRatingOfficerEmails, forceSync } = useUser();
+  const { register: registerUser, getRatingOfficerEmails } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
   
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -81,35 +78,18 @@ const Register = () => {
   useEffect(() => {
     const initialSync = async () => {
       setIsSyncing(true);
-      setIsInitializing(true);
-      
       try {
-        // Request sync from other devices
-        requestDataSync();
-        
-        // Wait for sync to complete
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Force sync to ensure latest data
-        await forceSync();
-        
+        await forceSyncAllStorage();
         console.log("Initial data sync completed");
       } catch (error) {
         console.error("Error during initial sync:", error);
-        
-        toast({
-          title: "Sync Error",
-          description: "There was an error synchronizing with other devices. Some features may not work correctly.",
-          variant: "warning"
-        });
       } finally {
         setIsSyncing(false);
-        setIsInitializing(false);
       }
     };
     
     initialSync();
-  }, [forceSync]);
+  }, []);
   
   const selectedRole = form.watch("role");
   
@@ -122,9 +102,7 @@ const Register = () => {
     setErrorMessage("");
     
     try {
-      // Force sync
-      await forceSync();
-      
+      await forceSyncAllStorage();
       toast({
         title: "Data Synchronized",
         description: "Your device has been synchronized with the latest data.",
@@ -142,19 +120,35 @@ const Register = () => {
     setErrorMessage("");
     
     try {
-      // Force sync before registration
-      await forceSync();
-      
-      if (data.role === "rating_officer" && accessCode !== "NCR2025") {
-        setErrorMessage("Invalid access code for Rating Officer registration");
-        setIsSubmitting(false);
-        return;
-      }
-      
+      await forceSyncAllStorage();
+    } catch (syncError) {
+      console.error("Error syncing before registration:", syncError);
+    }
+    
+    if (data.role === "rating_officer" && accessCode !== "NCR2025") {
+      setErrorMessage("Invalid access code for Rating Officer registration");
+      setIsSubmitting(false);
+      return;
+    }
+    
+    try {
       const normalizedData = {
         ...data,
         email: data.email.toLowerCase().trim()
       };
+      
+      try {
+        const storedUsers = localStorage.getItem('ncr_users');
+        if (storedUsers) {
+          const users = JSON.parse(storedUsers);
+          const filteredUsers = users.filter((user: any) => 
+            user.email.toLowerCase() !== normalizedData.email.toLowerCase()
+          );
+          localStorage.setItem('ncr_users', JSON.stringify(filteredUsers));
+        }
+      } catch (storageError) {
+        console.error("Error cleaning up storage:", storageError);
+      }
       
       const success = await registerUser({
         fullName: normalizedData.fullName,
@@ -188,9 +182,6 @@ const Register = () => {
         form.reset();
         setAccessCode("");
         
-        // Force another sync to ensure data propagates to other devices
-        await forceSync();
-        
         setTimeout(() => {
           navigate("/login");
         }, 3000);
@@ -198,29 +189,11 @@ const Register = () => {
         setErrorMessage("Registration failed. Please try again.");
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
       setErrorMessage(error.message || "Registration failed");
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="max-w-7xl mx-auto pt-32 pb-20 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-nigeria-green mb-4" />
-          <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Initializing Registration System
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            Synchronizing with other devices...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
