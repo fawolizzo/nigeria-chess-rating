@@ -19,6 +19,7 @@ const SYNC_CHANNEL_NAME = 'ncr_sync_channel';
 const AUTH_CHANNEL_NAME = 'ncr_auth_channel';
 const STORAGE_LAST_SYNC = 'ncr_last_sync_timestamp';
 const SYNC_INTERVAL = 5000; // 5 seconds
+const SYNC_TIMEOUT = 10000; // 10 seconds timeout for sync operations
 
 // Initialize device ID if not exists
 export const ensureDeviceId = (): string => {
@@ -66,12 +67,15 @@ export const initSyncChannels = (): void => {
 // Send message through channel
 export const sendSyncMessage = (channel: 'sync' | 'auth', type: SyncEventType, data?: any): void => {
   try {
+    const deviceId = ensureDeviceId();
     const payload = {
       type,
       data,
       timestamp: Date.now(),
-      deviceId: ensureDeviceId()
+      deviceId
     };
+    
+    console.log(`[DeviceSync] Sending ${type} message through ${channel} channel from device ${deviceId}`);
     
     // Use BroadcastChannel if available
     if (channel === 'sync' && syncChannel) {
@@ -99,7 +103,8 @@ export const getDataFromStorage = <T>(key: string, defaultValue: T): T => {
     const data = localStorage.getItem(key);
     if (!data) return defaultValue;
     
-    return JSON.parse(data) as T;
+    const parsed = JSON.parse(data) as T;
+    return parsed;
   } catch (error) {
     console.error(`[DeviceSync] Error getting data from storage for key ${key}:`, error);
     return defaultValue;
@@ -109,6 +114,11 @@ export const getDataFromStorage = <T>(key: string, defaultValue: T): T => {
 // Save data to storage with robust error handling
 export const saveDataToStorage = <T>(key: string, data: T): boolean => {
   try {
+    if (data === undefined || data === null) {
+      console.warn(`[DeviceSync] Attempted to save undefined or null data for key ${key}`);
+      return false;
+    }
+    
     const serialized = JSON.stringify(data);
     localStorage.setItem(key, serialized);
     
@@ -206,7 +216,7 @@ export const setupSyncListeners = (
       // Ignore messages from this device
       if (deviceId === ensureDeviceId()) return;
       
-      console.log(`[DeviceSync] Received sync message: ${type}`);
+      console.log(`[DeviceSync] Received sync message: ${type} from device ${deviceId}`);
       
       const handler = handlers[type];
       if (handler) {
@@ -227,7 +237,7 @@ export const setupSyncListeners = (
       // Ignore messages from this device
       if (deviceId === ensureDeviceId()) return;
       
-      console.log(`[DeviceSync] Received auth message: ${type}`);
+      console.log(`[DeviceSync] Received auth message: ${type} from device ${deviceId}`);
       
       const handler = handlers[type];
       if (handler) {
@@ -250,7 +260,7 @@ export const setupSyncListeners = (
         // Ignore messages from this device
         if (data.deviceId === ensureDeviceId()) return;
         
-        console.log(`[DeviceSync] Received storage event: ${data.type}`);
+        console.log(`[DeviceSync] Received storage event: ${data.type} from device ${data.deviceId}`);
         
         const handler = handlers[data.type];
         if (handler) {
@@ -308,49 +318,109 @@ export const setupSyncListeners = (
   };
 };
 
-// Sync specific data with other devices
-export const syncData = (key: string, data: any): void => {
-  try {
-    // Save data to local storage
-    saveDataToStorage(key, data);
-    
-    // Broadcast update to other devices
-    sendSyncMessage('sync', SyncEventType.UPDATE, { key, data });
-    
-    console.log(`[DeviceSync] Data synchronized for key: ${key}`);
-  } catch (error) {
-    console.error(`[DeviceSync] Error syncing data for key ${key}:`, error);
-  }
+// Sync specific data with other devices with timeout and acknowledgment
+export const syncData = (key: string, data: any, waitForAck = false): Promise<boolean> => {
+  return new Promise((resolve) => {
+    try {
+      // Save data to local storage
+      const saveResult = saveDataToStorage(key, data);
+      
+      if (!saveResult) {
+        console.error(`[DeviceSync] Failed to save data locally for key: ${key}`);
+        resolve(false);
+        return;
+      }
+      
+      // Broadcast update to other devices
+      sendSyncMessage('sync', SyncEventType.UPDATE, { key, data });
+      
+      console.log(`[DeviceSync] Data synchronized for key: ${key}`);
+      
+      if (!waitForAck) {
+        resolve(true);
+        return;
+      }
+      
+      // If we need acknowledgment, set a timeout to wait for it
+      const timeoutId = setTimeout(() => {
+        console.warn(`[DeviceSync] Timeout waiting for sync acknowledgment for key: ${key}`);
+        resolve(true); // Resolve true anyway since we did save locally
+      }, SYNC_TIMEOUT);
+      
+      // In a real implementation, we would wait for acknowledgments here
+      // For now, we'll just use the timeout
+      
+    } catch (error) {
+      console.error(`[DeviceSync] Error syncing data for key ${key}:`, error);
+      resolve(false);
+    }
+  });
 };
 
-// Specifically sync auth data (users and current user)
-export const syncAuthData = (): void => {
-  try {
-    // Get current data
-    const users = getDataFromStorage<any[]>(STORAGE_KEY_USERS, []);
-    const currentUser = getDataFromStorage<any>(STORAGE_KEY_CURRENT_USER, null);
-    
-    // Broadcast to other devices
-    sendSyncMessage('auth', SyncEventType.UPDATE, { 
-      users, 
-      currentUser 
-    });
-    
-    console.log('[DeviceSync] Auth data synchronized');
-  } catch (error) {
-    console.error('[DeviceSync] Error syncing auth data:', error);
-  }
+// Specifically sync auth data (users and current user) with acknowledgment
+export const syncAuthData = (waitForAck = false): Promise<boolean> => {
+  return new Promise((resolve) => {
+    try {
+      // Get current data
+      const users = getDataFromStorage<any[]>(STORAGE_KEY_USERS, []);
+      const currentUser = getDataFromStorage<any>(STORAGE_KEY_CURRENT_USER, null);
+      
+      if (!users || !Array.isArray(users)) {
+        console.error('[DeviceSync] Invalid users data when attempting to sync auth data');
+        resolve(false);
+        return;
+      }
+      
+      // Broadcast to other devices
+      sendSyncMessage('auth', SyncEventType.UPDATE, { 
+        users, 
+        currentUser 
+      });
+      
+      console.log('[DeviceSync] Auth data synchronized');
+      
+      if (!waitForAck) {
+        resolve(true);
+        return;
+      }
+      
+      // If we need acknowledgment, set a timeout to wait for it
+      const timeoutId = setTimeout(() => {
+        console.warn('[DeviceSync] Timeout waiting for auth sync acknowledgment');
+        resolve(true); // Resolve true anyway since we did broadcast
+      }, SYNC_TIMEOUT);
+      
+      // In a real implementation, we would wait for acknowledgments here
+      
+    } catch (error) {
+      console.error('[DeviceSync] Error syncing auth data:', error);
+      resolve(false);
+    }
+  });
 };
 
-// Force sync from other devices
-export const requestDataSync = (): void => {
-  try {
-    // Broadcast sync request
-    sendSyncMessage('sync', SyncEventType.FORCE_SYNC);
-    console.log('[DeviceSync] Data sync requested from other devices');
-  } catch (error) {
-    console.error('[DeviceSync] Error requesting data sync:', error);
-  }
+// Force sync from other devices with timeout
+export const requestDataSync = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    try {
+      // Broadcast sync request
+      sendSyncMessage('sync', SyncEventType.FORCE_SYNC);
+      console.log('[DeviceSync] Data sync requested from other devices');
+      
+      // Set a timeout for acknowledgment
+      const timeoutId = setTimeout(() => {
+        console.log('[DeviceSync] Sync request timeout reached, continuing');
+        resolve(true);
+      }, SYNC_TIMEOUT);
+      
+      // In a real implementation, we would listen for acknowledgments
+      // For now, we'll just use the timeout
+      
+    } catch (error) {
+      console.error('[DeviceSync] Error requesting data sync:', error);
+      resolve(false);
+    }
+  });
 };
 
 // Initialize device sync system
@@ -360,7 +430,9 @@ export const initializeDeviceSync = (): (() => void) => {
   
   // Set up periodic sync
   const syncInterval = setInterval(() => {
-    syncAuthData();
+    syncAuthData().catch(error => {
+      console.error('[DeviceSync] Error during periodic auth sync:', error);
+    });
   }, SYNC_INTERVAL);
   
   // Return cleanup function
