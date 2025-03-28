@@ -81,7 +81,7 @@ const LoginForm = () => {
             console.log("Initial sync timed out, continuing anyway");
             // Continue without showing an error
           }
-        }, 3000); // Reduced from 5000 to 3000 ms
+        }, 3000); // Reduced timeout for better user experience
         
         // Only sync critical data needed for login
         await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
@@ -157,6 +157,9 @@ const LoginForm = () => {
   };
   
   const onSubmit = async (data: LoginFormData) => {
+    // Prevent multiple simultaneous submissions
+    if (isLoading) return;
+    
     setIsLoading(true);
     setError("");
     setIsLoginTimeout(false);
@@ -170,18 +173,17 @@ const LoginForm = () => {
       
       setLoginAttempts(prev => prev + 1);
       
-      // Set a short sync timeout to prevent hanging
-      let syncTimeoutId: NodeJS.Timeout | null = null;
+      // Create a promise that will resolve after a timeout
+      const syncTimeoutPromise = new Promise<void>((resolve) => {
+        const timeoutId = setTimeout(() => {
+          console.log("Sync before login timed out, continuing with login");
+          resolve();
+        }, 2000);
+        
+        setSyncTimeout(timeoutId);
+      });
       
       try {
-        // Create a promise that will resolve after a timeout
-        const syncTimeoutPromise = new Promise<void>((resolve) => {
-          syncTimeoutId = setTimeout(() => {
-            console.log("Sync before login timed out, continuing with login");
-            resolve();
-          }, 2000); // Reduced from 5000 to 2000 ms
-        });
-        
         // Race between sync and timeout
         await Promise.race([
           forceSyncAllStorage(['ncr_users', 'ncr_current_user']),
@@ -192,8 +194,9 @@ const LoginForm = () => {
         // Continue with login even if sync fails
       } finally {
         // Clear the timeout if it's still active
-        if (syncTimeoutId) {
-          clearTimeout(syncTimeoutId);
+        if (syncTimeout) {
+          clearTimeout(syncTimeout);
+          setSyncTimeout(null);
         }
       }
       
@@ -222,7 +225,7 @@ const LoginForm = () => {
           setIsLoginTimeout(true);
           console.log("Login operation timed out");
           resolve(false);
-        }, 5000); // Reduced from 10000 to 5000 ms
+        }, 5000);
       });
       
       // Perform login

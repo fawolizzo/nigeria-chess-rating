@@ -1,140 +1,107 @@
 
-import { ensureDeviceId } from "./storageUtils";
+import { logMessage, LogLevel } from './debugLogger';
 
-// Track active monitoring sessions
-type MonitoringSession = {
-  id: string;
-  startTime: number;
-  operations: Map<string, { 
-    startTime: number;
-    endTime?: number;
-    success?: boolean;
-  }>;
-};
+/**
+ * Monitors a synchronization operation with timeout handling
+ * @param operation The name of the operation being monitored
+ * @param context Additional context information for debugging
+ * @param syncFunction The async function to execute and monitor
+ * @param timeoutMs Optional timeout in milliseconds (default: 8000ms)
+ * @returns The result of the sync function or false if it times out
+ */
+export const monitorSync = async <T>(
+  operation: string,
+  context: string,
+  syncFunction: () => Promise<T>,
+  timeoutMs: number = 8000
+): Promise<T> => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let isTimedOut = false;
 
-// Active monitoring sessions
-const activeSessions = new Map<string, MonitoringSession>();
-
-// Start a new monitoring session and return its ID
-export const startSyncMonitoring = (sessionName: string): string => {
-  const sessionId = `${sessionName}_${Date.now()}`;
-  const deviceId = ensureDeviceId();
-  
-  console.log(`[SyncMonitor] ${deviceId} - Starting monitoring session: ${sessionId}`);
-  
-  activeSessions.set(sessionId, {
-    id: sessionId,
-    startTime: Date.now(),
-    operations: new Map()
-  });
-  
-  return sessionId;
-};
-
-// Track a new operation within the current session
-export const trackSyncOperation = (operationName: string, key: string = ''): string => {
-  const deviceId = ensureDeviceId();
-  const opId = `${operationName}_${key}_${Date.now()}`;
-  
-  console.log(`[SyncMonitor] ${deviceId} - Starting operation: ${opId}`);
-  
-  // Store in the most recent session if available, or create a new one
-  const sessions = Array.from(activeSessions.values());
-  const currentSession = sessions.length > 0 
-    ? sessions[sessions.length - 1] 
-    : activeSessions.set(`default_${Date.now()}`, {
-        id: `default_${Date.now()}`,
-        startTime: Date.now(),
-        operations: new Map()
-      }).get(`default_${Date.now()}`);
-  
-  if (currentSession) {
-    currentSession.operations.set(opId, {
-      startTime: Date.now()
-    });
-  }
-  
-  return opId;
-};
-
-// Complete an operation and record its success/failure
-export const completeSyncOperation = (operationId: string, success: boolean): void => {
-  const deviceId = ensureDeviceId();
-  
-  console.log(`[SyncMonitor] ${deviceId} - Completing operation: ${operationId} (success: ${success})`);
-  
-  // Find the session that contains this operation
-  for (const session of activeSessions.values()) {
-    if (session.operations.has(operationId)) {
-      const operation = session.operations.get(operationId);
-      if (operation) {
-        operation.endTime = Date.now();
-        operation.success = success;
-        const duration = operation.endTime - operation.startTime;
-        console.log(`[SyncMonitor] ${deviceId} - Operation ${operationId} took ${duration}ms`);
-      }
-      break;
-    }
-  }
-};
-
-// End a monitoring session and return summary
-export const endSyncMonitoring = (sessionId?: string): void => {
-  const deviceId = ensureDeviceId();
-  
-  if (sessionId && activeSessions.has(sessionId)) {
-    const session = activeSessions.get(sessionId);
-    if (session) {
-      const duration = Date.now() - session.startTime;
-      const operationCount = session.operations.size;
-      const successCount = Array.from(session.operations.values())
-        .filter(op => op.success === true).length;
-      
-      console.log(`[SyncMonitor] ${deviceId} - Ended session ${sessionId} after ${duration}ms`);
-      console.log(`[SyncMonitor] ${deviceId} - Total operations: ${operationCount}, successful: ${successCount}`);
-      
-      activeSessions.delete(sessionId);
-    }
-  } else {
-    // If no specific session ID, end the most recent session
-    const sessions = Array.from(activeSessions.keys());
-    if (sessions.length > 0) {
-      const lastSessionId = sessions[sessions.length - 1];
-      const lastSession = activeSessions.get(lastSessionId);
-      
-      if (lastSession) {
-        const duration = Date.now() - lastSession.startTime;
-        const operationCount = lastSession.operations.size;
-        const successCount = Array.from(lastSession.operations.values())
-          .filter(op => op.success === true).length;
-        
-        console.log(`[SyncMonitor] ${deviceId} - Ended last active session ${lastSessionId} after ${duration}ms`);
-        console.log(`[SyncMonitor] ${deviceId} - Total operations: ${operationCount}, successful: ${successCount}`);
-        
-        activeSessions.delete(lastSessionId);
-      }
-    }
-  }
-};
-
-// Simplified monitoring function that wraps an operation in start/complete calls
-export const monitorSync = async <T>(operationName: string, key: string, operation: () => Promise<T>): Promise<T> => {
-  const deviceId = ensureDeviceId();
-  const startTime = Date.now();
-  const opId = trackSyncOperation(operationName, key);
-  
-  console.log(`[SyncMonitor] ${deviceId} - Starting ${operationName} for key: ${key}`);
-  
   try {
-    const result = await operation();
-    const duration = Date.now() - startTime;
-    
-    console.log(`[SyncMonitor] ${deviceId} - ${operationName} for key: ${key} completed in ${duration}ms`);
-    completeSyncOperation(opId, true);
+    logMessage(LogLevel.INFO, 'MonitorSync', `Starting monitoring for ${operation} (${context})`);
+
+    // Create a timeout promise
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`Operation ${operation} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    // Race between the sync function and the timeout
+    const result = await Promise.race([
+      syncFunction(),
+      timeoutPromise
+    ]);
+
+    // Clear the timeout if it's still active
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+
+    logMessage(LogLevel.INFO, 'MonitorSync', `Completed monitoring for ${operation} (${context})`);
     return result;
   } catch (error) {
-    console.error(`[SyncMonitor] ${deviceId} - ${operationName} for key: ${key} failed:`, error);
-    completeSyncOperation(opId, false);
+    // Clear the timeout if it's still active
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+
+    // Log the error
+    if (isTimedOut) {
+      logMessage(LogLevel.ERROR, 'MonitorSync', `Operation ${operation} (${context}) timed out after ${timeoutMs}ms`);
+    } else {
+      logMessage(LogLevel.ERROR, 'MonitorSync', `Error during ${operation} (${context}):`, error);
+    }
+    
     throw error;
   }
+};
+
+// Export the function explicitly for better discoverability
+export { monitorSync as startSyncMonitoring };
+
+/**
+ * Simpler version of monitorSync that returns a default value if the operation times out
+ */
+export const withTimeout = async <T>(
+  operation: () => Promise<T>,
+  defaultValue: T,
+  timeoutMs: number = 5000,
+  operationName: string = 'Operation'
+): Promise<T> => {
+  return new Promise((resolve) => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isResolved = false;
+
+    // Set timeout
+    timeoutId = setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        logMessage(LogLevel.WARNING, 'withTimeout', `${operationName} timed out after ${timeoutMs}ms, using default value`);
+        resolve(defaultValue);
+      }
+    }, timeoutMs);
+
+    // Execute operation
+    operation()
+      .then((result) => {
+        if (!isResolved) {
+          isResolved = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          resolve(result);
+        }
+      })
+      .catch((error) => {
+        if (!isResolved) {
+          isResolved = true;
+          logMessage(LogLevel.ERROR, 'withTimeout', `Error in ${operationName}:`, error);
+          if (timeoutId) clearTimeout(timeoutId);
+          resolve(defaultValue);
+        }
+      });
+  });
 };
