@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { syncStorage, forceSyncAllStorage } from '@/utils/storageUtils';
-import { monitorSync } from '@/utils/monitorSync';
+import { monitorSync, startSyncMonitoring, trackSyncOperation, completeSyncOperation, endSyncMonitoring } from '@/utils/monitorSync';
 import { logSyncEvent, LogLevel, logMessage } from '@/utils/debugLogger';
 
 /**
