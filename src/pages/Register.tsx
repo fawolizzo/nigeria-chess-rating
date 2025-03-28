@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -159,12 +158,11 @@ const Register = () => {
         password: normalizedData.password,
       };
       
-      // If the user should be auto-approved, add the status property
-      if (isAutoApproved) {
-        Object.assign(userData, { status: 'approved' as const });
-      }
+      const userDataWithStatus = isAutoApproved 
+        ? { ...userData, status: 'approved' as const } 
+        : { ...userData, status: 'pending' as const };
       
-      const success = await registerUser(userData);
+      const success = await registerUser(userDataWithStatus);
       
       if (success) {
         logUserEvent("Registration successful", undefined, { 
