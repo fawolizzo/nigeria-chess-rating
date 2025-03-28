@@ -192,7 +192,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         }
         
         // Auto-approve rating officers, but tournament organizers need approval
-        const status = userData.status || (userData.role === 'rating_officer' ? 'approved' : 'pending');
+        const status = userData.status || (userData.role === 'rating_officer' ? 'approved' as const : 'pending' as const);
         
         // Create new user
         const newUser: User = {
@@ -279,7 +279,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       if (user.id === userId) {
         return {
           ...user,
-          status: 'approved',
+          status: 'approved' as const,
           approvalDate: new Date().toISOString(),
           lastModified: Date.now()
         };
@@ -319,7 +319,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
       if (user.id === userId) {
         return {
           ...user,
-          status: 'rejected',
+          status: 'rejected' as const,
           lastModified: Date.now()
         };
       }
