@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -23,7 +24,12 @@ import * as z from "zod";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "@/components/ui/use-toast";
-import { syncStorage, ensureDeviceId } from "@/utils/storageUtils";
+import { 
+  syncStorage, 
+  ensureDeviceId, 
+  clearAllData as clearStorageData,
+  forceSyncAllStorage
+} from "@/utils/storageUtils";
 import { logUserEvent } from "@/utils/debugLogger";
 
 const nigerianStates = [
@@ -35,6 +41,7 @@ const nigerianStates = [
   "Yobe", "Zamfara"
 ];
 
+// Fixed access code - should be moved to environment variables in production
 const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
 const registerSchema = z.object({
@@ -61,8 +68,7 @@ const Register = () => {
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [isAccessCodeValid, setIsAccessCodeValid] = useState(false);
-  
-  const registrationAttempts = useState(0);
+  const [registrationAttempts, setRegistrationAttempts] = useState(0);
   
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -78,24 +84,21 @@ const Register = () => {
   });
   
   useEffect(() => {
-    const initializeData = async () => {
+    const initializeRegistration = async () => {
       try {
-        logUserEvent("Register page initialized");
         ensureDeviceId();
-        
-        await syncStorage(['ncr_users']);
+        await forceSyncAllStorage(['ncr_users']);
         await refreshUserData();
-        
         await forceSync();
         
-        logUserEvent("Register page data synced successfully");
+        logUserEvent("Register page initialized successfully");
       } catch (error) {
         console.error("Error initializing register page:", error);
         logUserEvent("Register page initialization error", undefined, error);
       }
     };
     
-    initializeData();
+    initializeRegistration();
   }, [refreshUserData, forceSync]);
   
   const selectedRole = form.watch("role");
@@ -122,19 +125,26 @@ const Register = () => {
         email: data.email,
         role: data.role,
         state: data.state,
-        attempts: registrationAttempts[0] + 1
+        attempts: registrationAttempts + 1
       });
       
-      registrationAttempts[1](prev => prev + 1);
+      setRegistrationAttempts(prev => prev + 1);
       
-      await syncStorage(['ncr_users']);
-      await forceSync();
+      // Force sync to ensure we have the latest data
+      await forceSyncAllStorage(['ncr_users']);
       
       if (data.role === "rating_officer") {
         if (accessCode !== RATING_OFFICER_ACCESS_CODE) {
           logUserEvent("Invalid rating officer access code", undefined, { email: data.email });
           setErrorMessage("Invalid access code for Rating Officer registration");
           setIsSubmitting(false);
+          
+          toast({
+            title: "Invalid Access Code",
+            description: "Please enter a valid access code for Rating Officer registration",
+            variant: "destructive"
+          });
+          
           return;
         }
         
@@ -156,13 +166,10 @@ const Register = () => {
         state: normalizedData.state,
         role: normalizedData.role as 'tournament_organizer' | 'rating_officer',
         password: normalizedData.password,
+        status: isAutoApproved ? 'approved' as const : 'pending' as const
       };
       
-      const userDataWithStatus = isAutoApproved 
-        ? { ...userData, status: 'approved' as const } 
-        : { ...userData, status: 'pending' as const };
-      
-      const success = await registerUser(userDataWithStatus);
+      const success = await registerUser(userData);
       
       if (success) {
         logUserEvent("Registration successful", undefined, { 
@@ -188,15 +195,21 @@ const Register = () => {
         setAccessCode("");
         setIsAccessCodeValid(false);
         
-        await syncStorage(['ncr_users']);
-        await forceSync();
+        // Force sync to ensure data is available across devices
+        await forceSyncAllStorage(['ncr_users']);
         
         setTimeout(() => {
           navigate("/login");
-        }, 3000);
+        }, 2000);
       } else {
         logUserEvent("Registration failed", undefined, { email: data.email, role: data.role });
         setErrorMessage("Registration failed. Please try again with a different email address.");
+        
+        toast({
+          title: "Registration Failed",
+          description: "There was an issue with your registration. Please try again with a different email.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       console.error("Registration error:", error);

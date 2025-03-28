@@ -175,7 +175,7 @@ export const forceSyncAllStorage = async (priorityKeys?: string[]): Promise<bool
   });
 };
 
-// Check storage health and recover if needed
+// Check storage health and recover if needed - EXPORTING THIS FUNCTION TO FIX BUILD ERROR
 export const checkStorageHealth = async (): Promise<boolean> => {
   return monitorSync('checkStorageHealth', 'system', async () => {
     try {
