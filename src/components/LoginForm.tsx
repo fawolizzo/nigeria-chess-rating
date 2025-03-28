@@ -46,6 +46,8 @@ const LoginForm = () => {
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [syncBeforeLogin, setSyncBeforeLogin] = useState(false);
   const [syncTimeout, setSyncTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isLoginTimeout, setIsLoginTimeout] = useState(false);
+  const { toast } = useToast();
   
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -68,33 +70,60 @@ const LoginForm = () => {
   
   // Optimize initial sync - only run once and use a more efficient approach
   useEffect(() => {
+    let isMounted = true;
+    let initialSyncTimeout: NodeJS.Timeout | null = null;
+    
     const syncUserData = async () => {
       try {
-        // Only sync critical data needed for login with a 5 second timeout
-        const syncPromise = forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
-        
-        // Create a timeout that resolves after 5 seconds
-        const timeoutPromise = new Promise<boolean>(resolve => {
-          const timeoutId = setTimeout(() => {
+        // Set a timeout for the initial sync
+        initialSyncTimeout = setTimeout(() => {
+          if (isMounted) {
             console.log("Initial sync timed out, continuing anyway");
-            resolve(true);
-          }, 5000);
+            // Continue without showing an error
+          }
+        }, 3000); // Reduced from 5000 to 3000 ms
+        
+        // Only sync critical data needed for login
+        await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+        
+        if (isMounted) {
+          // Clear the timeout
+          if (initialSyncTimeout) {
+            clearTimeout(initialSyncTimeout);
+            initialSyncTimeout = null;
+          }
           
-          setSyncTimeout(timeoutId);
-        });
-        
-        // Use Promise.race to either wait for sync or timeout
-        await Promise.race([syncPromise, timeoutPromise]);
-        
-        await refreshUserData();
-        
+          await refreshUserData();
+        }
       } catch (error) {
         console.error("Error during initial data sync:", error);
+        
+        if (isMounted) {
+          // We failed, but we want to let the user continue anyway
+          toast({
+            title: "Data Sync Issue",
+            description: "There was a problem syncing your data, but you can still continue.",
+            variant: "warning",
+          });
+        }
       }
     };
     
-    syncUserData();
-  }, [refreshUserData]);
+    // Slight delay to allow component to mount fully
+    setTimeout(() => {
+      if (isMounted) {
+        syncUserData();
+      }
+    }, 100);
+    
+    return () => {
+      isMounted = false;
+      
+      if (initialSyncTimeout) {
+        clearTimeout(initialSyncTimeout);
+      }
+    };
+  }, [refreshUserData, toast]);
   
   const handleSyncComplete = () => {
     if (syncBeforeLogin) {
@@ -130,6 +159,7 @@ const LoginForm = () => {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setError("");
+    setIsLoginTimeout(false);
     
     try {
       logUserEvent("Login attempt", undefined, { 
@@ -140,26 +170,31 @@ const LoginForm = () => {
       
       setLoginAttempts(prev => prev + 1);
       
-      // Force sync with timeout to prevent hanging
-      const syncPromise = forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+      // Set a short sync timeout to prevent hanging
+      let syncTimeoutId: NodeJS.Timeout | null = null;
       
-      // Set a timeout of 5 seconds for the sync operation
-      const timeoutPromise = new Promise<void>(resolve => {
-        const timeoutId = setTimeout(() => {
-          console.log("Sync before login timed out, continuing with login");
-          resolve();
-        }, 5000);
+      try {
+        // Create a promise that will resolve after a timeout
+        const syncTimeoutPromise = new Promise<void>((resolve) => {
+          syncTimeoutId = setTimeout(() => {
+            console.log("Sync before login timed out, continuing with login");
+            resolve();
+          }, 2000); // Reduced from 5000 to 2000 ms
+        });
         
-        setSyncTimeout(timeoutId);
-      });
-      
-      // Use Promise.race to either wait for sync or timeout
-      await Promise.race([syncPromise, timeoutPromise]);
-      
-      // Clear the timeout if sync completed successfully
-      if (syncTimeout) {
-        clearTimeout(syncTimeout);
-        setSyncTimeout(null);
+        // Race between sync and timeout
+        await Promise.race([
+          forceSyncAllStorage(['ncr_users', 'ncr_current_user']),
+          syncTimeoutPromise
+        ]);
+      } catch (error) {
+        console.error("Error during sync before login:", error);
+        // Continue with login even if sync fails
+      } finally {
+        // Clear the timeout if it's still active
+        if (syncTimeoutId) {
+          clearTimeout(syncTimeoutId);
+        }
       }
       
       const normalizedData = {
@@ -180,13 +215,17 @@ const LoginForm = () => {
       
       // Set a timeout for the login operation
       let loginTimeoutId: NodeJS.Timeout | null = null;
-      const loginTimeoutPromise = new Promise<void>((_, reject) => {
+      
+      // Create a promise that will resolve with false after a timeout
+      const loginTimeoutPromise = new Promise<boolean>((resolve) => {
         loginTimeoutId = setTimeout(() => {
-          reject(new Error("Login timed out. Please try again."));
-        }, 10000); // 10 seconds timeout
+          setIsLoginTimeout(true);
+          console.log("Login operation timed out");
+          resolve(false);
+        }, 5000); // Reduced from 10000 to 5000 ms
       });
       
-      // Perform login with a timeout
+      // Perform login
       const loginPromise = login(
         normalizedData.email, 
         authValue, 
@@ -196,7 +235,7 @@ const LoginForm = () => {
       // Race between login and timeout
       const success = await Promise.race([
         loginPromise,
-        loginTimeoutPromise.then(() => false)
+        loginTimeoutPromise
       ]);
       
       // Clear the login timeout
@@ -223,28 +262,13 @@ const LoginForm = () => {
       } else {
         logUserEvent("Login failed", undefined, { email: data.email, role: data.role });
         
-        // If login failed, try to sync again
-        if (loginAttempts === 0) {
-          setSyncBeforeLogin(true);
-          
-          // Set a timeout to stop the syncing indicator if it takes too long
-          const syncTimeoutId = setTimeout(() => {
-            setSyncBeforeLogin(false);
-            setError("Sync timed out. Please try logging in again.");
-            
-            toast({
-              title: "Sync Timeout",
-              description: "Data synchronization is taking too long. Please try logging in again.",
-              variant: "warning",
-            });
-          }, 8000); // 8 seconds timeout
-          
-          setSyncTimeout(syncTimeoutId);
+        if (isLoginTimeout) {
+          setError("Login timed out. Please try again. If the issue persists, try refreshing the page.");
           
           toast({
-            title: "Login Failed",
-            description: "Trying to sync with other devices to get the latest user data. Please try again after sync is complete.",
-            variant: "warning",
+            title: "Login Timeout",
+            description: "The login process took too long. Please try again or refresh the page.",
+            variant: "destructive",
           });
         } else {
           setError(normalizedData.role === "tournament_organizer" 
@@ -400,9 +424,6 @@ const LoginForm = () => {
                         ) : (
                           <Eye className="h-4 w-4" />
                         )}
-                        <span className="sr-only">
-                          {showPassword ? "Hide password" : "Show password"}
-                        </span>
                       </Button>
                     </div>
                   </FormControl>
@@ -418,18 +439,16 @@ const LoginForm = () => {
                 <FormItem>
                   <FormLabel>Access Code</FormLabel>
                   <FormControl>
-                    <div className="relative mb-1">
+                    <div className="relative">
                       <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input 
                         placeholder="Enter your access code" 
                         className="pl-10" 
+                        type="text"
                         {...field}
                       />
                     </div>
                   </FormControl>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter the access code provided when your account was created
-                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -438,30 +457,21 @@ const LoginForm = () => {
           
           <Button
             type="submit"
-            className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-            disabled={isLoading || contextLoading || syncBeforeLogin}
+            className="w-full bg-nigeria-green hover:bg-nigeria-green-dark dark:bg-nigeria-green-light dark:hover:bg-nigeria-green"
+            disabled={isLoading || contextLoading}
           >
             {isLoading || contextLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing In...
-              </>
-            ) : syncBeforeLogin ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Syncing Data...
+                {isLoginTimeout ? "Timeout..." : "Signing In..."}
               </>
             ) : (
               "Sign In"
             )}
           </Button>
           
-          <div className="mt-4 text-center">
-            <SyncStatusIndicator 
-              showButton={true} 
-              className="justify-center" 
-              onSyncComplete={handleSyncComplete}
-            />
+          <div className="mt-2">
+            <SyncStatusIndicator onSyncComplete={handleSyncComplete} />
           </div>
         </form>
       </Form>

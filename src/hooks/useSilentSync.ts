@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { syncStorage, forceSyncAllStorage } from '@/utils/storageUtils';
-import { monitorSync, startSyncMonitoring, trackSyncOperation, completeSyncOperation, endSyncMonitoring } from '@/utils/monitorSync';
+import { monitorSync } from '@/utils/monitorSync';
 import { logSyncEvent, LogLevel, logMessage } from '@/utils/debugLogger';
 
 /**
@@ -45,8 +45,8 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     keys = [],
     syncOnMount = true,
     syncInterval = 0,
-    maxRetries = 3,
-    syncTimeout = 8000, // Add a default timeout of 8 seconds
+    maxRetries = 2, // Reduced max retries from 3 to 2
+    syncTimeout = 5000, // Reduced timeout from 8000 to 5000 ms
     onSyncComplete,
     onSyncError
   } = options;
@@ -64,20 +64,50 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     
     logSyncEvent('Starting sync', 'SilentSync', { keys });
     setIsSyncing(true);
-    
-    // Create a timeout promise that rejects after syncTimeout milliseconds
-    const timeoutPromise = new Promise<boolean>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Sync operation timed out after ${syncTimeout}ms`));
-      }, syncTimeout);
-    });
+
+    // Set a hard timeout to ensure we don't block the UI forever
+    let timeoutId: NodeJS.Timeout | null = null;
+    let syncCompleted = false;
     
     try {
-      // Perform the sync with monitoring and timeout
-      const syncPromise = monitorSync('sync-storage', keys.join(','), () => syncStorage(keys));
+      // Create a promise that resolves once the sync operation is complete or times out
+      const syncPromise = new Promise<boolean>(async (resolve) => {
+        // Set a timeout to force resolution if the sync takes too long
+        timeoutId = setTimeout(() => {
+          if (!syncCompleted) {
+            logMessage(LogLevel.WARNING, 'SilentSync', `Sync operation timed out after ${syncTimeout}ms`);
+            resolve(false); // Resolve with false to indicate timeout
+          }
+        }, syncTimeout);
+
+        try {
+          // Perform the sync operation
+          const success = await monitorSync('sync-storage', keys.join(','), () => syncStorage(keys));
+          syncCompleted = true;
+          
+          // Clear the timeout if we completed before it fired
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          
+          resolve(success);
+        } catch (error) {
+          syncCompleted = true;
+          
+          // Clear the timeout if we completed before it fired
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          
+          logMessage(LogLevel.ERROR, 'SilentSync', 'Sync error in sync promise', error);
+          resolve(false);
+        }
+      });
       
-      // Race between the sync operation and the timeout
-      const success = await Promise.race([syncPromise, timeoutPromise]);
+      // Wait for either the sync operation to complete or timeout
+      const success = await syncPromise;
       
       setLastSyncSuccess(success);
       setLastSyncTime(new Date());
@@ -90,72 +120,51 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
           onSyncComplete();
         }
       } else {
-        logSyncEvent('Sync completed with warnings', 'SilentSync', { keys, retryCount });
+        logSyncEvent('Sync completed with warnings or timed out', 'SilentSync', { keys, retryCount });
         
-        // Retry if needed
+        // Only retry once to prevent endless retries
         if (retryCount < maxRetries) {
           setRetryCount(prev => prev + 1);
           
-          // Exponential backoff for retries
-          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 8000);
+          // Exponential backoff for retries, but cap at 3 seconds
+          const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 3000);
           
           logSyncEvent('Scheduling retry', 'SilentSync', { 
             retryCount: retryCount + 1, 
             backoffTime 
           });
           
+          // Use setTimeout instead of a blocking promise chain
           setTimeout(() => {
-            sync().catch(console.error);
+            sync().catch(err => {
+              console.error('Retry sync error:', err);
+            });
           }, backoffTime);
+        } else if (onSyncError) {
+          onSyncError(new Error('Sync failed after maximum retries'));
         }
       }
       
       return success;
     } catch (error) {
-      const isTimeout = error instanceof Error && error.message.includes('timed out');
-      
-      if (isTimeout) {
-        logMessage(LogLevel.ERROR, 'SilentSync', 'Sync operation timed out', error);
-      } else {
-        logMessage(LogLevel.ERROR, 'SilentSync', 'Sync error', error);
-      }
+      // This catch block handles errors that may occur outside of the syncPromise
+      logMessage(LogLevel.ERROR, 'SilentSync', 'Sync error in main function', error);
       
       setLastSyncSuccess(false);
       setLastSyncTime(new Date());
       
       if (onSyncError && error instanceof Error) {
         onSyncError(error);
-      } else {
-        console.error('Silent sync error:', error);
-      }
-      
-      // For timeout errors, force completion to unblock the UI
-      if (isTimeout) {
-        logSyncEvent('Forcing completion after timeout', 'SilentSync');
-        // Force success to prevent UI from hanging
-        return true;
-      }
-      
-      // Retry if needed
-      if (retryCount < maxRetries) {
-        setRetryCount(prev => prev + 1);
-        
-        // Exponential backoff for retries
-        const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 8000);
-        
-        logSyncEvent('Scheduling retry after error', 'SilentSync', { 
-          retryCount: retryCount + 1, 
-          backoffTime,
-          error: error instanceof Error ? error.message : String(error)
-        });
-        
-        setTimeout(() => {
-          sync().catch(console.error);
-        }, backoffTime);
       }
       
       return false;
     } finally {
+      // Make sure we clean up the timeout if it's still active
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Always set isSyncing to false when we're done
       setIsSyncing(false);
     }
   }, [isSyncing, keys, retryCount, maxRetries, syncTimeout, onSyncComplete, onSyncError]);
@@ -169,27 +178,46 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     logSyncEvent('Starting force sync', 'SilentSync', { keys });
     setIsSyncing(true);
     
-    // Create a timeout promise that resolves after syncTimeout milliseconds
-    const timeoutPromise = new Promise<boolean>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Force sync operation timed out after ${syncTimeout}ms`));
-      }, syncTimeout);
-    });
+    let timeoutId: NodeJS.Timeout | null = null;
+    let syncCompleted = false;
     
-    // Monitor this operation with timeout
     try {
-      const syncPromise = monitorSync('force-sync-all', keys.join(','), async () => {
+      const syncPromise = new Promise<boolean>(async (resolve) => {
+        // Set a timeout to force resolution if the sync takes too long
+        timeoutId = setTimeout(() => {
+          if (!syncCompleted) {
+            logMessage(LogLevel.WARNING, 'SilentSync', `Force sync operation timed out after ${syncTimeout}ms`);
+            resolve(false); // Resolve with false to indicate timeout
+          }
+        }, syncTimeout);
+        
         try {
-          const success = await forceSyncAllStorage(keys);
-          return success;
+          const success = await monitorSync('force-sync-all', keys.join(','), () => forceSyncAllStorage(keys));
+          syncCompleted = true;
+          
+          // Clear the timeout if we completed before it fired
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          
+          resolve(success);
         } catch (error) {
-          logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync operation error', error);
-          throw error;
+          syncCompleted = true;
+          
+          // Clear the timeout if we completed before it fired
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          
+          logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync error in sync promise', error);
+          resolve(false);
         }
       });
       
-      // Race between the sync operation and the timeout
-      const success = await Promise.race([syncPromise, timeoutPromise]);
+      // Wait for either the sync operation to complete or timeout
+      const success = await syncPromise;
       
       setLastSyncSuccess(success);
       setLastSyncTime(new Date());
@@ -202,38 +230,32 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
           onSyncComplete();
         }
       } else {
-        logSyncEvent('Force sync completed with warnings', 'SilentSync');
-        // No auto-retry for force sync
+        logSyncEvent('Force sync completed with warnings or timed out', 'SilentSync');
+        
+        if (onSyncError) {
+          onSyncError(new Error('Force sync failed or timed out'));
+        }
       }
       
       return success;
     } catch (error) {
-      const isTimeout = error instanceof Error && error.message.includes('timed out');
-      
-      if (isTimeout) {
-        logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync operation timed out', error);
-      } else {
-        logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync error', error);
-      }
+      logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync error in main function', error);
       
       setLastSyncSuccess(false);
       setLastSyncTime(new Date());
       
       if (onSyncError && error instanceof Error) {
         onSyncError(error);
-      } else {
-        console.error('Silent force sync error:', error);
-      }
-      
-      // For timeout errors, force completion to unblock the UI
-      if (isTimeout) {
-        logSyncEvent('Forcing completion after timeout', 'SilentSync');
-        // Return success to unblock UI
-        return true;
       }
       
       return false;
     } finally {
+      // Make sure we clean up the timeout if it's still active
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Always set isSyncing to false when we're done
       setIsSyncing(false);
     }
   }, [isSyncing, keys, syncTimeout, onSyncComplete, onSyncError]);
@@ -241,33 +263,54 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
   useEffect(() => {
     // Sync on mount if configured
     if (syncOnMount) {
+      let mounted = true;
+      
       logSyncEvent('Auto-sync on mount', 'SilentSync', { keys });
-      sync().catch(error => {
-        console.error('Error during mount sync:', error);
-      });
+      
+      // Use setTimeout to slightly delay the initial sync to prevent UI freezing on mount
+      setTimeout(() => {
+        if (mounted) {
+          sync().catch(error => {
+            console.error('Error during mount sync:', error);
+          });
+        }
+      }, 100);
+      
+      // Clean up
+      return () => {
+        mounted = false;
+      };
     }
     
+    return undefined;
+  }, [sync, syncOnMount, keys]);
+  
+  useEffect(() => {
     // Set up sync interval if configured
-    let intervalId: number | undefined;
-    
     if (syncInterval > 0) {
       logSyncEvent('Setting up sync interval', 'SilentSync', { interval: syncInterval });
       
-      intervalId = window.setInterval(() => {
+      const intervalId = window.setInterval(() => {
         logSyncEvent('Interval sync triggered', 'SilentSync');
-        sync().catch(error => {
-          console.error('Error during interval sync:', error);
-        });
+        
+        // Only sync if not already syncing
+        if (!isSyncing) {
+          sync().catch(error => {
+            console.error('Error during interval sync:', error);
+          });
+        } else {
+          logSyncEvent('Skipping interval sync, already syncing', 'SilentSync');
+        }
       }, syncInterval);
+      
+      // Clean up
+      return () => {
+        clearInterval(intervalId);
+      };
     }
     
-    // Clean up
-    return () => {
-      if (intervalId !== undefined) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [sync, syncOnMount, syncInterval, keys]);
+    return undefined;
+  }, [sync, syncInterval, isSyncing]);
   
   return {
     sync,

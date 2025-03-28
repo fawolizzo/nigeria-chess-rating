@@ -4,6 +4,7 @@ import { RefreshCw, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSilentSync from "@/hooks/useSilentSync";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface SyncStatusIndicatorProps {
   showButton?: boolean;
@@ -18,6 +19,7 @@ const SyncStatusIndicator = ({
 }: SyncStatusIndicatorProps) => {
   const [syncTimeout, setSyncTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isSyncTimedOut, setIsSyncTimedOut] = useState(false);
+  const { toast } = useToast();
   
   const { 
     sync, 
@@ -27,7 +29,7 @@ const SyncStatusIndicator = ({
   } = useSilentSync({
     syncOnMount: true,
     keys: ['ncr_users', 'ncr_current_user', 'ncr_players', 'ncr_tournaments'],
-    syncTimeout: 10000, // 10 second timeout
+    syncTimeout: 5000, // Reduced from 10000 to 5000 ms
     onSyncComplete: () => {
       // Clear the timeout if sync completes successfully
       if (syncTimeout) {
@@ -43,6 +45,12 @@ const SyncStatusIndicator = ({
     onSyncError: (error) => {
       console.error("Sync error:", error);
       setIsSyncTimedOut(true);
+      
+      toast({
+        title: "Sync Error",
+        description: "There was an issue syncing your data. You can continue using the app.",
+        variant: "warning",
+      });
     }
   });
   
@@ -57,13 +65,25 @@ const SyncStatusIndicator = ({
     
     const timeoutId = setTimeout(() => {
       setIsSyncTimedOut(true);
-    }, 12000); // 12 seconds timeout
+      
+      toast({
+        title: "Sync Taking Longer Than Expected",
+        description: "You can continue using the app while sync completes in the background.",
+        variant: "warning",
+      });
+    }, 5000); // Reduced from 12000 to 5000 ms
     
     setSyncTimeout(timeoutId);
     
     // Trigger sync
     sync().catch(error => {
       console.error("Manual sync error:", error);
+      
+      toast({
+        title: "Sync Error",
+        description: "There was an issue syncing your data. You can continue using the app.",
+        variant: "warning",
+      });
     });
   };
   
@@ -71,7 +91,16 @@ const SyncStatusIndicator = ({
     // Set a timeout for the initial sync
     const timeoutId = setTimeout(() => {
       setIsSyncTimedOut(true);
-    }, 12000); // 12 seconds timeout
+      
+      // Only show a toast if initial sync times out
+      if (isSyncing) {
+        toast({
+          title: "Initial Sync Taking Longer Than Expected",
+          description: "You can continue using the app while sync completes in the background.",
+          variant: "warning",
+        });
+      }
+    }, 5000); // Reduced from 12000 to 5000 ms
     
     setSyncTimeout(timeoutId);
     
