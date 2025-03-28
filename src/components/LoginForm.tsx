@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -22,16 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
-import { 
-  checkStorageHealth, 
-  forceSyncAllStorage
-} from "@/utils/storageUtils";
-import { 
-  checkResetStatus, 
-  clearResetStatus, 
-  forceGlobalSync
-} from "@/utils/storageSync";
 import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
+import { requestDataSync } from "@/utils/deviceSync";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -59,25 +50,11 @@ const LoginForm = () => {
       setIsSyncing(true);
       
       try {
-        // Check for system reset
-        if (checkResetStatus()) {
-          console.log("[LoginForm] System reset detected, clearing reset status");
-          clearResetStatus();
-          
-          toast({
-            title: "System Reset Detected",
-            description: "The system has been reset. All account data has been cleared.",
-          });
-        }
+        // Request sync from other devices
+        requestDataSync();
         
-        // Check storage health
-        await checkStorageHealth();
-        
-        // Force sync critical auth data first
-        await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
-        
-        // Then sync all storage
-        await forceGlobalSync();
+        // Wait a bit to allow sync to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Refresh user context data
         await refreshUserData();
@@ -170,8 +147,8 @@ const LoginForm = () => {
     try {
       console.log(`[LoginForm] Login attempt - Email: ${data.email}, Role: ${data.role}`);
       
-      // Force sync critical auth data before login attempt
-      await forceSyncAllStorage([STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS]);
+      // Force sync before login attempt
+      await forceSync();
       
       // Normalize email
       const normalizedEmail = data.email.toLowerCase().trim();
@@ -186,9 +163,6 @@ const LoginForm = () => {
       if (success) {
         setSuccessMessage("Login successful!");
         console.log("[LoginForm] Login successful, redirecting...");
-        
-        // Force global sync
-        await forceGlobalSync();
         
         // Slight delay to allow state to update
         setTimeout(() => {

@@ -23,10 +23,10 @@ const OfficerDashboardContent: React.FC = () => {
   // Function to load all data
   const loadAllData = async () => {
     try {
-      // Ensure storage is synced
-      await syncStorage('ncr_users');
-      await syncStorage('ncr_players');
-      await syncStorage('ncr_tournaments');
+      // Ensure storage is synced - pass arrays instead of single strings
+      await syncStorage(['ncr_users']);
+      await syncStorage(['ncr_players']);
+      await syncStorage(['ncr_tournaments']);
       
       // Load tournaments based on their status
       const allTournaments = getAllTournaments();
