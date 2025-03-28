@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@/contexts/UserContext";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { forceSyncAllStorage } from "@/utils/storageUtils";
 import { logUserEvent } from "@/utils/debugLogger";
 import SyncStatusIndicator from "./SyncStatusIndicator";
