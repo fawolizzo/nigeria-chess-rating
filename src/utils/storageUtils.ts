@@ -1,4 +1,3 @@
-
 import { 
   STORAGE_KEY_USERS, 
   STORAGE_KEY_CURRENT_USER,
@@ -48,12 +47,9 @@ export const forceSyncAllStorage = async (priorityKeys?: string[]): Promise<bool
   }
 };
 
-// Sync storage with other devices - modified to accept string[] instead of just string
-export const syncStorage = async (keys?: string | string[]): Promise<boolean> => {
+// Sync storage with other devices
+export const syncStorage = async (keys?: string[]): Promise<boolean> => {
   try {
-    // Convert single key to array if provided as string
-    const keysArray = typeof keys === 'string' ? [keys] : keys;
-    
     // Request sync from other devices
     requestDataSync();
     

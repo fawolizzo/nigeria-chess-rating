@@ -181,7 +181,7 @@ export const setupSyncListeners = (
   onLogin: (data: any) => void,
   onLogout: () => void,
   onApproval: (userId: string) => void
-): (() => void) => {
+): () => void => {
   // Initialize device ID and channels
   ensureDeviceId();
   initSyncChannels();
@@ -354,7 +354,7 @@ export const requestDataSync = (): void => {
 };
 
 // Initialize device sync system
-export const initializeDeviceSync = (): (() => void) => {
+export const initializeDeviceSync = (): void => {
   ensureDeviceId();
   initSyncChannels();
   
