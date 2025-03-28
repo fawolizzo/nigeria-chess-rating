@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -7,8 +8,7 @@ import {
   Calendar, 
   Shield, 
   Check, 
-  AlertCircle, 
-  RefreshCw,
+  AlertCircle,
   Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import SyncStatusIndicator from "@/components/SyncStatusIndicator";
-import { STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER } from "@/types/userTypes";
-import { requestDataSync } from "@/utils/deviceSync";
+import { syncStorage, ensureDeviceId } from "@/utils/storageUtils";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -35,52 +33,34 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const LoginForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, currentUser, refreshUserData, forceSync } = useUser();
+  const { login, currentUser, refreshUserData } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [initComplete, setInitComplete] = useState(false);
   const isMobile = useIsMobile();
   
-  // Initialize login form
+  // Initialize user context
   useEffect(() => {
     const initializeLogin = async () => {
-      console.log("[LoginForm] Initializing login form");
-      setIsSyncing(true);
-      
       try {
-        // Request sync from other devices
-        requestDataSync();
+        // Ensure device has ID
+        ensureDeviceId();
         
-        // Wait a bit to allow sync to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Refresh user context data
+        // Silently refresh user data without showing UI indicators
+        await syncStorage(['ncr_users', 'ncr_current_user']);
         await refreshUserData();
-        
-        console.log("[LoginForm] Login form initialization complete");
       } catch (error) {
         console.error("[LoginForm] Error initializing login form:", error);
-        
-        toast({
-          title: "Initialization Error",
-          description: "Failed to initialize login form. Please try refreshing the page.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsSyncing(false);
-        setInitComplete(true);
       }
     };
     
     initializeLogin();
-  }, [toast, refreshUserData, forceSync]);
+  }, [refreshUserData]);
   
-  // Handle redirect if user is already logged in
+  // Redirect if already logged in
   useEffect(() => {
-    if (currentUser && initComplete) {
-      console.log(`[LoginForm] User already logged in: ${currentUser.email}, redirecting...`);
+    if (currentUser) {
+      console.log(`[LoginForm] User already logged in: ${currentUser.email}`);
       
       if (currentUser.role === "tournament_organizer") {
         navigate("/organizer/dashboard", { replace: true });
@@ -88,7 +68,7 @@ const LoginForm = () => {
         navigate("/officer/dashboard", { replace: true });
       }
     }
-  }, [currentUser, navigate, initComplete]);
+  }, [currentUser, navigate]);
   
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -101,44 +81,6 @@ const LoginForm = () => {
   
   const selectedRole = form.watch("role");
   
-  // Handle manual sync
-  const handleManualSync = async () => {
-    setIsSyncing(true);
-    setErrorMessage("");
-    
-    try {
-      // Perform global sync
-      const syncResult = await forceSync();
-      
-      if (syncResult) {
-        // Refresh user data
-        await refreshUserData();
-        
-        toast({
-          title: "Sync Complete",
-          description: "Data has been synchronized successfully across all devices.",
-        });
-      } else {
-        toast({
-          title: "Sync Issues",
-          description: "There were some issues synchronizing data. Please try again.",
-          variant: "warning"
-        });
-      }
-    } catch (error) {
-      console.error("[LoginForm] Error during manual sync:", error);
-      
-      toast({
-        title: "Sync Failed",
-        description: "Failed to synchronize data. Please try again later.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-  
-  // Handle login form submission
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
@@ -146,9 +88,6 @@ const LoginForm = () => {
     
     try {
       console.log(`[LoginForm] Login attempt - Email: ${data.email}, Role: ${data.role}`);
-      
-      // Force sync before login attempt
-      await forceSync();
       
       // Normalize email
       const normalizedEmail = data.email.toLowerCase().trim();
@@ -171,7 +110,7 @@ const LoginForm = () => {
           } else {
             navigate("/officer/dashboard", { replace: true });
           }
-        }, 500);
+        }, 300);
       } else {
         console.log("[LoginForm] Login failed");
         setErrorMessage("Invalid credentials or your account is pending approval");
@@ -191,17 +130,6 @@ const LoginForm = () => {
     }
   };
 
-  if (!initComplete) {
-    return (
-      <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
-        <p className="text-gray-600 dark:text-gray-400">
-          Initializing login system...
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 sm:p-8">
       <div className="text-center mb-8">
@@ -209,10 +137,6 @@ const LoginForm = () => {
         <p className="mt-2 text-gray-600 dark:text-gray-400">
           Sign in to your Nigeria Chess Rating System account
         </p>
-        
-        <div className="mt-3 flex justify-center">
-          <SyncStatusIndicator showButton={true} />
-        </div>
       </div>
       
       {successMessage && (
@@ -227,16 +151,6 @@ const LoginForm = () => {
           <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div className="ml-3">
             <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-2 h-8 text-xs"
-              onClick={handleManualSync}
-              disabled={isSyncing}
-            >
-              <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? "Syncing..." : "Sync Data & Try Again"}
-            </Button>
           </div>
         </div>
       )}
@@ -342,7 +256,7 @@ const LoginForm = () => {
           <Button
             type="submit"
             className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-            disabled={isSubmitting || isSyncing}
+            disabled={isSubmitting}
           >
             {isSubmitting ? (
               <>

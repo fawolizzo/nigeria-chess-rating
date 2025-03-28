@@ -2,11 +2,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
-  ClipboardCheck, 
   UserPlus, 
   Shield, 
   Calendar, 
-  ChevronDown, 
   User, 
   Map, 
   Phone, 
@@ -14,9 +12,7 @@ import {
   Lock, 
   Check, 
   AlertCircle,
-  RefreshCw,
-  Loader2,
-  WifiOff
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +24,7 @@ import * as z from "zod";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "@/components/ui/use-toast";
-import SyncStatusIndicator from "@/components/SyncStatusIndicator";
-import { requestDataSync, syncAuthData } from "@/utils/deviceSync";
+import { syncStorage, ensureDeviceId } from "@/utils/storageUtils";
 
 const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
@@ -57,17 +52,12 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register: registerUser, getRatingOfficerEmails, forceSync } = useUser();
+  const { register: registerUser, refreshUserData } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [syncStatus, setSyncStatus] = useState<'initializing' | 'syncing' | 'success' | 'failed' | 'retrying'>('initializing');
-  const [syncRetries, setSyncRetries] = useState(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -82,104 +72,18 @@ const Register = () => {
     }
   });
   
-  // Monitor online/offline status
   useEffect(() => {
-    const handleOnline = () => {
-      console.log("[Register] Device came online");
-      setIsOnline(true);
+    // Silently ensure device ID and sync data in the background
+    const initializeData = async () => {
+      ensureDeviceId();
       
-      // Retry sync when device comes back online
-      if (syncStatus === 'failed' || syncStatus === 'retrying') {
-        handleManualSync();
-      }
+      // Silently sync user data without showing UI indicators
+      await syncStorage(['ncr_users']);
+      await refreshUserData();
     };
     
-    const handleOffline = () => {
-      console.log("[Register] Device went offline");
-      setIsOnline(false);
-      
-      if (syncStatus === 'syncing') {
-        setSyncStatus('failed');
-        setErrorMessage("Synchronization failed: You are offline. Please reconnect to the internet and try again.");
-      }
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [syncStatus]);
-  
-  useEffect(() => {
-    const initialSync = async () => {
-      setIsSyncing(true);
-      setIsInitializing(true);
-      setSyncStatus('initializing');
-      
-      if (!isOnline) {
-        console.warn("[Register] Device is offline, cannot sync");
-        setSyncStatus('failed');
-        setErrorMessage("Cannot initialize registration system: You are offline. Please connect to the internet.");
-        setIsSyncing(false);
-        setIsInitializing(false);
-        return;
-      }
-      
-      try {
-        console.log("[Register] Starting initial synchronization process");
-        setSyncStatus('syncing');
-        
-        // Request sync from other devices
-        const syncRequestResult = await requestDataSync();
-        console.log("[Register] Sync request result:", syncRequestResult);
-        
-        // Wait for sync to complete with progressive timeouts
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Force sync to ensure latest data
-        const forceSyncResult = await forceSync();
-        console.log("[Register] Force sync result:", forceSyncResult);
-        
-        if (forceSyncResult) {
-          console.log("[Register] Initial data sync completed successfully");
-          setSyncStatus('success');
-          toast({
-            title: "Synchronization Complete",
-            description: "Your device has been synchronized with the system.",
-          });
-        } else {
-          console.warn("[Register] Initial sync completed with warnings");
-          setSyncStatus('success'); // Still consider it a success to allow registration
-          toast({
-            title: "Synchronization Warning",
-            description: "Synchronization completed with warnings. Some features may be limited.",
-            variant: "warning"
-          });
-        }
-        
-        console.log("[Register] Initial data sync process finished");
-      } catch (error) {
-        console.error("[Register] Error during initial sync:", error);
-        
-        setSyncStatus('failed');
-        setErrorMessage("Failed to synchronize with the system. Please try refreshing the page.");
-        
-        toast({
-          title: "Sync Error",
-          description: "There was an error synchronizing with other devices. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsSyncing(false);
-        setIsInitializing(false);
-      }
-    };
-    
-    initialSync();
-  }, [forceSync]);
+    initializeData();
+  }, [refreshUserData]);
   
   const selectedRole = form.watch("role");
   
@@ -187,106 +91,16 @@ const Register = () => {
     setShowAccessCode(role === "rating_officer");
   };
   
-  const handleManualSync = async () => {
-    if (isSyncing) return;
-    
-    setIsSyncing(true);
-    setErrorMessage("");
-    setSyncStatus('syncing');
-    setSyncRetries(prev => prev + 1);
-    
-    if (!isOnline) {
-      console.warn("[Register] Cannot sync while offline");
-      setSyncStatus('failed');
-      setErrorMessage("Cannot synchronize: You are offline. Please connect to the internet.");
-      setIsSyncing(false);
-      return;
-    }
-    
-    try {
-      console.log("[Register] Starting manual synchronization");
-      
-      // First request sync from other devices
-      const syncRequestResult = await requestDataSync();
-      console.log("[Register] Sync request result:", syncRequestResult);
-      
-      // Wait for sync to complete
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Force sync to ensure latest data
-      const forceSyncResult = await forceSync();
-      console.log("[Register] Force sync result:", forceSyncResult);
-      
-      if (forceSyncResult) {
-        console.log("[Register] Manual sync completed successfully");
-        setSyncStatus('success');
-        
-        toast({
-          title: "Data Synchronized",
-          description: "Your device has been synchronized with the latest data.",
-        });
-      } else {
-        console.warn("[Register] Manual sync completed with warnings");
-        setSyncStatus('success'); // Still consider it a success
-        
-        toast({
-          title: "Synchronization Warning",
-          description: "Synchronization completed with warnings. Some features may be limited.",
-          variant: "warning"
-        });
-      }
-    } catch (error) {
-      console.error("[Register] Error during manual sync:", error);
-      
-      setSyncStatus('retrying');
-      setErrorMessage("Synchronization failed. Please try again or refresh the page.");
-      
-      toast({
-        title: "Sync Failed",
-        description: "Failed to synchronize data. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-  
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
     setErrorMessage("");
-    
-    if (syncStatus === 'failed') {
-      console.warn("[Register] Cannot register while sync has failed");
-      setErrorMessage("Cannot register: System synchronization has failed. Please try again after syncing.");
-      setIsSubmitting(false);
-      return;
-    }
-    
-    if (!isOnline) {
-      console.warn("[Register] Cannot register while offline");
-      setErrorMessage("Cannot register: You are offline. Please connect to the internet.");
-      setIsSubmitting(false);
-      return;
-    }
+    setSuccessMessage("");
     
     try {
-      console.log("[Register] Starting registration process");
-      
-      // Force sync before registration to ensure we have latest user data
-      console.log("[Register] Syncing before registration");
-      const preSyncResult = await forceSync();
-      
-      if (!preSyncResult) {
-        console.warn("[Register] Pre-registration sync warning");
-        toast({
-          title: "Sync Warning",
-          description: "Could not fully synchronize before registration. Proceeding anyway.",
-          variant: "warning"
-        });
-      }
+      // Silent background sync before registration
+      await syncStorage(['ncr_users']);
       
       if (data.role === "rating_officer" && accessCode !== "NCR2025") {
-        console.warn("[Register] Invalid rating officer access code");
         setErrorMessage("Invalid access code for Rating Officer registration");
         setIsSubmitting(false);
         return;
@@ -299,7 +113,6 @@ const Register = () => {
         phoneNumber: data.phoneNumber.trim()
       };
       
-      console.log("[Register] Sending registration data");
       const success = await registerUser({
         fullName: normalizedData.fullName,
         email: normalizedData.email,
@@ -310,100 +123,43 @@ const Register = () => {
       });
       
       if (success) {
-        console.log("[Register] Registration successful");
+        setSuccessMessage(
+          data.role === "tournament_organizer"
+            ? "Registration successful! Your account is pending approval by a rating officer."
+            : "Rating Officer account created successfully!"
+        );
         
-        if (data.role === "tournament_organizer") {
-          setSuccessMessage("Registration successful! Your account is pending approval by a rating officer.");
-          toast({
-            title: "Registration successful!",
-            description: "A confirmation email has been sent to your email address.",
-          });
-
-          const ratingOfficerEmails = getRatingOfficerEmails();
-          if (ratingOfficerEmails.length > 0) {
-            toast({
-              title: "Rating officers notified",
-              description: "Rating officers have been notified about your registration.",
-              variant: "default",
-            });
-          }
-        } else {
-          setSuccessMessage("Rating Officer account created successfully!");
-        }
+        toast({
+          title: "Registration successful!",
+          description: "A confirmation email has been sent to your email address.",
+        });
         
         form.reset();
         setAccessCode("");
         
-        // Force another sync to ensure data propagates to other devices
-        console.log("[Register] Syncing after registration");
-        await syncAuthData(true);
-        await forceSync();
+        // Silent background sync after registration
+        await syncStorage(['ncr_users']);
         
         setTimeout(() => {
-          console.log("[Register] Redirecting to login");
           navigate("/login");
         }, 3000);
       } else {
-        console.error("[Register] Registration failed");
-        setErrorMessage("Registration failed. Please try again.");
+        setErrorMessage("Registration failed. Please try again with a different email address.");
       }
     } catch (error: any) {
-      console.error("[Register] Registration error:", error);
-      setErrorMessage(error.message || "Registration failed");
+      console.error("Registration error:", error);
+      setErrorMessage(error.message || "Registration failed. Please try again.");
+      
+      toast({
+        title: "Registration Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Render loading state during initialization
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="max-w-7xl mx-auto pt-32 pb-20 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-nigeria-green mb-4" />
-          <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {syncStatus === 'initializing' ? 'Initializing Registration System' : 
-             syncStatus === 'syncing' ? 'Synchronizing with other devices...' :
-             syncStatus === 'failed' ? 'Synchronization Failed' : 
-             'Completing Initialization'}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-            {syncStatus === 'initializing' ? 'Preparing the registration system...' : 
-             syncStatus === 'syncing' ? 'Ensuring your data is up-to-date across all devices...' :
-             syncStatus === 'failed' ? 'There was a problem connecting to the system.' : 
-             'Almost ready...'}
-          </p>
-
-          {syncStatus === 'failed' && (
-            <div className="mt-6">
-              <Button 
-                variant="default" 
-                onClick={handleManualSync}
-                disabled={isSyncing || !isOnline}
-                className="mx-auto"
-              >
-                {isSyncing ? (
-                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Trying Again...</>
-                ) : !isOnline ? (
-                  <><WifiOff className="h-4 w-4 mr-2" /> You're Offline</>
-                ) : (
-                  <><RefreshCw className="h-4 w-4 mr-2" /> Try Again</>
-                )}
-              </Button>
-              {!isOnline && (
-                <p className="text-sm text-center mt-2 text-amber-600 dark:text-amber-400">
-                  Please connect to the internet and try again
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Regular render with form
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -416,23 +172,6 @@ const Register = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Join the Nigeria Chess Rating System
               </p>
-              
-              <div className="mt-2 flex justify-center items-center space-x-2">
-                <SyncStatusIndicator showButton={true} />
-                
-                {syncStatus === 'retrying' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="ml-2 h-7 text-xs"
-                    onClick={handleManualSync}
-                    disabled={isSyncing}
-                  >
-                    <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-                    {isSyncing ? "Syncing..." : "Retry Sync"}
-                  </Button>
-                )}
-              </div>
             </div>
             
             {successMessage && (
@@ -445,27 +184,7 @@ const Register = () => {
             {errorMessage && (
               <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-start">
                 <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                <div className="ml-3">
-                  <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
-                  {(errorMessage.includes("Email has already registered") || 
-                    errorMessage.includes("synchronization") || 
-                    errorMessage.includes("sync")) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2 h-8 text-xs"
-                      onClick={handleManualSync}
-                      disabled={isSyncing || !isOnline}
-                    >
-                      {!isOnline ? (
-                        <><WifiOff className="h-3 w-3 mr-1" /> You're Offline</>
-                      ) : (
-                        <><RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? "Syncing..." : "Sync Data & Try Again"}</>
-                      )}
-                    </Button>
-                  )}
-                </div>
+                <p className="ml-3 text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
               </div>
             )}
             
@@ -525,6 +244,7 @@ const Register = () => {
                 
                 <input type="hidden" {...form.register("role")} />
                 
+                {/* Form fields */}
                 <FormField
                   control={form.control}
                   name="fullName"
@@ -601,13 +321,13 @@ const Register = () => {
                       >
                         <FormControl>
                           <div className="relative">
-                            <Map className="absolute left-3 top-3 h-4 w-4 text-gray-400 z-10" />
+                            <Map className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
                             <SelectTrigger className="pl-10">
                               <SelectValue placeholder="Select your state" />
                             </SelectTrigger>
                           </div>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-h-[200px]">
                           {nigerianStates.map((state) => (
                             <SelectItem key={state} value={state}>
                               {state}
@@ -619,29 +339,6 @@ const Register = () => {
                     </FormItem>
                   )}
                 />
-                
-                {showAccessCode && (
-                  <div className="space-y-2">
-                    <label htmlFor="accessCode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Access Code
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="accessCode"
-                        type="password"
-                        placeholder="Enter rating officer access code"
-                        className="pl-10"
-                        value={accessCode}
-                        onChange={(e) => setAccessCode(e.target.value)}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Rating Officer registration requires an access code.
-                      Please contact the Nigerian Chess Federation to obtain one.
-                    </p>
-                  </div>
-                )}
                 
                 <FormField
                   control={form.control}
@@ -687,41 +384,48 @@ const Register = () => {
                   )}
                 />
                 
-                <div className="pt-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isSubmitting || isSyncing || syncStatus === 'failed' || !isOnline}
-                  >
-                    {isSubmitting ? (
-                      <span className="flex items-center">
-                        <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                        Registering...
-                      </span>
-                    ) : !isOnline ? (
-                      <span className="flex items-center">
-                        <WifiOff className="h-4 w-4 mr-2" />
-                        You're Offline
-                      </span>
-                    ) : syncStatus === 'failed' ? (
-                      <span className="flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Sync Required
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Register Account
-                      </span>
-                    )}
-                  </Button>
-                </div>
+                {showAccessCode && (
+                  <div>
+                    <FormLabel>Access Code</FormLabel>
+                    <div className="relative">
+                      <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input 
+                        placeholder="Enter Rating Officer access code" 
+                        className="pl-10" 
+                        type="password"
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Required for Rating Officer registration
+                    </p>
+                  </div>
+                )}
                 
-                <div className="text-center mt-6">
+                <Button
+                  type="submit"
+                  className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Create Account
+                    </>
+                  )}
+                </Button>
+                
+                <div className="mt-6 text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Already have an account?{" "}
-                    <Link to="/login" className="font-medium text-primary hover:underline">
-                      Log in
+                    <Link to="/login" className="font-medium text-nigeria-green dark:text-nigeria-green-light hover:underline">
+                      Sign In
                     </Link>
                   </p>
                 </div>

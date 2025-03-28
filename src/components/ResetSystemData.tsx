@@ -1,122 +1,111 @@
 
-import React, { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { AlertCircle, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Trash2, AlertTriangle, RefreshCw } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { performSystemReset } from "@/utils/storageSync";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { useUser } from "@/contexts/UserContext";
 
 interface ResetSystemDataProps {
   onReset?: () => void;
 }
 
 const ResetSystemData: React.FC<ResetSystemDataProps> = ({ onReset }) => {
-  const { toast } = useToast();
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const { clearAllData } = useUser();
   const [isResetting, setIsResetting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleResetSystem = () => {
+  const handleReset = async () => {
+    setIsResetting(true);
+
     try {
-      setIsResetting(true);
+      console.log("Starting system data reset...");
       
-      toast({
-        title: "System Reset Started",
-        description: "Clearing all data across devices. This may take a few moments...",
-        duration: 3000,
-      });
+      // Perform system reset
+      const success = await clearAllData();
       
-      // Call the enhanced system reset function
-      performSystemReset();
+      if (success) {
+        console.log("System reset completed successfully");
+      } else {
+        console.error("System reset completed with errors");
+      }
       
-      // Execute the onReset callback if provided
+      // Call onReset callback if provided
       if (onReset) {
         onReset();
       }
       
-      // Note: The page will automatically reload from performSystemReset
-      // so we don't need additional reload logic here
+      // Reload the page after a small delay to ensure storage events are processed
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     } catch (error) {
       console.error("Error during system reset:", error);
-      toast({
-        title: "Reset Failed",
-        description: "An error occurred during the reset. Please try again.",
-        variant: "destructive",
-      });
       setIsResetting(false);
     }
   };
 
   return (
-    <div className="p-6 border border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/30 rounded-lg shadow-sm">
-      <div className="flex items-start">
-        <div className="flex-shrink-0">
-          <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          variant="outline" 
+          className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/30"
+        >
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Reset All System Data
+        </Button>
+      </DialogTrigger>
+      
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center text-red-600 dark:text-red-400">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            Reset System Data
+          </DialogTitle>
+          <DialogDescription>
+            This will delete ALL system data including users, tournaments, and player records.
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
+          Warning: All data will be permanently deleted across all devices. You will be logged out 
+          and redirected to the homepage.
         </div>
-        <div className="ml-3">
-          <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2">
-            System Reset
-          </h3>
-          <p className="text-sm text-red-600 dark:text-red-300 mb-4">
-            This action will remove ALL data on ALL connected devices including rating officers, organizers, players, tournaments, and registration data.
-            Everyone will need to register again after this action.
-          </p>
-          <Button 
-            variant="outline" 
-            className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/30"
-            onClick={() => setIsConfirmOpen(true)}
+
+        <DialogFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={() => setIsDialogOpen(false)}
+            disabled={isResetting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleReset}
             disabled={isResetting}
           >
             {isResetting ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Resetting...
+              </>
             ) : (
-              <Trash2 className="h-4 w-4 mr-2" />
+              "Reset All Data"
             )}
-            {isResetting ? "Resetting All Devices..." : "Reset System Data (All Devices)"}
           </Button>
-        </div>
-      </div>
-
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600 flex items-center">
-              <AlertTriangle className="h-5 w-5 mr-2" />
-              Confirm System Reset
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. ALL data including rating officers, organizers, players, tournaments will be permanently deleted from ALL devices. 
-              Everyone will need to register again to use the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
-              onClick={handleResetSystem}
-              disabled={isResetting}
-            >
-              {isResetting ? (
-                <span className="flex items-center">
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Resetting...
-                </span>
-              ) : (
-                "Yes, Reset All Data"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
