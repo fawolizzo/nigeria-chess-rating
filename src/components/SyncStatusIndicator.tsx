@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Wifi, WifiOff, AlertCircle, Check, RefreshCw, Loader2, Clock } from "lucide-react";
+import { Wifi, WifiOff, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { requestDataSync } from "@/utils/deviceSync";
 import { useUser } from "@/contexts/UserContext";
@@ -21,40 +21,24 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
-  const [syncRetryCount, setSyncRetryCount] = useState(0);
   const { toast } = useToast();
   const { forceSync } = useUser();
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      console.log("[SyncIndicator] Device came online, auto-syncing");
       handleSync(false);
     };
     
     const handleOffline = () => {
       setIsOnline(false);
-      console.log("[SyncIndicator] Device went offline");
-      
-      if (isSyncing) {
-        setSyncStatus('error');
-        
-        toast({
-          title: "Sync Interrupted",
-          description: "You are offline. Sync will resume when you reconnect.",
-          variant: "warning",
-        });
-      }
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     // Initial sync
-    if (isOnline) {
-      console.log("[SyncIndicator] Running initial sync");
-      handleSync(false);
-    }
+    handleSync(false);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -63,48 +47,21 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
   }, []);
 
   const handleSync = async (showToast = true) => {
-    if (isSyncing) {
-      console.log("[SyncIndicator] Sync already in progress, ignoring request");
-      return;
-    }
-    
-    if (!isOnline) {
-      console.log("[SyncIndicator] Cannot sync while offline");
-      
-      if (showToast) {
-        toast({
-          title: "Cannot Sync",
-          description: "You are currently offline. Please connect to the internet.",
-          variant: "warning",
-        });
-      }
-      
-      return;
-    }
+    if (isSyncing) return;
     
     try {
-      console.log("[SyncIndicator] Starting data sync");
       setIsSyncing(true);
       setSyncStatus('syncing');
       
       // Request sync from other devices
-      console.log("[SyncIndicator] Requesting sync from other devices");
-      await requestDataSync();
-      
-      // Allow some time for responses to arrive (progressive timeout for retries)
-      const waitTime = Math.min(1500 + (syncRetryCount * 500), 5000);
-      console.log(`[SyncIndicator] Waiting ${waitTime}ms for sync responses`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
+      requestDataSync();
       
       // Force local sync
-      console.log("[SyncIndicator] Forcing local sync");
       const success = await forceSync();
       
       if (success) {
-        console.log("[SyncIndicator] Sync completed successfully");
         setLastSynced(new Date());
         setSyncStatus('success');
-        setSyncRetryCount(0);
         
         if (showToast) {
           toast({
@@ -123,17 +80,12 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           setSyncStatus('idle');
         }, 3000);
       } else {
-        console.warn("[SyncIndicator] Sync completed with warnings");
-        setLastSynced(new Date());
         setSyncStatus('error');
-        setSyncRetryCount(prev => prev + 1);
         
         if (showToast) {
           toast({
             title: "Sync Warning",
-            description: syncRetryCount > 1 
-              ? "Multiple sync attempts have produced warnings. Some data may not be up to date."
-              : "Synchronization completed with warnings. Some data may not be up to date.",
+            description: "Synchronization completed with warnings. Some data may not be up to date.",
             variant: "warning",
           });
         }
@@ -144,16 +96,13 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
         }, 3000);
       }
     } catch (error) {
-      console.error("[SyncIndicator] Error during manual sync:", error);
+      console.error("Error during manual sync:", error);
       setSyncStatus('error');
-      setSyncRetryCount(prev => prev + 1);
       
       if (showToast) {
         toast({
           title: "Sync Failed",
-          description: syncRetryCount > 1 
-            ? "Multiple sync attempts have failed. Please check your connection or try refreshing the page."
-            : "Failed to synchronize data. Please try again.",
+          description: "Failed to synchronize data. Please try again.",
           variant: "destructive",
         });
       }
@@ -164,23 +113,6 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
       }, 3000);
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  const formatTimeAgo = (date: Date): string => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'just now';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes}m ago`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours}h ago`;
-    } else {
-      return date.toLocaleTimeString();
     }
   };
 
@@ -195,8 +127,8 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
         <span>
           {isOnline ? "Online" : "Offline"}
           {lastSynced && isOnline && (
-            <span className="ml-1 flex items-center">
-              • <Clock className="h-2.5 w-2.5 mx-0.5" /> {formatTimeAgo(lastSynced)}
+            <span className="ml-1">
+              • Last synced: {lastSynced.toLocaleTimeString()}
             </span>
           )}
         </span>
@@ -214,7 +146,7 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           disabled={isSyncing || !isOnline}
         >
           {syncStatus === 'syncing' && (
-            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
           )}
           {syncStatus === 'success' && (
             <Check className="h-3 w-3 mr-1 text-green-500" />
@@ -227,8 +159,7 @@ const SyncStatusIndicator: React.FC<SyncStatusIndicatorProps> = ({
           )}
           {syncStatus === 'syncing' ? "Syncing..." : 
            syncStatus === 'success' ? "Synced" : 
-           syncStatus === 'error' ? "Try Again" : 
-           !isOnline ? "Offline" : "Sync Now"}
+           syncStatus === 'error' ? "Try Again" : "Sync Now"}
         </Button>
       )}
     </div>
