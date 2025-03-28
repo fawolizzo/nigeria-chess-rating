@@ -45,6 +45,7 @@ const LoginForm = () => {
   const [error, setError] = useState("");
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [syncBeforeLogin, setSyncBeforeLogin] = useState(false);
+  const [syncTimeout, setSyncTimeout] = useState<NodeJS.Timeout | null>(null);
   
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -56,13 +57,37 @@ const LoginForm = () => {
     }
   });
   
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (syncTimeout) {
+        clearTimeout(syncTimeout);
+      }
+    };
+  }, [syncTimeout]);
+  
   // Optimize initial sync - only run once and use a more efficient approach
   useEffect(() => {
     const syncUserData = async () => {
       try {
-        // Only sync critical data needed for login
-        await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+        // Only sync critical data needed for login with a 5 second timeout
+        const syncPromise = forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+        
+        // Create a timeout that resolves after 5 seconds
+        const timeoutPromise = new Promise<boolean>(resolve => {
+          const timeoutId = setTimeout(() => {
+            console.log("Initial sync timed out, continuing anyway");
+            resolve(true);
+          }, 5000);
+          
+          setSyncTimeout(timeoutId);
+        });
+        
+        // Use Promise.race to either wait for sync or timeout
+        await Promise.race([syncPromise, timeoutPromise]);
+        
         await refreshUserData();
+        
       } catch (error) {
         console.error("Error during initial data sync:", error);
       }
@@ -115,8 +140,27 @@ const LoginForm = () => {
       
       setLoginAttempts(prev => prev + 1);
       
-      // Force sync to get latest user data from all devices before login
-      await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+      // Force sync with timeout to prevent hanging
+      const syncPromise = forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+      
+      // Set a timeout of 5 seconds for the sync operation
+      const timeoutPromise = new Promise<void>(resolve => {
+        const timeoutId = setTimeout(() => {
+          console.log("Sync before login timed out, continuing with login");
+          resolve();
+        }, 5000);
+        
+        setSyncTimeout(timeoutId);
+      });
+      
+      // Use Promise.race to either wait for sync or timeout
+      await Promise.race([syncPromise, timeoutPromise]);
+      
+      // Clear the timeout if sync completed successfully
+      if (syncTimeout) {
+        clearTimeout(syncTimeout);
+        setSyncTimeout(null);
+      }
       
       const normalizedData = {
         ...data,
@@ -134,11 +178,31 @@ const LoginForm = () => {
           : "Access code is required");
       }
       
-      const success = await login(
+      // Set a timeout for the login operation
+      let loginTimeoutId: NodeJS.Timeout | null = null;
+      const loginTimeoutPromise = new Promise<void>((_, reject) => {
+        loginTimeoutId = setTimeout(() => {
+          reject(new Error("Login timed out. Please try again."));
+        }, 10000); // 10 seconds timeout
+      });
+      
+      // Perform login with a timeout
+      const loginPromise = login(
         normalizedData.email, 
         authValue, 
         normalizedData.role
       );
+      
+      // Race between login and timeout
+      const success = await Promise.race([
+        loginPromise,
+        loginTimeoutPromise.then(() => false)
+      ]);
+      
+      // Clear the login timeout
+      if (loginTimeoutId) {
+        clearTimeout(loginTimeoutId);
+      }
       
       if (success) {
         logUserEvent("Login successful", undefined, { email: data.email, role: data.role });
@@ -148,18 +212,35 @@ const LoginForm = () => {
           description: `Welcome back! You are now logged in as a ${data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer'}.`,
         });
         
-        // Navigate to the appropriate dashboard
-        if (data.role === "tournament_organizer") {
-          navigate("/organizer/dashboard");
-        } else {
-          navigate("/officer/dashboard");
-        }
+        // Navigate to the appropriate dashboard with a small delay to allow the toast to be seen
+        setTimeout(() => {
+          if (data.role === "tournament_organizer") {
+            navigate("/organizer/dashboard");
+          } else {
+            navigate("/officer/dashboard");
+          }
+        }, 500);
       } else {
         logUserEvent("Login failed", undefined, { email: data.email, role: data.role });
         
         // If login failed, try to sync again
         if (loginAttempts === 0) {
           setSyncBeforeLogin(true);
+          
+          // Set a timeout to stop the syncing indicator if it takes too long
+          const syncTimeoutId = setTimeout(() => {
+            setSyncBeforeLogin(false);
+            setError("Sync timed out. Please try logging in again.");
+            
+            toast({
+              title: "Sync Timeout",
+              description: "Data synchronization is taking too long. Please try logging in again.",
+              variant: "warning",
+            });
+          }, 8000); // 8 seconds timeout
+          
+          setSyncTimeout(syncTimeoutId);
+          
           toast({
             title: "Login Failed",
             description: "Trying to sync with other devices to get the latest user data. Please try again after sync is complete.",
@@ -190,8 +271,17 @@ const LoginForm = () => {
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
+      
+      // Cancel any pending sync
+      setSyncBeforeLogin(false);
     } finally {
       setIsLoading(false);
+      
+      // Clear any remaining timeouts
+      if (syncTimeout) {
+        clearTimeout(syncTimeout);
+        setSyncTimeout(null);
+      }
     }
   };
 

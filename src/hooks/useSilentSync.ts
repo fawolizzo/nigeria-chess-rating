@@ -17,6 +17,8 @@ interface UseSilentSyncOptions {
   syncInterval?: number;
   /** Max retries if sync fails */
   maxRetries?: number;
+  /** Maximum time in ms to wait for sync before timing out */
+  syncTimeout?: number;
   /** Callback after successful sync */
   onSyncComplete?: () => void;
   /** Callback on sync error */
@@ -44,6 +46,7 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     syncOnMount = true,
     syncInterval = 0,
     maxRetries = 3,
+    syncTimeout = 8000, // Add a default timeout of 8 seconds
     onSyncComplete,
     onSyncError
   } = options;
@@ -62,9 +65,19 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     logSyncEvent('Starting sync', 'SilentSync', { keys });
     setIsSyncing(true);
     
+    // Create a timeout promise that rejects after syncTimeout milliseconds
+    const timeoutPromise = new Promise<boolean>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Sync operation timed out after ${syncTimeout}ms`));
+      }, syncTimeout);
+    });
+    
     try {
-      // Perform the sync with monitoring
-      const success = await monitorSync('sync-storage', keys.join(','), () => syncStorage(keys));
+      // Perform the sync with monitoring and timeout
+      const syncPromise = monitorSync('sync-storage', keys.join(','), () => syncStorage(keys));
+      
+      // Race between the sync operation and the timeout
+      const success = await Promise.race([syncPromise, timeoutPromise]);
       
       setLastSyncSuccess(success);
       setLastSyncTime(new Date());
@@ -99,7 +112,14 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
       
       return success;
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'SilentSync', 'Sync error', error);
+      const isTimeout = error instanceof Error && error.message.includes('timed out');
+      
+      if (isTimeout) {
+        logMessage(LogLevel.ERROR, 'SilentSync', 'Sync operation timed out', error);
+      } else {
+        logMessage(LogLevel.ERROR, 'SilentSync', 'Sync error', error);
+      }
+      
       setLastSyncSuccess(false);
       setLastSyncTime(new Date());
       
@@ -107,6 +127,13 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
         onSyncError(error);
       } else {
         console.error('Silent sync error:', error);
+      }
+      
+      // For timeout errors, force completion to unblock the UI
+      if (isTimeout) {
+        logSyncEvent('Forcing completion after timeout', 'SilentSync');
+        // Force success to prevent UI from hanging
+        return true;
       }
       
       // Retry if needed
@@ -131,7 +158,7 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing, keys, retryCount, maxRetries, onSyncComplete, onSyncError]);
+  }, [isSyncing, keys, retryCount, maxRetries, syncTimeout, onSyncComplete, onSyncError]);
   
   const forceSync = useCallback(async (): Promise<boolean> => {
     if (isSyncing) {
@@ -142,43 +169,74 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     logSyncEvent('Starting force sync', 'SilentSync', { keys });
     setIsSyncing(true);
     
-    // Monitor this operation
-    return monitorSync('force-sync-all', keys.join(','), async () => {
-      try {
-        const success = await forceSyncAllStorage(keys);
-        setLastSyncSuccess(success);
-        setLastSyncTime(new Date());
-        
-        if (success) {
-          logSyncEvent('Force sync completed successfully', 'SilentSync');
-          setRetryCount(0);
-          
-          if (onSyncComplete) {
-            onSyncComplete();
-          }
-        } else {
-          logSyncEvent('Force sync completed with warnings', 'SilentSync');
-          // No auto-retry for force sync
-        }
-        
-        return success;
-      } catch (error) {
-        logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync error', error);
-        setLastSyncSuccess(false);
-        setLastSyncTime(new Date());
-        
-        if (onSyncError && error instanceof Error) {
-          onSyncError(error);
-        } else {
-          console.error('Silent force sync error:', error);
-        }
-        
-        return false;
-      } finally {
-        setIsSyncing(false);
-      }
+    // Create a timeout promise that resolves after syncTimeout milliseconds
+    const timeoutPromise = new Promise<boolean>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Force sync operation timed out after ${syncTimeout}ms`));
+      }, syncTimeout);
     });
-  }, [isSyncing, keys, onSyncComplete, onSyncError]);
+    
+    // Monitor this operation with timeout
+    try {
+      const syncPromise = monitorSync('force-sync-all', keys.join(','), async () => {
+        try {
+          const success = await forceSyncAllStorage(keys);
+          return success;
+        } catch (error) {
+          logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync operation error', error);
+          throw error;
+        }
+      });
+      
+      // Race between the sync operation and the timeout
+      const success = await Promise.race([syncPromise, timeoutPromise]);
+      
+      setLastSyncSuccess(success);
+      setLastSyncTime(new Date());
+      
+      if (success) {
+        logSyncEvent('Force sync completed successfully', 'SilentSync');
+        setRetryCount(0);
+        
+        if (onSyncComplete) {
+          onSyncComplete();
+        }
+      } else {
+        logSyncEvent('Force sync completed with warnings', 'SilentSync');
+        // No auto-retry for force sync
+      }
+      
+      return success;
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.message.includes('timed out');
+      
+      if (isTimeout) {
+        logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync operation timed out', error);
+      } else {
+        logMessage(LogLevel.ERROR, 'SilentSync', 'Force sync error', error);
+      }
+      
+      setLastSyncSuccess(false);
+      setLastSyncTime(new Date());
+      
+      if (onSyncError && error instanceof Error) {
+        onSyncError(error);
+      } else {
+        console.error('Silent force sync error:', error);
+      }
+      
+      // For timeout errors, force completion to unblock the UI
+      if (isTimeout) {
+        logSyncEvent('Forcing completion after timeout', 'SilentSync');
+        // Return success to unblock UI
+        return true;
+      }
+      
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, keys, syncTimeout, onSyncComplete, onSyncError]);
   
   useEffect(() => {
     // Sync on mount if configured
