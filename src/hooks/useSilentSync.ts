@@ -1,13 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { syncStorage, forceSyncAllStorage } from '@/utils/storageUtils';
-import { 
-  startSyncMonitoring, 
-  trackSyncOperation, 
-  completeSyncOperation, 
-  endSyncMonitoring,
-  monitorSync
-} from '@/utils/monitorSync';
+import { monitorSync } from '@/utils/monitorSync';
 import { logSyncEvent, LogLevel, logMessage } from '@/utils/debugLogger';
 
 /**
@@ -68,20 +62,12 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
     logSyncEvent('Starting sync', 'SilentSync', { keys });
     setIsSyncing(true);
     
-    // Start monitoring session
-    const sessionId = startSyncMonitoring('silent-sync');
-    
     try {
-      // Track this sync operation
-      const opId = trackSyncOperation('sync-storage', keys.join(','));
+      // Perform the sync with monitoring
+      const success = await monitorSync('sync-storage', keys.join(','), () => syncStorage(keys));
       
-      // Perform the sync
-      const success = await syncStorage(keys);
       setLastSyncSuccess(success);
       setLastSyncTime(new Date());
-      
-      // Record the result
-      completeSyncOperation(opId, success);
       
       if (success) {
         logSyncEvent('Sync completed successfully', 'SilentSync', { keys });
@@ -111,17 +97,11 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
         }
       }
       
-      // End monitoring
-      endSyncMonitoring();
-      
       return success;
     } catch (error) {
       logMessage(LogLevel.ERROR, 'SilentSync', 'Sync error', error);
       setLastSyncSuccess(false);
       setLastSyncTime(new Date());
-      
-      // End monitoring
-      endSyncMonitoring();
       
       if (onSyncError && error instanceof Error) {
         onSyncError(error);
@@ -178,7 +158,6 @@ const useSilentSync = (options: UseSilentSyncOptions = {}): UseSilentSyncResult 
           }
         } else {
           logSyncEvent('Force sync completed with warnings', 'SilentSync');
-          
           // No auto-retry for force sync
         }
         
