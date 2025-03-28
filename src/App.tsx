@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -7,7 +6,6 @@ import { UserProvider } from './contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
   forceSyncAllStorage, 
-  checkStorageHealth, 
   initializeStorageListeners 
 } from '@/utils/storageUtils';
 import { STORAGE_KEY_CURRENT_USER } from '@/types/userTypes';
@@ -167,9 +165,6 @@ function App() {
         
         // Initialize storage event listeners
         initializeStorageListeners();
-        
-        // Check storage health and recover if needed
-        await checkStorageHealth();
         
         // Force sync storage on app load
         const syncResult = await forceSyncAllStorage();

@@ -1,4 +1,3 @@
-
 import { 
   STORAGE_KEY_USERS, 
   STORAGE_KEY_CURRENT_USER,
@@ -148,6 +147,32 @@ export const forceSyncAllStorage = async (priorityKeys?: string[]): Promise<bool
     return true;
   } catch (error) {
     console.error("Error during force sync all storage:", error);
+    return false;
+  }
+};
+
+// Check storage health and recover if needed
+export const checkStorageHealth = async (): Promise<boolean> => {
+  try {
+    console.log("Checking storage health...");
+    
+    // Ensure device has a unique ID
+    ensureDeviceId();
+    
+    // Check for critical data structure integrity
+    const userData = getFromStorage(STORAGE_KEY_USERS, []);
+    
+    // Validate if userData is actually an array
+    if (!Array.isArray(userData)) {
+      console.error("Storage health check: users data is corrupted (not an array)");
+      // Reset the users array
+      saveToStorage(STORAGE_KEY_USERS, []);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error checking storage health:", error);
     return false;
   }
 };
