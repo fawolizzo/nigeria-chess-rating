@@ -1,4 +1,3 @@
-
 import React, { 
   createContext, 
   useState, 
@@ -40,24 +39,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // Clear all data completely
   const clearAllData = useCallback(async (): Promise<boolean> => {
     try {
       console.log("[UserContext] Clearing all user data");
       
-      // First remove specific data
       removeFromStorage(STORAGE_KEY_USERS);
       removeFromStorage(STORAGE_KEY_CURRENT_USER);
       
-      // Then use the utility to clear everything else
       const success = await clearAllStorageData();
       
       if (success) {
-        // Update state
         setCurrentUser(null);
         setUsers([]);
         
-        // Set reset flags
         const resetTimestamp = Date.now().toString();
         localStorage.setItem(STORAGE_KEY_RESET_FLAG, resetTimestamp);
         localStorage.setItem(STORAGE_KEY_GLOBAL_RESET, resetTimestamp);
@@ -82,14 +76,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [toast]);
   
-  // Load user data without showing loading indicators
   const refreshUserData = useCallback(async (): Promise<boolean> => {
     try {
-      // Get latest data from storage 
       const latestUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
       const latestCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
       
-      // Update state
       setUsers(latestUsers || []);
       setCurrentUser(latestCurrentUser);
       
@@ -102,7 +93,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
   
-  // Helper to remove data from storage with proper error handling
   const removeFromStorage = useCallback((key: string): void => {
     try {
       localStorage.removeItem(key);
@@ -112,26 +102,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
   
-  // Initialize user context
   useEffect(() => {
     const loadUsers = async () => {
       setIsLoading(true);
       
       try {
-        // Ensure device ID
         ensureDeviceId();
         
-        // Get data from storage
         const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
         const storedCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
         
         console.log(`[UserContext] Loaded ${storedUsers?.length || 0} users and current user: ${storedCurrentUser?.email || 'none'}`);
         
-        // Set state with proper null checks
         setUsers(storedUsers || []);
         setCurrentUser(storedCurrentUser);
         
-        // Silently sync with other devices
         await syncStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
       } catch (error) {
         console.error("[UserContext] Error loading users from storage:", error);
@@ -146,18 +131,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     
-    // Add storage event listener for cross-tab sync
     const handleStorageEvent = (e: StorageEvent) => {
       if (!e.key) return;
       
-      // Handle reset events
       if (e.key === STORAGE_KEY_RESET_FLAG || e.key === STORAGE_KEY_GLOBAL_RESET) {
         setCurrentUser(null);
         setUsers([]);
         return;
       }
       
-      // Handle user data changes
       if (e.key === STORAGE_KEY_USERS || e.key === STORAGE_KEY_CURRENT_USER) {
         refreshUserData();
       }
@@ -171,20 +153,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [toast, refreshUserData]);
   
-  // User registration
   const register = async (
-    userData: Omit<User, 'id' | 'status' | 'registrationDate' | 'lastModified'>
+    userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }
   ): Promise<boolean> => {
     try {
       console.log("[UserContext] Registering new user:", userData.email);
       
-      // Get latest users with a fresh pull
       const existingUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []) || [];
       
-      // Normalize email for case-insensitive comparison
       const normalizedEmail = userData.email.toLowerCase().trim();
       
-      // Check if email exists with proper null checks
       const emailExists = existingUsers.some(user => 
         user.email && user.email.toLowerCase() === normalizedEmail
       );
@@ -201,28 +179,25 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // Create new user with proper timestamp
+      const isAutoApproved = userData.role === "rating_officer" && userData.status === "approved";
+      
       const newUser: User = {
         id: uuidv4(),
         ...userData,
-        status: 'pending',
+        status: userData.status || 'pending',
         registrationDate: new Date().toISOString(),
+        approvalDate: isAutoApproved ? new Date().toISOString() : undefined,
         lastModified: Date.now()
       };
       
-      // Add to users array with proper null checks
       const updatedUsers = [...existingUsers, newUser];
       
-      // Save to storage
       saveToStorage(STORAGE_KEY_USERS, updatedUsers);
       
-      // Update state
       setUsers(updatedUsers);
       
-      // Silently sync with other devices
       await syncStorage([STORAGE_KEY_USERS]);
       
-      // Send confirmation email
       const confirmationEmail = createOrganizerConfirmationEmail(newUser);
       const emailSent = await sendEmail(newUser.email, "Registration Received - Nigerian Chess Rating System", confirmationEmail);
       
@@ -234,19 +209,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
-      // Notify rating officers
-      const ratingOfficerEmails = getRatingOfficerEmails();
-      if (ratingOfficerEmails.length > 0) {
-        const notificationEmail = createRatingOfficerNotificationEmail(newUser);
-        for (const officerEmail of ratingOfficerEmails) {
-          await sendEmail(officerEmail, "New Tournament Organizer Registration", notificationEmail);
+      if (newUser.role === 'tournament_organizer') {
+        const ratingOfficerEmails = getRatingOfficerEmails();
+        if (ratingOfficerEmails.length > 0) {
+          const notificationEmail = createRatingOfficerNotificationEmail(newUser);
+          for (const officerEmail of ratingOfficerEmails) {
+            await sendEmail(officerEmail, "New Tournament Organizer Registration", notificationEmail);
+          }
         }
       }
       
-      toast({
-        title: "Registration Successful",
-        description: "Your account has been registered and is pending approval.",
-      });
+      if (isAutoApproved) {
+        toast({
+          title: "Rating Officer Registration Successful",
+          description: "Your account has been created and activated. You can now log in.",
+        });
+      } else {
+        toast({
+          title: "Registration Successful",
+          description: newUser.role === 'tournament_organizer' 
+            ? "Your account has been registered and is pending approval."
+            : "Your Rating Officer account has been registered.",
+        });
+      }
       
       return true;
     } catch (error: any) {
@@ -262,15 +247,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Approve a user
   const approveUser = async (userId: string) => {
     try {
       console.log(`[UserContext] Approving user: ${userId}`);
       
-      // Get latest users
       const existingUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []) || [];
       
-      // Update user status
       const updatedUsers = existingUsers.map(user => {
         if (user.id === userId && user.status === 'pending') {
           return {
@@ -283,19 +265,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return user;
       });
       
-      // Find the approved user
       const approvedUser = updatedUsers.find(user => user.id === userId);
       
-      // Save to storage
       saveToStorage(STORAGE_KEY_USERS, updatedUsers);
       
-      // Update state
       setUsers(updatedUsers);
       
-      // Silently sync with other devices
       await syncStorage([STORAGE_KEY_USERS]);
       
-      // Send approval email if user was found
       if (approvedUser) {
         const approvalEmail = createApprovalEmail(approvedUser);
         await sendEmail(approvedUser.email, "Account Approved - Nigerian Chess Rating System", approvalEmail);
@@ -316,18 +293,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Reject a user
   const rejectUser = async (userId: string) => {
     try {
       console.log(`[UserContext] Rejecting user: ${userId}`);
       
-      // Get latest users
       const existingUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []) || [];
       
-      // Find the user before updating
       const userToReject = existingUsers.find(user => user.id === userId);
       
-      // Update user status
       const updatedUsers = existingUsers.map(user => {
         if (user.id === userId && user.status === 'pending') {
           return {
@@ -340,16 +313,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return user;
       });
       
-      // Save to storage
       saveToStorage(STORAGE_KEY_USERS, updatedUsers);
       
-      // Update state
       setUsers(updatedUsers);
       
-      // Silently sync with other devices
       await syncStorage([STORAGE_KEY_USERS]);
       
-      // Send rejection email if user was found
       if (userToReject) {
         const rejectionEmail = createRejectionEmail(userToReject);
         await sendEmail(userToReject.email, "Registration Not Approved - Nigerian Chess Rating System", rejectionEmail);
@@ -370,10 +339,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Mock email sending
   const sendEmail = async (to: string, subject: string, html: string): Promise<boolean> => {
     try {
-      // Mock implementation for sending emails
       console.log(`[UserContext] Sending email to ${to} with subject: ${subject}`);
       
       return new Promise((resolve) => {
@@ -388,12 +355,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Get all rating officer emails
   const getRatingOfficerEmails = (): string[] => {
     return getOfficerEmails(users);
   };
   
-  // User login
   const login = async (
     email: string, 
     password: string, 
@@ -402,16 +367,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log(`[UserContext] Login attempt for ${email} as ${role}`);
       
-      // Silent background sync before login attempt
       await syncStorage([STORAGE_KEY_USERS]);
       
-      // Get latest users with proper null checks
       const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []) || [];
       
-      // Normalize email for case-insensitive comparison
       const normalizedEmail = email.toLowerCase().trim();
       
-      // Find matching user
       const user = storedUsers.find(u => 
         u.email && u.email.toLowerCase() === normalizedEmail && 
         u.role === role
@@ -422,7 +383,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         toast({
           title: "Login Failed",
-          description: "Invalid credentials or your account is pending approval.",
+          description: `No ${role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer'} account found with this email.`,
           variant: "destructive"
         });
         
@@ -434,7 +395,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         toast({
           title: "Login Failed",
-          description: "Invalid credentials.",
+          description: "Invalid password. Please check your credentials and try again.",
           variant: "destructive"
         });
         
@@ -444,33 +405,36 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (role === 'tournament_organizer' && user.status !== 'approved') {
         console.log(`[UserContext] Tournament organizer not approved: ${normalizedEmail}`);
         
-        toast({
-          title: "Account Pending Approval",
-          description: "Your account is pending approval by a rating officer.",
-          variant: "warning"
-        });
+        if (user.status === 'pending') {
+          toast({
+            title: "Account Pending Approval",
+            description: "Your account is pending approval by a rating officer.",
+            variant: "warning"
+          });
+        } else if (user.status === 'rejected') {
+          toast({
+            title: "Account Rejected",
+            description: "Your account registration has been rejected. Please contact support.",
+            variant: "destructive"
+          });
+        }
         
         return false;
       }
       
       console.log(`[UserContext] Login successful for ${normalizedEmail}`);
       
-      // Login successful, update current user with timestamp
       const userWithTimestamp: User = {
         ...user,
         lastModified: Date.now()
       };
       
-      // Remove password before saving to storage for security
       const { password: _, ...secureUser } = userWithTimestamp;
       
-      // Save to storage
       saveToStorage(STORAGE_KEY_CURRENT_USER, secureUser);
       
-      // Update state
       setCurrentUser(secureUser);
       
-      // Silently sync with other devices
       await syncStorage([STORAGE_KEY_CURRENT_USER]);
       
       toast({
@@ -492,16 +456,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // User logout
   const logout = async () => {
     try {
       console.log("[UserContext] Logging out user");
       
-      // Clear current user
       removeFromStorage(STORAGE_KEY_CURRENT_USER);
       setCurrentUser(null);
       
-      // Silently sync with other devices
       await syncStorage([STORAGE_KEY_CURRENT_USER]);
       
       toast({
@@ -519,16 +480,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Force sync
   const forceSync = async (): Promise<boolean> => {
     try {
       console.log("[UserContext] Forcing global sync");
       
-      // Silently sync without showing UI indicators
       const success = await forceSyncAllStorage([STORAGE_KEY_USERS, STORAGE_KEY_CURRENT_USER]);
       
       if (success) {
-        // Refresh user data
         await refreshUserData();
       }
       
@@ -539,7 +497,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Export context values
   const value: UserContextType = {
     currentUser,
     users,

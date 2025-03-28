@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -25,6 +24,7 @@ import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "@/components/ui/use-toast";
 import { syncStorage, ensureDeviceId } from "@/utils/storageUtils";
+import { logUserEvent } from "@/utils/debugLogger";
 
 const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
@@ -34,6 +34,8 @@ const nigerianStates = [
   "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", 
   "Yobe", "Zamfara"
 ];
+
+const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
 const registerSchema = z.object({
   fullName: z.string().min(3, "Full name must be at least 3 characters"),
@@ -52,12 +54,15 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register: registerUser, refreshUserData } = useUser();
+  const { register: registerUser, refreshUserData, forceSync } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [showAccessCode, setShowAccessCode] = useState(false);
   const [accessCode, setAccessCode] = useState("");
+  const [isAccessCodeValid, setIsAccessCodeValid] = useState(false);
+  
+  const registrationAttempts = useState(0);
   
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -73,22 +78,38 @@ const Register = () => {
   });
   
   useEffect(() => {
-    // Silently ensure device ID and sync data in the background
     const initializeData = async () => {
-      ensureDeviceId();
-      
-      // Silently sync user data without showing UI indicators
-      await syncStorage(['ncr_users']);
-      await refreshUserData();
+      try {
+        logUserEvent("Register page initialized");
+        ensureDeviceId();
+        
+        await syncStorage(['ncr_users']);
+        await refreshUserData();
+        
+        await forceSync();
+        
+        logUserEvent("Register page data synced successfully");
+      } catch (error) {
+        console.error("Error initializing register page:", error);
+        logUserEvent("Register page initialization error", undefined, error);
+      }
     };
     
     initializeData();
-  }, [refreshUserData]);
+  }, [refreshUserData, forceSync]);
   
   const selectedRole = form.watch("role");
   
+  useEffect(() => {
+    setIsAccessCodeValid(accessCode === RATING_OFFICER_ACCESS_CODE);
+  }, [accessCode]);
+  
   const handleShowAccessCode = (role: string) => {
     setShowAccessCode(role === "rating_officer");
+    if (role !== "rating_officer") {
+      setAccessCode("");
+      setIsAccessCodeValid(false);
+    }
   };
   
   const onSubmit = async (data: RegisterFormData) => {
@@ -97,21 +118,36 @@ const Register = () => {
     setSuccessMessage("");
     
     try {
-      // Silent background sync before registration
-      await syncStorage(['ncr_users']);
+      logUserEvent("Registration attempt", undefined, { 
+        email: data.email,
+        role: data.role,
+        state: data.state,
+        attempts: registrationAttempts[0] + 1
+      });
       
-      if (data.role === "rating_officer" && accessCode !== "NCR2025") {
-        setErrorMessage("Invalid access code for Rating Officer registration");
-        setIsSubmitting(false);
-        return;
+      registrationAttempts[1](prev => prev + 1);
+      
+      await syncStorage(['ncr_users']);
+      await forceSync();
+      
+      if (data.role === "rating_officer") {
+        if (accessCode !== RATING_OFFICER_ACCESS_CODE) {
+          logUserEvent("Invalid rating officer access code", undefined, { email: data.email });
+          setErrorMessage("Invalid access code for Rating Officer registration");
+          setIsSubmitting(false);
+          return;
+        }
+        
+        logUserEvent("Valid rating officer access code provided", undefined, { email: data.email });
       }
       
-      // Normalize data
       const normalizedData = {
         ...data,
         email: data.email.toLowerCase().trim(),
         phoneNumber: data.phoneNumber.trim()
       };
+      
+      const isAutoApproved = data.role === "rating_officer" && isAccessCodeValid;
       
       const success = await registerUser({
         fullName: normalizedData.fullName,
@@ -119,35 +155,48 @@ const Register = () => {
         phoneNumber: normalizedData.phoneNumber,
         state: normalizedData.state,
         role: normalizedData.role as 'tournament_organizer' | 'rating_officer',
-        password: normalizedData.password
+        password: normalizedData.password,
+        status: isAutoApproved ? 'approved' : 'pending'
       });
       
       if (success) {
+        logUserEvent("Registration successful", undefined, { 
+          email: data.email, 
+          role: data.role,
+          autoApproved: isAutoApproved
+        });
+        
         setSuccessMessage(
           data.role === "tournament_organizer"
             ? "Registration successful! Your account is pending approval by a rating officer."
-            : "Rating Officer account created successfully!"
+            : "Rating Officer account created successfully! You can now log in."
         );
         
         toast({
           title: "Registration successful!",
-          description: "A confirmation email has been sent to your email address.",
+          description: data.role === "rating_officer" 
+            ? "Your Rating Officer account has been created. You can now log in."
+            : "A confirmation email has been sent to your email address.",
         });
         
         form.reset();
         setAccessCode("");
+        setIsAccessCodeValid(false);
         
-        // Silent background sync after registration
         await syncStorage(['ncr_users']);
+        await forceSync();
         
         setTimeout(() => {
           navigate("/login");
         }, 3000);
       } else {
+        logUserEvent("Registration failed", undefined, { email: data.email, role: data.role });
         setErrorMessage("Registration failed. Please try again with a different email address.");
       }
     } catch (error: any) {
       console.error("Registration error:", error);
+      logUserEvent("Registration error", undefined, { error: error.message });
+      
       setErrorMessage(error.message || "Registration failed. Please try again.");
       
       toast({
@@ -194,7 +243,7 @@ const Register = () => {
                   <div
                     className={`cursor-pointer rounded-md border p-4 flex flex-col items-center justify-center text-center ${
                       selectedRole === "tournament_organizer"
-                        ? "border-black dark:border-white bg-gray-50 dark:bg-gray-800"
+                        ? "border-nigeria-green bg-nigeria-green/5"
                         : "border-gray-200 dark:border-gray-700"
                     }`}
                     onClick={() => {
@@ -204,12 +253,12 @@ const Register = () => {
                   >
                     <Calendar className={`h-6 w-6 mb-2 ${
                       selectedRole === "tournament_organizer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`} />
                     <h3 className={`text-sm font-medium ${
                       selectedRole === "tournament_organizer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green-dark dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`}>
                       Tournament Organizer
@@ -219,7 +268,7 @@ const Register = () => {
                   <div
                     className={`cursor-pointer rounded-md border p-4 flex flex-col items-center justify-center text-center ${
                       selectedRole === "rating_officer"
-                        ? "border-black dark:border-white bg-gray-50 dark:bg-gray-800"
+                        ? "border-nigeria-green bg-nigeria-green/5"
                         : "border-gray-200 dark:border-gray-700"
                     }`}
                     onClick={() => {
@@ -229,12 +278,12 @@ const Register = () => {
                   >
                     <Shield className={`h-6 w-6 mb-2 ${
                       selectedRole === "rating_officer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`} />
                     <h3 className={`text-sm font-medium ${
                       selectedRole === "rating_officer"
-                        ? "text-black dark:text-white"
+                        ? "text-nigeria-green-dark dark:text-nigeria-green-light"
                         : "text-gray-500 dark:text-gray-400"
                     }`}>
                       Rating Officer
@@ -244,7 +293,6 @@ const Register = () => {
                 
                 <input type="hidden" {...form.register("role")} />
                 
-                {/* Form fields */}
                 <FormField
                   control={form.control}
                   name="fullName"
@@ -391,22 +439,29 @@ const Register = () => {
                       <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input 
                         placeholder="Enter Rating Officer access code" 
-                        className="pl-10" 
+                        className={`pl-10 ${isAccessCodeValid ? 'border-green-500 focus:ring-green-500' : ''}`}
                         type="password"
                         value={accessCode}
                         onChange={(e) => setAccessCode(e.target.value)}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Required for Rating Officer registration
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Required for Rating Officer registration
+                      </p>
+                      {isAccessCodeValid && (
+                        <p className="text-xs text-green-500 flex items-center">
+                          <Check className="h-3 w-3 mr-1" /> Code valid - account will be auto-approved
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
                 
                 <Button
                   type="submit"
                   className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (showAccessCode && !isAccessCodeValid)}
                 >
                   {isSubmitting ? (
                     <>

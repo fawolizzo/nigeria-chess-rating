@@ -9,7 +9,8 @@ import {
   Shield, 
   Check, 
   AlertCircle,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { syncStorage, ensureDeviceId } from "@/utils/storageUtils";
+import { logAuthEvent, checkStorageHealth } from "@/utils/debugLogger";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -33,34 +35,55 @@ type LoginFormData = z.infer<typeof loginSchema>;
 const LoginForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, currentUser, refreshUserData } = useUser();
+  const { login, currentUser, refreshUserData, forceSync, users } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
   const isMobile = useIsMobile();
   
   // Initialize user context
   useEffect(() => {
     const initializeLogin = async () => {
       try {
+        // Log initialization
+        logAuthEvent("Initializing login form");
+        
         // Ensure device has ID
         ensureDeviceId();
+        
+        // Check storage health
+        const healthCheck = checkStorageHealth();
+        if (!healthCheck.healthy) {
+          logAuthEvent("Storage health check failed", undefined, healthCheck.issues);
+          toast({
+            title: "Storage Issues Detected",
+            description: "Some data storage issues were detected. Try clearing your browser cache if login fails.",
+            variant: "warning",
+            duration: 6000
+          });
+        }
         
         // Silently refresh user data without showing UI indicators
         await syncStorage(['ncr_users', 'ncr_current_user']);
         await refreshUserData();
+        await forceSync();
+        
+        logAuthEvent("Login form initialized successfully");
       } catch (error) {
         console.error("[LoginForm] Error initializing login form:", error);
+        logAuthEvent("Login form initialization error", undefined, error);
       }
     };
     
     initializeLogin();
-  }, [refreshUserData]);
+  }, [refreshUserData, forceSync, toast]);
   
   // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
-      console.log(`[LoginForm] User already logged in: ${currentUser.email}`);
+      logAuthEvent(`User already logged in: ${currentUser.email}`);
       
       if (currentUser.role === "tournament_organizer") {
         navigate("/organizer/dashboard", { replace: true });
@@ -80,6 +103,69 @@ const LoginForm = () => {
   });
   
   const selectedRole = form.watch("role");
+  const emailValue = form.watch("email");
+  
+  // Check if the entered email exists in the system
+  useEffect(() => {
+    if (emailValue && emailValue.length > 5) {
+      const normalizedEmail = emailValue.toLowerCase().trim();
+      const matchingUser = users.find(u => 
+        u.email && u.email.toLowerCase() === normalizedEmail &&
+        u.role === selectedRole
+      );
+      
+      if (matchingUser) {
+        setUserData({
+          status: matchingUser.status,
+          role: matchingUser.role,
+          fullName: matchingUser.fullName
+        });
+      } else {
+        setUserData(null);
+      }
+    } else {
+      setUserData(null);
+    }
+  }, [emailValue, selectedRole, users]);
+  
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    setErrorMessage("");
+    
+    try {
+      logAuthEvent("Forcing data sync from login form");
+      
+      // Perform a deep sync
+      await syncStorage(['ncr_users', 'ncr_current_user']);
+      const success = await forceSync();
+      
+      if (success) {
+        toast({
+          title: "Data Refreshed",
+          description: "User data has been refreshed successfully.",
+        });
+        logAuthEvent("Data sync successful");
+      } else {
+        toast({
+          title: "Sync Warning",
+          description: "Data refresh may be incomplete. Try again if login fails.",
+          variant: "warning"
+        });
+        logAuthEvent("Data sync incomplete");
+      }
+    } catch (error) {
+      console.error("[LoginForm] Force sync error:", error);
+      logAuthEvent("Force sync error", undefined, error);
+      
+      toast({
+        title: "Sync Error",
+        description: "Failed to refresh data. Try reloading the page.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
@@ -87,10 +173,33 @@ const LoginForm = () => {
     setSuccessMessage("");
     
     try {
-      console.log(`[LoginForm] Login attempt - Email: ${data.email}, Role: ${data.role}`);
+      // Log login attempt
+      logAuthEvent(`Login attempt - Email: ${data.email}, Role: ${data.role}`);
       
       // Normalize email
       const normalizedEmail = data.email.toLowerCase().trim();
+      
+      // Check user status before attempting login
+      const userExists = users.find(u => 
+        u.email && u.email.toLowerCase() === normalizedEmail && 
+        u.role === data.role
+      );
+      
+      // If user exists but is pending approval
+      if (userExists && userExists.status === 'pending' && data.role === 'tournament_organizer') {
+        logAuthEvent("Login attempt for pending account", userExists.id);
+        setErrorMessage("Your account is pending approval by a rating officer. Please try again later.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // If user exists but is rejected
+      if (userExists && userExists.status === 'rejected') {
+        logAuthEvent("Login attempt for rejected account", userExists.id);
+        setErrorMessage("Your registration has been rejected. Please contact support for assistance.");
+        setIsSubmitting(false);
+        return;
+      }
       
       // Attempt login
       const success = await login(
@@ -101,7 +210,7 @@ const LoginForm = () => {
       
       if (success) {
         setSuccessMessage("Login successful!");
-        console.log("[LoginForm] Login successful, redirecting...");
+        logAuthEvent("Login successful", undefined, { email: normalizedEmail, role: data.role });
         
         // Slight delay to allow state to update
         setTimeout(() => {
@@ -112,11 +221,17 @@ const LoginForm = () => {
           }
         }, 300);
       } else {
-        console.log("[LoginForm] Login failed");
-        setErrorMessage("Invalid credentials or your account is pending approval");
+        logAuthEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
+        
+        if (!userExists) {
+          setErrorMessage(`No ${data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer'} account found with this email.`);
+        } else {
+          setErrorMessage("Invalid password. Please check your credentials and try again.");
+        }
       }
     } catch (error: any) {
       console.error("[LoginForm] Login error:", error);
+      logAuthEvent("Login error", undefined, error);
       
       setErrorMessage(error.message || "Login failed. Please try again.");
       
@@ -151,6 +266,18 @@ const LoginForm = () => {
           <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div className="ml-3">
             <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+            <button 
+              onClick={handleForceSync} 
+              className="mt-2 text-xs text-red-600 dark:text-red-300 flex items-center hover:underline"
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              Refresh data and try again
+            </button>
           </div>
         </div>
       )}
@@ -223,6 +350,26 @@ const LoginForm = () => {
                     />
                   </div>
                 </FormControl>
+                {userData && (
+                  <div className="mt-1">
+                    {userData.status === 'pending' && userData.role === 'tournament_organizer' ? (
+                      <p className="text-xs text-orange-500 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        This account is pending approval
+                      </p>
+                    ) : userData.status === 'approved' ? (
+                      <p className="text-xs text-green-500 flex items-center">
+                        <Check className="h-3 w-3 mr-1" />
+                        {userData.fullName}'s account is active
+                      </p>
+                    ) : userData.status === 'rejected' ? (
+                      <p className="text-xs text-red-500 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        This account has been rejected
+                      </p>
+                    ) : null}
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -270,6 +417,22 @@ const LoginForm = () => {
               </>
             )}
           </Button>
+          
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={handleForceSync}
+              className="text-xs text-gray-500 flex items-center mx-auto hover:underline"
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              Refresh user data
+            </button>
+          </div>
         </form>
       </Form>
     </div>

@@ -14,7 +14,8 @@ export enum LogLevel {
   ERROR = 'ERROR',
   SYNC = 'SYNC',
   AUTH = 'AUTH',
-  API = 'API'
+  API = 'API',
+  USER = 'USER' // Added USER level for user management logging
 }
 
 // Colors for console logs
@@ -24,7 +25,8 @@ const LOG_COLORS = {
   [LogLevel.ERROR]: 'color: #F44336',
   [LogLevel.SYNC]: 'color: #2196F3',
   [LogLevel.AUTH]: 'color: #9C27B0',
-  [LogLevel.API]: 'color: #00BCD4'
+  [LogLevel.API]: 'color: #00BCD4',
+  [LogLevel.USER]: 'color: #3F51B5' // Blue-purple for user management
 };
 
 /**
@@ -118,6 +120,22 @@ export const logSyncEvent = (
 };
 
 /**
+ * Log a user management event
+ */
+export const logUserEvent = (
+  action: string,
+  userId?: string,
+  details?: any
+): void => {
+  logMessage(
+    LogLevel.USER,
+    'UserEvent',
+    `${action}${userId ? ` (userId: ${userId})` : ''}`,
+    details
+  );
+};
+
+/**
  * Log an authentication event
  */
 export const logAuthEvent = (
@@ -131,6 +149,60 @@ export const logAuthEvent = (
     `${action}${userId ? ` (userId: ${userId})` : ''}`,
     details
   );
+};
+
+/**
+ * Check storage health to verify data integrity
+ */
+export const checkStorageHealth = (): {
+  healthy: boolean;
+  issues: string[];
+} => {
+  try {
+    const issues: string[] = [];
+    
+    // Check if localStorage is accessible
+    try {
+      localStorage.setItem('ncr_health_check', 'test');
+      localStorage.removeItem('ncr_health_check');
+    } catch (e) {
+      issues.push('localStorage is not accessible');
+    }
+    
+    // Check if sessionStorage is accessible
+    try {
+      sessionStorage.setItem('ncr_health_check', 'test');
+      sessionStorage.removeItem('ncr_health_check');
+    } catch (e) {
+      issues.push('sessionStorage is not accessible');
+    }
+    
+    // Check for critical data presence
+    const usersData = localStorage.getItem('ncr_users');
+    if (!usersData) {
+      issues.push('User data is missing');
+    } else {
+      try {
+        // Check if the data is valid JSON
+        const parsedUsers = JSON.parse(usersData);
+        if (!Array.isArray(parsedUsers)) {
+          issues.push('User data is not in expected format (not an array)');
+        }
+      } catch (e) {
+        issues.push('User data is corrupted (invalid JSON)');
+      }
+    }
+    
+    return {
+      healthy: issues.length === 0,
+      issues
+    };
+  } catch (error) {
+    return {
+      healthy: false,
+      issues: [`Failed to check storage health: ${error.message}`]
+    };
+  }
 };
 
 /**
@@ -175,7 +247,8 @@ if (DEBUG_MODE) {
   (window as any).ncrDebug = {
     getAllLogs,
     clearLogs,
-    enableVerboseLogging
+    enableVerboseLogging,
+    checkStorageHealth
   };
   
   console.log('%c[NCR Debug Logger] Initialized. Access utilities via window.ncrDebug', 'color: #2196F3');

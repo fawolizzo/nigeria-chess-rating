@@ -5,6 +5,7 @@ import LoginForm from "@/components/LoginForm";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { clearAllData } from "@/utils/storageUtils";
+import LoginSystemDiagnostic from "@/components/LoginSystemDiagnostic";
 
 const Login = () => {
   const { toast } = useToast();
@@ -70,6 +71,13 @@ const Login = () => {
             </div>
           </div>
         </div>
+        
+        {/* Display the diagnostic component only in development mode */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-8 max-w-md mx-auto">
+            <LoginSystemDiagnostic />
+          </div>
+        )}
       </div>
     </div>
   );
