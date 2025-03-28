@@ -1,4 +1,3 @@
-
 import { 
   STORAGE_KEY_USERS, 
   STORAGE_KEY_CURRENT_USER,
@@ -175,7 +174,7 @@ export const forceSyncAllStorage = async (priorityKeys?: string[]): Promise<bool
   });
 };
 
-// Check storage health and recover if needed - EXPORTING THIS FUNCTION TO FIX BUILD ERROR
+// Check storage health and recover if needed
 export const checkStorageHealth = async (): Promise<boolean> => {
   return monitorSync('checkStorageHealth', 'system', async () => {
     try {

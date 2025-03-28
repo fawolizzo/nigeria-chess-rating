@@ -14,6 +14,7 @@ export interface User {
   registrationDate: string;
   approvalDate?: string;
   password?: string;
+  accessCode?: string; // Add access code for rating officers
   lastModified: number; // Timestamp for conflict resolution
 }
 
@@ -21,9 +22,9 @@ export interface UserContextType {
   currentUser: User | null;
   users: User[];
   isLoading: boolean;
-  login: (email: string, password: string, role: 'tournament_organizer' | 'rating_officer') => Promise<boolean>;
+  login: (email: string, authValue: string, role: 'tournament_organizer' | 'rating_officer') => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'registrationDate' | 'status' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }) => Promise<boolean>;
+  register: (userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }) => Promise<boolean>;
   approveUser: (userId: string) => void;
   rejectUser: (userId: string) => void;
   sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;
@@ -86,4 +87,14 @@ export const generateDeviceId = (): string => {
   }
   
   return 'device_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(36);
+};
+
+// Function to generate a secure access code
+export const generateAccessCode = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Omitting confusing characters (0, 1, I, O)
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 };

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Loader2, UserCheck, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, UserCheck, Shield, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -13,12 +13,27 @@ import { toast } from "@/components/ui/use-toast";
 import { forceSyncAllStorage } from "@/utils/storageUtils";
 import { logUserEvent } from "@/utils/debugLogger";
 import SyncStatusIndicator from "./SyncStatusIndicator";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
-// Schema for login form
+// Schema for login form with conditional validation
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().optional(),
+  code: z.string().optional(),
   role: z.enum(["tournament_organizer", "rating_officer"])
+}).refine(data => {
+  // If role is tournament_organizer, password is required
+  if (data.role === "tournament_organizer") {
+    return !!data.password;
+  }
+  // If role is rating_officer, code is required
+  if (data.role === "rating_officer") {
+    return !!data.code;
+  }
+  return false;
+}, {
+  message: "Password or code is required depending on your role",
+  path: ["password"] // Default error path
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -37,6 +52,7 @@ const LoginForm = () => {
     defaultValues: {
       email: "",
       password: "",
+      code: "",
       role: "tournament_organizer"
     }
   });
@@ -88,9 +104,14 @@ const LoginForm = () => {
         email: data.email.toLowerCase().trim(),
       };
       
+      // Use password for tournament_organizer and code for rating_officer
+      const authValue = normalizedData.role === "tournament_organizer" 
+        ? normalizedData.password 
+        : normalizedData.code;
+      
       const success = await login(
         normalizedData.email, 
-        normalizedData.password, 
+        authValue || "", 
         normalizedData.role
       );
       
@@ -120,11 +141,15 @@ const LoginForm = () => {
             variant: "warning",
           });
         } else {
-          setError("Invalid credentials or your account is pending approval.");
+          setError(normalizedData.role === "tournament_organizer" 
+            ? "Invalid credentials or your account is pending approval." 
+            : "Invalid email or access code. Please check and try again.");
           
           toast({
             title: "Login Failed",
-            description: "Invalid credentials or your account is pending approval.",
+            description: normalizedData.role === "tournament_organizer" 
+              ? "Invalid credentials or your account is pending approval." 
+              : "Invalid email or access code. Please check and try again.",
             variant: "destructive",
           });
         }
@@ -232,43 +257,69 @@ const LoginForm = () => {
             )}
           />
           
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input 
-                      placeholder="Enter your password" 
-                      className="pl-10 pr-10" 
-                      type={showPassword ? "text" : "password"}
-                      {...field}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-10 px-3 text-gray-400 hover:text-gray-500"
-                      onClick={togglePasswordVisibility}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                      <span className="sr-only">
-                        {showPassword ? "Hide password" : "Show password"}
-                      </span>
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {selectedRole === "tournament_organizer" ? (
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input 
+                        placeholder="Enter your password" 
+                        className="pl-10 pr-10" 
+                        type={showPassword ? "text" : "password"}
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-10 px-3 text-gray-400 hover:text-gray-500"
+                        onClick={togglePasswordVisibility}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">
+                          {showPassword ? "Hide password" : "Show password"}
+                        </span>
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Access Code</FormLabel>
+                  <FormControl>
+                    <div className="relative mb-1">
+                      <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input 
+                        placeholder="Enter your access code" 
+                        className="pl-10" 
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter the access code provided when your account was created
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           
           <Button
             type="submit"
