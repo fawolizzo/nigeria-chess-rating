@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Calendar, User, Map, Phone, Mail, Lock, Check, AlertCircle, Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,6 +65,11 @@ const RegisterForm = () => {
     }
   };
   
+  useEffect(() => {
+    setIsAccessCodeValid(accessCode === RATING_OFFICER_ACCESS_CODE);
+    console.log(`Access code: ${accessCode}, Valid: ${accessCode === RATING_OFFICER_ACCESS_CODE}`);
+  }, [accessCode]);
+  
   const onSubmit = async (data: RegisterFormData) => {
     if (isSubmitting || authLoading) return;
     
@@ -107,7 +111,6 @@ const RegisterForm = () => {
         password: data.password.trim()
       };
       
-      // Create metadata for the user
       const metadata = {
         fullName: normalizedData.fullName,
         phoneNumber: normalizedData.phoneNumber,
@@ -116,7 +119,6 @@ const RegisterForm = () => {
         status: normalizedData.role === 'rating_officer' ? 'approved' : 'pending'
       };
       
-      // Register with Supabase Auth
       const success = await signUp(normalizedData.email, normalizedData.password, metadata);
       
       if (success) {
@@ -172,11 +174,6 @@ const RegisterForm = () => {
     }
   };
   
-  // Check if access code is valid whenever it changes
-  useState(() => {
-    setIsAccessCodeValid(accessCode === RATING_OFFICER_ACCESS_CODE);
-  });
-
   return (
     <div className="p-6 sm:p-8">
       <div className="text-center mb-8">
