@@ -23,6 +23,7 @@ const SyncStatusIndicator = ({
     syncOnMount: true,
     keys: prioritizeUserData ? [STORAGE_KEY_USERS] : undefined,
     syncInterval: null,
+    prioritizeUserData,
     onSyncComplete: () => {
       if (onSyncComplete) onSyncComplete();
       

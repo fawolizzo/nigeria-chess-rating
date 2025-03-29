@@ -12,6 +12,7 @@ interface UseSilentSyncOptions {
   syncTimeout?: number;
   onSyncComplete?: () => void;
   onSyncError?: (error: any) => void;
+  prioritizeUserData?: boolean;
 }
 
 /**
@@ -24,7 +25,8 @@ const useSilentSync = ({
   syncInterval = null,
   syncTimeout = 5000,
   onSyncComplete,
-  onSyncError
+  onSyncError,
+  prioritizeUserData = false
 }: UseSilentSyncOptions = {}) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncSuccess, setLastSyncSuccess] = useState<boolean | null>(null);
@@ -38,11 +40,19 @@ const useSilentSync = ({
     
     try {
       setIsSyncing(true);
-      logMessage(LogLevel.INFO, 'useSilentSync', `Starting sync ${keys ? `for keys: ${keys.join(', ')}` : 'for all keys'}`);
+      
+      // Determine which keys to sync
+      let keysToSync = keys;
+      if (prioritizeUserData && (!keys || !keys.includes(STORAGE_KEY_USERS))) {
+        // If prioritizeUserData is true and STORAGE_KEY_USERS isn't already included
+        keysToSync = [...(keys || []), STORAGE_KEY_USERS];
+      }
+      
+      logMessage(LogLevel.INFO, 'useSilentSync', `Starting sync ${keysToSync ? `for keys: ${keysToSync.join(', ')}` : 'for all keys'}`);
       
       // Use withTimeout to ensure sync doesn't hang
       const result = await withTimeout(
-        () => keys ? forceSyncAllStorage(keys) : forceSyncAllStorage(),
+        () => keysToSync ? forceSyncAllStorage(keysToSync) : forceSyncAllStorage(),
         false,
         syncTimeout,
         'Storage Sync'
@@ -79,7 +89,7 @@ const useSilentSync = ({
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing, keys, onSyncComplete, onSyncError, retryCount, syncTimeout]);
+  }, [isSyncing, keys, onSyncComplete, onSyncError, retryCount, syncTimeout, prioritizeUserData]);
 
   // Add a forceSync function that prioritizes user data
   const forceSync = useCallback(async () => {
