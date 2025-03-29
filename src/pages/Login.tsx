@@ -5,12 +5,9 @@ import Navbar from "@/components/Navbar";
 import LoginForm from "@/components/LoginForm";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { clearAllData } from "@/utils/storageUtils";
-import LoginSystemDiagnostic from "@/components/LoginSystemDiagnostic";
 import { AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
-import { sendSyncEvent } from "@/utils/storageSync";
-import { SyncEventType } from "@/types/userTypes";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const { toast } = useToast();
@@ -24,42 +21,29 @@ const Login = () => {
       
       toast({
         title: "System Reset",
-        description: "Resetting all system data...",
+        description: "Resetting system data...",
       });
       
-      // Broadcast reset event to other devices/tabs
-      sendSyncEvent(SyncEventType.RESET);
-      sendSyncEvent(SyncEventType.CLEAR_DATA);
+      // Sign out if signed in
+      await supabase.auth.signOut();
       
-      // Clear all data
-      const success = await clearAllData();
+      // Clear localStorage
+      localStorage.clear();
       
-      if (success) {
-        logMessage(LogLevel.INFO, 'Login', "System reset completed successfully");
-        
-        toast({
-          title: "Reset Complete",
-          description: "All data has been cleared successfully. The page will reload now.",
-        });
-        
-        // Reload the page after a short delay
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      } else {
-        logMessage(LogLevel.ERROR, 'Login', "System reset completed with warnings");
-        
-        toast({
-          title: "Reset Issues",
-          description: "There may be some issues with the reset. The page will refresh to ensure clean state.",
-          variant: "warning",
-        });
-        
-        // Force reload even if there were issues
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
+      // Clear sessionStorage
+      sessionStorage.clear();
+      
+      logMessage(LogLevel.INFO, 'Login', "System reset completed successfully");
+      
+      toast({
+        title: "Reset Complete",
+        description: "All local data has been cleared successfully. The page will reload now.",
+      });
+      
+      // Reload the page after a short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error("[Login] Reset failed:", error);
       logMessage(LogLevel.ERROR, 'Login', "Reset failed with error:", error);
@@ -131,7 +115,7 @@ const Login = () => {
         {/* Display the diagnostic component only in development mode */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-8 max-w-md mx-auto">
-            <LoginSystemDiagnostic />
+            {/* Remove LoginSystemDiagnostic as it's not compatible with Supabase Auth */}
           </div>
         )}
       </div>

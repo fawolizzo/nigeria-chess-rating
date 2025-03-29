@@ -1,13 +1,30 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { ChevronRight, Users, Calendar, UserCheck, Shield, Award, Trophy, Info, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import HomeReset from "@/components/HomeReset";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Logo from "@/components/Logo";
+import { createInitialRatingOfficerIfNeeded } from '@/utils/createInitialRatingOfficer';
+import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 const Index = () => {
+  useEffect(() => {
+    const initializeRatingOfficer = async () => {
+      try {
+        await createInitialRatingOfficerIfNeeded(
+          "rating.officer@nigerianchess.org", 
+          "NCR2025"
+        );
+      } catch (error) {
+        logMessage(LogLevel.ERROR, 'Index', 'Error initializing rating officer:', error);
+      }
+    };
+    
+    initializeRatingOfficer();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
