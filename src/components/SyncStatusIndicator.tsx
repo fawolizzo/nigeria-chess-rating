@@ -13,17 +13,17 @@ interface SyncStatusIndicatorProps {
 
 const SyncStatusIndicator = ({ 
   onSyncComplete,
-  prioritizeUserData = true
+  prioritizeUserData = true  // Default to true to ensure user data is always prioritized
 }: SyncStatusIndicatorProps) => {
   const [showStatus, setShowStatus] = useState(false);
   const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  // Use the silent sync hook with user data prioritization
+  // Always prioritize user data during sync to ensure login credentials are available
   const { sync, forceSync, isSyncing, lastSyncSuccess, lastSyncTime } = useSilentSync({
     syncOnMount: true,
     keys: prioritizeUserData ? [STORAGE_KEY_USERS] : undefined,
     syncInterval: null,
-    prioritizeUserData,
+    prioritizeUserData,  // This ensures user data is synced first
     onSyncComplete: () => {
       if (onSyncComplete) onSyncComplete();
       
@@ -39,6 +39,9 @@ const SyncStatusIndicator = ({
       }, 3000);
       
       setShowStatusTimeout(timeoutId);
+      
+      // Log successful sync with emphasis on user data
+      logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Sync completed successfully${prioritizeUserData ? ' with user data prioritized' : ''}`);
     },
     onSyncError: (error) => {
       logMessage(LogLevel.ERROR, 'SyncStatusIndicator', 'Sync error:', error);
@@ -70,8 +73,8 @@ const SyncStatusIndicator = ({
     try {
       setShowStatus(true);
       
-      // Use forceSync instead of sync for manual syncs
-      // forceSync prioritizes user data
+      // Always prioritize user data for manual syncs
+      logMessage(LogLevel.INFO, 'SyncStatusIndicator', 'Manual sync initiated with user data prioritized');
       await forceSync();
       
       // Status will be auto-hidden by the onSyncComplete callback
