@@ -80,6 +80,11 @@ const useSilentSync = ({
     }
   }, [isSyncing, keys, onSyncComplete, onSyncError, retryCount, syncTimeout]);
 
+  // Add a forceSync function that's essentially an alias for sync
+  const forceSync = useCallback(async () => {
+    return await sync();
+  }, [sync]);
+
   // Initial sync on mount
   useEffect(() => {
     let isMounted = true;
@@ -118,6 +123,7 @@ const useSilentSync = ({
 
   return {
     sync,
+    forceSync, // Add the forceSync alias to the return value
     isSyncing,
     lastSyncSuccess,
     lastSyncTime

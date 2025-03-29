@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import useSilentSync from "@/hooks/useSilentSync";
