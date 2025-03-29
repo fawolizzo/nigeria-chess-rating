@@ -79,8 +79,19 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         
         logUserEvent('login-attempt', undefined, { email, role });
         
+        const normalizedEmail = email.toLowerCase().trim();
+        
+        if (role === 'rating_officer') {
+          const ratingOfficers = latestUsers.filter(u => u.role === 'rating_officer');
+          logMessage(LogLevel.INFO, 'UserContext', `Found ${ratingOfficers.length} rating officers in the system`);
+          
+          ratingOfficers.forEach(officer => {
+            logMessage(LogLevel.INFO, 'UserContext', `Officer: ${officer.email}, status: ${officer.status}, has access code: ${!!officer.accessCode}`);
+          });
+        }
+        
         const user = latestUsers.find(
-          u => u.email.toLowerCase() === email.toLowerCase() && u.role === role
+          u => u.email.toLowerCase() === normalizedEmail && u.role === role
         );
         
         if (!user) {
@@ -88,15 +99,22 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           return false;
         }
         
+        logMessage(LogLevel.INFO, 'UserContext', `Found user for login: ${user.email}, role: ${user.role}, status: ${user.status}`);
+        if (role === 'rating_officer') {
+          logMessage(LogLevel.INFO, 'UserContext', `Rating officer access code: ${user.accessCode}, provided code: ${authValue}`);
+        }
+        
         let isAuthenticated = false;
         
-        if (role === 'tournament_organizer') {
+        if (role === "tournament_organizer") {
           if (user.password === authValue) {
             isAuthenticated = true;
           }
-        } else if (role === 'rating_officer') {
+        } else if (role === "rating_officer") {
           if (user.accessCode === authValue) {
             isAuthenticated = true;
+          } else {
+            logMessage(LogLevel.WARNING, 'UserContext', `Login failed: Invalid access code for ${email}. Expected ${user.accessCode}, got ${authValue}`);
           }
         }
         

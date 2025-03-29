@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { forceSyncAllStorage } from '@/utils/storageUtils';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { withTimeout } from '@/utils/monitorSync';
+import { STORAGE_KEY_USERS } from '@/types/userTypes';
 
 interface UseSilentSyncOptions {
   syncOnMount?: boolean;
@@ -80,10 +81,47 @@ const useSilentSync = ({
     }
   }, [isSyncing, keys, onSyncComplete, onSyncError, retryCount, syncTimeout]);
 
-  // Add a forceSync function that's essentially an alias for sync
+  // Add a forceSync function that prioritizes user data
   const forceSync = useCallback(async () => {
-    return await sync();
-  }, [sync]);
+    // Always include user data in the sync to ensure login works across devices
+    const userDataKeys = [...(keys || [])];
+    if (!userDataKeys.includes(STORAGE_KEY_USERS)) {
+      userDataKeys.push(STORAGE_KEY_USERS);
+    }
+    
+    setIsSyncing(true);
+    try {
+      logMessage(LogLevel.INFO, 'useSilentSync', 'Force syncing with priority on user data');
+      const result = await withTimeout(
+        () => forceSyncAllStorage(userDataKeys),
+        false,
+        syncTimeout,
+        'Force Storage Sync'
+      );
+      
+      setLastSyncSuccess(result);
+      setLastSyncTime(new Date());
+      
+      if (result) {
+        if (onSyncComplete) onSyncComplete();
+        logMessage(LogLevel.INFO, 'useSilentSync', 'Force sync completed successfully');
+      } else {
+        if (onSyncError) onSyncError(new Error('Force sync failed'));
+        logMessage(LogLevel.ERROR, 'useSilentSync', 'Force sync failed');
+      }
+      
+      return result;
+    } catch (error) {
+      setLastSyncSuccess(false);
+      setLastSyncTime(new Date());
+      logMessage(LogLevel.ERROR, 'useSilentSync', 'Force sync error:', error);
+      
+      if (onSyncError) onSyncError(error);
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [keys, onSyncComplete, onSyncError, syncTimeout]);
 
   // Initial sync on mount
   useEffect(() => {
@@ -123,7 +161,7 @@ const useSilentSync = ({
 
   return {
     sync,
-    forceSync, // Add the forceSync alias to the return value
+    forceSync,
     isSyncing,
     lastSyncSuccess,
     lastSyncTime

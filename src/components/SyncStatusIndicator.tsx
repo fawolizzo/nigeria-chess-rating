@@ -1,187 +1,137 @@
 
-import React, { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import useSilentSync from "@/hooks/useSilentSync";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { RefreshCw, Check, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import useSilentSync from '@/hooks/useSilentSync';
+import { Button } from '@/components/ui/button';
+import { STORAGE_KEY_USERS } from '@/types/userTypes';
+import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 interface SyncStatusIndicatorProps {
-  showButton?: boolean;
-  className?: string;
   onSyncComplete?: () => void;
+  prioritizeUserData?: boolean;
 }
 
 const SyncStatusIndicator = ({ 
-  showButton = false, 
-  className = "",
-  onSyncComplete
+  onSyncComplete,
+  prioritizeUserData = true
 }: SyncStatusIndicatorProps) => {
-  const [syncTimeout, setSyncTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [isSyncTimedOut, setIsSyncTimedOut] = useState(false);
-  const [shouldShowTimeoutMessage, setShouldShowTimeoutMessage] = useState(false);
-  const { toast } = useToast();
+  const [showStatus, setShowStatus] = useState(false);
+  const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  const { 
-    sync, 
-    isSyncing, 
-    lastSyncSuccess, 
-    lastSyncTime 
-  } = useSilentSync({
+  // Use the silent sync hook with user data prioritization
+  const { sync, forceSync, isSyncing, lastSyncSuccess, lastSyncTime } = useSilentSync({
     syncOnMount: true,
-    keys: ['ncr_users', 'ncr_current_user'],
-    syncTimeout: 4000, // Reduced timeout for better responsiveness
+    keys: prioritizeUserData ? [STORAGE_KEY_USERS] : undefined,
+    syncInterval: null,
     onSyncComplete: () => {
-      // Clear the timeout if sync completes successfully
-      if (syncTimeout) {
-        clearTimeout(syncTimeout);
-        setSyncTimeout(null);
-      }
-      setIsSyncTimedOut(false);
-      setShouldShowTimeoutMessage(false);
+      if (onSyncComplete) onSyncComplete();
       
-      if (onSyncComplete) {
-        onSyncComplete();
+      setShowStatus(true);
+      
+      // Hide the status after a delay
+      if (showStatusTimeout) {
+        clearTimeout(showStatusTimeout);
       }
+      
+      const timeoutId = setTimeout(() => {
+        setShowStatus(false);
+      }, 3000);
+      
+      setShowStatusTimeout(timeoutId);
     },
     onSyncError: (error) => {
-      console.error("Sync error:", error);
-      setIsSyncTimedOut(true);
+      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', 'Sync error:', error);
+      setShowStatus(true);
       
-      // Only show the toast once to avoid spamming
-      if (!shouldShowTimeoutMessage) {
-        toast({
-          title: "Sync Issue",
-          description: "There was an issue syncing your data. You can continue using the app.",
-          variant: "warning",
-        });
+      // Hide the error after a longer delay
+      if (showStatusTimeout) {
+        clearTimeout(showStatusTimeout);
       }
+      
+      const timeoutId = setTimeout(() => {
+        setShowStatus(false);
+      }, 5000);
+      
+      setShowStatusTimeout(timeoutId);
     }
   });
   
-  const handleManualSync = () => {
-    // Reset timeout state
-    setIsSyncTimedOut(false);
-    setShouldShowTimeoutMessage(false);
-    
-    // Set a timeout to show a message if sync takes too long
-    if (syncTimeout) {
-      clearTimeout(syncTimeout);
-    }
-    
-    const timeoutId = setTimeout(() => {
-      setIsSyncTimedOut(true);
-      setShouldShowTimeoutMessage(true);
-      
-      toast({
-        title: "Sync Taking Longer Than Expected",
-        description: "You can continue using the app while sync completes in the background.",
-        variant: "warning",
-      });
-    }, 3000); // Reduced timeout for better user experience
-    
-    setSyncTimeout(timeoutId);
-    
-    // Trigger sync
-    sync().catch(error => {
-      console.error("Manual sync error:", error);
-      
-      toast({
-        title: "Sync Error",
-        description: "There was an issue syncing your data. You can continue using the app.",
-        variant: "warning",
-      });
-    });
-  };
-  
+  // Clean up timeout on unmount
   useEffect(() => {
-    // Set a timeout for the initial sync
-    const timeoutId = setTimeout(() => {
-      setIsSyncTimedOut(true);
-      setShouldShowTimeoutMessage(true);
-      
-      // Only show a toast if initial sync times out
-      if (isSyncing) {
-        toast({
-          title: "Sync Taking Longer Than Expected",
-          description: "You can continue using the app without waiting for sync to complete.",
-          variant: "warning",
-        });
-      }
-    }, 3000); // Reduced timeout for better user experience
-    
-    setSyncTimeout(timeoutId);
-    
-    // Clear timeout on unmount
     return () => {
-      if (syncTimeout) {
-        clearTimeout(syncTimeout);
+      if (showStatusTimeout) {
+        clearTimeout(showStatusTimeout);
       }
     };
-  }, []);
+  }, [showStatusTimeout]);
   
-  // Format the last sync time
-  const formattedTime = lastSyncTime 
-    ? new Intl.DateTimeFormat('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit',
-        hour12: true 
-      }).format(lastSyncTime) 
-    : null;
-  
-  return (
-    <div className={cn("flex items-center text-xs text-gray-500 dark:text-gray-400", className)}>
-      {isSyncing ? (
-        <div className="flex items-center">
-          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-          <span>Syncing data...</span>
-          
-          {/* Timeout message */}
-          {isSyncTimedOut && shouldShowTimeoutMessage && (
-            <div className="ml-1 text-amber-500 flex items-center">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              <span>Taking longer than usual. You can continue.</span>
-            </div>
-          )}
-        </div>
-      ) : lastSyncSuccess === null ? (
-        <div className="flex items-center">
-          <RefreshCw className="w-3 h-3 mr-1" />
-          <span>Waiting for sync...</span>
-          
-          {/* Timeout message */}
-          {isSyncTimedOut && shouldShowTimeoutMessage && (
-            <div className="ml-1 text-amber-500 flex items-center">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              <span>Sync issue. Continuing anyway.</span>
-            </div>
-          )}
-        </div>
-      ) : lastSyncSuccess ? (
-        <div className="flex items-center">
-          <CheckCircle className="w-3 h-3 mr-1 text-green-500" />
-          <span>
-            Synced {formattedTime && <span className="opacity-75">at {formattedTime}</span>}
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center">
-          <AlertCircle className="w-3 h-3 mr-1 text-amber-500" />
-          <span>Sync issue. You can continue.</span>
-        </div>
-      )}
+  const handleManualSync = async () => {
+    try {
+      setShowStatus(true);
       
-      {showButton && (
+      // Use forceSync instead of sync for manual syncs
+      // forceSync prioritizes user data
+      await forceSync();
+      
+      // Status will be auto-hidden by the onSyncComplete callback
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', 'Manual sync error:', error);
+    }
+  };
+  
+  const formatTime = (date: Date | null) => {
+    if (!date) return 'never';
+    
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  if (!showStatus && !isSyncing) {
+    return (
+      <div className="flex justify-end">
         <Button
           variant="ghost"
           size="sm"
-          className="ml-2 text-xs h-6 px-2"
+          className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          onClick={handleManualSync}
+        >
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Sync data
+        </Button>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center">
+        {isSyncing ? (
+          <>
+            <RefreshCw className="h-3 w-3 mr-1 animate-spin text-blue-500" />
+            <span className="text-blue-500">Syncing data...</span>
+          </>
+        ) : lastSyncSuccess ? (
+          <>
+            <Check className="h-3 w-3 mr-1 text-green-500" />
+            <span className="text-green-500">Data synced at {formatTime(lastSyncTime)}</span>
+          </>
+        ) : (
+          <>
+            <AlertCircle className="h-3 w-3 mr-1 text-amber-500" />
+            <span className="text-amber-500">Sync failed. Try again.</span>
+          </>
+        )}
+      </div>
+      
+      {!isSyncing && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs py-1 h-6"
           onClick={handleManualSync}
           disabled={isSyncing}
         >
-          <RefreshCw className="w-3 h-3 mr-1" />
-          Refresh
+          <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+          {isSyncing ? 'Syncing...' : 'Sync now'}
         </Button>
       )}
     </div>

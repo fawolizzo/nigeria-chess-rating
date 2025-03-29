@@ -10,9 +10,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
-import { forceSyncAllStorage } from "@/utils/storageUtils";
-import { logUserEvent } from "@/utils/debugLogger";
+import { forceSyncAllStorage, getFromStorage } from "@/utils/storageUtils";
+import { logUserEvent, logMessage, LogLevel } from "@/utils/debugLogger";
 import SyncStatusIndicator from "./SyncStatusIndicator";
+import { STORAGE_KEY_USERS } from "@/types/userTypes";
 
 // Schema for login form with conditional validation
 const loginSchema = z.object({
@@ -47,6 +48,7 @@ const LoginForm = () => {
   const [syncBeforeLogin, setSyncBeforeLogin] = useState(false);
   const [syncTimeout, setSyncTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isLoginTimeout, setIsLoginTimeout] = useState(false);
+  const [ratingOfficerExists, setRatingOfficerExists] = useState<boolean | null>(null);
   const { toast } = useToast();
   
   const form = useForm<LoginFormData>({
@@ -58,6 +60,47 @@ const LoginForm = () => {
       role: "tournament_organizer"
     }
   });
+  
+  // Watch for email changes to check if a rating officer exists with that email
+  const watchedEmail = form.watch("email");
+  const watchedRole = form.watch("role");
+  
+  // Check if rating officer exists when email or role changes
+  useEffect(() => {
+    if (watchedRole === "rating_officer" && watchedEmail) {
+      const checkRatingOfficer = async () => {
+        try {
+          // Force sync to get latest users data
+          await forceSyncAllStorage([STORAGE_KEY_USERS]);
+          
+          // Get users from storage
+          const users = getFromStorage<any[]>(STORAGE_KEY_USERS, []);
+          
+          // Check if rating officer exists with this email
+          const officerExists = users.some(user => 
+            user.email.toLowerCase() === watchedEmail.toLowerCase() && 
+            user.role === "rating_officer" &&
+            user.status === "approved"
+          );
+          
+          setRatingOfficerExists(officerExists);
+          
+          if (officerExists) {
+            logMessage(LogLevel.INFO, 'LoginForm', `Rating officer found for email: ${watchedEmail}`);
+          }
+        } catch (error) {
+          logMessage(LogLevel.ERROR, 'LoginForm', 'Error checking rating officer:', error);
+        }
+      };
+      
+      // Debounce the check to avoid too many checks
+      const timer = setTimeout(() => {
+        checkRatingOfficer();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [watchedEmail, watchedRole]);
   
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -84,7 +127,7 @@ const LoginForm = () => {
         }, 3000); // Reduced timeout for better user experience
         
         // Only sync critical data needed for login
-        await forceSyncAllStorage(['ncr_users', 'ncr_current_user']);
+        await forceSyncAllStorage([STORAGE_KEY_USERS]);
         
         if (isMounted) {
           // Clear the timeout
@@ -183,20 +226,55 @@ const LoginForm = () => {
         setSyncTimeout(timeoutId);
       });
       
+      // Force sync before attempting login to ensure we have the latest user data
       try {
+        logMessage(LogLevel.INFO, 'LoginForm', 'Syncing before login attempt');
         // Race between sync and timeout
         await Promise.race([
-          forceSyncAllStorage(['ncr_users', 'ncr_current_user']),
+          forceSyncAllStorage([STORAGE_KEY_USERS]),
           syncTimeoutPromise
         ]);
       } catch (error) {
-        console.error("Error during sync before login:", error);
+        logMessage(LogLevel.ERROR, 'LoginForm', 'Error during sync before login:', error);
         // Continue with login even if sync fails
       } finally {
         // Clear the timeout if it's still active
         if (syncTimeout) {
           clearTimeout(syncTimeout);
           setSyncTimeout(null);
+        }
+      }
+      
+      // Check if the rating officer exists before attempting login
+      if (data.role === "rating_officer") {
+        // Get latest users from storage after sync
+        const users = getFromStorage<any[]>(STORAGE_KEY_USERS, []);
+        
+        // Normalize email for comparison
+        const normalizedEmail = data.email.toLowerCase().trim();
+        
+        // Check if rating officer exists with this email
+        const officerExists = users.some(user => 
+          user.email.toLowerCase() === normalizedEmail && 
+          user.role === "rating_officer" &&
+          user.status === "approved"
+        );
+        
+        if (!officerExists) {
+          logMessage(LogLevel.WARNING, 'LoginForm', `Login failed: No rating officer found with email ${data.email}`);
+          setError(`No rating officer account found with email ${data.email}`);
+          setIsLoading(false);
+          return;
+        }
+
+        // Debug: Check if we can find the officer and their access code
+        const officer = users.find(user => 
+          user.email.toLowerCase() === normalizedEmail && 
+          user.role === "rating_officer"
+        );
+        
+        if (officer) {
+          logMessage(LogLevel.INFO, 'LoginForm', `Found rating officer: ${officer.email}, status: ${officer.status}, has access code: ${!!officer.accessCode}`);
         }
       }
       
@@ -223,7 +301,7 @@ const LoginForm = () => {
       const loginTimeoutPromise = new Promise<boolean>((resolve) => {
         loginTimeoutId = setTimeout(() => {
           setIsLoginTimeout(true);
-          console.log("Login operation timed out");
+          logMessage(LogLevel.WARNING, 'LoginForm', "Login operation timed out");
           resolve(false);
         }, 5000);
       });
