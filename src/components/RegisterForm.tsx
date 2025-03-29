@@ -12,7 +12,7 @@ import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { logUserEvent, logMessage, LogLevel } from "@/utils/debugLogger";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
-import { nigerianStates } from "@/lib/nigerianStates";
+import { nigerianStates, getAllStates } from "@/lib/nigerianStates";
 
 const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
@@ -339,7 +339,7 @@ const RegisterForm = () => {
                     </div>
                   </FormControl>
                   <SelectContent className="max-h-[200px]">
-                    {nigerianStates.map((state) => (
+                    {getAllStates().map((state) => (
                       <SelectItem key={state} value={state}>
                         {state}
                       </SelectItem>
