@@ -59,6 +59,7 @@ const RegisterForm = () => {
   const selectedRole = form.watch("role");
   
   const handleShowAccessCode = (role: string) => {
+    console.log("handleShowAccessCode called with role:", role);
     setShowAccessCode(role === "rating_officer");
     if (role !== "rating_officer") {
       setAccessCode("");
@@ -67,18 +68,30 @@ const RegisterForm = () => {
   };
   
   useEffect(() => {
-    setIsAccessCodeValid(accessCode === RATING_OFFICER_ACCESS_CODE);
-    console.log(`Access code: ${accessCode}, Valid: ${accessCode === RATING_OFFICER_ACCESS_CODE}`);
+    console.log("Access code changed to:", accessCode);
+    console.log("Expected code:", RATING_OFFICER_ACCESS_CODE);
+    const isValid = accessCode === RATING_OFFICER_ACCESS_CODE;
+    console.log("Is access code valid?", isValid);
+    setIsAccessCodeValid(isValid);
   }, [accessCode]);
   
   const onSubmit = async (data: RegisterFormData) => {
-    if (isSubmitting || authLoading) return;
+    console.log("Submit function called with data:", data);
+    console.log("Current state - isSubmitting:", isSubmitting, "authLoading:", authLoading);
+    console.log("Selected role:", data.role);
+    console.log("Access code:", accessCode, "isAccessCodeValid:", isAccessCodeValid);
+    
+    if (isSubmitting || authLoading) {
+      console.log("Submission already in progress, returning early");
+      return;
+    }
     
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
     
     try {
+      console.log("Starting registration process");
       logUserEvent("Registration attempt", undefined, { 
         email: data.email,
         role: data.role,
@@ -89,7 +102,10 @@ const RegisterForm = () => {
       setRegistrationAttempts(prev => prev + 1);
       
       if (data.role === "rating_officer") {
+        console.log("Verifying Rating Officer access code");
+        console.log("Input code:", accessCode, "Expected code:", RATING_OFFICER_ACCESS_CODE);
         if (accessCode !== RATING_OFFICER_ACCESS_CODE) {
+          console.error("Access code validation failed. Input:", accessCode, "Expected:", RATING_OFFICER_ACCESS_CODE);
           logUserEvent("Invalid rating officer access code", undefined, { email: data.email });
           setErrorMessage("Invalid access code for Rating Officer registration");
           
@@ -99,9 +115,11 @@ const RegisterForm = () => {
             variant: "destructive"
           });
           
+          setIsSubmitting(false);
           return;
         }
         
+        console.log("Rating Officer access code validated successfully");
         logUserEvent("Valid rating officer access code provided", undefined, { email: data.email });
       }
       
@@ -120,9 +138,13 @@ const RegisterForm = () => {
         status: normalizedData.role === 'rating_officer' ? 'approved' : 'pending'
       };
       
+      console.log("Calling signUp with metadata:", metadata);
+      console.log("Before Supabase signUp call");
       const success = await signUp(normalizedData.email, normalizedData.password, metadata);
+      console.log("After Supabase signUp call. Result:", success);
       
       if (success) {
+        console.log("Registration successful");
         logUserEvent("Registration successful", undefined, { 
           email: data.email, 
           role: data.role,
@@ -150,6 +172,7 @@ const RegisterForm = () => {
           navigate("/login");
         }, 2000);
       } else {
+        console.error("Registration failed with no specific error returned");
         logUserEvent("Registration failed", undefined, { email: data.email, role: data.role });
         setErrorMessage("Registration failed. Please try again with a different email address.");
         
@@ -194,6 +217,7 @@ const RegisterForm = () => {
         variant: "destructive",
       });
     } finally {
+      console.log("Registration attempt completed");
       setIsSubmitting(false);
     }
   };

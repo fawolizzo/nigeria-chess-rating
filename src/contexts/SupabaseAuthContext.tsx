@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -131,9 +132,29 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const signUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
     try {
+      console.log("SupabaseAuthContext.signUp: Starting signup process");
+      console.log("Email:", email);
+      console.log("Password length:", password.length);
+      console.log("Metadata:", metadata);
+      
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign up for: ${email}, role: ${metadata.role}`);
       console.log('Attempting to sign up with metadata:', metadata);
       setIsLoading(true);
+      
+      console.log("About to call supabase.auth.signUp with options:", {
+        email: email.trim().toLowerCase(),
+        password: "********", // Don't log actual password
+        options: {
+          data: {
+            ...metadata,
+            status: metadata.role === 'rating_officer' ? 'approved' : 'pending'
+          }
+        }
+      });
+      
+      // Log Supabase configuration to check if it's properly set up
+      console.log("Supabase configuration check - Is supabase client defined:", !!supabase);
+      console.log("Supabase auth module exists:", !!supabase.auth);
       
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -146,24 +167,35 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       });
       
+      console.log("Supabase.auth.signUp response received");
+      
       if (error) {
         console.error("SUPABASE SIGNUP ERROR DETAILS:", error);
         console.error("Error code:", error.code);
         console.error("Error message:", error.message);
         console.error("Status code:", error.status);
+        console.error("Error name:", error.name);
+        console.error("Full error object:", JSON.stringify(error, null, 2));
         
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign up error:', error);
         throw error;
       }
       
+      console.log("No error from supabase.auth.signUp");
+      console.log("Response data:", data);
+      
       if (!data.user) {
         const noUserError = new Error('Registration failed, no user created.');
         console.error("NO USER CREATED:", noUserError);
+        console.error("Full response:", JSON.stringify(data, null, 2));
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign up failed: No user created');
         throw noUserError;
       }
       
       console.log("SIGNUP SUCCESS - User data:", data.user);
+      console.log("User ID:", data.user.id);
+      console.log("User email:", data.user.email);
+      console.log("User created at:", data.user.created_at);
       console.log("User metadata:", data.user.user_metadata);
       console.log("User app metadata:", data.user.app_metadata);
       
@@ -174,18 +206,39 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       );
       
       if (metadata.role === 'tournament_organizer') {
+        console.log("Tournament organizer role - signing out after registration");
         await supabase.auth.signOut();
       }
       
       return true;
     } catch (error: any) {
       console.error("SIGNUP FUNCTION CAUGHT ERROR:", error);
+      console.error("Error type:", typeof error);
       if (error.message) console.error("Error message:", error.message);
       if (error.code) console.error("Error code:", error.code);
       if (error.status) console.error("HTTP status:", error.status);
+      console.error("Full error stack:", error.stack);
+      
+      // Try to extract more detailed information
+      try {
+        console.error("Stringified error:", JSON.stringify(error));
+      } catch (e) {
+        console.error("Error could not be stringified:", e);
+      }
+      
+      // Check if there's a network-related issue
+      if (error.message && error.message.includes('network')) {
+        console.error("This appears to be a network-related error");
+      }
+      
+      // Check if there's an authentication issue
+      if (error.message && error.message.toLowerCase().includes('auth')) {
+        console.error("This appears to be an authentication-related error");
+      }
       
       return false;
     } finally {
+      console.log("SupabaseAuthContext.signUp: Completed signup process");
       setIsLoading(false);
     }
   };
