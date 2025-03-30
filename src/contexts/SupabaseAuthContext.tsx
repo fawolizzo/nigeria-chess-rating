@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,8 +35,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const isRatingOfficer = user?.app_metadata?.role === 'rating_officer';
-  const isTournamentOrganizer = user?.app_metadata?.role === 'tournament_organizer';
+  // Computed properties for user roles
+  const isRatingOfficer = !!(user?.user_metadata?.role === 'rating_officer' || user?.app_metadata?.role === 'rating_officer');
+  const isTournamentOrganizer = !!(user?.user_metadata?.role === 'tournament_organizer' || user?.app_metadata?.role === 'tournament_organizer');
 
   useEffect(() => {
     logMessage(LogLevel.INFO, 'SupabaseAuthContext', 'Setting up auth state listener');
@@ -43,11 +45,18 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Auth state changed: ${event}`);
+        console.log('Auth state change event:', event);
+        console.log('New session:', newSession);
+        
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (event !== 'INITIAL_SESSION') {
           if (event === 'SIGNED_IN') {
+            console.log('User signed in:', newSession?.user);
+            console.log('User metadata:', newSession?.user?.user_metadata);
+            console.log('App metadata:', newSession?.user?.app_metadata);
+            
             toast({
               title: "Signed in successfully",
               description: "Welcome back!",
@@ -64,21 +73,29 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth and getting session');
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Error getting session:', error);
+          console.error('Error getting session:', error);
           throw error;
         }
+        
+        console.log('Session data:', data);
         
         setSession(data.session);
         setUser(data.session?.user ?? null);
         
         if (data.session?.user) {
+          console.log('User authenticated:', data.session.user.email);
+          console.log('User metadata:', data.session.user.user_metadata);
+          console.log('App metadata:', data.session.user.app_metadata);
+          
           logMessage(
             LogLevel.INFO, 
             'SupabaseAuthContext', 
-            `User authenticated: ${data.session.user.email} (${data.session.user.app_metadata?.role || 'no role'})`
+            `User authenticated: ${data.session.user.email} (${data.session.user.app_metadata?.role || data.session.user.user_metadata?.role || 'no role'})`
           );
         }
       } catch (error) {
@@ -98,6 +115,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signIn = async (email: string, password: string): Promise<boolean> => {
     try {
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign in for: ${email}`);
+      console.log(`Attempting sign in for: ${email}`);
+      
       setIsLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -105,24 +124,33 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         password: password.trim(),
       });
       
+      console.log('Sign in response:', { data, error });
+      
       if (error) {
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign in error:', error);
+        console.error('Sign in error:', error);
         throw error;
       }
       
       if (!data.session) {
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign in failed: No session created');
+        console.error('Sign in failed: No session created');
         throw new Error('Login failed, no session created.');
       }
+      
+      console.log('Sign in successful for:', data.user?.email);
+      console.log('User metadata after login:', data.user?.user_metadata);
+      console.log('App metadata after login:', data.user?.app_metadata);
       
       logMessage(
         LogLevel.INFO, 
         'SupabaseAuthContext', 
-        `Sign in successful for: ${data.user?.email} (${data.user?.app_metadata?.role || 'no role'})`
+        `Sign in successful for: ${data.user?.email} (${data.user?.app_metadata?.role || data.user?.user_metadata?.role || 'no role'})`
       );
       
       return true;
     } catch (error) {
+      console.error('Error in signIn method:', error);
       return false;
     } finally {
       setIsLoading(false);
@@ -249,16 +277,21 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signOut = async (): Promise<void> => {
     try {
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', 'Signing out user');
+      console.log('Signing out user');
+      
       setIsLoading(true);
       
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign out error:', error);
+        console.error('Sign out error:', error);
         throw error;
       }
       
+      console.log('Sign out successful');
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', 'Sign out successful');
+      
     } catch (error) {
       console.error('Error signing out:', error);
       toast({

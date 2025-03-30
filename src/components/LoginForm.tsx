@@ -69,51 +69,65 @@ const LoginForm = () => {
       const normalizedEmail = data.email.toLowerCase().trim();
       const normalizedPassword = data.password.trim();
       
+      console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
+      
       // Attempt to sign in with Supabase Auth
       const success = await signIn(normalizedEmail, normalizedPassword);
+      
+      console.log(`Login attempt result: ${success ? 'success' : 'failed'}`);
       
       if (success) {
         logUserEvent("Login successful", undefined, { email: data.email, role: data.role });
         
+        // Fetch current user from auth context to check role
+        const currentUser = useSupabaseAuth().user;
+        console.log("Current user after login:", currentUser);
+        console.log("User metadata:", currentUser?.user_metadata);
+        console.log("App metadata:", currentUser?.app_metadata);
+        
         // Check if the user has the correct role
-        if (data.role === "rating_officer" && !isRatingOfficer) {
+        const userRole = currentUser?.user_metadata?.role || currentUser?.app_metadata?.role;
+        console.log(`User role from metadata: ${userRole}`);
+        
+        if (data.role === "rating_officer" && userRole !== "rating_officer") {
           // User logged in but doesn't have the rating officer role
           logMessage(LogLevel.WARNING, 'LoginForm', `User logged in but doesn't have rating officer role: ${normalizedEmail}`);
           setError(`No rating officer account found with email ${data.email}`);
           
           // Sign out the user
-          // We'll use a small timeout to allow the auth state to update first
-          setTimeout(() => {
-            useSupabaseAuth().signOut();
-          }, 0);
+          await useSupabaseAuth().signOut();
           
+          setIsLoading(false);
           return;
         }
         
-        if (data.role === "tournament_organizer" && !isTournamentOrganizer) {
+        if (data.role === "tournament_organizer" && userRole !== "tournament_organizer") {
           // User logged in but doesn't have the tournament organizer role
           logMessage(LogLevel.WARNING, 'LoginForm', `User logged in but doesn't have tournament organizer role: ${normalizedEmail}`);
           setError(`No tournament organizer account found with email ${data.email}`);
           
           // Sign out the user
-          setTimeout(() => {
-            useSupabaseAuth().signOut();
-          }, 0);
+          await useSupabaseAuth().signOut();
           
+          setIsLoading(false);
           return;
         }
         
         // Check if the tournament organizer is approved
-        if (data.role === "tournament_organizer" && useSupabaseAuth().user?.user_metadata?.status !== 'approved') {
-          logMessage(LogLevel.WARNING, 'LoginForm', `Tournament organizer not approved: ${normalizedEmail}`);
-          setError("Your account is pending approval by a rating officer.");
+        if (data.role === "tournament_organizer" && userRole === "tournament_organizer") {
+          const status = currentUser?.user_metadata?.status;
+          console.log(`Tournament organizer status: ${status}`);
           
-          // Sign out the user
-          setTimeout(() => {
-            useSupabaseAuth().signOut();
-          }, 0);
-          
-          return;
+          if (status !== 'approved') {
+            logMessage(LogLevel.WARNING, 'LoginForm', `Tournament organizer not approved: ${normalizedEmail}`);
+            setError("Your account is pending approval by a rating officer.");
+            
+            // Sign out the user
+            await useSupabaseAuth().signOut();
+            
+            setIsLoading(false);
+            return;
+          }
         }
         
         toast({
@@ -299,3 +313,4 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+
