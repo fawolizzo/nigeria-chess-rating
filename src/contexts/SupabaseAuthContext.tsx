@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,23 +34,18 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check if user has the rating officer role
   const isRatingOfficer = user?.app_metadata?.role === 'rating_officer';
-  
-  // Check if user has the tournament organizer role
   const isTournamentOrganizer = user?.app_metadata?.role === 'tournament_organizer';
 
   useEffect(() => {
     logMessage(LogLevel.INFO, 'SupabaseAuthContext', 'Setting up auth state listener');
     
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Auth state changed: ${event}`);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        // Only handle non-sync auth events
         if (event !== 'INITIAL_SESSION') {
           if (event === 'SIGNED_IN') {
             toast({
@@ -68,7 +62,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     );
     
-    // THEN check for existing session
     const initializeAuth = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -102,7 +95,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
   }, [toast]);
 
-  // Sign in with email and password
   const signIn = async (email: string, password: string): Promise<boolean> => {
     try {
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign in for: ${email}`);
@@ -123,7 +115,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         throw new Error('Login failed, no session created.');
       }
       
-      // Authentication successful
       logMessage(
         LogLevel.INFO, 
         'SupabaseAuthContext', 
@@ -132,17 +123,16 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       return true;
     } catch (error) {
-      // Let the calling component handle the error display
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign up with email and password
   const signUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
     try {
-      logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign up for: ${email}`);
+      logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign up for: ${email}, role: ${metadata.role}`);
+      console.log('Attempting to sign up with metadata:', metadata);
       setIsLoading(true);
       
       const { data, error } = await supabase.auth.signUp({
@@ -151,45 +141,55 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         options: {
           data: {
             ...metadata,
-            // For tournament organizers, default to pending status
             status: metadata.role === 'rating_officer' ? 'approved' : 'pending'
           }
         }
       });
       
       if (error) {
+        console.error("SUPABASE SIGNUP ERROR DETAILS:", error);
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        console.error("Status code:", error.status);
+        
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign up error:', error);
         throw error;
       }
       
       if (!data.user) {
+        const noUserError = new Error('Registration failed, no user created.');
+        console.error("NO USER CREATED:", noUserError);
         logMessage(LogLevel.ERROR, 'SupabaseAuthContext', 'Sign up failed: No user created');
-        throw new Error('Registration failed, no user created.');
+        throw noUserError;
       }
       
-      // Registration successful
+      console.log("SIGNUP SUCCESS - User data:", data.user);
+      console.log("User metadata:", data.user.user_metadata);
+      console.log("User app metadata:", data.user.app_metadata);
+      
       logMessage(
         LogLevel.INFO, 
         'SupabaseAuthContext', 
         `Sign up successful for: ${data.user.email} (${data.user.app_metadata?.role || 'no role'})`
       );
       
-      // For rating officers (already approved), stay signed in
-      // For tournament organizers (pending approval), sign out
       if (metadata.role === 'tournament_organizer') {
         await supabase.auth.signOut();
       }
       
       return true;
-    } catch (error) {
-      // Let the calling component handle the error display
+    } catch (error: any) {
+      console.error("SIGNUP FUNCTION CAUGHT ERROR:", error);
+      if (error.message) console.error("Error message:", error.message);
+      if (error.code) console.error("Error code:", error.code);
+      if (error.status) console.error("HTTP status:", error.status);
+      
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign out
   const signOut = async (): Promise<void> => {
     try {
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', 'Signing out user');

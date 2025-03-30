@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Calendar, User, Map, Phone, Mail, Lock, Check, AlertCircle, Loader2, Shield } from "lucide-react";
@@ -159,14 +160,37 @@ const RegisterForm = () => {
         });
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
-      logUserEvent("Registration error", undefined, { error: error.message });
+      // Add detailed console logging of the error
+      console.error("DETAILED REGISTRATION ERROR:", error);
+      console.error("Error object type:", typeof error);
+      console.error("Error properties:", Object.keys(error));
+      console.error("Error message:", error.message);
+      console.error("Error name:", error.name);
+      console.error("Error stack:", error.stack);
       
-      setErrorMessage(error.message || "Registration failed. Please try again.");
+      // If error is an object with a code and message property (Supabase format)
+      if (error.code) {
+        console.error("Supabase Error Code:", error.code);
+      }
+      
+      // If error is an object with a response property (HTTP error)
+      if (error.response) {
+        console.error("API Response Error:", error.response);
+      }
+      
+      logUserEvent("Registration error", undefined, { 
+        error: error.message, 
+        errorCode: error.code,
+        errorName: error.name
+      });
+      
+      // Show a more descriptive error message if available
+      const errorMsg = error.message || "Registration failed. Please try again.";
+      setErrorMessage(errorMsg);
       
       toast({
         title: "Registration Error",
-        description: error.message || "An unexpected error occurred",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
