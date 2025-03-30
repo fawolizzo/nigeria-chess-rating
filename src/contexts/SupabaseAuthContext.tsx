@@ -4,6 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { useUser } from '@/contexts/UserContext';
 
 interface SupabaseAuthContextType {
   session: Session | null;
@@ -34,6 +35,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { login: localLogin } = useUser();
 
   // Computed properties for user roles
   const isRatingOfficer = !!(user?.user_metadata?.role === 'rating_officer' || user?.app_metadata?.role === 'rating_officer');
@@ -119,6 +121,42 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       setIsLoading(true);
       
+      // First check if the email is for a rating officer in the local system
+      console.log("Checking if this is a rating officer login");
+      try {
+        // Try local system login for rating officer role
+        const localLoginSuccess = await localLogin(email, password, 'rating_officer');
+        
+        if (localLoginSuccess) {
+          console.log("Local login successful for rating officer:", email);
+          
+          // Try to do a Supabase login too, but don't make overall success dependent on it
+          try {
+            console.log("Attempting backup Supabase login for rating officer");
+            await supabase.auth.signInWithPassword({
+              email: email.trim().toLowerCase(),
+              password: password.trim(),
+            });
+            console.log("Supabase backup login also successful");
+          } catch (supabaseError) {
+            console.warn("Supabase backup login failed, but local login succeeded:", supabaseError);
+            // Ignore Supabase errors for rating officers
+          }
+          
+          toast({
+            title: "Signed in successfully",
+            description: "Welcome, Rating Officer!",
+          });
+          
+          return true;
+        }
+      } catch (localError) {
+        console.log("Local login as rating officer failed, will try Supabase:", localError);
+        // Continue to Supabase login if local login fails
+      }
+      
+      // If local login didn't succeed, try Supabase authentication
+      console.log("Proceeding with Supabase authentication");
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: password.trim(),

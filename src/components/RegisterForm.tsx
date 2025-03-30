@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Calendar, User, Map, Phone, Mail, Lock, Check, AlertCircle, Loader2, Shield } from "lucide-react";
@@ -12,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logUserEvent, logMessage, LogLevel } from "@/utils/debugLogger";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { nigerianStates, getAllStates } from "@/lib/nigerianStates";
+import { useUser } from "@/contexts/UserContext";
 
 const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
@@ -33,6 +35,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const RegisterForm = () => {
   const navigate = useNavigate();
   const { signUp, isLoading: authLoading } = useSupabaseAuth();
+  const { register: registerInLocalSystem } = useUser(); // Get the register function from UserContext
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -151,12 +154,50 @@ const RegisterForm = () => {
       };
       
       console.log("Registration metadata prepared:", JSON.stringify(metadata, null, 2));
-      console.log("About to call signUp with email:", normalizedData.email);
-      console.log("Password length:", normalizedData.password.length);
       
-      console.log("IMMEDIATELY BEFORE calling signUp function");
-      const success = await signUp(normalizedData.email, normalizedData.password, metadata);
-      console.log("IMMEDIATELY AFTER signUp function. Result:", success);
+      let success = false;
+      
+      if (data.role === "rating_officer") {
+        // For Rating Officers, try registering in local system first
+        try {
+          console.log("Registering Rating Officer in local system");
+          success = await registerInLocalSystem({
+            fullName: normalizedData.fullName,
+            email: normalizedData.email,
+            phoneNumber: normalizedData.phoneNumber,
+            state: normalizedData.state,
+            role: "rating_officer" as const,
+            status: "approved" as const,
+            password: normalizedData.password
+          });
+          
+          console.log("Local system registration result:", success);
+          
+          if (success) {
+            // If local registration succeeds, try Supabase as well but don't make overall success dependent on it
+            try {
+              console.log("Attempting backup registration in Supabase for Rating Officer");
+              await signUp(normalizedData.email, normalizedData.password, metadata);
+              console.log("Supabase backup registration complete");
+            } catch (supabaseError) {
+              console.error("Supabase backup registration failed, but local registration succeeded:", supabaseError);
+              // Log but ignore Supabase errors for Rating Officers
+            }
+          }
+        } catch (localError) {
+          console.error("Local system registration error:", localError);
+          throw localError;
+        }
+      } else {
+        // For Tournament Organizers, continue with Supabase registration
+        console.log("Registering Tournament Organizer in Supabase");
+        console.log("About to call signUp with email:", normalizedData.email);
+        console.log("Password length:", normalizedData.password.length);
+        
+        console.log("IMMEDIATELY BEFORE calling signUp function");
+        success = await signUp(normalizedData.email, normalizedData.password, metadata);
+        console.log("IMMEDIATELY AFTER signUp function. Result:", success);
+      }
       
       if (success) {
         console.log("Registration successful");
