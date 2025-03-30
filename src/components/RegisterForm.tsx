@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Calendar, User, Map, Phone, Mail, Lock, Check, AlertCircle, Loader2, Shield } from "lucide-react";
@@ -76,10 +75,13 @@ const RegisterForm = () => {
   }, [accessCode]);
   
   const onSubmit = async (data: RegisterFormData) => {
-    console.log("Submit function called with data:", data);
+    console.log("==== REGISTRATION FORM SUBMISSION DEBUG ====");
+    console.log("Submit function called with data:", JSON.stringify(data, null, 2));
     console.log("Current state - isSubmitting:", isSubmitting, "authLoading:", authLoading);
     console.log("Selected role:", data.role);
     console.log("Access code:", accessCode, "isAccessCodeValid:", isAccessCodeValid);
+    console.log("Password length:", data.password.length);
+    console.log("Confirm password matching:", data.password === data.confirmPassword);
     
     if (isSubmitting || authLoading) {
       console.log("Submission already in progress, returning early");
@@ -104,6 +106,16 @@ const RegisterForm = () => {
       if (data.role === "rating_officer") {
         console.log("Verifying Rating Officer access code");
         console.log("Input code:", accessCode, "Expected code:", RATING_OFFICER_ACCESS_CODE);
+        console.log("isAccessCodeValid state:", isAccessCodeValid);
+        
+        console.log("Access code equality check:", accessCode === RATING_OFFICER_ACCESS_CODE);
+        console.log("Access code types - entered:", typeof accessCode, "expected:", typeof RATING_OFFICER_ACCESS_CODE);
+        console.log("Access code trimmed check:", accessCode.trim() === RATING_OFFICER_ACCESS_CODE.trim());
+        console.log("Access code length - entered:", accessCode.length, "expected:", RATING_OFFICER_ACCESS_CODE.length);
+        
+        console.log("Character codes - entered:", [...accessCode].map(c => c.charCodeAt(0)));
+        console.log("Character codes - expected:", [...RATING_OFFICER_ACCESS_CODE].map(c => c.charCodeAt(0)));
+        
         if (accessCode !== RATING_OFFICER_ACCESS_CODE) {
           console.error("Access code validation failed. Input:", accessCode, "Expected:", RATING_OFFICER_ACCESS_CODE);
           logUserEvent("Invalid rating officer access code", undefined, { email: data.email });
@@ -138,10 +150,13 @@ const RegisterForm = () => {
         status: normalizedData.role === 'rating_officer' ? 'approved' : 'pending'
       };
       
-      console.log("Calling signUp with metadata:", metadata);
-      console.log("Before Supabase signUp call");
+      console.log("Registration metadata prepared:", JSON.stringify(metadata, null, 2));
+      console.log("About to call signUp with email:", normalizedData.email);
+      console.log("Password length:", normalizedData.password.length);
+      
+      console.log("IMMEDIATELY BEFORE calling signUp function");
       const success = await signUp(normalizedData.email, normalizedData.password, metadata);
-      console.log("After Supabase signUp call. Result:", success);
+      console.log("IMMEDIATELY AFTER signUp function. Result:", success);
       
       if (success) {
         console.log("Registration successful");
@@ -183,7 +198,6 @@ const RegisterForm = () => {
         });
       }
     } catch (error: any) {
-      // Add detailed console logging of the error
       console.error("DETAILED REGISTRATION ERROR:", error);
       console.error("Error object type:", typeof error);
       console.error("Error properties:", Object.keys(error));
@@ -191,12 +205,10 @@ const RegisterForm = () => {
       console.error("Error name:", error.name);
       console.error("Error stack:", error.stack);
       
-      // If error is an object with a code and message property (Supabase format)
       if (error.code) {
         console.error("Supabase Error Code:", error.code);
       }
       
-      // If error is an object with a response property (HTTP error)
       if (error.response) {
         console.error("API Response Error:", error.response);
       }
@@ -207,7 +219,6 @@ const RegisterForm = () => {
         errorName: error.name
       });
       
-      // Show a more descriptive error message if available
       const errorMsg = error.message || "Registration failed. Please try again.";
       setErrorMessage(errorMsg);
       
@@ -219,8 +230,26 @@ const RegisterForm = () => {
     } finally {
       console.log("Registration attempt completed");
       setIsSubmitting(false);
+      console.log("==== END OF FORM SUBMISSION DEBUG ====");
     }
   };
+  
+  const debugAccessCodeValidation = () => {
+    console.log({
+      accessCode,
+      RATING_OFFICER_ACCESS_CODE,
+      isEqual: accessCode === RATING_OFFICER_ACCESS_CODE,
+      isAccessCodeValid
+    });
+  };
+
+  const isSubmitDisabled = isSubmitting || authLoading || (showAccessCode && !isAccessCodeValid);
+  console.log("Submit button disabled state:", isSubmitDisabled, {
+    isSubmitting,
+    authLoading,
+    showAccessCode,
+    isAccessCodeValid
+  });
   
   return (
     <div className="p-6 sm:p-8">
@@ -451,6 +480,7 @@ const RegisterForm = () => {
                   type="password"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
+                  onBlur={() => debugAccessCodeValidation()}
                 />
               </div>
               <div className="flex justify-between items-center mt-1">
@@ -469,7 +499,7 @@ const RegisterForm = () => {
           <Button
             type="submit"
             className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-            disabled={isSubmitting || authLoading || (showAccessCode && !isAccessCodeValid)}
+            disabled={isSubmitDisabled}
           >
             {isSubmitting || authLoading ? (
               <>

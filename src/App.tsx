@@ -7,6 +7,7 @@ import { UserProvider } from './contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { SupabaseAuthProvider, useSupabaseAuth } from './contexts/SupabaseAuthContext';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { setupNetworkDebugger } from '@/utils/networkDebugger';
 
 // Import pages
 import Index from './pages/Index';
@@ -106,6 +107,14 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       logMessage(LogLevel.INFO, 'App', "Initializing application");
+      
+      // Setup network debugger for Supabase requests
+      try {
+        setupNetworkDebugger();
+        console.log("Network debugger initialized for Supabase requests");
+      } catch (e) {
+        console.error("Could not initialize network debugger:", e);
+      }
       
       try {
         // Check browser storage availability to ensure data persistence

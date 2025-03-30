@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -132,10 +131,11 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const signUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
     try {
+      console.log("==== SIGNUP DEBUGGING ====");
       console.log("SupabaseAuthContext.signUp: Starting signup process");
       console.log("Email:", email);
       console.log("Password length:", password.length);
-      console.log("Metadata:", metadata);
+      console.log("Metadata:", JSON.stringify(metadata, null, 2));
       
       logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign up for: ${email}, role: ${metadata.role}`);
       console.log('Attempting to sign up with metadata:', metadata);
@@ -152,10 +152,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       });
       
-      // Log Supabase configuration to check if it's properly set up
       console.log("Supabase configuration check - Is supabase client defined:", !!supabase);
       console.log("Supabase auth module exists:", !!supabase.auth);
       
+      console.log("RIGHT BEFORE CALLING supabase.auth.signUp");
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password: password.trim(),
@@ -167,7 +167,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       });
       
-      console.log("Supabase.auth.signUp response received");
+      console.log("IMMEDIATELY AFTER calling supabase.auth.signUp");
+      console.log("Response received from supabase.auth.signUp");
       
       if (error) {
         console.error("SUPABASE SIGNUP ERROR DETAILS:", error);
@@ -182,7 +183,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       console.log("No error from supabase.auth.signUp");
-      console.log("Response data:", data);
+      console.log("Response data:", data ? JSON.stringify(data, null, 2) : "No data");
       
       if (!data.user) {
         const noUserError = new Error('Registration failed, no user created.');
@@ -210,8 +211,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         await supabase.auth.signOut();
       }
       
+      console.log("==== END OF SIGNUP PROCESS ====");
       return true;
     } catch (error: any) {
+      console.error("==== SIGNUP ERROR CAUGHT ====");
       console.error("SIGNUP FUNCTION CAUGHT ERROR:", error);
       console.error("Error type:", typeof error);
       if (error.message) console.error("Error message:", error.message);
