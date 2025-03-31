@@ -36,7 +36,6 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
         variant: "destructive",
       });
     } else if (!isLoading && user) {
-      // Check if user has the required role
       const hasRequiredRole = 
         (role === 'rating_officer' && isRatingOfficer) || 
         (role === 'tournament_organizer' && isTournamentOrganizer);
@@ -49,7 +48,6 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
         });
       }
       
-      // If tournament organizer, check if approved
       if (role === 'tournament_organizer' && isTournamentOrganizer) {
         const isApproved = user.user_metadata?.status === 'approved';
         
@@ -65,7 +63,6 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
   }, [isLoading, user, role, toast, isRatingOfficer, isTournamentOrganizer]);
   
   if (isLoading) {
-    // Show loading state
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-nigeria-green"></div>
@@ -77,7 +74,6 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
     return <Navigate to="/login" replace />;
   }
   
-  // Check if user has the required role
   const hasRequiredRole = 
     (role === 'rating_officer' && isRatingOfficer) || 
     (role === 'tournament_organizer' && isTournamentOrganizer);
@@ -86,7 +82,6 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
     return <Navigate to="/login" replace />;
   }
   
-  // If tournament organizer, check if approved
   if (role === 'tournament_organizer' && isTournamentOrganizer) {
     const isApproved = user.user_metadata?.status === 'approved';
     
@@ -103,12 +98,10 @@ function App() {
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   
-  // Initialize app on load
   useEffect(() => {
     const initializeApp = async () => {
       logMessage(LogLevel.INFO, 'App', "Initializing application");
       
-      // Setup network debugger for Supabase requests
       try {
         setupNetworkDebugger();
         console.log("Network debugger initialized for Supabase requests");
@@ -117,7 +110,6 @@ function App() {
       }
       
       try {
-        // Check browser storage availability to ensure data persistence
         try {
           localStorage.setItem('storage_test', 'test');
           localStorage.removeItem('storage_test');
@@ -131,14 +123,12 @@ function App() {
           });
         }
         
-        // Check for mobile devices to apply optimizations
         const isMobile = window.innerWidth < 768;
         if (isMobile) {
           document.body.classList.add('mobile-optimized', 'safari-fix');
           logMessage(LogLevel.INFO, 'App', "Mobile device detected, optimizations applied");
         }
         
-        // Listen for online/offline events
         window.addEventListener('online', () => {
           logMessage(LogLevel.INFO, 'App', "Device came online");
         });
@@ -156,7 +146,7 @@ function App() {
           description: "There was a problem starting the application. Please refresh the page.",
           variant: "destructive",
         });
-        setIsInitialized(true); // Still set to true so the app can render
+        setIsInitialized(true);
       }
     };
     
@@ -173,8 +163,8 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <SupabaseAuthProvider>
-        <UserProvider>
+      <UserProvider>
+        <SupabaseAuthProvider>
           <Router>
             <div className="app">
               <Routes>
@@ -223,8 +213,8 @@ function App() {
             </div>
             <Toaster />
           </Router>
-        </UserProvider>
-      </SupabaseAuthProvider>
+        </SupabaseAuthProvider>
+      </UserProvider>
     </ErrorBoundary>
   );
 }
