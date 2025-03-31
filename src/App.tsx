@@ -1,10 +1,12 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
-import { SupabaseAuthProvider, useSupabaseAuth } from './contexts/SupabaseAuthContext';
+import { SupabaseAuthProvider } from './services/auth/SupabaseAuthProvider';
+import { useSupabaseAuth } from './services/auth/useSupabaseAuth';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { setupNetworkDebugger } from '@/utils/networkDebugger';
 import ErrorBoundary from '@/components/ErrorBoundary';
