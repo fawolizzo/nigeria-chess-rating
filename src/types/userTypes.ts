@@ -98,3 +98,28 @@ export const generateAccessCode = (): string => {
   }
   return code;
 };
+
+// Add this function since it's imported in storageSync.ts
+export const sendSyncMessage = (channel: 'sync' | 'auth', type: SyncEventType, data?: any): void => {
+  try {
+    // Ensure BroadcastChannel exists
+    if (typeof BroadcastChannel === 'undefined') {
+      console.warn("[UserTypes] BroadcastChannel not supported in this browser");
+      return;
+    }
+    
+    const channelName = channel === 'sync' ? 'ncr_sync_channel' : 'ncr_auth_channel';
+    const broadcastChannel = new BroadcastChannel(channelName);
+    
+    broadcastChannel.postMessage({
+      type,
+      data,
+      timestamp: Date.now(),
+      deviceId: localStorage.getItem('ncr_device_id') || 'unknown'
+    });
+    
+    broadcastChannel.close();
+  } catch (error) {
+    console.error(`[UserTypes] Error sending ${channel} message (${type}):`, error);
+  }
+};

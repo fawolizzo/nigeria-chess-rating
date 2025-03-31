@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { sendSyncMessage, SyncEventType } from '@/types/userTypes';
+import { SyncEventType } from '@/types/userTypes';
 
 /**
  * Resets the entire system data across all devices
@@ -43,5 +43,37 @@ export const performSystemReset = async () => {
     console.error("[StorageSync] Error during system reset:", error);
     window.ncrIsResetting = false;
     return false;
+  }
+};
+
+/**
+ * Send a sync event to other devices
+ * @param type The type of event to send
+ * @param key Optional storage key that was updated
+ * @param data Optional data to send with the event
+ */
+export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): void => {
+  try {
+    // Ensure BroadcastChannel exists
+    if (typeof BroadcastChannel === 'undefined') {
+      console.warn("[StorageSync] BroadcastChannel not supported in this browser");
+      return;
+    }
+    
+    const syncChannel = new BroadcastChannel('ncr_sync_channel');
+    
+    syncChannel.postMessage({
+      type,
+      key,
+      data,
+      timestamp: Date.now(),
+      deviceId: localStorage.getItem('ncr_device_id') || 'unknown'
+    });
+    
+    syncChannel.close();
+    
+    console.log(`[StorageSync] Sent ${type} event${key ? ` for key ${key}` : ''}`);
+  } catch (error) {
+    console.error(`[StorageSync] Error sending sync event (${type}):`, error);
   }
 };
