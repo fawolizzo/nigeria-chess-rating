@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -8,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SupabaseAuthProvider, useSupabaseAuth } from './contexts/SupabaseAuthContext';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { setupNetworkDebugger } from '@/utils/networkDebugger';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Import pages
 import Index from './pages/Index';
@@ -98,7 +98,7 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
   return children;
 };
 
-// Enhanced App component with improved initialization
+// Enhanced App component with improved initialization and error handling
 function App() {
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
@@ -172,58 +172,60 @@ function App() {
   }
 
   return (
-    <SupabaseAuthProvider>
-      <UserProvider>
-        <Router>
-          <div className="app">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route 
-                path="/organizer/*" 
-                element={
-                  <RequireAuth role="tournament_organizer">
-                    <OrganizerDashboard />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/officer/*" 
-                element={
-                  <RequireAuth role="rating_officer">
-                    <OfficerDashboard />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/manage/tournament/:id" 
-                element={
-                  <RequireAuth role="tournament_organizer">
-                    <TournamentManagement />
-                  </RequireAuth>
-                } 
-              />
-              <Route 
-                path="/tournament/:id/manage" 
-                element={
-                  <RequireAuth role="tournament_organizer">
-                    <TournamentManagement />
-                  </RequireAuth>
-                } 
-              />
-              <Route path="/tournaments" element={<Tournaments />} />
-              <Route path="/tournament/:id" element={<TournamentDetails />} />
-              <Route path="/players" element={<Players />} />
-              <Route path="/player/:id" element={<PlayerProfile />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-          <Toaster />
-        </Router>
-      </UserProvider>
-    </SupabaseAuthProvider>
+    <ErrorBoundary>
+      <SupabaseAuthProvider>
+        <UserProvider>
+          <Router>
+            <div className="app">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route 
+                  path="/organizer/*" 
+                  element={
+                    <RequireAuth role="tournament_organizer">
+                      <OrganizerDashboard />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/officer/*" 
+                  element={
+                    <RequireAuth role="rating_officer">
+                      <OfficerDashboard />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/manage/tournament/:id" 
+                  element={
+                    <RequireAuth role="tournament_organizer">
+                      <TournamentManagement />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/tournament/:id/manage" 
+                  element={
+                    <RequireAuth role="tournament_organizer">
+                      <TournamentManagement />
+                    </RequireAuth>
+                  } 
+                />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/tournament/:id" element={<TournamentDetails />} />
+                <Route path="/players" element={<Players />} />
+                <Route path="/player/:id" element={<PlayerProfile />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+            <Toaster />
+          </Router>
+        </UserProvider>
+      </SupabaseAuthProvider>
+    </ErrorBoundary>
   );
 }
 
