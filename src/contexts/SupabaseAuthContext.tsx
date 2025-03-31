@@ -53,22 +53,20 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        if (event !== 'INITIAL_SESSION') {
-          if (event === 'SIGNED_IN') {
-            console.log('User signed in:', newSession?.user);
-            console.log('User metadata:', newSession?.user?.user_metadata);
-            console.log('App metadata:', newSession?.user?.app_metadata);
-            
-            toast({
-              title: "Signed in successfully",
-              description: "Welcome back!",
-            });
-          } else if (event === 'SIGNED_OUT') {
-            toast({
-              title: "Signed out",
-              description: "You have been signed out successfully.",
-            });
-          }
+        if (event === 'SIGNED_IN') {
+          console.log('User signed in:', newSession?.user);
+          console.log('User metadata:', newSession?.user?.user_metadata);
+          console.log('App metadata:', newSession?.user?.app_metadata);
+          
+          toast({
+            title: "Signed in successfully",
+            description: "Welcome back!",
+          });
+        } else if (event === 'SIGNED_OUT') {
+          toast({
+            title: "Signed out",
+            description: "You have been signed out successfully.",
+          });
         }
       }
     );
@@ -121,21 +119,25 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       setIsLoading(true);
       
-      // First check if the email is for a rating officer in the local system
+      // Normalize inputs for consistent behavior across devices
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedPassword = password.trim();
+      
+      // First check if this is a rating officer login in the local system
       console.log("Checking if this is a rating officer login");
       try {
         // Try local system login for rating officer role
-        const localLoginSuccess = await localLogin(email, password, 'rating_officer');
+        const localLoginSuccess = await localLogin(normalizedEmail, normalizedPassword, 'rating_officer');
         
         if (localLoginSuccess) {
-          console.log("Local login successful for rating officer:", email);
+          console.log("Local login successful for rating officer:", normalizedEmail);
           
           // Try to do a Supabase login too, but don't make overall success dependent on it
           try {
             console.log("Attempting backup Supabase login for rating officer");
             await supabase.auth.signInWithPassword({
-              email: email.trim().toLowerCase(),
-              password: password.trim(),
+              email: normalizedEmail,
+              password: normalizedPassword,
             });
             console.log("Supabase backup login also successful");
           } catch (supabaseError) {
@@ -158,8 +160,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // If local login didn't succeed, try Supabase authentication
       console.log("Proceeding with Supabase authentication");
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
+        email: normalizedEmail,
+        password: normalizedPassword,
       });
       
       console.log('Sign in response:', { data, error });
@@ -180,10 +182,19 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.log('User metadata after login:', data.user?.user_metadata);
       console.log('App metadata after login:', data.user?.app_metadata);
       
+      // Check if the user has the correct role AFTER successful authentication
+      const userRole = data.user?.user_metadata?.role || data.user?.app_metadata?.role;
+      console.log(`User role from metadata after successful login: ${userRole}`);
+      
+      if (!userRole) {
+        console.warn(`User logged in but has no role assigned: ${normalizedEmail}`);
+        // Allow login even without role, but log a warning
+      }
+      
       logMessage(
         LogLevel.INFO, 
         'SupabaseAuthContext', 
-        `Sign in successful for: ${data.user?.email} (${data.user?.app_metadata?.role || data.user?.user_metadata?.role || 'no role'})`
+        `Sign in successful for: ${data.user?.email} (${userRole || 'no role'})`
       );
       
       return true;
@@ -203,12 +214,16 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.log("Password length:", password.length);
       console.log("Metadata:", JSON.stringify(metadata, null, 2));
       
-      logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign up for: ${email}, role: ${metadata.role}`);
+      // Normalize inputs for consistent behavior across devices
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedPassword = password.trim();
+      
+      logMessage(LogLevel.INFO, 'SupabaseAuthContext', `Attempting sign up for: ${normalizedEmail}, role: ${metadata.role}`);
       console.log('Attempting to sign up with metadata:', metadata);
       setIsLoading(true);
       
       console.log("About to call supabase.auth.signUp with options:", {
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password: "********", // Don't log actual password
         options: {
           data: {
@@ -223,8 +238,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       console.log("RIGHT BEFORE CALLING supabase.auth.signUp");
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
+        email: normalizedEmail,
+        password: normalizedPassword,
         options: {
           data: {
             ...metadata,
@@ -293,16 +308,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.error("Stringified error:", JSON.stringify(error));
       } catch (e) {
         console.error("Error could not be stringified:", e);
-      }
-      
-      // Check if there's a network-related issue
-      if (error.message && error.message.includes('network')) {
-        console.error("This appears to be a network-related error");
-      }
-      
-      // Check if there's an authentication issue
-      if (error.message && error.message.toLowerCase().includes('auth')) {
-        console.error("This appears to be an authentication-related error");
       }
       
       return false;

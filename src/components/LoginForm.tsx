@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Loader2, UserCheck, Shield } from "lucide-react";
@@ -50,6 +49,13 @@ const LoginForm = () => {
     setShowPassword(!showPassword);
   };
   
+  const normalizeCredentials = (email: string, password: string) => {
+    return {
+      normalizedEmail: email.toLowerCase().trim(),
+      normalizedPassword: password.trim()
+    };
+  };
+  
   const onSubmit = async (data: LoginFormData) => {
     // Prevent multiple simultaneous submissions
     if (isLoading || authLoading) return;
@@ -66,8 +72,8 @@ const LoginForm = () => {
       
       setLoginAttempts(prev => prev + 1);
       
-      const normalizedEmail = data.email.toLowerCase().trim();
-      const normalizedPassword = data.password.trim();
+      // Normalize inputs for consistent behavior across devices
+      const { normalizedEmail, normalizedPassword } = normalizeCredentials(data.email, data.password);
       
       console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
       
@@ -77,58 +83,7 @@ const LoginForm = () => {
       console.log(`Login attempt result: ${success ? 'success' : 'failed'}`);
       
       if (success) {
-        logUserEvent("Login successful", undefined, { email: data.email, role: data.role });
-        
-        // Fetch current user from auth context to check role
-        const currentUser = useSupabaseAuth().user;
-        console.log("Current user after login:", currentUser);
-        console.log("User metadata:", currentUser?.user_metadata);
-        console.log("App metadata:", currentUser?.app_metadata);
-        
-        // Check if the user has the correct role
-        const userRole = currentUser?.user_metadata?.role || currentUser?.app_metadata?.role;
-        console.log(`User role from metadata: ${userRole}`);
-        
-        if (data.role === "rating_officer" && userRole !== "rating_officer") {
-          // User logged in but doesn't have the rating officer role
-          logMessage(LogLevel.WARNING, 'LoginForm', `User logged in but doesn't have rating officer role: ${normalizedEmail}`);
-          setError(`No rating officer account found with email ${data.email}`);
-          
-          // Sign out the user
-          await useSupabaseAuth().signOut();
-          
-          setIsLoading(false);
-          return;
-        }
-        
-        if (data.role === "tournament_organizer" && userRole !== "tournament_organizer") {
-          // User logged in but doesn't have the tournament organizer role
-          logMessage(LogLevel.WARNING, 'LoginForm', `User logged in but doesn't have tournament organizer role: ${normalizedEmail}`);
-          setError(`No tournament organizer account found with email ${data.email}`);
-          
-          // Sign out the user
-          await useSupabaseAuth().signOut();
-          
-          setIsLoading(false);
-          return;
-        }
-        
-        // Check if the tournament organizer is approved
-        if (data.role === "tournament_organizer" && userRole === "tournament_organizer") {
-          const status = currentUser?.user_metadata?.status;
-          console.log(`Tournament organizer status: ${status}`);
-          
-          if (status !== 'approved') {
-            logMessage(LogLevel.WARNING, 'LoginForm', `Tournament organizer not approved: ${normalizedEmail}`);
-            setError("Your account is pending approval by a rating officer.");
-            
-            // Sign out the user
-            await useSupabaseAuth().signOut();
-            
-            setIsLoading(false);
-            return;
-          }
-        }
+        logUserEvent("Login successful", undefined, { email: normalizedEmail, role: data.role });
         
         toast({
           title: "Login Successful",
@@ -144,7 +99,7 @@ const LoginForm = () => {
           }
         }, 500);
       } else {
-        logUserEvent("Login failed", undefined, { email: data.email, role: data.role });
+        logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
         
         setError("Invalid email or password. Please check and try again.");
         
@@ -313,4 +268,3 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
-

@@ -21,7 +21,7 @@ const Login = () => {
       
       toast({
         title: "System Reset",
-        description: "Resetting system data...",
+        description: "Signing out and clearing local data...",
       });
       
       // Sign out if signed in
@@ -37,7 +37,7 @@ const Login = () => {
       
       toast({
         title: "Reset Complete",
-        description: "All local data has been cleared successfully. The page will reload now.",
+        description: "You've been signed out and local data has been cleared. The page will reload now.",
       });
       
       // Reload the page after a short delay
@@ -83,7 +83,7 @@ const Login = () => {
               <div className="flex items-center justify-center mb-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Having login issues? Try resetting the system data
+                  Having login issues? Try clearing local data
                 </p>
               </div>
               
@@ -98,26 +98,22 @@ const Login = () => {
                   {isResetting ? (
                     <>
                       <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      Resetting...
+                      Clearing...
                     </>
                   ) : (
                     <>
                       <RefreshCw className="h-3 w-3 mr-1" />
-                      Reset All Data
+                      Clear Local Data
                     </>
                   )}
                 </Button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                This will sign you out and clear local data. Supabase accounts will not be deleted.
+              </p>
             </div>
           </div>
         </div>
-        
-        {/* Display the diagnostic component only in development mode */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 max-w-md mx-auto">
-            {/* Remove LoginSystemDiagnostic as it's not compatible with Supabase Auth */}
-          </div>
-        )}
       </div>
     </div>
   );
