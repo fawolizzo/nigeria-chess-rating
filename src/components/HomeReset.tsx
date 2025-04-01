@@ -12,6 +12,8 @@ import {
 import { performSystemReset } from "@/utils/storageSync";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +29,7 @@ import {
 const HomeReset: React.FC = () => {
   const { toast } = useToast();
   const { clearAllData: clearUserData } = useUser();
+  const { user } = useSupabaseAuth();
   const [isResetting, setIsResetting] = useState(false);
   const [resetStep, setResetStep] = useState<'idle' | 'confirming' | 'processing' | 'success' | 'error'>('idle');
 
@@ -35,6 +38,7 @@ const HomeReset: React.FC = () => {
       setIsResetting(true);
       setResetStep('processing');
       console.log("[HomeReset] Starting complete system reset...");
+      logMessage(LogLevel.WARNING, 'HomeReset', "User initiated system reset");
       
       toast({
         title: "System Reset Started",
@@ -42,15 +46,50 @@ const HomeReset: React.FC = () => {
         duration: 5000,
       });
       
-      // First, clear local data
-      await clearUserData();
+      // Store the current user's email if available (for potential deletion)
+      const currentUserEmail = user?.email;
       
-      // Sign out from Supabase
+      // Step 1: Sign out from Supabase
       await supabase.auth.signOut();
       console.log("[HomeReset] Signed out from Supabase Auth");
       
-      // Then trigger global reset
+      // Step 2: Clear local data
+      await clearUserData();
+      console.log("[HomeReset] Local data cleared");
+      
+      // Step 3: Trigger global reset
       await performSystemReset();
+      console.log("[HomeReset] Global reset triggered");
+      
+      // Step 4: If we have the current user's email and it's a test account, attempt to delete it
+      if (currentUserEmail && 
+         (currentUserEmail.includes('test') || 
+          currentUserEmail.includes('demo') || 
+          confirm(`Delete the Supabase auth user "${currentUserEmail}" to allow reuse for testing?`))) {
+        
+        console.log(`[HomeReset] Attempting to delete Supabase auth user: ${currentUserEmail}`);
+        
+        try {
+          // Call the edge function to delete the user
+          const { data, error } = await supabase.functions.invoke('delete-auth-user', {
+            body: { email: currentUserEmail }
+          });
+          
+          if (error) {
+            console.error("[HomeReset] Error deleting auth user:", error);
+            logMessage(LogLevel.ERROR, 'HomeReset', "Error deleting auth user", error);
+          } else {
+            console.log("[HomeReset] Auth user deletion response:", data);
+            if (data.success) {
+              console.log(`[HomeReset] Auth user with email ${currentUserEmail} deleted successfully`);
+              logMessage(LogLevel.INFO, 'HomeReset', `Auth user deleted: ${currentUserEmail}`);
+            }
+          }
+        } catch (fnError) {
+          console.error("[HomeReset] Edge function error:", fnError);
+          logMessage(LogLevel.ERROR, 'HomeReset', "Edge function error when deleting user", fnError);
+        }
+      }
       
       // Set success state
       setResetStep('success');
@@ -64,10 +103,11 @@ const HomeReset: React.FC = () => {
       
       // Delay reload to allow toast to be seen
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = "/";
       }, 2000);
     } catch (error) {
       console.error("[HomeReset] Error during system reset:", error);
+      logMessage(LogLevel.ERROR, 'HomeReset', "Error during system reset", error);
       
       setResetStep('error');
       
@@ -130,9 +170,14 @@ const HomeReset: React.FC = () => {
                 <div className="flex items-start">
                   <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold">Note about Supabase accounts:</p>
+                    <p className="font-semibold">
+                      {user?.email ? `Current user: ${user.email}` : 'No user is currently logged in'}
+                    </p>
                     <p className="mt-1">
-                      This will sign you out and clear local data, but Supabase user accounts will remain in the system. Test accounts will need to be deleted from the Supabase dashboard.
+                      {user?.email ? 
+                        "For test accounts, this will attempt to delete the Supabase auth user to allow re-registration with the same email." : 
+                        "Note: No user is currently logged in to delete from Supabase."
+                      }
                     </p>
                   </div>
                 </div>
@@ -152,7 +197,7 @@ const HomeReset: React.FC = () => {
       </AlertDialog>
       
       <p className="text-xs text-gray-500 mt-2">
-        This will sign you out and clear local data. Supabase user accounts will remain in the system.
+        This will sign you out and clear local data. {user?.email ? "For test accounts, this will also attempt to delete the Supabase auth user." : ""}
       </p>
     </div>
   );

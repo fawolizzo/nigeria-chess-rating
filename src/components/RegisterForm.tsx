@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Calendar, User, Map, Phone, Mail, Lock, Check, AlertCircle, Loader2, Shield } from "lucide-react";
@@ -35,7 +34,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const RegisterForm = () => {
   const navigate = useNavigate();
   const { signUp, isLoading: authLoading } = useSupabaseAuth();
-  const { register: registerInLocalSystem } = useUser(); // Get the register function from UserContext
+  const { register: registerInLocalSystem } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -158,7 +157,6 @@ const RegisterForm = () => {
       let success = false;
       
       if (data.role === "rating_officer") {
-        // For Rating Officers, try registering in local system first
         try {
           console.log("Registering Rating Officer in local system");
           success = await registerInLocalSystem({
@@ -174,7 +172,6 @@ const RegisterForm = () => {
           console.log("Local system registration result:", success);
           
           if (success) {
-            // If local registration succeeds, try Supabase as well but don't make overall success dependent on it
             try {
               console.log("Attempting backup registration in Supabase for Rating Officer");
               await signUp(normalizedData.email, normalizedData.password, metadata);
@@ -189,14 +186,45 @@ const RegisterForm = () => {
           throw localError;
         }
       } else {
-        // For Tournament Organizers, continue with Supabase registration
         console.log("Registering Tournament Organizer in Supabase");
         console.log("About to call signUp with email:", normalizedData.email);
         console.log("Password length:", normalizedData.password.length);
         
-        console.log("IMMEDIATELY BEFORE calling signUp function");
-        success = await signUp(normalizedData.email, normalizedData.password, metadata);
-        console.log("IMMEDIATELY AFTER signUp function. Result:", success);
+        try {
+          console.log("IMMEDIATELY BEFORE calling signUp function");
+          
+          const { data: supabaseData, error: supabaseError } = await supabase.auth.signUp({
+            email: normalizedData.email,
+            password: normalizedData.password,
+            options: {
+              data: metadata
+            }
+          });
+          
+          console.log("IMMEDIATELY AFTER signUp function call");
+          
+          if (supabaseError) {
+            console.error("DETAILED SUPABASE ERROR:", supabaseError);
+            console.error("Error code:", supabaseError.code);
+            console.error("Error message:", supabaseError.message);
+            console.error("Status:", supabaseError.status);
+            throw supabaseError;
+          }
+          
+          console.log("Supabase signUp response data:", supabaseData);
+          
+          if (!supabaseData.user) {
+            console.error("No user returned from signUp call!");
+            throw new Error("Registration failed - no user data returned");
+          }
+          
+          success = true;
+          console.log("Supabase registration completed successfully");
+          
+        } catch (directError) {
+          console.error("DIRECT SUPABASE ERROR CAUGHT:", directError);
+          throw directError;
+        }
       }
       
       if (success) {
@@ -254,13 +282,34 @@ const RegisterForm = () => {
         console.error("API Response Error:", error.response);
       }
       
+      if (error.code === "23505") {
+        console.error("This appears to be a unique constraint violation - likely the email is already in use");
+      } else if (error.code === "P0001") {
+        console.error("This appears to be a PostgreSQL error with a custom message");
+      } else if (error.message && error.message.includes("email")) {
+        console.error("This appears to be an email-related error");
+      }
+      
       logUserEvent("Registration error", undefined, { 
         error: error.message, 
         errorCode: error.code,
         errorName: error.name
       });
       
-      const errorMsg = error.message || "Registration failed. Please try again.";
+      let errorMsg = "Registration failed. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("already") && error.message.includes("registered")) {
+          errorMsg = "This email is already registered. Please use a different email or reset your password.";
+        } else if (error.message.includes("invalid email")) {
+          errorMsg = "Please enter a valid email address.";
+        } else if (error.message.includes("password")) {
+          errorMsg = "Password issue: " + error.message;
+        } else {
+          errorMsg = error.message;
+        }
+      }
+      
       setErrorMessage(errorMsg);
       
       toast({
