@@ -17,6 +17,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const { toast } = useToast();
   const { login: localLogin } = useUser();
 
@@ -35,20 +36,24 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
-        if (event === 'SIGNED_IN') {
-          console.log('User signed in:', newSession?.user);
-          console.log('User metadata:', newSession?.user?.user_metadata);
-          console.log('App metadata:', newSession?.user?.app_metadata);
-          
-          toast({
-            title: "Signed in successfully",
-            description: "Welcome back!",
-          });
-        } else if (event === 'SIGNED_OUT') {
-          toast({
-            title: "Signed out",
-            description: "You have been signed out successfully.",
-          });
+        // Only show toast notifications for explicit sign-in/sign-out actions
+        // not when the app is just initializing or refreshing
+        if (!isInitialLoad) {
+          if (event === 'SIGNED_IN') {
+            console.log('User signed in:', newSession?.user);
+            console.log('User metadata:', newSession?.user?.user_metadata);
+            console.log('App metadata:', newSession?.user?.app_metadata);
+            
+            toast({
+              title: "Signed in successfully",
+              description: "Welcome back!",
+            });
+          } else if (event === 'SIGNED_OUT') {
+            toast({
+              title: "Signed out",
+              description: "You have been signed out successfully.",
+            });
+          }
         }
       }
     );
@@ -84,6 +89,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.error('Error initializing auth:', error);
       } finally {
         setIsLoading(false);
+        setIsInitialLoad(false);
       }
     };
     
@@ -97,7 +103,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signIn = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      return await signInWithEmailAndPassword(email, password, localLogin);
+      const success = await signInWithEmailAndPassword(email, password, localLogin);
+      // Toast will be shown via the auth state change event
+      return success;
     } catch (error) {
       toast({
         title: "Error signing in",
@@ -113,7 +121,9 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
     try {
       setIsLoading(true);
-      return await signUpWithEmailAndPassword(email, password, metadata);
+      const success = await signUpWithEmailAndPassword(email, password, metadata);
+      // No toast needed here since the user will be redirected to login
+      return success;
     } catch (error) {
       toast({
         title: "Error signing up",
@@ -130,6 +140,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       setIsLoading(true);
       await authSignOut();
+      // Toast will be shown via the auth state change event
     } catch (error) {
       toast({
         title: "Error signing out",
