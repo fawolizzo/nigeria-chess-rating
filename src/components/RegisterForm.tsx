@@ -13,6 +13,7 @@ import { logUserEvent, logMessage, LogLevel } from "@/utils/debugLogger";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { nigerianStates, getAllStates } from "@/lib/nigerianStates";
 import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
