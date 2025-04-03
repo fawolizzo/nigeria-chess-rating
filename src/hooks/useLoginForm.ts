@@ -8,10 +8,12 @@ import { logUserEvent, logMessage, LogLevel } from "@/utils/debugLogger";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { normalizeCredentials } from "@/services/auth";
+import { useUser } from "@/contexts/UserContext";
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
   const { signIn, isLoading: authLoading } = useSupabaseAuth();
+  const { login: localLogin } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -57,13 +59,36 @@ export const useLoginForm = () => {
       
       console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
       
+      let success = false;
+      
+      // For rating officers, try the local login first
       if (data.role === 'rating_officer') {
-        console.log("This is a rating officer login attempt");
+        console.log("Attempting rating officer login via local system");
+        
+        try {
+          // Try local login with rating officer role
+          success = await localLogin(normalizedEmail, normalizedPassword, 'rating_officer');
+          console.log("Rating officer local login result:", success ? "success" : "failed");
+        } catch (localLoginError) {
+          console.error("Local login error for rating officer:", localLoginError);
+        }
+      } else {
+        // For tournament organizers, try Supabase first, then fallback to local
+        try {
+          // Try Supabase auth
+          success = await signIn(normalizedEmail, normalizedPassword);
+          console.log("Supabase login result:", success ? "success" : "failed");
+          
+          // If Supabase fails, try local login as fallback
+          if (!success) {
+            console.log("Supabase login failed, trying local login as fallback");
+            success = await localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer');
+            console.log("Local login result:", success ? "success" : "failed");
+          }
+        } catch (loginError) {
+          console.error("Login error:", loginError);
+        }
       }
-      
-      const success = await signIn(normalizedEmail, normalizedPassword);
-      
-      console.log(`Login attempt result: ${success ? 'success' : 'failed'}`);
       
       if (success) {
         logUserEvent("Login successful", undefined, { email: normalizedEmail, role: data.role });

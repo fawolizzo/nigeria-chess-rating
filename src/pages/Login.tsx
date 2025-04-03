@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import LoginForm from "@/components/LoginForm";
+import LoginDebug from "@/components/LoginDebug";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
@@ -111,6 +112,8 @@ const Login = () => {
               <p className="text-xs text-gray-500 mt-2">
                 This will sign you out and clear local data. Supabase accounts will not be deleted.
               </p>
+              
+              {process.env.NODE_ENV !== 'production' && <LoginDebug />}
             </div>
           </div>
         </div>

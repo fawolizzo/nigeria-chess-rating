@@ -63,12 +63,12 @@ const LoginFormInputs = ({
         name="password"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{selectedRole === "rating_officer" ? "Access Code" : "Password"}</FormLabel>
+            <FormLabel>{selectedRole === "rating_officer" ? "Access Code or Password" : "Password"}</FormLabel>
             <FormControl>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input 
-                  placeholder={selectedRole === "rating_officer" ? "Enter your access code" : "Enter your password"}
+                  placeholder={selectedRole === "rating_officer" ? "Enter your access code or password" : "Enter your password"}
                   className="pl-10 pr-10" 
                   type={showPassword ? "text" : "password"}
                   {...field}

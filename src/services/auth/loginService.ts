@@ -88,8 +88,6 @@ export const signInWithEmailAndPassword = async (
     }
     
     console.log('Supabase sign in successful for:', data.user?.email);
-    console.log('User metadata after login:', data.user?.user_metadata);
-    console.log('App metadata after login:', data.user?.app_metadata);
     
     // Check if the user has the correct role AFTER successful authentication
     const userRole = data.user?.user_metadata?.role || data.user?.app_metadata?.role;
