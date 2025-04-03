@@ -9,9 +9,9 @@ import { SupabaseAuthContext } from './SupabaseAuthContext';
 import { 
   signInWithEmailAndPassword, 
   signUpWithEmailAndPassword, 
-  signOut as authSignOut,
+  signOut,
   getUserRoleInfo
-} from './authService';
+} from './index';
 
 export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -139,7 +139,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signOutUser = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      await authSignOut();
+      await signOut();
       // Toast will be shown via the auth state change event
     } catch (error) {
       toast({

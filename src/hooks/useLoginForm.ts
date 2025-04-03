@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -7,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logUserEvent, logMessage, LogLevel } from "@/utils/debugLogger";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
+import { normalizeCredentials } from "@/services/auth";
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
@@ -37,15 +37,7 @@ export const useLoginForm = () => {
     setShowPassword(!showPassword);
   };
 
-  const normalizeCredentials = (email: string, password: string) => {
-    return {
-      normalizedEmail: email.toLowerCase().trim(),
-      normalizedPassword: password.trim()
-    };
-  };
-
   const onSubmit = async (data: LoginFormData) => {
-    // Prevent multiple simultaneous submissions
     if (isLoading || authLoading) return;
     
     setIsLoading(true);
@@ -60,17 +52,14 @@ export const useLoginForm = () => {
       
       setLoginAttempts(prev => prev + 1);
       
-      // Normalize inputs for consistent behavior across devices
       const { normalizedEmail, normalizedPassword } = normalizeCredentials(data.email, data.password);
       
       console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
       
-      // Additional debug information 
       if (data.role === 'rating_officer') {
         console.log("This is a rating officer login attempt");
       }
       
-      // Attempt to sign in with Supabase Auth
       const success = await signIn(normalizedEmail, normalizedPassword);
       
       console.log(`Login attempt result: ${success ? 'success' : 'failed'}`);
@@ -83,7 +72,6 @@ export const useLoginForm = () => {
           description: `Welcome back! You are now logged in as a ${data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer'}.`,
         });
         
-        // Navigate to the appropriate dashboard with a small delay to allow the toast to be seen
         setTimeout(() => {
           if (data.role === "tournament_organizer") {
             navigate("/organizer/dashboard");
