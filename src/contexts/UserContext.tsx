@@ -86,7 +86,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           logMessage(LogLevel.INFO, 'UserContext', `Found ${ratingOfficers.length} rating officers in the system`);
           
           ratingOfficers.forEach(officer => {
-            logMessage(LogLevel.INFO, 'UserContext', `Officer: ${officer.email}, status: ${officer.status}, has password: ${!!officer.password}`);
+            logMessage(LogLevel.INFO, 'UserContext', `Officer: ${officer.email}, status: ${officer.status}, has password: ${!!officer.password}, has accessCode: ${!!officer.accessCode}`);
           });
         }
         
@@ -103,11 +103,23 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         
         let isAuthenticated = false;
         
-        if (user.password === authValue || (user.accessCode && user.accessCode === authValue)) {
-          isAuthenticated = true;
-          logMessage(LogLevel.INFO, 'UserContext', `Authentication successful for ${email} with role ${role}`);
+        if (role === 'rating_officer') {
+          if (user.password === authValue || (user.accessCode && user.accessCode === authValue)) {
+            isAuthenticated = true;
+            logMessage(LogLevel.INFO, 'UserContext', `Rating officer authentication successful for ${email}`);
+            console.log(`Rating officer auth successful: ${email} using ${user.accessCode === authValue ? 'access code' : 'password'}`);
+          }
         } else {
+          if (user.password === authValue) {
+            isAuthenticated = true;
+            logMessage(LogLevel.INFO, 'UserContext', `Authentication successful for ${email} with role ${role}`);
+          }
+        }
+        
+        if (!isAuthenticated) {
           logMessage(LogLevel.WARNING, 'UserContext', `Login failed: Invalid credentials for ${email}`);
+          console.log(`Login failed: Invalid credentials for ${email}`);
+          return false;
         }
         
         if (role === 'tournament_organizer' && user.status !== 'approved') {
@@ -115,18 +127,14 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           return false;
         }
         
-        if (isAuthenticated) {
-          logMessage(LogLevel.INFO, 'UserContext', `Login successful for ${email} with role ${role}`);
-          
-          setCurrentUser(user);
-          saveToStorage(STORAGE_KEY_CURRENT_USER, user);
-          
-          sendSyncEvent(SyncEventType.LOGIN, STORAGE_KEY_CURRENT_USER, user);
-          
-          return true;
-        }
+        logMessage(LogLevel.INFO, 'UserContext', `Login successful for ${email} with role ${role}`);
         
-        return false;
+        setCurrentUser(user);
+        saveToStorage(STORAGE_KEY_CURRENT_USER, user);
+        
+        sendSyncEvent(SyncEventType.LOGIN, STORAGE_KEY_CURRENT_USER, user);
+        
+        return true;
       } catch (error) {
         logMessage(LogLevel.ERROR, 'UserContext', 'Login error:', error);
         throw new Error('An error occurred during login');
