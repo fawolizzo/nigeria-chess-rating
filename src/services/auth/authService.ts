@@ -21,14 +21,17 @@ export const signInWithEmailAndPassword = async (
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedPassword = password.trim();
     
-    // First check if this is a rating officer login in the local system
+    // First try local system login for rating officer role
     console.log("Checking if this is a rating officer login");
     try {
-      // Try local system login for rating officer role
+      // Try local login with rating officer role first
       const localLoginSuccess = await localLogin(normalizedEmail, normalizedPassword, 'rating_officer');
       
       if (localLoginSuccess) {
         console.log("Local login successful for rating officer:", normalizedEmail);
+        
+        // Send sync event to notify other devices
+        sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'rating_officer' });
         
         // Try to do a Supabase login too, but don't make overall success dependent on it
         try {
@@ -40,16 +43,15 @@ export const signInWithEmailAndPassword = async (
           console.log("Supabase backup login also successful");
         } catch (supabaseError) {
           console.warn("Supabase backup login failed, but local login succeeded:", supabaseError);
-          // Ignore Supabase errors for rating officers
+          // Ignore Supabase errors for rating officers since we have local authentication
         }
         
-        // Send sync event to notify other devices
-        sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'rating_officer' });
-        
         return true;
+      } else {
+        console.log("Local login as rating officer failed, will try Supabase");
       }
     } catch (localError) {
-      console.log("Local login as rating officer failed, will try Supabase:", localError);
+      console.log("Local login as rating officer failed with error:", localError);
       // Continue to Supabase login if local login fails
     }
     
@@ -60,11 +62,23 @@ export const signInWithEmailAndPassword = async (
       password: normalizedPassword,
     });
     
-    console.log('Sign in response:', { data, error });
+    console.log('Supabase sign in response:', { data, error });
     
     if (error) {
       logMessage(LogLevel.ERROR, 'authService', 'Sign in error:', error);
       console.error('Sign in error:', error);
+      
+      // Try one more time with tournament organizer role in local system as fallback
+      console.log("Trying local login as tournament organizer as fallback");
+      const tournamentOrganizerLogin = await localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer');
+      
+      if (tournamentOrganizerLogin) {
+        console.log("Local login successful for tournament organizer:", normalizedEmail);
+        
+        sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'tournament_organizer' });
+        return true;
+      }
+      
       throw error;
     }
     
@@ -74,7 +88,7 @@ export const signInWithEmailAndPassword = async (
       throw new Error('Login failed, no session created.');
     }
     
-    console.log('Sign in successful for:', data.user?.email);
+    console.log('Supabase sign in successful for:', data.user?.email);
     console.log('User metadata after login:', data.user?.user_metadata);
     console.log('App metadata after login:', data.user?.app_metadata);
     

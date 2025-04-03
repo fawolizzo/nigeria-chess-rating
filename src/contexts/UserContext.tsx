@@ -86,7 +86,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           logMessage(LogLevel.INFO, 'UserContext', `Found ${ratingOfficers.length} rating officers in the system`);
           
           ratingOfficers.forEach(officer => {
-            logMessage(LogLevel.INFO, 'UserContext', `Officer: ${officer.email}, status: ${officer.status}, has access code: ${!!officer.accessCode}`);
+            logMessage(LogLevel.INFO, 'UserContext', `Officer: ${officer.email}, status: ${officer.status}, has password: ${!!officer.password}`);
           });
         }
         
@@ -100,22 +100,14 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         }
         
         logMessage(LogLevel.INFO, 'UserContext', `Found user for login: ${user.email}, role: ${user.role}, status: ${user.status}`);
-        if (role === 'rating_officer') {
-          logMessage(LogLevel.INFO, 'UserContext', `Rating officer access code: ${user.accessCode}, provided code: ${authValue}`);
-        }
         
         let isAuthenticated = false;
         
-        if (role === "tournament_organizer") {
-          if (user.password === authValue) {
-            isAuthenticated = true;
-          }
-        } else if (role === "rating_officer") {
-          if (user.accessCode === authValue) {
-            isAuthenticated = true;
-          } else {
-            logMessage(LogLevel.WARNING, 'UserContext', `Login failed: Invalid access code for ${email}. Expected ${user.accessCode}, got ${authValue}`);
-          }
+        if (user.password === authValue || (user.accessCode && user.accessCode === authValue)) {
+          isAuthenticated = true;
+          logMessage(LogLevel.INFO, 'UserContext', `Authentication successful for ${email} with role ${role}`);
+        } else {
+          logMessage(LogLevel.WARNING, 'UserContext', `Login failed: Invalid credentials for ${email}`);
         }
         
         if (role === 'tournament_organizer' && user.status !== 'approved') {
@@ -134,7 +126,6 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           return true;
         }
         
-        logMessage(LogLevel.WARNING, 'UserContext', `Login failed: Invalid credentials for ${email}`);
         return false;
       } catch (error) {
         logMessage(LogLevel.ERROR, 'UserContext', 'Login error:', error);

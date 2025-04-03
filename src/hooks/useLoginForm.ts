@@ -65,6 +65,11 @@ export const useLoginForm = () => {
       
       console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
       
+      // Additional debug information 
+      if (data.role === 'rating_officer') {
+        console.log("This is a rating officer login attempt");
+      }
+      
       // Attempt to sign in with Supabase Auth
       const success = await signIn(normalizedEmail, normalizedPassword);
       
@@ -89,11 +94,12 @@ export const useLoginForm = () => {
       } else {
         logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
         
-        setError("Invalid email or password. Please check and try again.");
+        const roleDisplay = data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer';
+        setError(`Invalid email or password for ${roleDisplay} account. Please check your credentials and try again.`);
         
         toast({
           title: "Login Failed",
-          description: "Invalid email or password. Please check and try again.",
+          description: `Invalid email or password for ${roleDisplay} account. Please check your credentials and try again.`,
           variant: "destructive",
         });
       }
