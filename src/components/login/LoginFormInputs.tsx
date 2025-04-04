@@ -15,7 +15,7 @@ import { z } from "zod";
 // Schema for login form
 export const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  password: z.string().min(1, "Password or access code is required"),
   role: z.enum(["tournament_organizer", "rating_officer"])
 });
 
@@ -34,6 +34,15 @@ const LoginFormInputs = ({
   togglePasswordVisibility,
   selectedRole
 }: LoginFormInputsProps) => {
+  // Get the appropriate label for the password field based on role
+  const passwordLabel = selectedRole === "rating_officer" 
+    ? "Password or Access Code" 
+    : "Password";
+
+  const passwordPlaceholder = selectedRole === "rating_officer"
+    ? "Enter your password or access code"
+    : "Enter your password";
+
   return (
     <>
       <FormField
@@ -63,12 +72,12 @@ const LoginFormInputs = ({
         name="password"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{selectedRole === "rating_officer" ? "Access Code or Password" : "Password"}</FormLabel>
+            <FormLabel>{passwordLabel}</FormLabel>
             <FormControl>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input 
-                  placeholder={selectedRole === "rating_officer" ? "Enter your access code or password" : "Enter your password"}
+                  placeholder={passwordPlaceholder}
                   className="pl-10 pr-10" 
                   type={showPassword ? "text" : "password"}
                   {...field}

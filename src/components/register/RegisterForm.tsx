@@ -5,6 +5,7 @@ import { Form } from "@/components/ui/form";
 import RoleSelector from "./RoleSelector";
 import RegisterFormFields from "./RegisterFormFields";
 import AccessCodeInput from "./AccessCodeInput";
+import RegistrationDebug from "./RegistrationDebug";
 import { useRegisterForm } from "@/hooks/useRegisterForm";
 
 const RegisterForm = () => {
@@ -22,13 +23,6 @@ const RegisterForm = () => {
     setAccessCode,
     onSubmit
   } = useRegisterForm();
-
-  const debugAccessCodeValidation = () => {
-    console.log({
-      accessCode,
-      isAccessCodeValid
-    });
-  };
   
   return (
     <div className="p-6 sm:p-8">
@@ -72,7 +66,7 @@ const RegisterForm = () => {
               accessCode={accessCode}
               isAccessCodeValid={isAccessCodeValid}
               onChange={setAccessCode}
-              onBlur={debugAccessCodeValidation}
+              onBlur={() => console.log("Access code validation:", { accessCode, isValid: isAccessCodeValid })}
             />
           )}
           
@@ -95,6 +89,8 @@ const RegisterForm = () => {
           </Button>
         </form>
       </Form>
+      
+      {process.env.NODE_ENV !== 'production' && <RegistrationDebug />}
     </div>
   );
 };

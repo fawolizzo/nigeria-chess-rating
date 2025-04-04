@@ -9,6 +9,7 @@ import { sendEmail } from '@/services/emailService';
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+// Add these to the window for debug purposes
 if (typeof window !== 'undefined') {
   window.ncrForceSyncFunction = forceSyncAllStorage;
   window.ncrClearAllData = clearAllStorageData;
@@ -24,6 +25,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
+  // Initialize user data on component mount
   useEffect(() => {
     const initializeUserData = async () => {
       try {
@@ -34,9 +36,31 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         const storedUsers = getFromStorage<User[]>(STORAGE_KEY_USERS, []);
         const storedCurrentUser = getFromStorage<User | null>(STORAGE_KEY_CURRENT_USER, null);
         
-        logMessage(LogLevel.INFO, 'UserContext', `Initializing with ${storedUsers.length} users and currentUser: ${storedCurrentUser?.email || 'none'}`);
+        // Create default rating officer if none exists
+        if (!storedUsers.some(user => user.role === 'rating_officer')) {
+          console.log("No rating officer found, creating default");
+          
+          const defaultRatingOfficer: User = {
+            id: uuidv4(),
+            email: "rating.officer@nigerianchess.org",
+            fullName: "Default Rating Officer",
+            phoneNumber: "",
+            state: "Lagos",
+            role: "rating_officer",
+            status: "approved",
+            password: "password123",
+            accessCode: "NCR2025",
+            registrationDate: new Date().toISOString(),
+            lastModified: Date.now()
+          };
+          
+          const updatedUsers = [...storedUsers, defaultRatingOfficer];
+          saveToStorage(STORAGE_KEY_USERS, updatedUsers);
+          setUsers(updatedUsers);
+        } else {
+          setUsers(storedUsers);
+        }
         
-        setUsers(storedUsers);
         setCurrentUser(storedCurrentUser);
         
         setIsInitialized(true);
@@ -50,6 +74,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     initializeUserData();
   }, []);
   
+  // Sync users to storage whenever they change
   useEffect(() => {
     if (isInitialized) {
       logMessage(LogLevel.INFO, 'UserContext', 'Syncing user data to storage');
@@ -57,6 +82,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }
   }, [users, isInitialized]);
   
+  // Sync current user to storage whenever it changes
   useEffect(() => {
     if (isInitialized && currentUser !== null) {
       logMessage(LogLevel.INFO, 'UserContext', `Syncing current user to storage: ${currentUser.email}`);
@@ -81,35 +107,37 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         
         const normalizedEmail = email.toLowerCase().trim();
         
-        if (role === 'rating_officer') {
-          const ratingOfficers = latestUsers.filter(u => u.role === 'rating_officer');
-          logMessage(LogLevel.INFO, 'UserContext', `Found ${ratingOfficers.length} rating officers in the system`);
-          
-          ratingOfficers.forEach(officer => {
-            logMessage(LogLevel.INFO, 'UserContext', `Officer: ${officer.email}, status: ${officer.status}, has password: ${!!officer.password}, has accessCode: ${!!officer.accessCode}`);
-          });
-        }
+        // Debug output
+        console.log(`Attempting to login: ${normalizedEmail} with role ${role}`);
+        console.log(`Total users in system: ${latestUsers.length}`);
+        console.log(`Users with matching role ${role}: ${latestUsers.filter(u => u.role === role).length}`);
         
+        // Find user with matching email and role
         const user = latestUsers.find(
           u => u.email.toLowerCase() === normalizedEmail && u.role === role
         );
         
         if (!user) {
+          console.log(`No user found with email ${normalizedEmail} and role ${role}`);
           logMessage(LogLevel.WARNING, 'UserContext', `Login failed: No user found with email ${email} and role ${role}`);
           return false;
         }
         
-        logMessage(LogLevel.INFO, 'UserContext', `Found user for login: ${user.email}, role: ${user.role}, status: ${user.status}`);
+        console.log(`Found user for login: ${user.email}, role: ${user.role}, status: ${user.status}`);
+        console.log(`User has password: ${!!user.password}, has accessCode: ${!!user.accessCode}`);
         
         let isAuthenticated = false;
         
+        // Check password/access code based on role
         if (role === 'rating_officer') {
+          // Rating officers can login with either password or access code
           if (user.password === authValue || (user.accessCode && user.accessCode === authValue)) {
             isAuthenticated = true;
             logMessage(LogLevel.INFO, 'UserContext', `Rating officer authentication successful for ${email}`);
             console.log(`Rating officer auth successful: ${email} using ${user.accessCode === authValue ? 'access code' : 'password'}`);
           }
         } else {
+          // Tournament organizers can only login with password
           if (user.password === authValue) {
             isAuthenticated = true;
             logMessage(LogLevel.INFO, 'UserContext', `Authentication successful for ${email} with role ${role}`);
@@ -122,13 +150,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           return false;
         }
         
+        // Check user status for tournament organizers
         if (role === 'tournament_organizer' && user.status !== 'approved') {
           logMessage(LogLevel.WARNING, 'UserContext', `Login failed: User ${email} is not approved (status: ${user.status})`);
+          console.log(`Login failed: Tournament organizer ${email} is not approved (status: ${user.status})`);
           return false;
         }
         
         logMessage(LogLevel.INFO, 'UserContext', `Login successful for ${email} with role ${role}`);
+        console.log(`Login successful for ${email} with role ${role}`);
         
+        // Set current user and sync
         setCurrentUser(user);
         saveToStorage(STORAGE_KEY_CURRENT_USER, user);
         
@@ -175,9 +207,10 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         
         const registrationDate = new Date().toISOString();
         
-        let accessCode: string | undefined;
-        if (userData.role === 'rating_officer') {
-          accessCode = generateAccessCode();
+        // Generate access code for rating officers if one is not provided
+        let accessCode = userData.accessCode;
+        if (userData.role === 'rating_officer' && !accessCode) {
+          accessCode = "NCR2025"; // Use fixed access code for simplicity
         }
         
         const status = userData.status || (userData.role === 'rating_officer' ? 'approved' as const : 'pending' as const);
@@ -190,6 +223,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           accessCode,
           lastModified: Date.now()
         };
+        
+        console.log("Creating new user:", newUser);
         
         const updatedUsers = [...latestUsers, newUser];
         
@@ -204,6 +239,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           status
         });
         
+        // Send emails (in production this would use a real email service)
         if (userData.role === 'rating_officer' && accessCode) {
           try {
             await sendEmail(

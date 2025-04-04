@@ -11,11 +11,12 @@ import { registerSchema } from "@/components/register/RegisterFormSchema";
 import { supabase } from "@/integrations/supabase/client";
 import type { RegisterFormData } from "@/components/register/RegisterFormSchema";
 
+// This is the access code for rating officers
 const RATING_OFFICER_ACCESS_CODE = "NCR2025";
 
 export const useRegisterForm = () => {
   const navigate = useNavigate();
-  const { signUp, isLoading: authLoading } = useSupabaseAuth();
+  const { signUp } = useSupabaseAuth();
   const { register: registerInLocalSystem } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -41,6 +42,7 @@ export const useRegisterForm = () => {
   
   const selectedRole = form.watch("role");
   
+  // Show access code field when role is rating officer
   const handleShowAccessCode = (role: string) => {
     setShowAccessCode(role === "rating_officer");
     if (role !== "rating_officer") {
@@ -49,55 +51,40 @@ export const useRegisterForm = () => {
     }
   };
   
+  // Validate access code whenever it changes
   useEffect(() => {
     const isValid = accessCode === RATING_OFFICER_ACCESS_CODE;
     setIsAccessCodeValid(isValid);
   }, [accessCode]);
 
   const onSubmit = async (data: RegisterFormData) => {
-    console.log("==== REGISTRATION FORM SUBMISSION DEBUG ====");
-    console.log("Submit function called with data:", JSON.stringify(data, null, 2));
-    
-    if (isSubmitting || authLoading) {
-      console.log("Submission already in progress, returning early");
-      return;
-    }
+    console.log("Registration form submitted with data:", data);
     
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
     
     try {
-      console.log("Starting registration process");
       logUserEvent("Registration attempt", undefined, { 
         email: data.email,
         role: data.role,
-        state: data.state,
-        attempts: registrationAttempts + 1
+        state: data.state
       });
       
       setRegistrationAttempts(prev => prev + 1);
       
+      // Check access code for rating officers
       if (data.role === "rating_officer") {
-        console.log("Verifying Rating Officer access code");
-        
         if (accessCode !== RATING_OFFICER_ACCESS_CODE) {
-          console.error("Access code validation failed");
-          logUserEvent("Invalid rating officer access code", undefined, { email: data.email });
           setErrorMessage("Invalid access code for Rating Officer registration");
-          
           toast({
             title: "Invalid Access Code",
             description: "Please enter a valid access code for Rating Officer registration",
             variant: "destructive"
           });
-          
           setIsSubmitting(false);
           return;
         }
-        
-        console.log("Rating Officer access code validated successfully");
-        logUserEvent("Valid rating officer access code provided", undefined, { email: data.email });
       }
       
       const normalizedData = {
@@ -107,88 +94,82 @@ export const useRegisterForm = () => {
         password: data.password.trim()
       };
       
-      const metadata = {
-        fullName: normalizedData.fullName,
-        phoneNumber: normalizedData.phoneNumber,
-        state: normalizedData.state,
-        role: normalizedData.role,
-        status: normalizedData.role === 'rating_officer' ? 'approved' : 'pending'
-      };
-      
-      console.log("Registration metadata prepared:", JSON.stringify(metadata, null, 2));
-      
       let success = false;
       
       if (data.role === "rating_officer") {
-        try {
-          console.log("Registering Rating Officer in local system");
-          success = await registerInLocalSystem({
-            fullName: normalizedData.fullName,
-            email: normalizedData.email,
-            phoneNumber: normalizedData.phoneNumber,
-            state: normalizedData.state,
-            role: "rating_officer" as const,
-            status: "approved" as const,
-            password: normalizedData.password
-          });
-          
-          console.log("Local system registration result:", success);
-          
-          if (success) {
-            try {
-              console.log("Attempting backup registration in Supabase for Rating Officer");
-              await signUp(normalizedData.email, normalizedData.password, metadata);
-              console.log("Supabase backup registration complete");
-            } catch (supabaseError) {
-              console.error("Supabase backup registration failed, but local registration succeeded:", supabaseError);
-              // Log but ignore Supabase errors for Rating Officers
-            }
+        // Register rating officer in local system
+        console.log("Registering rating officer in local system");
+        success = await registerInLocalSystem({
+          fullName: normalizedData.fullName,
+          email: normalizedData.email,
+          phoneNumber: normalizedData.phoneNumber,
+          state: normalizedData.state,
+          role: "rating_officer" as const,
+          status: "approved" as const,
+          password: normalizedData.password,
+          accessCode: RATING_OFFICER_ACCESS_CODE
+        });
+        
+        if (success) {
+          // Also try to register in Supabase as backup
+          try {
+            await signUp(normalizedData.email, normalizedData.password, {
+              fullName: normalizedData.fullName,
+              phoneNumber: normalizedData.phoneNumber,
+              state: normalizedData.state,
+              role: "rating_officer",
+              status: "approved"
+            });
+          } catch (supabaseError) {
+            console.log("Supabase registration failed for rating officer, but local registration succeeded:", supabaseError);
+            // This is fine, we'll continue with local registration only
           }
-        } catch (localError) {
-          console.error("Local system registration error:", localError);
-          throw localError;
         }
       } else {
-        console.log("Registering Tournament Organizer in Supabase");
-        
+        // Register tournament organizer in Supabase and local system
         try {
+          // First register in Supabase
           const { data: supabaseData, error: supabaseError } = await supabase.auth.signUp({
             email: normalizedData.email,
             password: normalizedData.password,
             options: {
-              data: metadata
+              data: {
+                fullName: normalizedData.fullName,
+                phoneNumber: normalizedData.phoneNumber,
+                state: normalizedData.state,
+                role: "tournament_organizer",
+                status: "pending"
+              }
             }
           });
           
           if (supabaseError) {
-            console.error("DETAILED SUPABASE ERROR:", supabaseError);
             throw supabaseError;
           }
           
-          console.log("Supabase signUp response data:", supabaseData);
-          
           if (!supabaseData.user) {
-            console.error("No user returned from signUp call!");
             throw new Error("Registration failed - no user data returned");
           }
           
-          success = true;
-          console.log("Supabase registration completed successfully");
+          // Then register in local system as backup
+          await registerInLocalSystem({
+            fullName: normalizedData.fullName,
+            email: normalizedData.email,
+            phoneNumber: normalizedData.phoneNumber,
+            state: normalizedData.state,
+            role: "tournament_organizer" as const,
+            status: "pending" as const,
+            password: normalizedData.password
+          });
           
-        } catch (directError) {
-          console.error("DIRECT SUPABASE ERROR CAUGHT:", directError);
-          throw directError;
+          success = true;
+        } catch (error) {
+          console.error("Registration error:", error);
+          throw error;
         }
       }
       
       if (success) {
-        console.log("Registration successful");
-        logUserEvent("Registration successful", undefined, { 
-          email: data.email, 
-          role: data.role,
-          autoApproved: data.role === 'rating_officer'
-        });
-        
         setSuccessMessage(
           data.role === "tournament_organizer"
             ? "Registration successful! Your account is pending approval by a rating officer."
@@ -210,8 +191,6 @@ export const useRegisterForm = () => {
           navigate("/login");
         }, 2000);
       } else {
-        console.error("Registration failed with no specific error returned");
-        logUserEvent("Registration failed", undefined, { email: data.email, role: data.role });
         setErrorMessage("Registration failed. Please try again with a different email address.");
         
         toast({
@@ -221,13 +200,7 @@ export const useRegisterForm = () => {
         });
       }
     } catch (error: any) {
-      console.error("DETAILED REGISTRATION ERROR:", error);
-      
-      logUserEvent("Registration error", undefined, { 
-        error: error.message, 
-        errorCode: error.code,
-        errorName: error.name
-      });
+      console.error("Registration error:", error);
       
       let errorMsg = "Registration failed. Please try again.";
       
@@ -251,12 +224,12 @@ export const useRegisterForm = () => {
         variant: "destructive",
       });
     } finally {
-      console.log("Registration attempt completed");
       setIsSubmitting(false);
     }
   };
 
-  const isSubmitDisabled = isSubmitting || authLoading || (showAccessCode && !isAccessCodeValid);
+  // FIX: Only disable the submit button when actually submitting, not when access code is invalid
+  const isSubmitDisabled = isSubmitting || (showAccessCode && !isAccessCodeValid && accessCode.length > 0);
 
   return {
     form,

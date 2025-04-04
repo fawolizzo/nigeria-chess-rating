@@ -24,6 +24,7 @@ export const signInWithEmailAndPassword = async (
     console.log("Checking if this is a rating officer login");
     try {
       // Try local login with rating officer role first
+      console.log("Attempting local login as rating officer with:", normalizedEmail);
       const localLoginSuccess = await localLogin(normalizedEmail, normalizedPassword, 'rating_officer');
       
       if (localLoginSuccess) {
@@ -32,26 +33,31 @@ export const signInWithEmailAndPassword = async (
         // Send sync event to notify other devices
         sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'rating_officer' });
         
-        // Try to do a Supabase login too, but don't make overall success dependent on it
-        try {
-          console.log("Attempting backup Supabase login for rating officer");
-          await supabase.auth.signInWithPassword({
-            email: normalizedEmail,
-            password: normalizedPassword,
-          });
-          console.log("Supabase backup login also successful");
-        } catch (supabaseError) {
-          console.warn("Supabase backup login failed, but local login succeeded:", supabaseError);
-          // Ignore Supabase errors for rating officers since we have local authentication
-        }
-        
         return true;
       } else {
-        console.log("Local login as rating officer failed, will try Supabase");
+        console.log("Local login as rating officer failed, will try tournament organizer next");
       }
     } catch (localError) {
       console.log("Local login as rating officer failed with error:", localError);
-      // Continue to Supabase login if local login fails
+    }
+    
+    // Try local login for tournament organizer
+    try {
+      console.log("Attempting local login as tournament organizer with:", normalizedEmail);
+      const localLoginSuccess = await localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer');
+      
+      if (localLoginSuccess) {
+        console.log("Local login successful for tournament organizer:", normalizedEmail);
+        
+        // Send sync event to notify other devices
+        sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'tournament_organizer' });
+        
+        return true;
+      } else {
+        console.log("Local login as tournament organizer failed, will try Supabase");
+      }
+    } catch (localError) {
+      console.log("Local login as tournament organizer failed with error:", localError);
     }
     
     // If local login didn't succeed, try Supabase authentication
@@ -61,23 +67,14 @@ export const signInWithEmailAndPassword = async (
       password: normalizedPassword,
     });
     
-    console.log('Supabase sign in response:', { data, error });
+    console.log('Supabase sign in response:', { 
+      user: data?.user?.email, 
+      error: error?.message 
+    });
     
     if (error) {
       logMessage(LogLevel.ERROR, 'authService', 'Sign in error:', error);
       console.error('Sign in error:', error);
-      
-      // Try one more time with tournament organizer role in local system as fallback
-      console.log("Trying local login as tournament organizer as fallback");
-      const tournamentOrganizerLogin = await localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer');
-      
-      if (tournamentOrganizerLogin) {
-        console.log("Local login successful for tournament organizer:", normalizedEmail);
-        
-        sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'tournament_organizer' });
-        return true;
-      }
-      
       throw error;
     }
     
@@ -92,11 +89,6 @@ export const signInWithEmailAndPassword = async (
     // Check if the user has the correct role AFTER successful authentication
     const userRole = data.user?.user_metadata?.role || data.user?.app_metadata?.role;
     console.log(`User role from metadata after successful login: ${userRole}`);
-    
-    if (!userRole) {
-      console.warn(`User logged in but has no role assigned: ${normalizedEmail}`);
-      // Allow login even without role, but log a warning
-    }
     
     logMessage(
       LogLevel.INFO, 
