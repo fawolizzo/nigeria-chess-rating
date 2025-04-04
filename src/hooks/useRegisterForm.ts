@@ -91,13 +91,13 @@ export const useRegisterForm = () => {
         ...data,
         email: data.email.toLowerCase().trim(),
         phoneNumber: data.phoneNumber.trim(),
-        password: data.password.trim()
+        password: data.role === "tournament_organizer" ? data.password?.trim() : undefined
       };
       
       let success = false;
       
       if (data.role === "rating_officer") {
-        // Register rating officer in local system
+        // Register rating officer in local system without password
         console.log("Registering rating officer in local system");
         success = await registerInLocalSystem({
           fullName: normalizedData.fullName,
@@ -106,26 +106,21 @@ export const useRegisterForm = () => {
           state: normalizedData.state,
           role: "rating_officer" as const,
           status: "approved" as const,
-          password: normalizedData.password,
           accessCode: RATING_OFFICER_ACCESS_CODE
         });
-        
-        if (success) {
-          // Also try to register in Supabase as backup
-          try {
-            await signUp(normalizedData.email, normalizedData.password, {
-              fullName: normalizedData.fullName,
-              phoneNumber: normalizedData.phoneNumber,
-              state: normalizedData.state,
-              role: "rating_officer",
-              status: "approved"
-            });
-          } catch (supabaseError) {
-            console.log("Supabase registration failed for rating officer, but local registration succeeded:", supabaseError);
-            // This is fine, we'll continue with local registration only
-          }
-        }
       } else {
+        // For tournament organizers, both password and confirmPassword must be provided
+        if (!normalizedData.password) {
+          setErrorMessage("Password is required for Tournament Organizer registration");
+          toast({
+            title: "Password Required",
+            description: "Please enter a password for your Tournament Organizer account",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        
         // Register tournament organizer in Supabase and local system
         try {
           // First register in Supabase
@@ -228,7 +223,7 @@ export const useRegisterForm = () => {
     }
   };
 
-  // FIX: Only disable the submit button when actually submitting, not when access code is invalid
+  // Only disable the submit button when actually submitting or when access code is invalid
   const isSubmitDisabled = isSubmitting || (showAccessCode && !isAccessCodeValid && accessCode.length > 0);
 
   return {

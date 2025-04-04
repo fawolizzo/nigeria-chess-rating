@@ -81,22 +81,24 @@ export const useLoginForm = () => {
           description: `Welcome back! You are now logged in as a ${data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer'}.`,
         });
         
-        setTimeout(() => {
-          if (data.role === "tournament_organizer") {
-            navigate("/organizer/dashboard");
-          } else {
-            navigate("/officer/dashboard");
-          }
-        }, 500);
+        // Navigate immediately instead of using a timeout
+        if (data.role === "tournament_organizer") {
+          navigate("/organizer/dashboard");
+        } else {
+          navigate("/officer/dashboard");
+        }
       } else {
         logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
         
         const roleDisplay = data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer';
-        setError(`Invalid email or password for ${roleDisplay} account. Please check your credentials and try again.`);
+        const fieldName = data.role === 'tournament_organizer' ? 'password' : 'access code';
+        
+        const errorMessage = `Invalid email or ${fieldName} for ${roleDisplay} account. Please check your credentials and try again.`;
+        setError(errorMessage);
         
         toast({
           title: "Login Failed",
-          description: `Invalid email or password for ${roleDisplay} account. Please check your credentials and try again.`,
+          description: errorMessage,
           variant: "destructive",
         });
       }

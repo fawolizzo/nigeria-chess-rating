@@ -42,13 +42,12 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           
           const defaultRatingOfficer: User = {
             id: uuidv4(),
-            email: "rating.officer@nigerianchess.org",
+            email: "rating.officer@ncr.com",
             fullName: "Default Rating Officer",
             phoneNumber: "",
             state: "Lagos",
             role: "rating_officer",
             status: "approved",
-            password: "password123",
             accessCode: "NCR2025",
             registrationDate: new Date().toISOString(),
             lastModified: Date.now()
@@ -58,7 +57,24 @@ export const UserProvider = ({ children }: UserProviderProps) => {
           saveToStorage(STORAGE_KEY_USERS, updatedUsers);
           setUsers(updatedUsers);
         } else {
-          setUsers(storedUsers);
+          // Update existing rating officer emails to the new format if needed
+          const updatedUsers = storedUsers.map(user => {
+            if (user.role === 'rating_officer' && user.email === 'rating.officer@nigerianchess.org') {
+              return {
+                ...user,
+                email: 'rating.officer@ncr.com',
+                lastModified: Date.now()
+              };
+            }
+            return user;
+          });
+          
+          if (JSON.stringify(updatedUsers) !== JSON.stringify(storedUsers)) {
+            saveToStorage(STORAGE_KEY_USERS, updatedUsers);
+            setUsers(updatedUsers);
+          } else {
+            setUsers(storedUsers);
+          }
         }
         
         setCurrentUser(storedCurrentUser);
@@ -130,11 +146,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         
         // Check password/access code based on role
         if (role === 'rating_officer') {
-          // Rating officers can login with either password or access code
-          if (user.password === authValue || (user.accessCode && user.accessCode === authValue)) {
+          // Rating officers can login with access code only
+          if (user.accessCode && user.accessCode === authValue) {
             isAuthenticated = true;
             logMessage(LogLevel.INFO, 'UserContext', `Rating officer authentication successful for ${email}`);
-            console.log(`Rating officer auth successful: ${email} using ${user.accessCode === authValue ? 'access code' : 'password'}`);
+            console.log(`Rating officer auth successful: ${email} using access code`);
           }
         } else {
           // Tournament organizers can only login with password

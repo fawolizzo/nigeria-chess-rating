@@ -7,11 +7,26 @@ export const registerSchema = z.object({
   phoneNumber: z.string().min(11, "Phone number must be at least 11 digits"),
   state: z.string().min(1, "Please select your state"),
   role: z.enum(["tournament_organizer", "rating_officer"]),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  confirmPassword: z.string().optional()
+}).refine((data) => {
+  // Only validate password matching if it's a tournament organizer
+  if (data.role === "tournament_organizer") {
+    return data.password === data.confirmPassword;
+  }
+  return true;
+}, {
   message: "Passwords do not match",
   path: ["confirmPassword"]
+}).refine((data) => {
+  // Require password for tournament organizers
+  if (data.role === "tournament_organizer") {
+    return !!data.password && data.password.length >= 8;
+  }
+  return true;
+}, {
+  message: "Password is required for Tournament Organizers",
+  path: ["password"]
 });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;

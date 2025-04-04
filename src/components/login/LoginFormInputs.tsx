@@ -36,11 +36,11 @@ const LoginFormInputs = ({
 }: LoginFormInputsProps) => {
   // Get the appropriate label for the password field based on role
   const passwordLabel = selectedRole === "rating_officer" 
-    ? "Password or Access Code" 
+    ? "Access Code" 
     : "Password";
 
   const passwordPlaceholder = selectedRole === "rating_officer"
-    ? "Enter your password or access code"
+    ? "Enter your access code"
     : "Enter your password";
 
   return (
