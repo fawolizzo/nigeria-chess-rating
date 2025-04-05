@@ -8,73 +8,122 @@ import { getAllTournaments, getAllPlayers, getAllUsers } from "@/lib/mockData";
 import ResetSystemData from "@/components/ResetSystemData";
 import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
 import { useToast } from "@/components/ui/use-toast";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const OfficerDashboard: React.FC = () => {
-  const { currentUser, isLoading, logout } = useUser();
+  const { currentUser, isLoading, logout, forceSync } = useUser();
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
+  const [isContentLoading, setIsContentLoading] = useState(true);
   const { toast } = useToast();
   
   useEffect(() => {
-    if (!isLoading && (!currentUser || currentUser.role !== "rating_officer")) {
-      navigate("/login");
+    // Check if user is logged in and is a rating officer
+    if (!isLoading) {
+      if (!currentUser) {
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
+        navigate("/login");
+        return;
+      }
+      
+      if (currentUser.role !== "rating_officer") {
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', `User role is ${currentUser.role}, not rating_officer`);
+        toast({
+          title: "Access Denied",
+          description: "This page is only accessible to Rating Officers",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+      
+      logMessage(LogLevel.INFO, 'OfficerDashboard', `Rating officer logged in: ${currentUser.email}`);
     }
+  }, [currentUser, isLoading, navigate, toast]);
+  
+  // Load data once user authentication is confirmed
+  useEffect(() => {
+    if (isLoading || !currentUser) return;
     
     // Force sync storage on first load to ensure we have the latest data
-    forceSyncAllStorage();
-    
-    // Load pending data counts
-    const loadPendingCounts = async () => {
+    const loadData = async () => {
       try {
-        // Ensure storage is synced between localStorage and sessionStorage - use arrays
-        await syncStorage(['ncr_users']);
-        await syncStorage(['ncr_players']);
-        await syncStorage(['ncr_tournaments']);
+        setIsContentLoading(true);
         
-        // Load pending tournaments count
-        const allTournaments = getAllTournaments();
-        const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
-        const completedTournaments = allTournaments.filter(t => t.status === "completed").length;
+        // Force sync all storage
+        logMessage(LogLevel.INFO, 'OfficerDashboard', 'Forcing sync of all storage');
+        await forceSync();
+        await forceSyncAllStorage();
         
-        // Load pending players count
-        const allPlayers = getAllPlayers();
-        const pendingPlayers = allPlayers.filter(p => p.status === "pending").length;
+        // Load pending data counts
+        await loadPendingCounts();
         
-        // Load pending organizers count
-        const allUsers = getAllUsers();
-        const pendingOrganizers = allUsers.filter(u => 
-          u.role === 'tournament_organizer' && u.status === 'pending'
-        ).length;
-        
-        // Set total pending count
-        setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
-        
-        console.log("Pending counts:", {
-          tournaments: pendingTournaments,
-          completed: completedTournaments,
-          players: pendingPlayers,
-          organizers: pendingOrganizers,
-          total: pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments
-        });
+        setIsContentLoading(false);
       } catch (error) {
-        console.error("Error loading pending counts:", error);
+        logMessage(LogLevel.ERROR, 'OfficerDashboard', 'Error initializing dashboard:', error);
         toast({
-          title: "Error Loading Data",
-          description: "There was a problem loading pending approvals.",
+          title: "Error Loading Dashboard",
+          description: "There was an error loading the dashboard data. Please try again.",
           variant: "destructive"
         });
+        setIsContentLoading(false);
       }
     };
     
-    loadPendingCounts();
-    
+    loadData();
+  }, [currentUser, isLoading, toast, forceSync]);
+  
+  // Function to load pending counts
+  const loadPendingCounts = async () => {
+    try {
+      // Ensure storage is synced between localStorage and sessionStorage - use arrays
+      await syncStorage(['ncr_users']);
+      await syncStorage(['ncr_players']);
+      await syncStorage(['ncr_tournaments']);
+      
+      // Load pending tournaments count
+      const allTournaments = getAllTournaments();
+      const pendingTournaments = allTournaments.filter(t => t.status === "pending").length;
+      const completedTournaments = allTournaments.filter(t => t.status === "completed").length;
+      
+      // Load pending players count
+      const allPlayers = getAllPlayers();
+      const pendingPlayers = allPlayers.filter(p => p.status === "pending").length;
+      
+      // Load pending organizers count
+      const allUsers = getAllUsers();
+      const pendingOrganizers = allUsers.filter(u => 
+        u.role === 'tournament_organizer' && u.status === 'pending'
+      ).length;
+      
+      // Set total pending count
+      setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
+      
+      logMessage(LogLevel.INFO, 'OfficerDashboard', "Pending counts loaded:", {
+        tournaments: pendingTournaments,
+        completed: completedTournaments,
+        players: pendingPlayers,
+        organizers: pendingOrganizers,
+        total: pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments
+      });
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'OfficerDashboard', "Error loading pending counts:", error);
+      toast({
+        title: "Error Loading Data",
+        description: "There was a problem loading pending approvals.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  useEffect(() => {
     // Set up an interval to refresh the counts more frequently
-    const interval = setInterval(loadPendingCounts, 2000); // Update every 2 seconds
+    const interval = setInterval(loadPendingCounts, 5000); // Update every 5 seconds
     
     // Listen for storage changes from other tabs/devices
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
-        console.log(`Storage event detected for ${e.key}, reloading counts`);
+        logMessage(LogLevel.INFO, 'OfficerDashboard', `Storage event detected for ${e.key}, reloading counts`);
         
         // Force sync all storage when a storage event is detected
         forceSyncAllStorage();
@@ -88,19 +137,19 @@ const OfficerDashboard: React.FC = () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [currentUser, isLoading, navigate, toast]);
+  }, []);
   
   const handleSystemReset = () => {
     // Log out the current user after reset
     logout();
   };
   
-  if (isLoading) {
+  if (isLoading || isContentLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-nigeria-green"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
     );

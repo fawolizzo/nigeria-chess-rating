@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -6,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { UserProvider } from './contexts/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { SupabaseAuthProvider } from './services/auth/SupabaseAuthProvider';
-import { useSupabaseAuth } from './services/auth/useSupabaseAuth';
+import { useUser } from './contexts/UserContext';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { setupNetworkDebugger } from '@/utils/networkDebugger';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -25,44 +24,26 @@ import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
 import NotFound from './pages/NotFound';
 
-// Higher-order component for protected routes using Supabase Auth
-const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournament_organizer' | 'rating_officer' }) => {
+// Simple auth route component that uses the UserContext directly
+const ProtectedRoute = ({ children, role }: { children: JSX.Element, role: 'tournament_organizer' | 'rating_officer' }) => {
   const { toast } = useToast();
-  const { user, isLoading, isRatingOfficer, isTournamentOrganizer } = useSupabaseAuth();
+  const { currentUser, isLoading } = useUser();
   
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !currentUser) {
       toast({
         title: "Authentication Required",
         description: "Please log in to access this page",
         variant: "destructive",
       });
-    } else if (!isLoading && user) {
-      const hasRequiredRole = 
-        (role === 'rating_officer' && isRatingOfficer) || 
-        (role === 'tournament_organizer' && isTournamentOrganizer);
-      
-      if (!hasRequiredRole) {
-        toast({
-          title: "Access Denied",
-          description: `This page is only accessible to ${role === 'tournament_organizer' ? 'Tournament Organizers' : 'Rating Officers'}`,
-          variant: "destructive",
-        });
-      }
-      
-      if (role === 'tournament_organizer' && isTournamentOrganizer) {
-        const isApproved = user.user_metadata?.status === 'approved';
-        
-        if (!isApproved) {
-          toast({
-            title: "Account Pending Approval",
-            description: "Your account is pending approval by a rating officer.",
-            variant: "destructive",
-          });
-        }
-      }
+    } else if (!isLoading && currentUser && currentUser.role !== role) {
+      toast({
+        title: "Access Denied",
+        description: `This page is only accessible to ${role === 'tournament_organizer' ? 'Tournament Organizers' : 'Rating Officers'}`,
+        variant: "destructive",
+      });
     }
-  }, [isLoading, user, role, toast, isRatingOfficer, isTournamentOrganizer]);
+  }, [isLoading, currentUser, role, toast]);
   
   if (isLoading) {
     return (
@@ -72,24 +53,21 @@ const RequireAuth = ({ children, role }: { children: JSX.Element, role: 'tournam
     );
   }
   
-  if (!user) {
+  if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
   
-  const hasRequiredRole = 
-    (role === 'rating_officer' && isRatingOfficer) || 
-    (role === 'tournament_organizer' && isTournamentOrganizer);
-  
-  if (!hasRequiredRole) {
-    return <Navigate to="/login" replace />;
+  if (currentUser.role !== role) {
+    return <Navigate to="/" replace />;
   }
   
-  if (role === 'tournament_organizer' && isTournamentOrganizer) {
-    const isApproved = user.user_metadata?.status === 'approved';
-    
-    if (!isApproved) {
-      return <Navigate to="/login" replace />;
-    }
+  if (role === 'tournament_organizer' && currentUser.status !== 'approved') {
+    toast({
+      title: "Account Pending Approval",
+      description: "Your account is pending approval by a rating officer.",
+      variant: "destructive",
+    });
+    return <Navigate to="/login" replace />;
   }
   
   return children;
@@ -177,33 +155,41 @@ function App() {
                 <Route 
                   path="/organizer/*" 
                   element={
-                    <RequireAuth role="tournament_organizer">
+                    <ProtectedRoute role="tournament_organizer">
                       <OrganizerDashboard />
-                    </RequireAuth>
+                    </ProtectedRoute>
                   } 
                 />
                 <Route 
                   path="/officer/*" 
                   element={
-                    <RequireAuth role="rating_officer">
+                    <ProtectedRoute role="rating_officer">
                       <OfficerDashboard />
-                    </RequireAuth>
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/officer/dashboard" 
+                  element={
+                    <ProtectedRoute role="rating_officer">
+                      <OfficerDashboard />
+                    </ProtectedRoute>
                   } 
                 />
                 <Route 
                   path="/manage/tournament/:id" 
                   element={
-                    <RequireAuth role="tournament_organizer">
+                    <ProtectedRoute role="tournament_organizer">
                       <TournamentManagement />
-                    </RequireAuth>
+                    </ProtectedRoute>
                   } 
                 />
                 <Route 
                   path="/tournament/:id/manage" 
                   element={
-                    <RequireAuth role="tournament_organizer">
+                    <ProtectedRoute role="tournament_organizer">
                       <TournamentManagement />
-                    </RequireAuth>
+                    </ProtectedRoute>
                   } 
                 />
                 <Route path="/tournaments" element={<Tournaments />} />

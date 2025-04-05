@@ -55,17 +55,23 @@ export const loginUser = async (
       
       // Check password/access code based on role
       if (role === 'rating_officer') {
-        // Rating officers can login with access code only
+        // Rating officers login with access code
         if (user.accessCode && user.accessCode === authValue) {
           isAuthenticated = true;
           logMessage(LogLevel.INFO, 'UserAuthOperations', `Rating officer authentication successful for ${email}`);
           console.log(`Rating officer auth successful: ${email} using access code`);
+        } else {
+          console.log(`Rating officer auth failed: Invalid access code`);
+          logMessage(LogLevel.WARNING, 'UserAuthOperations', `Invalid access code for rating officer ${email}`);
         }
       } else {
-        // Tournament organizers can only login with password
-        if (user.password === authValue) {
+        // Tournament organizers login with password
+        if (user.password && user.password === authValue) {
           isAuthenticated = true;
           logMessage(LogLevel.INFO, 'UserAuthOperations', `Authentication successful for ${email} with role ${role}`);
+        } else {
+          console.log(`Tournament organizer auth failed: Invalid password`);
+          logMessage(LogLevel.WARNING, 'UserAuthOperations', `Invalid password for tournament organizer ${email}`);
         }
       }
       

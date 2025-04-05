@@ -4,25 +4,15 @@ import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import useSilentSync from "@/hooks/useSilentSync";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 const OrganizerApprovals: React.FC = () => {
-  const { approveUser, rejectUser, users } = useUser();
+  const { approveUser, rejectUser, users, forceSync } = useUser();
   const { toast } = useToast();
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Use the silent sync hook to ensure we have up-to-date data
-  const { forceSync } = useSilentSync({
-    keys: ['ncr_users'],
-    syncOnMount: true,
-    syncInterval: 15000, // Check every 15 seconds
-    onSyncComplete: () => {
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', 'Silent sync completed, refreshing approvals list');
-      loadPendingOrganizers();
-    }
-  });
-
   // Load pending organizers directly from context
   const loadPendingOrganizers = () => {
     try {
@@ -59,35 +49,24 @@ const OrganizerApprovals: React.FC = () => {
     }
   };
   
-  // Effect for initial load and interval refresh
+  // Effect for initial load and when users change
   useEffect(() => {
-    // Load immediately
+    // Load immediately when users change
     loadPendingOrganizers();
-    
-    // Set up interval to refresh the data (every 2 seconds to ensure updates)
-    const interval = setInterval(() => {
-      loadPendingOrganizers();
-    }, 2000);
-    
-    // Log for debugging
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', 'Component mounted, set up refresh interval');
-    
-    return () => {
-      clearInterval(interval);
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', 'Component unmounted, cleared refresh interval');
-    };
-  }, [refreshTrigger, toast, users]);
-
+  }, [users]);
+  
   // Force refresh from all sources
   const handleForceRefresh = async () => {
     logMessage(LogLevel.INFO, 'OrganizerApprovals', 'Forcing refresh of all organizer data');
     
     try {
+      setIsRefreshing(true);
+      
       // Force a sync to get the latest data
       await forceSync();
       
-      // Increment refresh trigger to cause useEffect to run again
-      setRefreshTrigger(prev => prev + 1);
+      // Reload pending organizers
+      loadPendingOrganizers();
       
       toast({
         title: "Data Refreshed",
@@ -101,6 +80,8 @@ const OrganizerApprovals: React.FC = () => {
         description: "There was a problem refreshing the data. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -111,7 +92,7 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer approved",
       description: "The tournament organizer has been approved successfully.",
     });
-    setRefreshTrigger(prev => prev + 1); // Trigger re-render
+    // Organizers will be updated via the users state change
   };
 
   const handleReject = (userId: string) => {
@@ -121,21 +102,22 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer rejected",
       description: "The tournament organizer has been rejected.",
     });
-    setRefreshTrigger(prev => prev + 1); // Trigger re-render
+    // Organizers will be updated via the users state change
   };
 
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <button 
-          className="text-xs text-gray-500 flex items-center gap-1 hover:underline"
+        <Button 
+          variant="outline"
+          size="sm"
           onClick={handleForceRefresh}
+          disabled={isRefreshing}
+          className="text-xs text-gray-500 flex items-center gap-1"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
+          <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh Data
-        </button>
+        </Button>
       </div>
       <OrganizerApprovalList
         pendingOrganizers={pendingOrganizers}

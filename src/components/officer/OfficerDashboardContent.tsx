@@ -9,12 +9,16 @@ import ApprovedOrganizers from "./ApprovedOrganizers";
 import { useToast } from "@/components/ui/use-toast";
 import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
 import { getAllUsersFromStorage } from "@/utils/userUtils";
-import { syncStorage } from "@/utils/storageUtils";
+import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useUser } from "@/contexts/UserContext";
 
 const OfficerDashboardContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("organizers"); // Default to organizers tab to highlight approval feature
   const { toast } = useToast();
+  const { forceSync } = useUser();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [pendingTournaments, setPendingTournaments] = useState<any[]>([]);
   const [completedTournaments, setCompletedTournaments] = useState<any[]>([]);
   const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
@@ -23,7 +27,15 @@ const OfficerDashboardContent: React.FC = () => {
   // Function to load all data
   const loadAllData = async () => {
     try {
-      // Ensure storage is synced - pass arrays instead of single strings
+      setIsLoading(true);
+      
+      logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Loading dashboard data');
+      
+      // Force a complete sync first
+      await forceSync();
+      await forceSyncAllStorage();
+      
+      // Ensure storage is synced
       await syncStorage(['ncr_users']);
       await syncStorage(['ncr_players']);
       await syncStorage(['ncr_tournaments']);
@@ -43,27 +55,41 @@ const OfficerDashboardContent: React.FC = () => {
         (user) => user.role === "tournament_organizer" && user.status === "pending"
       );
       setPendingOrganizers(filteredOrganizers);
-      console.log("Pending organizers count:", filteredOrganizers.length);
+      
+      logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard data loaded', {
+        pendingTournaments: allTournaments.filter(t => t.status === "pending").length,
+        completedTournaments: allTournaments.filter(t => t.status === "completed").length,
+        pendingPlayers: allPlayers.filter(p => p.status === "pending").length,
+        pendingOrganizers: filteredOrganizers.length
+      });
+      
+      setIsLoading(false);
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      logMessage(LogLevel.ERROR, 'OfficerDashboardContent', "Error loading dashboard data:", error);
+      toast({
+        title: "Error Loading Data",
+        description: "There was a problem loading the dashboard data. Please try refreshing the page.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
     }
   };
   
   // Initial load and refresh when the key changes
   useEffect(() => {
     loadAllData();
-  }, [refreshKey]);
+  }, [refreshKey, forceSync]);
   
   // Set up an interval to refresh data periodically and listen for storage events
   useEffect(() => {
     const intervalId = setInterval(() => {
       loadAllData();
-    }, 3000); // Refresh every 3 seconds for real-time updates
+    }, 5000); // Refresh every 5 seconds for real-time updates
     
     // Add event listener for storage changes from other tabs/devices
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
-        console.log(`Storage event detected for ${e.key}, reloading dashboard data`);
+        logMessage(LogLevel.INFO, 'OfficerDashboardContent', `Storage event detected for ${e.key}, reloading dashboard data`);
         loadAllData();
       }
     };
@@ -74,7 +100,7 @@ const OfficerDashboardContent: React.FC = () => {
       clearInterval(intervalId);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [forceSync]);
   
   const refreshDashboard = () => {
     setRefreshKey(prev => prev + 1);
@@ -90,6 +116,15 @@ const OfficerDashboardContent: React.FC = () => {
     // Refresh data when switching tabs
     loadAllData();
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nigeria-green"></div>
+        <span className="ml-3 text-gray-600">Loading dashboard content...</span>
+      </div>
+    );
+  }
   
   return (
     <div>
