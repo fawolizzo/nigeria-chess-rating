@@ -66,7 +66,6 @@ const RegisterForm = () => {
               accessCode={accessCode}
               isAccessCodeValid={isAccessCodeValid}
               onChange={setAccessCode}
-              onBlur={() => console.log("Access code validation:", { accessCode, isValid: isAccessCodeValid })}
             />
           )}
           

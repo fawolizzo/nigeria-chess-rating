@@ -76,11 +76,11 @@ export const useRegistrationSubmit = (
             accessCode: RATING_OFFICER_ACCESS_CODE
           });
           
-          if (success) {
-            logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
-          } else {
+          if (!success) {
             throw new Error("Failed to register Rating Officer in local system");
           }
+          
+          logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
         } catch (error) {
           console.error("Error registering rating officer:", error);
           logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${normalizedData.email}`, error);

@@ -20,9 +20,7 @@ export const useAccessCode = () => {
   
   // Validate access code whenever it changes
   useEffect(() => {
-    console.log("Validating access code:", accessCode, "against:", RATING_OFFICER_ACCESS_CODE);
     const isValid = accessCode === RATING_OFFICER_ACCESS_CODE;
-    console.log("Access code is valid:", isValid);
     setIsAccessCodeValid(isValid);
   }, [accessCode]);
 
