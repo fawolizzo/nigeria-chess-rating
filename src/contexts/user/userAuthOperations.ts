@@ -6,6 +6,7 @@ import { logMessage, LogLevel, logUserEvent } from '@/utils/debugLogger';
 import { sendEmail } from '@/services/emailService';
 import { STORAGE_KEYS } from './userContextTypes';
 import { monitorSync } from '@/utils/monitorSync';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Handle user login
@@ -117,8 +118,7 @@ export const registerUser = async (
   forceSyncAllStorage: (keys?: string[]) => Promise<boolean>,
   getRatingOfficerEmails: () => string[]
 ): Promise<boolean> => {
-  const { v4: uuidv4 } = require('uuid');
-  
+  // Generate UUID without using require
   return monitorSync('register', userData.email, async () => {
     try {
       setIsLoading(true);

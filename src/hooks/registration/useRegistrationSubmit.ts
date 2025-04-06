@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { logUserEvent, LogLevel, logMessage } from "@/utils/debugLogger";
-import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { RegisterFormData } from "@/components/register/RegisterFormSchema";
@@ -14,7 +13,6 @@ export const useRegistrationSubmit = (
   RATING_OFFICER_ACCESS_CODE: string
 ) => {
   const navigate = useNavigate();
-  const { signUp } = useSupabaseAuth();
   const { register: registerInLocalSystem } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -23,8 +21,6 @@ export const useRegistrationSubmit = (
   const { toast } = useToast();
 
   const handleSubmit = async (data: RegisterFormData) => {
-    console.log("Registration form submitted with data:", data);
-    
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");

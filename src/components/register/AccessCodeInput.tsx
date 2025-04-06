@@ -7,14 +7,12 @@ interface AccessCodeInputProps {
   accessCode: string;
   isAccessCodeValid: boolean;
   onChange: (value: string) => void;
-  onBlur?: () => void;
 }
 
 const AccessCodeInput = ({ 
   accessCode, 
   isAccessCodeValid, 
-  onChange, 
-  onBlur 
+  onChange 
 }: AccessCodeInputProps) => {
   return (
     <div>
@@ -27,7 +25,6 @@ const AccessCodeInput = ({
           type="password"
           value={accessCode}
           onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
         />
       </div>
       <div className="flex justify-between items-center mt-1">
