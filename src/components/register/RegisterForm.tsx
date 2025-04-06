@@ -6,7 +6,7 @@ import RoleSelector from "./RoleSelector";
 import RegisterFormFields from "./RegisterFormFields";
 import AccessCodeInput from "./AccessCodeInput";
 import RegistrationDebug from "./RegistrationDebug";
-import { useRegisterForm } from "@/hooks/useRegisterForm";
+import { useRegisterForm } from "@/hooks/registration/useRegisterForm";
 
 const RegisterForm = () => {
   const {

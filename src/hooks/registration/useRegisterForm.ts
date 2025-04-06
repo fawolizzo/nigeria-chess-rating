@@ -42,7 +42,7 @@ export const useRegisterForm = () => {
     return handleSubmit(data);
   };
 
-  // Only disable the submit button when actually submitting or when access code is invalid
+  // Only disable the submit button when actually submitting or when access code is invalid and entered
   const isSubmitDisabled = isSubmitting || (showAccessCode && !isAccessCodeValid && accessCode.length > 0);
 
   return {

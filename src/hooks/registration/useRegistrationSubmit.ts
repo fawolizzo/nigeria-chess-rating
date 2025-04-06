@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { logUserEvent } from "@/utils/debugLogger";
+import { logUserEvent, LogLevel, logMessage } from "@/utils/debugLogger";
 import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +48,7 @@ export const useRegistrationSubmit = (
             variant: "destructive"
           });
           setIsSubmitting(false);
-          return;
+          return false;
         }
       }
       
@@ -62,8 +62,9 @@ export const useRegistrationSubmit = (
       let success = false;
       
       if (data.role === "rating_officer") {
+        logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer: ${normalizedData.email}`);
+        
         // Register rating officer in local system without password
-        console.log("Registering rating officer in local system");
         success = await registerInLocalSystem({
           fullName: normalizedData.fullName,
           email: normalizedData.email,
@@ -73,6 +74,12 @@ export const useRegistrationSubmit = (
           status: "approved" as const,
           accessCode: RATING_OFFICER_ACCESS_CODE
         });
+        
+        if (success) {
+          logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
+        } else {
+          throw new Error("Failed to register Rating Officer in local system");
+        }
       } else {
         // For tournament organizers, both password and confirmPassword must be provided
         if (!normalizedData.password) {
@@ -83,7 +90,7 @@ export const useRegistrationSubmit = (
             variant: "destructive"
           });
           setIsSubmitting(false);
-          return;
+          return false;
         }
         
         // Register tournament organizer in Supabase and local system
