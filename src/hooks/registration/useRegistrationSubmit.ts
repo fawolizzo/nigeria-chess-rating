@@ -64,21 +64,27 @@ export const useRegistrationSubmit = (
       if (data.role === "rating_officer") {
         logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer: ${normalizedData.email}`);
         
-        // Register rating officer in local system without password
-        success = await registerInLocalSystem({
-          fullName: normalizedData.fullName,
-          email: normalizedData.email,
-          phoneNumber: normalizedData.phoneNumber,
-          state: normalizedData.state,
-          role: "rating_officer" as const,
-          status: "approved" as const,
-          accessCode: RATING_OFFICER_ACCESS_CODE
-        });
-        
-        if (success) {
-          logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
-        } else {
-          throw new Error("Failed to register Rating Officer in local system");
+        try {
+          // Register rating officer in local system without password
+          success = await registerInLocalSystem({
+            fullName: normalizedData.fullName,
+            email: normalizedData.email,
+            phoneNumber: normalizedData.phoneNumber,
+            state: normalizedData.state,
+            role: "rating_officer" as const,
+            status: "approved" as const,
+            accessCode: RATING_OFFICER_ACCESS_CODE
+          });
+          
+          if (success) {
+            logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
+          } else {
+            throw new Error("Failed to register Rating Officer in local system");
+          }
+        } catch (error) {
+          console.error("Error registering rating officer:", error);
+          logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${normalizedData.email}`, error);
+          throw error;
         }
       } else {
         // For tournament organizers, both password and confirmPassword must be provided
@@ -148,6 +154,7 @@ export const useRegistrationSubmit = (
           description: data.role === "rating_officer" 
             ? "Your Rating Officer account has been created. You can now log in."
             : "Your account has been created. A rating officer will review and approve your account.",
+          variant: "default"
         });
         
         setTimeout(() => {
