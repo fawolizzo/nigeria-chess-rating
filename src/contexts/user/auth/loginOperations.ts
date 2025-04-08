@@ -6,6 +6,9 @@ import { logMessage, LogLevel, logUserEvent } from '@/utils/debugLogger';
 import { STORAGE_KEYS } from '../userContextTypes';
 import { monitorSync } from '@/utils/monitorSync';
 
+// Default rating officer email
+const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
+
 /**
  * Handle user login
  */
@@ -36,17 +39,13 @@ export const loginUser = async (
       console.log(`Total users in system: ${latestUsers.length}`);
       console.log(`Users with matching role ${role}: ${latestUsers.filter(u => u.role === role).length}`);
       
-      // Support both domain formats for rating officer login
+      // Find user for login
       let user = findUserForLogin(latestUsers, normalizedEmail, role);
       
-      // Special case for rating officer - try both domain formats
+      // Special case for rating officer - try with the default email
       if (!user && role === 'rating_officer') {
-        const alternateEmail = normalizedEmail.includes('@ncr.com') 
-          ? normalizedEmail.replace('@ncr.com', '@nigerianchess.org')
-          : normalizedEmail.replace('@nigerianchess.org', '@ncr.com');
-        
-        console.log(`Rating officer not found with ${normalizedEmail}, trying alternate email: ${alternateEmail}`);
-        user = findUserForLogin(latestUsers, alternateEmail, role);
+        console.log(`Rating officer not found with ${normalizedEmail}, trying default email: ${DEFAULT_RATING_OFFICER_EMAIL}`);
+        user = findUserForLogin(latestUsers, DEFAULT_RATING_OFFICER_EMAIL, role);
       }
       
       if (!user) {

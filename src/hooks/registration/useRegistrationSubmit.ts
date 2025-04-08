@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -5,6 +6,9 @@ import { logUserEvent, LogLevel, logMessage } from "@/utils/debugLogger";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { RegisterFormData } from "@/components/register/RegisterFormSchema";
+
+// Default rating officer email
+const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
 
 export const useRegistrationSubmit = (
   accessCode: string,
@@ -51,18 +55,14 @@ export const useRegistrationSubmit = (
 
   // Register a rating officer
   const registerRatingOfficer = async (normalizedData: any): Promise<boolean> => {
-    // Use the standardized email format
-    const standardizedEmail = normalizedData.email.toLowerCase().endsWith("@nigerianchess.org") 
-      ? normalizedData.email.toLowerCase().replace("@nigerianchess.org", "@ncr.com")
-      : normalizedData.email.toLowerCase();
-    
-    logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer: ${standardizedEmail}`);
+    // Always use the default email for rating officers
+    logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer with standardized email: ${DEFAULT_RATING_OFFICER_EMAIL}`);
     
     try {
       // Register rating officer in local system without password
       const success = await registerInLocalSystem({
         fullName: normalizedData.fullName,
-        email: standardizedEmail,
+        email: DEFAULT_RATING_OFFICER_EMAIL, // Always use the default email
         phoneNumber: normalizedData.phoneNumber,
         state: normalizedData.state,
         role: "rating_officer" as const,
@@ -74,11 +74,11 @@ export const useRegistrationSubmit = (
         throw new Error("Failed to register Rating Officer in local system");
       }
       
-      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${standardizedEmail}`);
+      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${DEFAULT_RATING_OFFICER_EMAIL}`);
       return true;
     } catch (error) {
       console.error("Error registering rating officer:", error);
-      logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${standardizedEmail}`, error);
+      logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${DEFAULT_RATING_OFFICER_EMAIL}`, error);
       throw error;
     }
   };
@@ -230,6 +230,7 @@ export const useRegistrationSubmit = (
       let success = false;
       
       if (data.role === "rating_officer") {
+        // For rating officers, we ignore the provided email and use the default
         success = await registerRatingOfficer(normalizedData);
       } else {
         success = await registerTournamentOrganizer(normalizedData);

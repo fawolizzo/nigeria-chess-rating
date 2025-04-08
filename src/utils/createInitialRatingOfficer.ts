@@ -3,33 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 // Default constants
-const DEFAULT_RATING_OFFICER_EMAIL = "rating.officer@ncr.com";
-const ALTERNATE_RATING_OFFICER_EMAIL = "rating.officer@nigerianchess.org";
+const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
 
 // This function handles creating the initial rating officer account if it doesn't exist
 export const createInitialRatingOfficerIfNeeded = async (email: string, password: string) => {
   try {
-    // Standardize to our preferred email format
-    const standardizedEmail = email.toLowerCase() === ALTERNATE_RATING_OFFICER_EMAIL.toLowerCase() 
-      ? DEFAULT_RATING_OFFICER_EMAIL 
-      : email;
+    // Use our default email regardless of what was passed
+    const standardizedEmail = DEFAULT_RATING_OFFICER_EMAIL;
     
     logMessage(LogLevel.INFO, 'createInitialRatingOfficer', `Checking if rating officer exists: ${standardizedEmail}`);
     
-    // Try the standardized email first
+    // Check if rating officer exists
     let exists = await checkRatingOfficerExists(standardizedEmail, password);
-    
-    // If not found with standardized email, try alternate
-    if (!exists && standardizedEmail === DEFAULT_RATING_OFFICER_EMAIL) {
-      exists = await checkRatingOfficerExists(ALTERNATE_RATING_OFFICER_EMAIL, password);
-      
-      // If found with alternate email, we'll update it later in the userInitializer
-      if (exists) {
-        logMessage(LogLevel.INFO, 'createInitialRatingOfficer', 
-          `Rating officer found with alternate email: ${ALTERNATE_RATING_OFFICER_EMAIL}`);
-        return true;
-      }
-    }
     
     // Account doesn't exist, create it
     if (!exists) {

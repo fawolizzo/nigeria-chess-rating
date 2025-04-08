@@ -5,9 +5,8 @@ import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { STORAGE_KEYS } from './userContextTypes';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
-// Default rating officer constants
-const DEFAULT_RATING_OFFICER_EMAIL = "rating.officer@ncr.com";
-const ALTERNATE_RATING_OFFICER_EMAIL = "rating.officer@nigerianchess.org";
+// Default rating officer constants - updated email
+const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
 const DEFAULT_ACCESS_CODE = "NCR2025";
 
 /**
@@ -49,7 +48,7 @@ export const initializeUserData = async (
       setUsers(updatedUsers);
       logMessage(LogLevel.INFO, 'UserInitializer', `Created default rating officer: ${DEFAULT_RATING_OFFICER_EMAIL}`);
     } else {
-      // Make sure we have a consistent email and accessCode for rating officers
+      // Update all rating officers to use the new email format
       let needsUpdate = false;
       const updatedUsers = storedUsers.map(user => {
         if (user.role === 'rating_officer') {
@@ -64,15 +63,15 @@ export const initializeUserData = async (
             logMessage(LogLevel.INFO, 'UserInitializer', `Updated access code for rating officer: ${user.email}`);
           }
           
-          // Standardize to our preferred email format if it's using the alternate
-          if (user.email.toLowerCase() === ALTERNATE_RATING_OFFICER_EMAIL.toLowerCase()) {
+          // Update email to new format
+          if (user.email !== DEFAULT_RATING_OFFICER_EMAIL) {
             needsUpdate = true;
             user = {
               ...user,
               email: DEFAULT_RATING_OFFICER_EMAIL,
               lastModified: Date.now()
             };
-            logMessage(LogLevel.INFO, 'UserInitializer', `Standardized rating officer email to: ${DEFAULT_RATING_OFFICER_EMAIL}`);
+            logMessage(LogLevel.INFO, 'UserInitializer', `Updated rating officer email to: ${DEFAULT_RATING_OFFICER_EMAIL}`);
           }
         }
         return user;
@@ -88,7 +87,7 @@ export const initializeUserData = async (
     // Update current user if it's a rating officer with old email format
     if (storedCurrentUser && 
         storedCurrentUser.role === 'rating_officer' && 
-        storedCurrentUser.email.toLowerCase() === ALTERNATE_RATING_OFFICER_EMAIL.toLowerCase()) {
+        storedCurrentUser.email !== DEFAULT_RATING_OFFICER_EMAIL) {
       const updatedCurrentUser = {
         ...storedCurrentUser,
         email: DEFAULT_RATING_OFFICER_EMAIL
