@@ -4,17 +4,15 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 // Default constants
 const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
+const DEFAULT_ACCESS_CODE = "NCR2025";
 
 // This function handles creating the initial rating officer account if it doesn't exist
-export const createInitialRatingOfficerIfNeeded = async (email: string, password: string) => {
+export const createInitialRatingOfficerIfNeeded = async () => {
   try {
-    // Use our default email regardless of what was passed
-    const standardizedEmail = DEFAULT_RATING_OFFICER_EMAIL;
-    
-    logMessage(LogLevel.INFO, 'createInitialRatingOfficer', `Checking if rating officer exists: ${standardizedEmail}`);
+    logMessage(LogLevel.INFO, 'createInitialRatingOfficer', `Checking if rating officer exists: ${DEFAULT_RATING_OFFICER_EMAIL}`);
     
     // Check if rating officer exists
-    let exists = await checkRatingOfficerExists(standardizedEmail, password);
+    let exists = await checkRatingOfficerExists(DEFAULT_RATING_OFFICER_EMAIL, DEFAULT_ACCESS_CODE);
     
     // Account doesn't exist, create it
     if (!exists) {
@@ -22,8 +20,8 @@ export const createInitialRatingOfficerIfNeeded = async (email: string, password
       
       // Create the rating officer account
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: standardizedEmail,
-        password,
+        email: DEFAULT_RATING_OFFICER_EMAIL,
+        password: DEFAULT_ACCESS_CODE,
         options: {
           data: {
             fullName: "Nigerian Chess Rating Officer",

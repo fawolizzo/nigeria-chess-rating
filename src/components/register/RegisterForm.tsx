@@ -24,6 +24,26 @@ const RegisterForm = () => {
     onSubmit
   } = useRegisterForm();
   
+  console.log("RegisterForm rendered with state:", {
+    selectedRole,
+    isSubmitting,
+    successMessage,
+    errorMessage,
+    showAccessCode,
+    accessCode,
+    isAccessCodeValid,
+    isSubmitDisabled
+  });
+  
+  const handleFormSubmit = async (data: any) => {
+    console.log("Form submitted with values:", data);
+    console.log("Selected role:", selectedRole);
+    console.log("Access code (rating officer):", accessCode);
+    console.log("Is access code valid:", isAccessCodeValid);
+    
+    return onSubmit(data);
+  };
+  
   return (
     <div className="p-6 sm:p-8">
       <div className="text-center mb-8">
@@ -48,10 +68,11 @@ const RegisterForm = () => {
       )}
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-5">
           <RoleSelector 
             selectedRole={selectedRole} 
             onRoleSelect={(role) => {
+              console.log("Role selected:", role);
               form.setValue("role", role);
               handleShowAccessCode(role);
             }} 
@@ -65,7 +86,10 @@ const RegisterForm = () => {
             <AccessCodeInput 
               accessCode={accessCode}
               isAccessCodeValid={isAccessCodeValid}
-              onChange={setAccessCode}
+              onChange={(value) => {
+                console.log("Access code changed:", value);
+                setAccessCode(value);
+              }}
             />
           )}
           
@@ -73,6 +97,11 @@ const RegisterForm = () => {
             type="submit"
             className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
             disabled={isSubmitDisabled}
+            onClick={() => {
+              console.log("Submit button clicked");
+              console.log("Form values:", form.getValues());
+              console.log("Form state:", form.formState);
+            }}
           >
             {isSubmitting ? (
               <>

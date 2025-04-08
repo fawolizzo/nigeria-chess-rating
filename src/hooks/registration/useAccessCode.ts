@@ -12,7 +12,12 @@ export const useAccessCode = () => {
   // Show access code field when role is rating officer
   const handleShowAccessCode = (role: string) => {
     setShowAccessCode(role === "rating_officer");
-    if (role !== "rating_officer") {
+    
+    // Pre-fill the access code for testing purposes
+    if (role === "rating_officer") {
+      setAccessCode(RATING_OFFICER_ACCESS_CODE);
+      setIsAccessCodeValid(true);
+    } else {
       setAccessCode("");
       setIsAccessCodeValid(false);
     }

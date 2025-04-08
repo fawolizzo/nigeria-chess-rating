@@ -55,11 +55,11 @@ export const useRegistrationSubmit = (
 
   // Register a rating officer
   const registerRatingOfficer = async (normalizedData: any): Promise<boolean> => {
-    // Always use the default email for rating officers
-    logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer with standardized email: ${DEFAULT_RATING_OFFICER_EMAIL}`);
-    
     try {
-      // Register rating officer in local system without password
+      // Always use the default email for rating officers
+      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer with default email: ${DEFAULT_RATING_OFFICER_EMAIL}`);
+      
+      // Register rating officer in local system
       const success = await registerInLocalSystem({
         fullName: normalizedData.fullName,
         email: DEFAULT_RATING_OFFICER_EMAIL, // Always use the default email
@@ -72,6 +72,26 @@ export const useRegistrationSubmit = (
       
       if (!success) {
         throw new Error("Failed to register Rating Officer in local system");
+      }
+      
+      // Also register in Supabase for authentication
+      const { data: supabaseData, error: supabaseError } = await supabase.auth.signUp({
+        email: DEFAULT_RATING_OFFICER_EMAIL,
+        password: RATING_OFFICER_ACCESS_CODE, // Use access code as password for simplicity
+        options: {
+          data: {
+            fullName: normalizedData.fullName,
+            phoneNumber: normalizedData.phoneNumber,
+            state: normalizedData.state,
+            role: "rating_officer",
+            status: "approved"
+          }
+        }
+      });
+      
+      if (supabaseError) {
+        console.error("Supabase error registering rating officer:", supabaseError);
+        // Continue even if Supabase fails - we'll rely on local registration
       }
       
       logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${DEFAULT_RATING_OFFICER_EMAIL}`);
@@ -116,8 +136,7 @@ export const useRegistrationSubmit = (
         phoneNumber: normalizedData.phoneNumber,
         state: normalizedData.state,
         role: "tournament_organizer" as const,
-        status: "pending" as const,
-        password: normalizedData.password
+        status: "pending" as const
       });
       
       return true;
@@ -198,6 +217,8 @@ export const useRegistrationSubmit = (
     setErrorMessage("");
     setSuccessMessage("");
     
+    console.log("Registration form submitted with data:", data);
+    
     try {
       logUserEvent("Registration attempt", undefined, { 
         email: data.email,
@@ -227,13 +248,19 @@ export const useRegistrationSubmit = (
         password: data.role === "tournament_organizer" ? data.password?.trim() : undefined
       };
       
+      console.log("Normalized registration data:", normalizedData);
+      
       let success = false;
       
       if (data.role === "rating_officer") {
         // For rating officers, we ignore the provided email and use the default
+        console.log("Attempting to register rating officer...");
         success = await registerRatingOfficer(normalizedData);
+        console.log("Rating officer registration result:", success);
       } else {
+        console.log("Attempting to register tournament organizer...");
         success = await registerTournamentOrganizer(normalizedData);
+        console.log("Tournament organizer registration result:", success);
       }
       
       if (success) {
@@ -242,6 +269,7 @@ export const useRegistrationSubmit = (
         return handleRegistrationFailure();
       }
     } catch (error: any) {
+      console.error("Registration error caught in handleSubmit:", error);
       return handleRegistrationError(error);
     } finally {
       setIsSubmitting(false);
