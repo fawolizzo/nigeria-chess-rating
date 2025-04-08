@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -52,13 +51,18 @@ export const useRegistrationSubmit = (
 
   // Register a rating officer
   const registerRatingOfficer = async (normalizedData: any): Promise<boolean> => {
-    logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer: ${normalizedData.email}`);
+    // Use the standardized email format
+    const standardizedEmail = normalizedData.email.toLowerCase().endsWith("@nigerianchess.org") 
+      ? normalizedData.email.toLowerCase().replace("@nigerianchess.org", "@ncr.com")
+      : normalizedData.email.toLowerCase();
+    
+    logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer: ${standardizedEmail}`);
     
     try {
       // Register rating officer in local system without password
       const success = await registerInLocalSystem({
         fullName: normalizedData.fullName,
-        email: normalizedData.email,
+        email: standardizedEmail,
         phoneNumber: normalizedData.phoneNumber,
         state: normalizedData.state,
         role: "rating_officer" as const,
@@ -70,11 +74,11 @@ export const useRegistrationSubmit = (
         throw new Error("Failed to register Rating Officer in local system");
       }
       
-      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
+      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${standardizedEmail}`);
       return true;
     } catch (error) {
       console.error("Error registering rating officer:", error);
-      logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${normalizedData.email}`, error);
+      logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${standardizedEmail}`, error);
       throw error;
     }
   };
@@ -215,6 +219,7 @@ export const useRegistrationSubmit = (
         return false;
       }
       
+      // Normalize and standardize email formats
       const normalizedData = {
         ...data,
         email: data.email.toLowerCase().trim(),

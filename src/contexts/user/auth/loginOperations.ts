@@ -36,7 +36,18 @@ export const loginUser = async (
       console.log(`Total users in system: ${latestUsers.length}`);
       console.log(`Users with matching role ${role}: ${latestUsers.filter(u => u.role === role).length}`);
       
-      const user = findUserForLogin(latestUsers, normalizedEmail, role);
+      // Support both domain formats for rating officer login
+      let user = findUserForLogin(latestUsers, normalizedEmail, role);
+      
+      // Special case for rating officer - try both domain formats
+      if (!user && role === 'rating_officer') {
+        const alternateEmail = normalizedEmail.includes('@ncr.com') 
+          ? normalizedEmail.replace('@ncr.com', '@nigerianchess.org')
+          : normalizedEmail.replace('@nigerianchess.org', '@ncr.com');
+        
+        console.log(`Rating officer not found with ${normalizedEmail}, trying alternate email: ${alternateEmail}`);
+        user = findUserForLogin(latestUsers, alternateEmail, role);
+      }
       
       if (!user) {
         console.log(`No user found with email ${normalizedEmail} and role ${role}`);
@@ -84,7 +95,8 @@ function findUserForLogin(users: User[], email: string, role: string): User | un
  */
 function authenticateUser(user: User, authValue: string, role: string): boolean {
   if (role === 'rating_officer') {
-    // Rating officers login with access code
+    // Rating officers login with access code, but let's add more debug info
+    console.log(`Rating officer auth attempt with access code: ${authValue.substring(0, 2)}*** for user with code: ${user.accessCode?.substring(0, 2)}***`);
     if (user.accessCode && user.accessCode === authValue) {
       logMessage(LogLevel.INFO, 'LoginOperations', `Rating officer authentication successful for ${user.email}`);
       console.log(`Rating officer auth successful: ${user.email} using access code`);
