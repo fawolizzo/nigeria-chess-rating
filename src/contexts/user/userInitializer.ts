@@ -5,7 +5,7 @@ import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { STORAGE_KEYS } from './userContextTypes';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
-// Default rating officer constants - updated email
+// Default rating officer constants
 const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
 const DEFAULT_ACCESS_CODE = "NCR2025";
 
