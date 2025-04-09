@@ -2,6 +2,7 @@
 import { Check, Shield, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FormLabel } from "@/components/ui/form";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AccessCodeInputProps {
   accessCode: string;
@@ -18,7 +19,16 @@ const AccessCodeInput = ({
     <div>
       <FormLabel className="flex items-center gap-1">
         <span>Access Code</span> 
-        <Info className="h-4 w-4 text-gray-400 cursor-help" title="Required for Rating Officer" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-gray-400 cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Required for Rating Officer</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </FormLabel>
       <div className="relative">
         <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />

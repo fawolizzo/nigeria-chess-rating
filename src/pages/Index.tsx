@@ -13,10 +13,7 @@ const Index = () => {
   useEffect(() => {
     const initializeRatingOfficer = async () => {
       try {
-        await createInitialRatingOfficerIfNeeded(
-          "rating.officer@nigerianchess.org", 
-          "NCR2025"
-        );
+        await createInitialRatingOfficerIfNeeded();
       } catch (error) {
         logMessage(LogLevel.ERROR, 'Index', 'Error initializing rating officer:', error);
       }
