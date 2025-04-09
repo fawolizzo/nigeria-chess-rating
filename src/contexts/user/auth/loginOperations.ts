@@ -25,7 +25,7 @@ export const loginUser = async (
 ): Promise<boolean> => {
   return monitorSync('login', email, async () => {
     try {
-      console.log(`Login attempt - Email: ${email}, Role: ${role}`);
+      console.log(`Login attempt - Email: ${email}, Role: ${role}, Auth value provided: ${authValue ? 'Yes' : 'No'}`);
       
       setIsLoading(true);
       
@@ -45,11 +45,28 @@ export const loginUser = async (
       setUsers(latestUsers);
       
       // Try to find the user
-      const user = latestUsers.find((u) => 
+      let user = latestUsers.find((u) => 
         u.email.toLowerCase() === normalizedEmail && u.role === role
       );
       
       console.log(`User found in local storage: ${user ? 'Yes' : 'No'}`);
+      
+      // If no Rating Officer found, create one in memory (will not be persisted yet)
+      if (!user && role === 'rating_officer') {
+        console.log('Creating temporary Rating Officer in memory for login attempt');
+        user = {
+          id: 'temp-rating-officer-id',
+          email: DEFAULT_RATING_OFFICER_EMAIL,
+          fullName: 'Nigerian Chess Rating Officer',
+          phoneNumber: '',
+          state: 'FCT',
+          role: 'rating_officer',
+          status: 'approved',
+          registrationDate: new Date().toISOString(),
+          lastModified: Date.now(),
+          accessCode: DEFAULT_ACCESS_CODE
+        };
+      }
       
       if (!user) {
         throw new Error(`No ${role} account found with this email`);
@@ -94,6 +111,17 @@ export const loginUser = async (
         } else {
           throw new Error('Invalid password');
         }
+      }
+      
+      // If this is a temporary user, save it to storage
+      if (user.id === 'temp-rating-officer-id') {
+        console.log('Saving temporary Rating Officer to persistent storage');
+        user.id = crypto.randomUUID(); // Generate a proper UUID
+        
+        // Add user to the users array
+        const updatedUsers = [...latestUsers, user];
+        setUsers(updatedUsers);
+        saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
       }
       
       // Update current user and save to storage

@@ -25,7 +25,7 @@ export const registerSchema = z.object({
   }
   return true;
 }, {
-  message: "Password is required for Tournament Organizers",
+  message: "Password is required and must be at least 8 characters for Tournament Organizers",
   path: ["password"]
 });
 
