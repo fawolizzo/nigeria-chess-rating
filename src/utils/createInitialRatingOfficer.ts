@@ -23,20 +23,28 @@ export const createInitialRatingOfficerIfNeeded = async () => {
     
     // Try to create the account in Supabase (might fail if it already exists, but that's OK)
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: DEFAULT_RATING_OFFICER_EMAIL,
-        password: DEFAULT_ACCESS_CODE,
-        options: {
-          data: {
-            fullName: "Nigerian Chess Rating Officer",
-            role: "rating_officer",
-            status: "approved"
-          }
-        }
-      });
+      // First check if the user already exists in Supabase
+      const { data: existingUser, error: getUserError } = await supabase.auth.admin.getUserByEmail(DEFAULT_RATING_OFFICER_EMAIL);
       
-      if (signUpError && !signUpError.message.includes("already registered")) {
-        logMessage(LogLevel.ERROR, 'createInitialRatingOfficer', 'Error creating rating officer:', signUpError);
+      if (existingUser) {
+        logMessage(LogLevel.INFO, 'createInitialRatingOfficer', 'Rating officer already exists in Supabase');
+      } else {
+        // If user doesn't exist, create them
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: DEFAULT_RATING_OFFICER_EMAIL,
+          password: DEFAULT_ACCESS_CODE,
+          options: {
+            data: {
+              fullName: "Nigerian Chess Rating Officer",
+              role: "rating_officer",
+              status: "approved"
+            }
+          }
+        });
+        
+        if (signUpError && !signUpError.message.includes("already registered")) {
+          logMessage(LogLevel.ERROR, 'createInitialRatingOfficer', 'Error creating rating officer:', signUpError);
+        }
       }
     } catch (error) {
       // Ignore errors here - might just mean the account already exists

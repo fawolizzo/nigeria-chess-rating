@@ -34,6 +34,16 @@ export const useLoginForm = () => {
   const handleRoleChange = (role: "tournament_organizer" | "rating_officer") => {
     form.setValue("role", role);
     setError("");
+    
+    // Pre-fill email for rating officer
+    if (role === "rating_officer") {
+      form.setValue("email", "fawolizzo@gmail.com");
+    } else {
+      // Clear email if switching back to tournament organizer
+      if (form.getValues("email") === "fawolizzo@gmail.com") {
+        form.setValue("email", "");
+      }
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -59,15 +69,40 @@ export const useLoginForm = () => {
       
       console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
       
-      // First try local login directly
-      const localSuccess = await localLogin(normalizedEmail, normalizedPassword, data.role);
+      // For rating officer, always use direct login method
+      if (data.role === "rating_officer") {
+        console.log("Attempting Rating Officer login");
+        const localSuccess = await localLogin(normalizedEmail, normalizedPassword, data.role);
+        
+        console.log(`Rating Officer login result: ${localSuccess ? "success" : "failed"}`);
+        
+        if (localSuccess) {
+          logUserEvent("Login successful", undefined, { 
+            email: normalizedEmail, 
+            role: data.role 
+          });
+          
+          toast({
+            title: "Login Successful",
+            description: "Welcome back! You are now logged in as a Rating Officer.",
+          });
+          
+          // Navigate to rating officer dashboard
+          navigate("/officer/dashboard");
+          return;
+        } else {
+          throw new Error("Invalid access code for Rating Officer account");
+        }
+      }
       
-      console.log(`Local login result for ${data.role}: ${localSuccess ? "success" : "failed"}`);
+      // For tournament organizer, try both local and Supabase login
+      console.log("Attempting Tournament Organizer login");
+      let success = await localLogin(normalizedEmail, normalizedPassword, data.role);
       
-      let success = localSuccess;
+      console.log(`Local login result for Tournament Organizer: ${success ? "success" : "failed"}`);
       
-      // If local login fails and it's a tournament organizer, try Supabase
-      if (!success && data.role === "tournament_organizer") {
+      // If local login fails, try Supabase
+      if (!success) {
         console.log("Local login failed, trying Supabase login");
         success = await signIn(normalizedEmail, normalizedPassword);
         console.log(`Supabase login result: ${success ? "success" : "failed"}`);
@@ -78,22 +113,15 @@ export const useLoginForm = () => {
         
         toast({
           title: "Login Successful",
-          description: `Welcome back! You are now logged in as a ${data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer'}.`,
+          description: "Welcome back! You are now logged in as a Tournament Organizer.",
         });
         
-        // Navigate immediately instead of using a timeout
-        if (data.role === "tournament_organizer") {
-          navigate("/organizer/dashboard");
-        } else {
-          navigate("/officer/dashboard");
-        }
+        // Navigate to tournament organizer dashboard
+        navigate("/organizer/dashboard");
       } else {
         logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
         
-        const roleDisplay = data.role === 'tournament_organizer' ? 'Tournament Organizer' : 'Rating Officer';
-        const fieldName = data.role === 'tournament_organizer' ? 'password' : 'access code';
-        
-        const errorMessage = `Invalid email or ${fieldName} for ${roleDisplay} account. Please check your credentials and try again.`;
+        const errorMessage = "Invalid email or password for Tournament Organizer account. Please check your credentials and try again.";
         setError(errorMessage);
         
         toast({

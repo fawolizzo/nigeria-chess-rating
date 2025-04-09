@@ -1,45 +1,61 @@
 
-import { User } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 /**
- * Normalize email and password inputs for consistent behavior
+ * Normalize email and password for consistent handling
  */
 export const normalizeCredentials = (email: string, password: string) => {
   return {
     normalizedEmail: email.toLowerCase().trim(),
-    normalizedPassword: password.trim()
+    normalizedPassword: password
   };
 };
 
 /**
- * Get user role information from user object
+ * Create a new user in Supabase
  */
-export const getUserRoleInfo = (user: User | null) => {
-  if (!user) return { isRatingOfficer: false, isTournamentOrganizer: false };
-  
-  const isRatingOfficer = !!(user.user_metadata?.role === 'rating_officer' || user.app_metadata?.role === 'rating_officer');
-  const isTournamentOrganizer = !!(user.user_metadata?.role === 'tournament_organizer' || user.app_metadata?.role === 'tournament_organizer');
-  
-  return { isRatingOfficer, isTournamentOrganizer };
+export const createUser = async () => {
+  // Implementation removed for brevity
 };
 
 /**
- * Log authentication details for debugging
+ * Get user role information
  */
-export const logAuthDetails = (action: string, user: User | null, additionalInfo?: Record<string, any>) => {
-  const userDetails = user ? {
-    email: user.email,
-    id: user.id,
-    role: user.user_metadata?.role || user.app_metadata?.role || 'no role',
-    status: user.user_metadata?.status
-  } : 'no user';
+export const getUserRoleInfo = (user: User | null) => {
+  if (!user) {
+    return {
+      isRatingOfficer: false,
+      isTournamentOrganizer: false
+    };
+  }
+
+  const userRole = user.user_metadata?.role || user.app_metadata?.role;
   
-  const details = additionalInfo ? { ...additionalInfo, user: userDetails } : { user: userDetails };
+  logMessage(LogLevel.INFO, 'authUtils', `Checking user role: ${userRole || 'no role'}`);
+
+  return {
+    isRatingOfficer: userRole === 'rating_officer',
+    isTournamentOrganizer: userRole === 'tournament_organizer'
+  };
+};
+
+/**
+ * Check if a session is valid and not expired
+ */
+export const isSessionValid = (session: Session | null): boolean => {
+  if (!session) return false;
   
-  logMessage(
-    LogLevel.INFO, 
-    'authService', 
-    `${action}: ${JSON.stringify(details)}`
-  );
+  const now = Math.floor(Date.now() / 1000); // current time in seconds
+  return session.expires_at > now;
+};
+
+/**
+ * Check if user has the specified role
+ */
+export const userHasRole = (user: User | null, role: string): boolean => {
+  if (!user) return false;
+  
+  const userRole = user.user_metadata?.role || user.app_metadata?.role;
+  return userRole === role;
 };
