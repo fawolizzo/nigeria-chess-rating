@@ -40,7 +40,7 @@ export const createInitialRatingOfficerIfNeeded = async () => {
       }
     } catch (error) {
       // Ignore errors here - might just mean the account already exists
-      logMessage(LogLevel.WARN, 'createInitialRatingOfficer', 'Non-critical error in Supabase signup (might already exist):', error);
+      logMessage(LogLevel.WARNING, 'createInitialRatingOfficer', 'Non-critical error in Supabase signup (might already exist):', error);
     }
     
     // Create the rating officer in local storage regardless of Supabase result
