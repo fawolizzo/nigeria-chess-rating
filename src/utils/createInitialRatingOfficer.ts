@@ -68,9 +68,14 @@ async function checkRatingOfficerExistsLocally(email: string): Promise<boolean> 
   try {
     const users = getFromStorage(STORAGE_KEY_USERS, []);
     
+    if (!Array.isArray(users)) {
+      logMessage(LogLevel.WARNING, 'createInitialRatingOfficer', 'Users data is not an array, returning empty array');
+      return false;
+    }
+    
     const ratingOfficer = users.find(
       (user: any) => 
-        user.email.toLowerCase() === email.toLowerCase() && 
+        user && user.email && user.email.toLowerCase() === email.toLowerCase() && 
         user.role === 'rating_officer'
     );
     
@@ -88,6 +93,9 @@ async function createRatingOfficerInLocalStorage() {
   try {
     const users = getFromStorage(STORAGE_KEY_USERS, []);
     
+    // Ensure users is an array
+    const usersArray = Array.isArray(users) ? users : [];
+    
     // Create rating officer object
     const ratingOfficer = {
       id: crypto.randomUUID(),
@@ -103,10 +111,10 @@ async function createRatingOfficerInLocalStorage() {
     };
     
     // Add to users array
-    users.push(ratingOfficer);
+    usersArray.push(ratingOfficer);
     
     // Save back to storage
-    saveToStorage(STORAGE_KEY_USERS, users);
+    saveToStorage(STORAGE_KEY_USERS, usersArray);
     
     logMessage(LogLevel.INFO, 'createInitialRatingOfficer', 'Rating officer created in local storage');
     return true;

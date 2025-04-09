@@ -9,6 +9,7 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { normalizeCredentials } from "@/services/auth";
 import { useUser } from "@/contexts/UserContext";
+import createInitialRatingOfficerIfNeeded from "@/utils/createInitialRatingOfficer";
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
@@ -31,13 +32,20 @@ export const useLoginForm = () => {
 
   const selectedRole = form.watch("role");
 
-  const handleRoleChange = (role: "tournament_organizer" | "rating_officer") => {
+  const handleRoleChange = async (role: "tournament_organizer" | "rating_officer") => {
     form.setValue("role", role);
     setError("");
     
     // Pre-fill email for rating officer
     if (role === "rating_officer") {
       form.setValue("email", "fawolizzo@gmail.com");
+      
+      // Create rating officer if it doesn't exist
+      try {
+        await createInitialRatingOfficerIfNeeded();
+      } catch (error) {
+        console.error("Error creating initial rating officer:", error);
+      }
     } else {
       // Clear email if switching back to tournament organizer
       if (form.getValues("email") === "fawolizzo@gmail.com") {
@@ -72,6 +80,10 @@ export const useLoginForm = () => {
       // For rating officer, always use direct login method
       if (data.role === "rating_officer") {
         console.log("Attempting Rating Officer login");
+        
+        // Create rating officer if it doesn't exist
+        await createInitialRatingOfficerIfNeeded();
+        
         const localSuccess = await localLogin(normalizedEmail, normalizedPassword, data.role);
         
         console.log(`Rating Officer login result: ${localSuccess ? "success" : "failed"}`);

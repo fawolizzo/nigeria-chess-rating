@@ -42,12 +42,13 @@ export const loginUser = async (
       
       // Get the latest users from storage
       const latestUsers = getFromStorage<User[]>(STORAGE_KEYS.USERS, []);
-      setUsers(latestUsers);
+      console.log("Retrieved users from storage:", latestUsers);
+      setUsers(latestUsers || []); // Ensure we always have an array
       
       // Try to find the user
-      let user = latestUsers.find((u) => 
-        u.email.toLowerCase() === normalizedEmail && u.role === role
-      );
+      let user = Array.isArray(latestUsers) ? latestUsers.find((u) => 
+        u && u.email && u.email.toLowerCase() === normalizedEmail && u.role === role
+      ) : null;
       
       console.log(`User found in local storage: ${user ? 'Yes' : 'No'}`);
       
@@ -119,7 +120,7 @@ export const loginUser = async (
         user.id = crypto.randomUUID(); // Generate a proper UUID
         
         // Add user to the users array
-        const updatedUsers = [...latestUsers, user];
+        const updatedUsers = Array.isArray(latestUsers) ? [...latestUsers, user] : [user];
         setUsers(updatedUsers);
         saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
       }

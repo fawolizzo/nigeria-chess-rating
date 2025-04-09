@@ -39,6 +39,12 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     const initialize = async () => {
       try {
         setIsLoading(true);
+        
+        // First try to create the initial rating officer if needed
+        const { default: createInitialRatingOfficerIfNeeded } = await import('@/utils/createInitialRatingOfficer');
+        await createInitialRatingOfficerIfNeeded();
+        
+        // Then initialize user data
         await initializeUserData(setUsers, setCurrentUser, setIsInitialized, forceSyncAllStorage);
       } catch (error) {
         logMessage(LogLevel.ERROR, 'UserContext', 'Error initializing user data:', error);
