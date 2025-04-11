@@ -1,9 +1,96 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { OfficerDashboardProvider } from "@/contexts/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
+import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const OfficerDashboardContent: React.FC = () => {
+  const { syncDashboardData, isSyncing, lastSyncTime } = useOfficerDashboardSync();
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(10);
+  
+  // Initial sync and loading progress
+  useEffect(() => {
+    let mounted = true;
+    
+    const performInitialSync = async () => {
+      try {
+        // Start with a minimum progress
+        setLoadingProgress(10);
+        
+        // Simulate progress while sync is happening
+        const progressInterval = setInterval(() => {
+          if (mounted) {
+            setLoadingProgress(prev => {
+              // Don't go past 90% until we confirm sync is complete
+              return prev < 90 ? prev + 10 : prev;
+            });
+          }
+        }, 300);
+        
+        // Wait for actual sync
+        logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Performing initial data sync');
+        await syncDashboardData();
+        
+        // Clear interval and set to 100%
+        clearInterval(progressInterval);
+        if (mounted) {
+          setLoadingProgress(100);
+          
+          // Small delay to show completed progress before showing content
+          setTimeout(() => {
+            if (mounted) {
+              setInitialLoadComplete(true);
+            }
+          }, 300);
+        }
+      } catch (error) {
+        logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Initial sync failed:', error);
+        if (mounted) {
+          setInitialLoadComplete(true); // Show UI even if sync failed
+        }
+      }
+    };
+    
+    performInitialSync();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [syncDashboardData]);
+  
+  if (!initialLoadComplete) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+        
+        <div className="space-y-1 pt-4">
+          <div className="text-xs text-gray-500 flex justify-between">
+            <span>Loading dashboard data...</span>
+            <span>{loadingProgress}%</span>
+          </div>
+          <Progress value={loadingProgress} className="h-2" />
+        </div>
+        
+        <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array(4).fill(0).map((_, index) => (
+            <div key={index} className="border rounded-md p-4 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <OfficerDashboardProvider>
       <OfficerDashboardTabs />
