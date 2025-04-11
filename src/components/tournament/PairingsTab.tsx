@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
 import PairingSystem from "@/components/PairingSystem";
 import ResultRecorder from "@/components/ResultRecorder";
-import { useToast } from "@/components/ui/use-toast";
 
 interface PairingsTabProps {
   tournamentStatus: string;
@@ -124,12 +123,14 @@ const PairingsTab = ({
   }>) => {
     // Call the parent save results function (which will already show a toast)
     onSaveResults(results);
-    
-    // Toast notification is now only handled in the parent component
   };
 
   // Check if we should show the generate pairings button
   const shouldShowGeneratePairingsButton = () => {
+    // Only show the generate pairings button for the current round when:
+    // 1. Tournament is ongoing
+    // 2. We're viewing the current round
+    // 3. Pairings haven't been generated yet for this round
     return isOngoing && isCurrentRound && !pairingsGenerated;
   };
 

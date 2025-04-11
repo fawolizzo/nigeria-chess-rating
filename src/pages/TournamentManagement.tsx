@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -141,12 +140,15 @@ const TournamentManagement = () => {
   }, [tournament, registeredPlayers]);
 
   useEffect(() => {
-    // Fix the previouslyPlayed check in the PairingsTab
-    // This is a one-time fix for the pairing system
+    // Fix the pairingsGenerated state when round changes
     if (tournament?.pairings) {
-      setPairingsGenerated(tournament.pairings.some(p => p.roundNumber === tournament.currentRound));
+      // Update pairingsGenerated based on whether pairings exist for the current round
+      const hasPairings = tournament.pairings.some(p => p.roundNumber === tournament.currentRound);
+      setPairingsGenerated(hasPairings);
+    } else {
+      setPairingsGenerated(false);
     }
-  }, [tournament, selectedRound]);
+  }, [tournament, tournament?.currentRound]);
 
   useEffect(() => {
     // Check for pending players
@@ -479,20 +481,33 @@ const TournamentManagement = () => {
       }
     }
 
+    // Move to the next round
+    const nextRound = tournament.currentRound + 1;
+    
+    // Check if we're trying to exceed total rounds
+    if (nextRound > tournament.rounds) {
+      toast({
+        title: "Tournament Complete",
+        description: "This is the final round. You can complete the tournament now.",
+        variant: "warning"
+      });
+      return;
+    }
+
     const updatedTournament = {
       ...tournament,
-      currentRound: tournament.currentRound + 1,
+      currentRound: nextRound,
     };
 
     updateTournament(updatedTournament);
     setTournament(updatedTournament);
-    setSelectedRound(updatedTournament.currentRound);
+    setSelectedRound(nextRound);
     setPairingsGenerated(false);
     setCanAdvanceRound(false);
     
     toast({
       title: "Round Advanced",
-      description: `Tournament has advanced to Round ${updatedTournament.currentRound}.`,
+      description: `Tournament has advanced to Round ${nextRound}. You can now generate pairings for the new round.`,
     });
   };
 
@@ -595,12 +610,12 @@ const TournamentManagement = () => {
           onToggleRegistration={toggleRegistrationStatus}
           onStartTournament={startTournament}
           onCompleteTournament={completeTournament}
-          canStartTournament={tournament.players !== undefined && 
+          canStartTournament={tournament?.players !== undefined && 
             registeredPlayers.filter(p => p.status === 'approved').length >= 2}
         />
         
         {/* Show pending players alert */}
-        {hasPendingPlayers && tournament.status === "upcoming" && (
+        {hasPendingPlayers && tournament?.status === "upcoming" && (
           <Alert variant="warning" className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <AlertTitle className="text-yellow-800 dark:text-yellow-300">Pending Players</AlertTitle>
@@ -613,7 +628,7 @@ const TournamentManagement = () => {
         
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 mb-6">
           {/* Round Controller */}
-          {tournament.currentRound !== undefined && tournament.status === "ongoing" && (
+          {tournament?.currentRound !== undefined && tournament?.status === "ongoing" && (
             <RoundController 
               currentRound={tournament.currentRound}
               totalRounds={tournament.rounds}
@@ -630,7 +645,7 @@ const TournamentManagement = () => {
                 {hasPendingPlayers && <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-100 text-yellow-600 text-xs">!</span>}
               </TabsTrigger>
               
-              {(tournament.status === "ongoing" || tournament.status === "completed") && (
+              {(tournament?.status === "ongoing" || tournament?.status === "completed") && (
                 <>
                   <TabsTrigger value="pairings" className="flex gap-1 items-center">
                     <Trophy size={16} /> 
@@ -647,25 +662,25 @@ const TournamentManagement = () => {
             
             <TabsContent value="players">
               <PlayersTab 
-                tournamentId={tournament.id}
-                tournamentStatus={tournament.status}
+                tournamentId={tournament?.id || ""}
+                tournamentStatus={tournament?.status || "upcoming"}
                 registeredPlayers={registeredPlayers}
-                playerIds={tournament.players || []}
+                playerIds={tournament?.players || []}
                 onCreatePlayer={() => setIsCreatePlayerOpen(true)}
                 onAddPlayers={handleAddPlayers}
                 onRemovePlayer={handleRemovePlayer}
               />
             </TabsContent>
             
-            {(tournament.status === "ongoing" || tournament.status === "completed") && (
+            {(tournament?.status === "ongoing" || tournament?.status === "completed") && (
               <>
                 <TabsContent value="pairings">
                   <PairingsTab 
-                    tournamentStatus={tournament.status}
-                    currentRound={tournament.currentRound || 1}
-                    totalRounds={tournament.rounds}
+                    tournamentStatus={tournament?.status || "upcoming"}
+                    currentRound={tournament?.currentRound || 1}
+                    totalRounds={tournament?.rounds || 1}
                     selectedRound={selectedRound}
-                    pairings={tournament.pairings}
+                    pairings={tournament?.pairings}
                     players={registeredPlayers.filter(p => p.status === 'approved')} // Only include approved players
                     pairingsGenerated={pairingsGenerated}
                     onRoundSelect={setSelectedRound}
