@@ -143,14 +143,10 @@ const TournamentManagement = () => {
   useEffect(() => {
     // Fix the previouslyPlayed check in the PairingsTab
     // This is a one-time fix for the pairing system
-    const fixPreviouslyPlayedCheck = () => {
-      if (tournament?.pairings) {
-        setPairingsGenerated(tournament.pairings.some(p => p.roundNumber === tournament.currentRound));
-      }
-    };
-    
-    fixPreviouslyPlayedCheck();
-  }, [tournament]);
+    if (tournament?.pairings) {
+      setPairingsGenerated(tournament.pairings.some(p => p.roundNumber === tournament.currentRound));
+    }
+  }, [tournament, selectedRound]);
 
   useEffect(() => {
     // Check for pending players
@@ -455,6 +451,7 @@ const TournamentManagement = () => {
     // Immediately calculate standings after saving results
     calculateStandings();
     
+    // Single consolidated toast message for results being saved
     toast({
       title: "Results Saved",
       description: `Round ${roundNumber} results have been saved and standings have been updated.`,
@@ -492,6 +489,11 @@ const TournamentManagement = () => {
     setSelectedRound(updatedTournament.currentRound);
     setPairingsGenerated(false);
     setCanAdvanceRound(false);
+    
+    toast({
+      title: "Round Advanced",
+      description: `Tournament has advanced to Round ${updatedTournament.currentRound}.`,
+    });
   };
 
   const calculateStandings = () => {

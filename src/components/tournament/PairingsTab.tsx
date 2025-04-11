@@ -53,7 +53,6 @@ const PairingsTab = ({
   const currentPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
   const isOngoing = tournamentStatus === "ongoing";
   const isCurrentRound = selectedRound === currentRound;
-  const { toast } = useToast();
   
   // Calculate previous opponents for Swiss pairings
   const calculatePreviousOpponents = () => {
@@ -117,20 +116,21 @@ const PairingsTab = ({
     return scores;
   };
 
-  // Handle save results with forcing standings recalculation
+  // Handle save results - removed the duplicate toast notification here
   const handleSaveResults = (results: Array<{
     whiteId: string;
     blackId: string;
     result: "1-0" | "0-1" | "1/2-1/2" | "*"
   }>) => {
-    // Call the parent save results function
+    // Call the parent save results function (which will already show a toast)
     onSaveResults(results);
     
-    // Show a toast to inform user that standings are being updated
-    toast({
-      title: "Results Saved",
-      description: "Results have been saved and standings are being updated.",
-    });
+    // Toast notification is now only handled in the parent component
+  };
+
+  // Check if we should show the generate pairings button
+  const shouldShowGeneratePairingsButton = () => {
+    return isOngoing && isCurrentRound && !pairingsGenerated;
   };
 
   return (
@@ -140,9 +140,7 @@ const PairingsTab = ({
           <CardTitle className="text-nigeria-green-dark">Round {selectedRound} Pairings</CardTitle>
           
           <div className="flex gap-2">
-            {isOngoing && 
-              isCurrentRound &&
-              !pairingsGenerated && (
+            {shouldShowGeneratePairingsButton() && (
               <Button 
                 onClick={onGeneratePairings}
                 className="flex items-center gap-1 bg-nigeria-green hover:bg-nigeria-green-dark"
@@ -166,6 +164,7 @@ const PairingsTab = ({
                     : "text-nigeria-green border-nigeria-green/50 hover:bg-nigeria-green/10"
                 }`}
                 onClick={() => onRoundSelect(round)}
+                disabled={round > currentRound} // Disable future rounds
               >
                 {round}
               </Button>

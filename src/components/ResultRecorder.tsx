@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/mockData";
-import { useToast } from "@/components/ui/use-toast";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
 import { BadgeCheck, AlertCircle } from "lucide-react";
 
@@ -42,7 +41,6 @@ const ResultRecorder = ({
       result: pair.result || "*"
     }))
   );
-  const { toast } = useToast();
 
   useEffect(() => {
     // Update results when pairings change
@@ -63,15 +61,8 @@ const ResultRecorder = ({
   };
 
   const handleSave = () => {
-    // Pass results to parent component
+    // Pass results to parent component - the toast will be handled at a higher level
     onSaveResults(results);
-    
-    // Add toast notification to provide feedback
-    toast({
-      title: "Results Saved",
-      description: `Round ${roundNumber} results have been successfully saved.`,
-      variant: "default",
-    });
   };
 
   const getPlayerById = (id: string) => {
