@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
@@ -17,8 +17,8 @@ const OfficerDashboard: React.FC = () => {
   const [isContentLoading, setIsContentLoading] = useState(true);
   const { toast } = useToast();
   
+  // Prevent access for non-rating officers
   useEffect(() => {
-    // Check if user is logged in and is a rating officer
     if (!isLoading) {
       if (!currentUser) {
         logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
@@ -41,42 +41,12 @@ const OfficerDashboard: React.FC = () => {
     }
   }, [currentUser, isLoading, navigate, toast]);
   
-  // Load data once user authentication is confirmed
-  useEffect(() => {
+  // Optimized function to load pending counts
+  const loadPendingCounts = useCallback(async () => {
     if (isLoading || !currentUser) return;
     
-    // Force sync storage on first load to ensure we have the latest data
-    const loadData = async () => {
-      try {
-        setIsContentLoading(true);
-        
-        // Force sync all storage
-        logMessage(LogLevel.INFO, 'OfficerDashboard', 'Forcing sync of all storage');
-        await forceSync();
-        await forceSyncAllStorage();
-        
-        // Load pending data counts
-        await loadPendingCounts();
-        
-        setIsContentLoading(false);
-      } catch (error) {
-        logMessage(LogLevel.ERROR, 'OfficerDashboard', 'Error initializing dashboard:', error);
-        toast({
-          title: "Error Loading Dashboard",
-          description: "There was an error loading the dashboard data. Please try again.",
-          variant: "destructive"
-        });
-        setIsContentLoading(false);
-      }
-    };
-    
-    loadData();
-  }, [currentUser, isLoading, toast, forceSync]);
-  
-  // Function to load pending counts
-  const loadPendingCounts = async () => {
     try {
-      // Ensure storage is synced between localStorage and sessionStorage - use arrays
+      // Ensure storage is synced between localStorage and sessionStorage
       await syncStorage(['ncr_users']);
       await syncStorage(['ncr_players']);
       await syncStorage(['ncr_tournaments']);
@@ -98,14 +68,9 @@ const OfficerDashboard: React.FC = () => {
       
       // Set total pending count
       setPendingCount(pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments);
+      setIsContentLoading(false);
       
-      logMessage(LogLevel.INFO, 'OfficerDashboard', "Pending counts loaded:", {
-        tournaments: pendingTournaments,
-        completed: completedTournaments,
-        players: pendingPlayers,
-        organizers: pendingOrganizers,
-        total: pendingTournaments + pendingPlayers + pendingOrganizers + completedTournaments
-      });
+      logMessage(LogLevel.INFO, 'OfficerDashboard', "Pending counts loaded");
     } catch (error) {
       logMessage(LogLevel.ERROR, 'OfficerDashboard', "Error loading pending counts:", error);
       toast({
@@ -113,31 +78,60 @@ const OfficerDashboard: React.FC = () => {
         description: "There was a problem loading pending approvals.",
         variant: "destructive"
       });
+      setIsContentLoading(false);
     }
-  };
+  }, [isLoading, currentUser, toast]);
   
+  // Load data once user authentication is confirmed
   useEffect(() => {
-    // Set up an interval to refresh the counts more frequently
-    const interval = setInterval(loadPendingCounts, 5000); // Update every 5 seconds
+    if (isLoading || !currentUser) return;
     
-    // Listen for storage changes from other tabs/devices
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
-        logMessage(LogLevel.INFO, 'OfficerDashboard', `Storage event detected for ${e.key}, reloading counts`);
+    // Force sync storage on first load to ensure we have the latest data
+    const loadData = async () => {
+      try {
+        setIsContentLoading(true);
         
-        // Force sync all storage when a storage event is detected
-        forceSyncAllStorage();
-        loadPendingCounts();
+        // Use setTimeout to prevent UI freezing
+        setTimeout(async () => {
+          try {
+            // Force sync all storage
+            logMessage(LogLevel.INFO, 'OfficerDashboard', 'Forcing sync of all storage');
+            await forceSync();
+            await forceSyncAllStorage();
+            
+            // Load pending data counts
+            await loadPendingCounts();
+          } catch (error) {
+            logMessage(LogLevel.ERROR, 'OfficerDashboard', 'Error in async initialization:', error);
+            setIsContentLoading(false);
+          }
+        }, 100);
+      } catch (error) {
+        logMessage(LogLevel.ERROR, 'OfficerDashboard', 'Error initializing dashboard:', error);
+        toast({
+          title: "Error Loading Dashboard",
+          description: "There was an error loading the dashboard data. Please try again.",
+          variant: "destructive"
+        });
+        setIsContentLoading(false);
       }
     };
     
-    window.addEventListener('storage', handleStorageChange);
+    loadData();
+  }, [currentUser, isLoading, toast, forceSync, loadPendingCounts]);
+  
+  // Set up refresh interval with a longer time to prevent UI freezing
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const interval = setInterval(() => {
+      loadPendingCounts();
+    }, 15000); // Update every 15 seconds instead of 5
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [loadPendingCounts, currentUser]);
   
   const handleSystemReset = () => {
     // Log out the current user after reset

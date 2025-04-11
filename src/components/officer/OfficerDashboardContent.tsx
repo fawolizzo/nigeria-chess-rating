@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrganizerApprovals from "./OrganizerApprovals";
 import PlayerManagement from "./PlayerManagement";
@@ -14,7 +14,7 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useUser } from "@/contexts/UserContext";
 
 const OfficerDashboardContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("organizers"); // Default to organizers tab to highlight approval feature
+  const [activeTab, setActiveTab] = useState<string>("organizers");
   const { toast } = useToast();
   const { forceSync } = useUser();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -24,46 +24,48 @@ const OfficerDashboardContent: React.FC = () => {
   const [pendingPlayers, setPendingPlayers] = useState<any[]>([]);
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   
-  // Function to load all data
-  const loadAllData = async () => {
+  // Optimized load function with debounce capability
+  const loadAllData = useCallback(async () => {
     try {
       setIsLoading(true);
       
       logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Loading dashboard data');
       
-      // Force a complete sync first
-      await forceSync();
-      await forceSyncAllStorage();
-      
-      // Ensure storage is synced
-      await syncStorage(['ncr_users']);
-      await syncStorage(['ncr_players']);
-      await syncStorage(['ncr_tournaments']);
-      
-      // Load tournaments based on their status
-      const allTournaments = getAllTournaments();
-      setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
-      setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
-      
-      // Load pending players
-      const allPlayers = getAllPlayers();
-      setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
-      
-      // Load pending organizers directly from storage for the most up-to-date data
-      const allUsers = getAllUsersFromStorage();
-      const filteredOrganizers = allUsers.filter(
-        (user) => user.role === "tournament_organizer" && user.status === "pending"
-      );
-      setPendingOrganizers(filteredOrganizers);
-      
-      logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard data loaded', {
-        pendingTournaments: allTournaments.filter(t => t.status === "pending").length,
-        completedTournaments: allTournaments.filter(t => t.status === "completed").length,
-        pendingPlayers: allPlayers.filter(p => p.status === "pending").length,
-        pendingOrganizers: filteredOrganizers.length
-      });
-      
-      setIsLoading(false);
+      // Force a complete sync with a timeout to prevent freezing
+      setTimeout(async () => {
+        try {
+          await forceSync();
+          await forceSyncAllStorage();
+          
+          // Ensure storage is synced
+          await syncStorage(['ncr_users']);
+          await syncStorage(['ncr_players']);
+          await syncStorage(['ncr_tournaments']);
+          
+          // Load tournaments based on their status
+          const allTournaments = getAllTournaments();
+          setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
+          setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
+          
+          // Load pending players
+          const allPlayers = getAllPlayers();
+          setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
+          
+          // Load pending organizers directly from storage for the most up-to-date data
+          const allUsers = getAllUsersFromStorage();
+          const filteredOrganizers = allUsers.filter(
+            (user) => user.role === "tournament_organizer" && user.status === "pending"
+          );
+          setPendingOrganizers(filteredOrganizers);
+          
+          logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard data loaded');
+          
+          setIsLoading(false);
+        } catch (error) {
+          logMessage(LogLevel.ERROR, 'OfficerDashboardContent', "Error in async part:", error);
+          setIsLoading(false);
+        }
+      }, 100);
     } catch (error) {
       logMessage(LogLevel.ERROR, 'OfficerDashboardContent', "Error loading dashboard data:", error);
       toast({
@@ -73,34 +75,18 @@ const OfficerDashboardContent: React.FC = () => {
       });
       setIsLoading(false);
     }
-  };
+  }, [forceSync, toast]);
   
   // Initial load and refresh when the key changes
   useEffect(() => {
     loadAllData();
-  }, [refreshKey, forceSync]);
-  
-  // Set up an interval to refresh data periodically and listen for storage events
-  useEffect(() => {
+    // Use a shorter interval for refreshes to prevent UI freezing
     const intervalId = setInterval(() => {
       loadAllData();
-    }, 5000); // Refresh every 5 seconds for real-time updates
+    }, 15000); // Refresh every 15 seconds instead of 5 seconds
     
-    // Add event listener for storage changes from other tabs/devices
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'ncr_users' || e.key === 'ncr_players' || e.key === 'ncr_tournaments') {
-        logMessage(LogLevel.INFO, 'OfficerDashboardContent', `Storage event detected for ${e.key}, reloading dashboard data`);
-        loadAllData();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [forceSync]);
+    return () => clearInterval(intervalId);
+  }, [refreshKey, loadAllData]);
   
   const refreshDashboard = () => {
     setRefreshKey(prev => prev + 1);
@@ -112,9 +98,10 @@ const OfficerDashboardContent: React.FC = () => {
   
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    
-    // Refresh data when switching tabs
-    loadAllData();
+    // Don't immediately refresh when changing tabs - allow the UI to update first
+    setTimeout(() => {
+      loadAllData();
+    }, 100);
   };
   
   if (isLoading) {
@@ -134,40 +121,42 @@ const OfficerDashboardContent: React.FC = () => {
         onValueChange={handleTabChange}
         className="w-full"
       >
-        <TabsList className="grid grid-cols-4 mb-0 border-b rounded-none w-full">
-          <TabsTrigger value="organizers">
-            Organizers
-            {pendingOrganizers.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
-                {pendingOrganizers.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="players">
-            Players
-            {pendingPlayers.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
-                {pendingPlayers.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="pending-tournaments">
-            Pending Tournaments
-            {pendingTournaments.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
-                {pendingTournaments.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="approved-tournaments">
-            Tournaments
-            {completedTournaments.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-100 text-green-600 text-xs font-medium">
-                {completedTournaments.length}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="grid grid-cols-4 mb-0 border-b rounded-none w-full min-w-[600px]">
+            <TabsTrigger value="organizers" className="px-4">
+              Organizers
+              {pendingOrganizers.length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
+                  {pendingOrganizers.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="players" className="px-4">
+              Players
+              {pendingPlayers.length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
+                  {pendingPlayers.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="pending-tournaments" className="px-4">
+              Pending Tourn.
+              {pendingTournaments.length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
+                  {pendingTournaments.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="approved-tournaments" className="px-4">
+              Tournaments
+              {completedTournaments.length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-100 text-green-600 text-xs font-medium">
+                  {completedTournaments.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="organizers" className="p-4">
           <div className="space-y-8">
             <OrganizerApprovals />

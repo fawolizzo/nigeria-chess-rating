@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS, SyncEventType } from "@/types/userTypes";
 import {
@@ -19,6 +18,7 @@ const PlayerStorageInitializer: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [syncAttempts, setSyncAttempts] = useState(0);
   const { refreshUserData, clearAllData, forceSync } = useUser();
+  const syncInProgressRef = useRef(false);
   
   useEffect(() => {
     console.log("[PlayerStorageInitializer] Component mounting");
@@ -27,6 +27,14 @@ const PlayerStorageInitializer: React.FC = () => {
       // Initialize global functions for cross-device sync
       window.ncrForceSyncFunction = async (keys?: string[]) => {
         console.log("[PlayerStorageInitializer] Global force sync triggered", keys);
+        
+        // Prevent concurrent syncs
+        if (syncInProgressRef.current) {
+          console.log("[PlayerStorageInitializer] Sync already in progress, skipping");
+          return false;
+        }
+        
+        syncInProgressRef.current = true;
         
         try {
           if (keys && keys.length > 0) {
@@ -43,6 +51,8 @@ const PlayerStorageInitializer: React.FC = () => {
         } catch (error) {
           console.error("[PlayerStorageInitializer] Force sync error:", error);
           return false;
+        } finally {
+          syncInProgressRef.current = false;
         }
       };
       
@@ -74,8 +84,8 @@ const PlayerStorageInitializer: React.FC = () => {
           throw new Error("Storage access failed");
         }
         
-        // Request sync from other devices with retry logic
-        const maxSyncAttempts = 3;
+        // Request sync from other devices with retry logic but with timeouts to prevent freezing
+        const maxSyncAttempts = 2; // Reduced from 3
         let syncSuccessful = false;
         
         for (let attempt = 1; attempt <= maxSyncAttempts; attempt++) {
@@ -86,8 +96,8 @@ const PlayerStorageInitializer: React.FC = () => {
             // Broadcast sync request to other devices
             requestDataSync();
             
-            // Wait for responses (increasing timeout with each attempt)
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            // Wait for responses with a shorter timeout
+            await new Promise(resolve => setTimeout(resolve, 500)); // Fixed shorter timeout
             
             // Force local sync
             const syncResult = await forceSync();
@@ -106,13 +116,6 @@ const PlayerStorageInitializer: React.FC = () => {
         
         if (!syncSuccessful && syncAttempts >= maxSyncAttempts) {
           console.warn("[PlayerStorageInitializer] Max sync attempts reached, continuing with local data");
-          
-          toast({
-            title: "Synchronization Warning",
-            description: "Could not fully synchronize with other devices. Some data may not be up to date.",
-            variant: "warning",
-            duration: 5000,
-          });
         }
         
         // Refresh user data regardless of sync result to ensure we have something
@@ -121,24 +124,27 @@ const PlayerStorageInitializer: React.FC = () => {
         console.log("[PlayerStorageInitializer] Initialization complete");
       };
       
-      // Run initialization
-      initialize().then(() => {
-        setIsInitialized(true);
-      }).catch(error => {
-        console.error("[PlayerStorageInitializer] Initialization error:", error);
-        
-        toast({
-          title: "Initialization Error",
-          description: "There was a problem initializing the application. Please refresh the page or try again later.",
-          variant: "destructive",
-          duration: 5000,
+      // Run initialization with timeout to prevent freezing on initial load
+      setTimeout(() => {
+        initialize().then(() => {
+          setIsInitialized(true);
+        }).catch(error => {
+          console.error("[PlayerStorageInitializer] Initialization error:", error);
+          
+          toast({
+            title: "Initialization Error",
+            description: "There was a problem initializing the application. Please refresh the page or try again later.",
+            variant: "destructive",
+            duration: 5000,
+          });
+          
+          setIsInitialized(true); // Set initialized anyway to allow the app to function
         });
-        
-        setIsInitialized(true); // Set initialized anyway to allow the app to function
-      });
+      }, 100);
       
       // Set up sync listeners with enhanced logging
       const cleanup = setupSyncListeners(
+        // Keep existing listeners but wrap them with debounce logic
         // Reset handler
         () => {
           console.log("[PlayerStorageInitializer] Reset event received");
@@ -153,19 +159,31 @@ const PlayerStorageInitializer: React.FC = () => {
             window.location.reload();
           }, 1000);
         },
-        // Sync handler
+        // Sync handler - prevent rapid consecutive syncs
         async (data) => {
-          console.log(`[PlayerStorageInitializer] Sync event received`, data);
-          
-          if (data && data.key) {
-            // Handle data if available
-            console.log(`[PlayerStorageInitializer] Syncing key: ${data.key}`);
-            saveDataToStorage(data.key, data.data);
+          if (syncInProgressRef.current) {
+            console.log("[PlayerStorageInitializer] Sync already in progress, deferring new sync event");
+            return;
           }
           
-          await refreshUserData();
-          console.log("[PlayerStorageInitializer] User data refreshed after sync event");
+          syncInProgressRef.current = true;
+          
+          try {
+            console.log(`[PlayerStorageInitializer] Sync event received`, data);
+            
+            if (data && data.key) {
+              // Handle data if available
+              console.log(`[PlayerStorageInitializer] Syncing key: ${data.key}`);
+              saveDataToStorage(data.key, data.data);
+            }
+            
+            await refreshUserData();
+            console.log("[PlayerStorageInitializer] User data refreshed after sync event");
+          } finally {
+            syncInProgressRef.current = false;
+          }
         },
+        // Keep other handlers the same
         // Login handler
         async (userData) => {
           console.log("[PlayerStorageInitializer] Login event received", userData?.email || "unknown user");
