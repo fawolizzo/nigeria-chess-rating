@@ -199,7 +199,7 @@ const TournamentRatingDialog = ({
                     {
                       tournamentId: tournament.id,
                       tournamentName: tournament.name,
-                      format: 'rapid',
+                      format: 'rapid' as 'classical' | 'rapid' | 'blitz',
                       date: new Date().toISOString().split('T')[0],
                       position: finalPosition,
                       ratingChange: update.ratingChange
@@ -236,7 +236,7 @@ const TournamentRatingDialog = ({
                     {
                       tournamentId: tournament.id,
                       tournamentName: tournament.name,
-                      format: 'blitz',
+                      format: 'blitz' as 'classical' | 'rapid' | 'blitz',
                       date: new Date().toISOString().split('T')[0],
                       position: finalPosition,
                       ratingChange: update.ratingChange
@@ -273,7 +273,7 @@ const TournamentRatingDialog = ({
                     {
                       tournamentId: tournament.id,
                       tournamentName: tournament.name,
-                      format: 'classical',
+                      format: 'classical' as 'classical' | 'rapid' | 'blitz',
                       date: new Date().toISOString().split('T')[0],
                       position: finalPosition,
                       ratingChange: update.ratingChange
