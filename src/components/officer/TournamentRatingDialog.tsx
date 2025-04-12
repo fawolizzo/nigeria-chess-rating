@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -192,6 +193,17 @@ const TournamentRatingDialog = ({
                       rating: newRapidRating,
                       reason: `Tournament: ${tournament.name}`
                     }
+                  ],
+                  tournamentResults: [
+                    ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
+                    {
+                      tournamentId: tournament.id,
+                      tournamentName: tournament.name,
+                      format: 'rapid',
+                      date: new Date().toISOString().split('T')[0],
+                      position: finalPosition,
+                      ratingChange: update.ratingChange
+                    }
                   ]
                 };
               } else if (tournament.category === 'blitz') {
@@ -217,6 +229,17 @@ const TournamentRatingDialog = ({
                       date: new Date().toISOString().split('T')[0],
                       rating: newBlitzRating,
                       reason: `Tournament: ${tournament.name}`
+                    }
+                  ],
+                  tournamentResults: [
+                    ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
+                    {
+                      tournamentId: tournament.id,
+                      tournamentName: tournament.name,
+                      format: 'blitz',
+                      date: new Date().toISOString().split('T')[0],
+                      position: finalPosition,
+                      ratingChange: update.ratingChange
                     }
                   ]
                 };
@@ -244,6 +267,17 @@ const TournamentRatingDialog = ({
                       rating: newRating,
                       reason: `Tournament: ${tournament.name}`
                     }
+                  ],
+                  tournamentResults: [
+                    ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
+                    {
+                      tournamentId: tournament.id,
+                      tournamentName: tournament.name,
+                      format: 'classical',
+                      date: new Date().toISOString().split('T')[0],
+                      position: finalPosition,
+                      ratingChange: update.ratingChange
+                    }
                   ]
                 };
               }
@@ -251,19 +285,7 @@ const TournamentRatingDialog = ({
             
             const updatedPlayer = updatePlayerBasedOnTournamentType(player);
             
-            const updatedPlayerWithResults = {
-              ...updatedPlayer,
-              tournamentResults: [
-                ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
-                {
-                  tournamentId: tournament.id,
-                  position: finalPosition,
-                  ratingChange: update.ratingChange
-                }
-              ]
-            };
-            
-            updatePlayer(updatedPlayerWithResults);
+            updatePlayer(updatedPlayer);
           }
         });
         
@@ -277,7 +299,7 @@ const TournamentRatingDialog = ({
         
         toast({
           title: "Ratings Processed",
-          description: `All player ratings have been updated for ${tournament.name}`,
+          description: `All player ${tournament.category || 'classical'} ratings have been updated for ${tournament.name}`,
         });
         
         onOpenChange(false);
@@ -390,7 +412,7 @@ const TournamentRatingDialog = ({
                 <div className="font-medium">Rating System Parameters:</div>
                 <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                   <li>Floor rating of {FLOOR_RATING} for players without {tournament.category || 'classical'} ratings</li>
-                  <li>K=40 for new players (less than 10 games) under 2000 rating</li>
+                  <li>K=40 for new players (less than 30 games)</li>
                   <li>K=32 for players rated below 2100</li>
                   <li>K=24 for players rated 2100-2399</li>
                   <li>K=16 for higher-rated players (2400+)</li>

@@ -86,6 +86,11 @@ const GenerateReportDialog = ({
               }
             ]
           };
+          
+          // Update rating status if needed
+          if (updatedPlayer.rapidGamesPlayed >= 30 && (!updatedPlayer.rapidRatingStatus || updatedPlayer.rapidRatingStatus === 'provisional')) {
+            updatedPlayer.rapidRatingStatus = 'established';
+          }
         } else if (tournament.category === 'blitz') {
           updatedPlayer = {
             ...player,
@@ -100,6 +105,11 @@ const GenerateReportDialog = ({
               }
             ]
           };
+          
+          // Update rating status if needed
+          if (updatedPlayer.blitzGamesPlayed >= 30 && (!updatedPlayer.blitzRatingStatus || updatedPlayer.blitzRatingStatus === 'provisional')) {
+            updatedPlayer.blitzRatingStatus = 'established';
+          }
         } else {
           // Default to classical
           updatedPlayer = {
@@ -115,6 +125,11 @@ const GenerateReportDialog = ({
               }
             ]
           };
+          
+          // Update rating status if needed
+          if (updatedPlayer.gamesPlayed >= 30 && (!updatedPlayer.ratingStatus || updatedPlayer.ratingStatus === 'provisional')) {
+            updatedPlayer.ratingStatus = 'established';
+          }
         }
         
         updatePlayer(updatedPlayer);
