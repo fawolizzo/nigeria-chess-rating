@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,23 +52,19 @@ const PairingsTab = ({
   const isOngoing = tournamentStatus === "ongoing";
   const isCurrentRound = selectedRound === currentRound;
   
-  // Calculate previous opponents for Swiss pairings
   const calculatePreviousOpponents = () => {
     if (!pairings) return {};
     
     const previousOpponents: Record<string, string[]> = {};
     
-    // Initialize arrays for all players
     players.forEach(player => {
       previousOpponents[player.id] = [];
     });
     
-    // Only consider rounds before the current one
     const previousRounds = pairings.filter(round => round.roundNumber < selectedRound);
     
     previousRounds.forEach(round => {
       round.matches.forEach(match => {
-        // Add opponents to each player's list
         if (!previousOpponents[match.whiteId]) {
           previousOpponents[match.whiteId] = [];
         }
@@ -85,18 +80,15 @@ const PairingsTab = ({
     return previousOpponents;
   };
   
-  // Calculate player scores for Swiss pairings
   const calculatePlayerScores = () => {
     if (!pairings) return {};
     
     const scores: Record<string, number> = {};
     
-    // Initialize scores for all players
     players.forEach(player => {
       scores[player.id] = 0;
     });
     
-    // Only consider rounds before the current one
     const previousRounds = pairings.filter(round => round.roundNumber < selectedRound);
     
     previousRounds.forEach(round => {
@@ -115,22 +107,15 @@ const PairingsTab = ({
     return scores;
   };
 
-  // Handle save results - removed the duplicate toast notification here
   const handleSaveResults = (results: Array<{
     whiteId: string;
     blackId: string;
     result: "1-0" | "0-1" | "1/2-1/2" | "*"
   }>) => {
-    // Call the parent save results function (which will already show a toast)
     onSaveResults(results);
   };
 
-  // Check if we should show the generate pairings button
   const shouldShowGeneratePairingsButton = () => {
-    // Only show the generate pairings button for the current round when:
-    // 1. Tournament is ongoing
-    // 2. We're viewing the current round
-    // 3. Pairings haven't been generated yet for this round
     return isOngoing && isCurrentRound && !pairingsGenerated;
   };
 
@@ -138,7 +123,7 @@ const PairingsTab = ({
     <Card className="border-nigeria-green">
       <CardHeader className="bg-gradient-to-r from-nigeria-green/10 to-transparent">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-nigeria-green-dark">Round {selectedRound} Pairings</CardTitle>
+          <CardTitle className="text-nigeria-green-dark text-2xl">Round {selectedRound} Pairings</CardTitle>
           
           <div className="flex gap-2">
             {shouldShowGeneratePairingsButton() && (
@@ -153,13 +138,13 @@ const PairingsTab = ({
         </div>
         
         {totalRounds > 1 && (
-          <div className="flex gap-1 mt-4 flex-wrap">
+          <div className="flex gap-1 mt-4 flex-wrap justify-center">
             {Array.from({ length: totalRounds }, (_, i) => i + 1).map(round => (
               <Button
                 key={round}
                 variant={selectedRound === round ? "default" : "outline"}
                 size="sm"
-                className={`min-w-[40px] ${
+                className={`min-w-[48px] ${
                   selectedRound === round 
                     ? "bg-nigeria-green hover:bg-nigeria-green-dark" 
                     : "text-nigeria-green border-nigeria-green/50 hover:bg-nigeria-green/10"

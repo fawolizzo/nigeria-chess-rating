@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Player } from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
 import { generateSwissPairings } from "@/lib/swissPairingService";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, BadgeCheck } from "lucide-react";
 
 interface PairingSystemProps {
   players: Player[];
@@ -193,72 +193,98 @@ const PairingSystem = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="text-2xl font-bold text-center text-nigeria-green-dark">
           {roundNumber ? `Round ${roundNumber} Pairings` : "Swiss Pairing System"}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {pairingsToDisplay.length > 0 ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-4">
               {pairingsToDisplay.map((pair) => (
                 <div 
                   key={`${pair.white.id}-${pair.black.id}`} 
-                  className="flex justify-between items-center p-3 border border-gray-200 dark:border-gray-800 rounded-lg"
+                  className="border border-nigeria-green/20 rounded-md p-4 hover:bg-nigeria-green/5 transition-colors"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="font-semibold text-gray-500 dark:text-gray-400 w-8 text-center">
-                      {pair.boardNumber}
+                  <div className="grid grid-cols-11 items-center">
+                    {/* Board Number */}
+                    <div className="col-span-1">
+                      <div className="flex justify-center">
+                        <div className="w-8 h-8 rounded-full bg-nigeria-green/10 flex items-center justify-center">
+                          <span className="font-bold text-nigeria-green-dark">{pair.boardNumber}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="bg-white dark:bg-gray-800">
-                          White
-                        </Badge>
-                        <span className="font-medium">
+
+                    {/* White Player - 4 cols */}
+                    <div className="col-span-4">
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center justify-end">
                           {pair.white.title && (
-                            <span className="text-gold-dark dark:text-gold-light mr-1">
+                            <span className="text-gold-dark dark:text-gold-light mr-1 font-semibold">
                               {pair.white.title}
                             </span>
                           )}
-                          {pair.white.name}
-                        </span>
-                        <span className="text-gray-500 dark:text-gray-400">
-                          ({getPlayerRating(pair.white)})
-                        </span>
-                        {pair.whiteRatingChange !== undefined && (
-                          <span className={pair.whiteRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
-                            {pair.whiteRatingChange > 0 ? "+" : ""}{pair.whiteRatingChange}
+                          <span className="font-bold text-right">{pair.white.name}</span>
+                        </div>
+                        <div className="flex items-center mt-1">
+                          <Badge variant="outline" className="bg-white dark:bg-gray-800 mr-2">
+                            White
+                          </Badge>
+                          <span className="text-gray-500">
+                            {getPlayerRating(pair.white)}
                           </span>
-                        )}
+                          {pair.whiteRatingChange !== undefined && (
+                            <span className={`ml-1 ${pair.whiteRatingChange >= 0 ? "text-green-500" : "text-red-500"}`}>
+                              {pair.whiteRatingChange > 0 ? "+" : ""}{pair.whiteRatingChange}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Badge variant="outline" className="bg-black text-white dark:bg-black">
-                          Black
-                        </Badge>
-                        <span className="font-medium">
+                    </div>
+                    
+                    {/* VS - 1 col */}
+                    <div className="col-span-1 flex justify-center">
+                      <div className="bg-nigeria-green/10 rounded-full w-8 h-8 flex items-center justify-center text-nigeria-green-dark font-medium text-sm">
+                        vs
+                      </div>
+                    </div>
+                    
+                    {/* Black Player - 4 cols */}
+                    <div className="col-span-4">
+                      <div className="flex flex-col items-start">
+                        <div className="flex items-center">
                           {pair.black.title && (
-                            <span className="text-gold-dark dark:text-gold-light mr-1">
+                            <span className="text-gold-dark dark:text-gold-light mr-1 font-semibold">
                               {pair.black.title}
                             </span>
                           )}
-                          {pair.black.name}
-                        </span>
-                        <span className="text-gray-500 dark:text-gray-400">
-                          ({getPlayerRating(pair.black)})
-                        </span>
-                        {pair.blackRatingChange !== undefined && (
-                          <span className={pair.blackRatingChange >= 0 ? "text-green-500" : "text-red-500"}>
-                            {pair.blackRatingChange > 0 ? "+" : ""}{pair.blackRatingChange}
+                          <span className="font-bold">{pair.black.name}</span>
+                        </div>
+                        <div className="flex items-center mt-1">
+                          <Badge variant="outline" className="bg-black text-white dark:bg-black mr-2">
+                            Black
+                          </Badge>
+                          <span className="text-gray-500">
+                            {getPlayerRating(pair.black)}
                           </span>
-                        )}
+                          {pair.blackRatingChange !== undefined && (
+                            <span className={`ml-1 ${pair.blackRatingChange >= 0 ? "text-green-500" : "text-red-500"}`}>
+                              {pair.blackRatingChange > 0 ? "+" : ""}{pair.blackRatingChange}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                    </div>
+                    
+                    {/* Result - 1 col */}
+                    <div className="col-span-1">
                       {pair.result && pair.result !== "*" && (
-                        <div className="mt-2 text-center">
-                          <Badge variant="secondary">
-                            {pair.result === "1-0" ? "1-0 (White won)" : 
-                             pair.result === "0-1" ? "0-1 (Black won)" : 
-                             "½-½ (Draw)"}
+                        <div className="flex justify-center">
+                          <Badge className="bg-nigeria-green/10 text-nigeria-green-dark border-nigeria-green/20">
+                            {pair.result === "1-0" ? "1-0" : 
+                             pair.result === "0-1" ? "0-1" : 
+                             "½-½"}
                           </Badge>
                         </div>
                       )}
@@ -269,12 +295,17 @@ const PairingSystem = ({
             </div>
           </div>
         ) : (
-          <div className="text-center py-4">
+          <div className="text-center py-8">
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               No pairings have been generated yet.
             </p>
             {!readOnly && !readonly && onGeneratePairings && (
-              <Button onClick={generatePairings}>Generate Pairings</Button>
+              <Button 
+                onClick={generatePairings}
+                className="bg-nigeria-green hover:bg-nigeria-green-dark px-6"
+              >
+                Generate Pairings
+              </Button>
             )}
           </div>
         )}
