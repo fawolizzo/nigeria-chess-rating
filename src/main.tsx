@@ -5,15 +5,8 @@ import './index.css';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { detectPlatform } from '@/utils/storageSync';
 
-// Define global function types for TypeScript
-declare global {
-  interface Window {
-    ncrRunDiagnostics: () => any;
-    ncrForceSyncFunction: () => Promise<boolean>;
-    ncrClearAllData: () => void;
-    ncrIsResetting?: boolean;
-  }
-}
+// We don't need to redefine global types here as they're already in vite-env.d.ts
+// The global declarations were causing type conflicts
 
 try {
   // Ensure that the container element exists before rendering
@@ -56,11 +49,37 @@ try {
       console.log('[NCR Diagnostics]', results);
       return results;
     };
+    
+    // Initialize other global debugging functions
+    window.ncrForceSyncFunction = (keys?: string[]) => {
+      const { forceSyncAllStorage } = require('./utils/storageUtils');
+      return forceSyncAllStorage(keys);
+    };
+    
+    window.ncrClearAllData = async () => {
+      const { performSystemReset } = require('./utils/storageSync');
+      await performSystemReset();
+      return true; // Return Promise<boolean> to match the type in vite-env.d.ts
+    };
+    
+    window.ncrIsResetting = false;
   } else {
-    // In production, don't expose diagnostic functions
+    // In production, provide stub implementations that don't do anything
     window.ncrRunDiagnostics = () => {
       return { disabled: true, message: 'Diagnostics disabled in production mode' };
     };
+    
+    window.ncrForceSyncFunction = async (keys?: string[]) => {
+      console.log('Force sync disabled in production mode');
+      return true;
+    };
+    
+    window.ncrClearAllData = async () => {
+      console.log('Clear all data disabled in production mode');
+      return true;
+    };
+    
+    window.ncrIsResetting = false;
   }
 } catch (error) {
   console.error("Critical error during application initialization:", error);
