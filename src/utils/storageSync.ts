@@ -3,6 +3,50 @@ import { supabase } from '@/integrations/supabase/client';
 import { SyncEventType } from '@/types/userTypes';
 
 /**
+ * Detects the current platform type
+ * @returns Platform information including type and details
+ */
+export const detectPlatform = () => {
+  const platform = {
+    type: 'unknown',
+    details: '',
+    isMobile: false,
+    isTablet: false,
+    isDesktop: false,
+    userAgent: navigator.userAgent
+  };
+  
+  const ua = navigator.userAgent;
+  
+  // Check for mobile devices
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+    // Determine if tablet or phone based on screen size
+    const isTablet = Math.min(window.innerWidth, window.innerHeight) > 768;
+    
+    if (/iPad|Android(?!.*Mobile)/i.test(ua) || isTablet) {
+      platform.type = 'tablet';
+      platform.isTablet = true;
+    } else {
+      platform.type = 'mobile';
+      platform.isMobile = true;
+    }
+  } else {
+    platform.type = 'desktop';
+    platform.isDesktop = true;
+  }
+  
+  // Add more specific details
+  if (/iPhone/i.test(ua)) platform.details = 'iPhone';
+  else if (/iPad/i.test(ua)) platform.details = 'iPad';
+  else if (/Android/i.test(ua)) platform.details = 'Android';
+  else if (/Windows/i.test(ua)) platform.details = 'Windows';
+  else if (/Macintosh/i.test(ua)) platform.details = 'Mac';
+  else if (/Linux/i.test(ua)) platform.details = 'Linux';
+  
+  return platform;
+};
+
+/**
  * Resets the entire system data across all devices
  * This function clears local storage data and broadcasts a reset event
  */
@@ -12,6 +56,10 @@ export const performSystemReset = async () => {
     
     // Set global reset flag
     window.ncrIsResetting = true;
+    
+    // Get platform info for logging
+    const platform = detectPlatform();
+    console.log(`[StorageSync] System reset initiated from ${platform.type} device (${platform.details})`);
     
     // Clear all local storage
     localStorage.clear();
@@ -28,7 +76,8 @@ export const performSystemReset = async () => {
         const resetChannel = new BroadcastChannel('ncr_reset_channel');
         resetChannel.postMessage({
           type: SyncEventType.RESET,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          platform: platform
         });
         resetChannel.close();
       }
@@ -60,6 +109,9 @@ export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): vo
       return;
     }
     
+    const platform = detectPlatform();
+    const deviceId = localStorage.getItem('ncr_device_id') || 'unknown';
+    
     const syncChannel = new BroadcastChannel('ncr_sync_channel');
     
     syncChannel.postMessage({
@@ -67,13 +119,61 @@ export const sendSyncEvent = (type: SyncEventType, key?: string, data?: any): vo
       key,
       data,
       timestamp: Date.now(),
-      deviceId: localStorage.getItem('ncr_device_id') || 'unknown'
+      deviceId,
+      platform
     });
     
     syncChannel.close();
     
-    console.log(`[StorageSync] Sent ${type} event${key ? ` for key ${key}` : ''}`);
+    console.log(`[StorageSync] Sent ${type} event${key ? ` for key ${key}` : ''} from ${platform.type} device`);
   } catch (error) {
     console.error(`[StorageSync] Error sending sync event (${type}):`, error);
+  }
+};
+
+/**
+ * Diagnostic function to test cross-platform synchronization
+ * @returns Diagnostic information about the current device and storage
+ */
+export const runStorageDiagnostics = (): Record<string, any> => {
+  try {
+    const platform = detectPlatform();
+    const storageKeys = Object.keys(localStorage);
+    const sessionKeys = Object.keys(sessionStorage);
+    
+    // Storage space estimation
+    let storageSize = 0;
+    for (const key of storageKeys) {
+      const item = localStorage.getItem(key);
+      if (item) {
+        storageSize += key.length + item.length;
+      }
+    }
+    
+    // Get device ID
+    const deviceId = localStorage.getItem('ncr_device_id') || 'not_set';
+    
+    // Check for BroadcastChannel support
+    const hasBroadcastChannel = typeof BroadcastChannel !== 'undefined';
+    
+    const diagnostics = {
+      platform,
+      deviceId,
+      storageItemCount: storageKeys.length,
+      sessionItemCount: sessionKeys.length,
+      estimatedStorageUsage: `${(storageSize / 1024).toFixed(2)} KB`,
+      hasBroadcastChannel,
+      timestamp: new Date().toISOString(),
+      keys: storageKeys
+    };
+    
+    console.log('[StorageSync] Diagnostics:', diagnostics);
+    return diagnostics;
+  } catch (error) {
+    console.error('[StorageSync] Error running diagnostics:', error);
+    return {
+      error: 'Failed to run diagnostics',
+      message: error instanceof Error ? error.message : String(error)
+    };
   }
 };

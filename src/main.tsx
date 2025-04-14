@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { detectPlatform } from '@/utils/storageSync';
 
 try {
   // Ensure that the container element exists before rendering
@@ -12,12 +13,31 @@ try {
     throw new Error("Failed to find the root element. Make sure there is a div with id 'root' in your HTML.");
   }
 
-  logMessage(LogLevel.INFO, 'Main', "Starting application");
+  // Detect platform and log it early
+  const platform = detectPlatform();
+  logMessage(LogLevel.INFO, 'Main', `Starting application on ${platform.type} platform (${platform.details || 'generic'})`);
   
   const root = createRoot(container);
   root.render(<App />);
   
-  logMessage(LogLevel.INFO, 'Main', "Application rendered successfully");
+  logMessage(LogLevel.INFO, 'Main', `Application rendered successfully on ${platform.type} platform`);
+  
+  // Add global debugging function for cross-platform testing
+  window.ncrRunDiagnostics = () => {
+    const platform = detectPlatform();
+    const { runStorageDiagnostics } = require('./utils/storageSync');
+    const { checkCrossPlatformCompatibility } = require('./utils/storageUtils');
+    
+    const results = {
+      platform,
+      storage: runStorageDiagnostics(),
+      compatibility: checkCrossPlatformCompatibility(),
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('[NCR Diagnostics]', results);
+    return results;
+  };
 } catch (error) {
   console.error("Critical error during application initialization:", error);
   

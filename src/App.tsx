@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -8,6 +9,7 @@ import { SupabaseAuthProvider } from './services/auth/SupabaseAuthProvider';
 import { useUser } from './contexts/UserContext';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { setupNetworkDebugger } from '@/utils/networkDebugger';
+import { detectPlatform } from '@/utils/storageSync';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Import pages
@@ -22,6 +24,7 @@ import Tournaments from './pages/Tournaments';
 import TournamentDetails from './pages/TournamentDetails';
 import Players from './pages/Players';
 import PlayerProfile from './pages/PlayerProfile';
+import CrossPlatformTesting from './pages/CrossPlatformTesting';
 import NotFound from './pages/NotFound';
 
 // Simple auth route component that uses the UserContext directly
@@ -80,7 +83,8 @@ function App() {
   
   useEffect(() => {
     const initializeApp = async () => {
-      logMessage(LogLevel.INFO, 'App', "Initializing application");
+      const platform = detectPlatform();
+      logMessage(LogLevel.INFO, 'App', `Initializing application on ${platform.type} platform`);
       
       try {
         setupNetworkDebugger();
@@ -93,7 +97,7 @@ function App() {
         try {
           localStorage.setItem('storage_test', 'test');
           localStorage.removeItem('storage_test');
-          logMessage(LogLevel.INFO, 'App', "Storage availability check passed");
+          logMessage(LogLevel.INFO, 'App', `Storage availability check passed on ${platform.type} platform`);
         } catch (e) {
           logMessage(LogLevel.ERROR, 'App', 'Local storage is not available. This may affect application functionality.', e);
           toast({
@@ -103,22 +107,22 @@ function App() {
           });
         }
         
-        const isMobile = window.innerWidth < 768;
+        const isMobile = platform.isMobile;
         if (isMobile) {
           document.body.classList.add('mobile-optimized', 'safari-fix');
           logMessage(LogLevel.INFO, 'App', "Mobile device detected, optimizations applied");
         }
         
         window.addEventListener('online', () => {
-          logMessage(LogLevel.INFO, 'App', "Device came online");
+          logMessage(LogLevel.INFO, 'App', `Device came online (${platform.type})`);
         });
         
         window.addEventListener('offline', () => {
-          logMessage(LogLevel.WARNING, 'App', "Device went offline");
+          logMessage(LogLevel.WARNING, 'App', `Device went offline (${platform.type})`);
         });
         
         setIsInitialized(true);
-        logMessage(LogLevel.INFO, 'App', "Application initialization complete");
+        logMessage(LogLevel.INFO, 'App', `Application initialization complete on ${platform.type} platform`);
       } catch (error) {
         logMessage(LogLevel.ERROR, 'App', "Error initializing application:", error);
         toast({
@@ -196,6 +200,7 @@ function App() {
                 <Route path="/tournament/:id" element={<TournamentDetails />} />
                 <Route path="/players" element={<Players />} />
                 <Route path="/player/:id" element={<PlayerProfile />} />
+                <Route path="/cross-platform-testing" element={<CrossPlatformTesting />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
