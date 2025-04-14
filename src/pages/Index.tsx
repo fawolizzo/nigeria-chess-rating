@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smartphone } from 'lucide-react';
 
 const Index = () => {
@@ -108,7 +108,7 @@ const Index = () => {
         
         <div className="text-center">
           <p className="text-muted-foreground">
-            &copy; {new Date().getFullYear()} Nigerian Chess Federation. All rights reserved.
+            &copy; {new Date().getFullYear()} Nigeria Chess Rating. All rights reserved.
           </p>
         </div>
       </div>
