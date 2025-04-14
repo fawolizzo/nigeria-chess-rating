@@ -9,14 +9,24 @@ import { logMessage, LogLevel } from '@/utils/debugLogger';
 interface SyncStatusIndicatorProps {
   onSyncComplete?: () => void;
   prioritizeUserData?: boolean;
+  forceShow?: boolean;
 }
 
 const SyncStatusIndicator = ({ 
   onSyncComplete,
-  prioritizeUserData = true  // Default to true to ensure user data is always prioritized
+  prioritizeUserData = true,  // Default to true to ensure user data is always prioritized
+  forceShow = false
 }: SyncStatusIndicatorProps) => {
   const [showStatus, setShowStatus] = useState(false);
   const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Check if in production mode
+  const isProduction = import.meta.env.PROD;
+  
+  // If in production and not forced to show, don't render anything unless syncing
+  if (isProduction && !forceShow) {
+    return null;
+  }
   
   // Always prioritize user data during sync to ensure login credentials are available
   const { sync, forceSync, isSyncing, lastSyncSuccess, lastSyncTime } = useSilentSync({
@@ -134,7 +144,7 @@ const SyncStatusIndicator = ({
           onClick={handleManualSync}
           disabled={isSyncing}
         >
-          <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3 w-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
           {isSyncing ? 'Syncing...' : 'Sync now'}
         </Button>
       )}

@@ -15,29 +15,43 @@ try {
 
   // Detect platform and log it early
   const platform = detectPlatform();
-  logMessage(LogLevel.INFO, 'Main', `Starting application on ${platform.type} platform (${platform.details || 'generic'})`);
+  const isProduction = import.meta.env.PROD;
+  
+  // Only log detailed platform info in development
+  if (!isProduction) {
+    logMessage(LogLevel.INFO, 'Main', `Starting application on ${platform.type} platform (${platform.details || 'generic'})`);
+  } else {
+    logMessage(LogLevel.INFO, 'Main', `Starting application in production mode`);
+  }
   
   const root = createRoot(container);
   root.render(<App />);
   
-  logMessage(LogLevel.INFO, 'Main', `Application rendered successfully on ${platform.type} platform`);
-  
-  // Add global debugging function for cross-platform testing
-  window.ncrRunDiagnostics = () => {
-    const platform = detectPlatform();
-    const { runStorageDiagnostics } = require('./utils/storageSync');
-    const { checkCrossPlatformCompatibility } = require('./utils/storageUtils');
+  if (!isProduction) {
+    logMessage(LogLevel.INFO, 'Main', `Application rendered successfully on ${platform.type} platform`);
     
-    const results = {
-      platform,
-      storage: runStorageDiagnostics(),
-      compatibility: checkCrossPlatformCompatibility(),
-      timestamp: new Date().toISOString()
+    // Add global debugging function for cross-platform testing (only in development)
+    window.ncrRunDiagnostics = () => {
+      const platform = detectPlatform();
+      const { runStorageDiagnostics } = require('./utils/storageSync');
+      const { checkCrossPlatformCompatibility } = require('./utils/storageUtils');
+      
+      const results = {
+        platform,
+        storage: runStorageDiagnostics(),
+        compatibility: checkCrossPlatformCompatibility(),
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('[NCR Diagnostics]', results);
+      return results;
     };
-    
-    console.log('[NCR Diagnostics]', results);
-    return results;
-  };
+  } else {
+    // In production, don't expose diagnostic functions
+    window.ncrRunDiagnostics = () => {
+      return { disabled: true, message: 'Diagnostics disabled in production mode' };
+    };
+  }
 } catch (error) {
   console.error("Critical error during application initialization:", error);
   

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
@@ -145,6 +144,9 @@ function App() {
     );
   }
 
+  // Get environment mode
+  const isProduction = import.meta.env.PROD;
+
   return (
     <ErrorBoundary>
       <UserProvider>
@@ -200,7 +202,12 @@ function App() {
                 <Route path="/tournament/:id" element={<TournamentDetails />} />
                 <Route path="/players" element={<Players />} />
                 <Route path="/player/:id" element={<PlayerProfile />} />
-                <Route path="/cross-platform-testing" element={<CrossPlatformTesting />} />
+                
+                {/* Only include testing routes in non-production environments */}
+                {!isProduction && (
+                  <Route path="/cross-platform-testing" element={<CrossPlatformTesting />} />
+                )}
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

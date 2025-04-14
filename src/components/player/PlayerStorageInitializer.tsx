@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS, SyncEventType } from "@/types/userTypes";
@@ -9,6 +10,7 @@ import {
   ensureDeviceId
 } from "@/utils/deviceSync";
 import { useUser } from "@/contexts/UserContext";
+import useProductionSync from "@/hooks/useProductionSync";
 
 /**
  * Component to initialize storage and handle sync events on mount
@@ -19,6 +21,12 @@ const PlayerStorageInitializer: React.FC = () => {
   const [syncAttempts, setSyncAttempts] = useState(0);
   const { refreshUserData, clearAllData, forceSync } = useUser();
   const syncInProgressRef = useRef(false);
+
+  // Check if in production mode
+  const isProduction = import.meta.env.PROD;
+  
+  // Use production sync hook in production mode
+  useProductionSync();
   
   useEffect(() => {
     console.log("[PlayerStorageInitializer] Component mounting");
@@ -75,17 +83,20 @@ const PlayerStorageInitializer: React.FC = () => {
         } catch (storageError) {
           console.error("[PlayerStorageInitializer] Storage access test failed:", storageError);
           
-          toast({
-            title: "Storage Access Error",
-            description: "Your browser may be blocking access to local storage. Try disabling private browsing or clearing cookies.",
-            variant: "destructive",
-          });
+          // Only show toast in development
+          if (!isProduction) {
+            toast({
+              title: "Storage Access Error",
+              description: "Your browser may be blocking access to local storage. Try disabling private browsing or clearing cookies.",
+              variant: "destructive",
+            });
+          }
           
           throw new Error("Storage access failed");
         }
         
-        // Request sync from other devices with retry logic but with timeouts to prevent freezing
-        const maxSyncAttempts = 2; // Reduced from 3
+        // Request sync from other devices (with minimal attempts in production)
+        const maxSyncAttempts = isProduction ? 1 : 2;
         let syncSuccessful = false;
         
         for (let attempt = 1; attempt <= maxSyncAttempts; attempt++) {
@@ -97,7 +108,7 @@ const PlayerStorageInitializer: React.FC = () => {
             requestDataSync();
             
             // Wait for responses with a shorter timeout
-            await new Promise(resolve => setTimeout(resolve, 500)); // Fixed shorter timeout
+            await new Promise(resolve => setTimeout(resolve, isProduction ? 300 : 500));
             
             // Force local sync
             const syncResult = await forceSync();
@@ -131,12 +142,15 @@ const PlayerStorageInitializer: React.FC = () => {
         }).catch(error => {
           console.error("[PlayerStorageInitializer] Initialization error:", error);
           
-          toast({
-            title: "Initialization Error",
-            description: "There was a problem initializing the application. Please refresh the page or try again later.",
-            variant: "destructive",
-            duration: 5000,
-          });
+          // Only show toast in development
+          if (!isProduction) {
+            toast({
+              title: "Initialization Error",
+              description: "There was a problem initializing the application. Please refresh the page or try again later.",
+              variant: "destructive",
+              duration: 5000,
+            });
+          }
           
           setIsInitialized(true); // Set initialized anyway to allow the app to function
         });
@@ -144,16 +158,18 @@ const PlayerStorageInitializer: React.FC = () => {
       
       // Set up sync listeners with enhanced logging
       const cleanup = setupSyncListeners(
-        // Keep existing listeners but wrap them with debounce logic
         // Reset handler
         () => {
           console.log("[PlayerStorageInitializer] Reset event received");
           
-          toast({
-            title: "System Reset Detected",
-            description: "The system has been reset from another device. The page will reload.",
-            duration: 3000,
-          });
+          // Only show toast in development
+          if (!isProduction) {
+            toast({
+              title: "System Reset Detected",
+              description: "The system has been reset from another device. The page will reload.",
+              duration: 3000,
+            });
+          }
           
           setTimeout(() => {
             window.location.reload();
@@ -183,7 +199,6 @@ const PlayerStorageInitializer: React.FC = () => {
             syncInProgressRef.current = false;
           }
         },
-        // Keep other handlers the same
         // Login handler
         async (userData) => {
           console.log("[PlayerStorageInitializer] Login event received", userData?.email || "unknown user");
@@ -195,19 +210,25 @@ const PlayerStorageInitializer: React.FC = () => {
           
           await refreshUserData();
           
-          toast({
-            title: "Login Detected",
-            description: "Your account has been logged in from another device.",
-          });
+          // Only show toast in development
+          if (!isProduction) {
+            toast({
+              title: "Login Detected",
+              description: "Your account has been logged in from another device.",
+            });
+          }
         },
         // Logout handler
         () => {
           console.log("[PlayerStorageInitializer] Logout event received");
           
-          toast({
-            title: "Logged Out",
-            description: "You have been logged out from another device.",
-          });
+          // Only show toast in development
+          if (!isProduction) {
+            toast({
+              title: "Logged Out",
+              description: "You have been logged out from another device.",
+            });
+          }
           
           // Remove current user data
           localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
@@ -223,11 +244,14 @@ const PlayerStorageInitializer: React.FC = () => {
         async (userId) => {
           console.log("[PlayerStorageInitializer] Approval event received for:", userId);
           
-          toast({
-            title: "Account Status Updated",
-            description: "Your account status has been updated. The page will refresh to apply changes.",
-            duration: 4000,
-          });
+          // Only show toast in development
+          if (!isProduction) {
+            toast({
+              title: "Account Status Updated",
+              description: "Your account status has been updated. The page will refresh to apply changes.",
+              duration: 4000,
+            });
+          }
           
           // Refresh user data
           await refreshUserData();
@@ -253,15 +277,18 @@ const PlayerStorageInitializer: React.FC = () => {
     } catch (error) {
       console.error("[PlayerStorageInitializer] Error initializing storage:", error);
       
-      toast({
-        title: "Initialization Error",
-        description: "There was a problem initializing the application. Please refresh the page.",
-        variant: "destructive",
-      });
+      // Only show toast in development
+      if (!isProduction) {
+        toast({
+          title: "Initialization Error",
+          description: "There was a problem initializing the application. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
       
       setIsInitialized(true);
     }
-  }, [toast, refreshUserData, clearAllData, forceSync]);
+  }, [toast, refreshUserData, clearAllData, forceSync, isProduction]);
 
   return null; // This component doesn't render anything
 };

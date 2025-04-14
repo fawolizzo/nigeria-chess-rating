@@ -14,6 +14,9 @@ const Login = () => {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState(false);
   
+  // Check if in production mode
+  const isProduction = import.meta.env.PROD;
+  
   const handleSystemReset = async () => {
     setIsResetting(true);
     
@@ -80,41 +83,44 @@ const Login = () => {
               </Link>
             </p>
             
-            <div className="mt-6 border-t pt-6 border-gray-200 dark:border-gray-800">
-              <div className="flex items-center justify-center mb-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Having login issues? Try clearing local data
+            {/* Only show reset button in development */}
+            {!isProduction && (
+              <div className="mt-6 border-t pt-6 border-gray-200 dark:border-gray-800">
+                <div className="flex items-center justify-center mb-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Having login issues? Try clearing local data
+                  </p>
+                </div>
+                
+                <div className="flex justify-center mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSystemReset}
+                    disabled={isResetting}
+                    className="text-xs flex items-center gap-1 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/30"
+                  >
+                    {isResetting ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        Clearing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Clear Local Data
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  This will sign you out and clear local data. Supabase accounts will not be deleted.
                 </p>
+                
+                {process.env.NODE_ENV !== 'production' && <LoginDebug />}
               </div>
-              
-              <div className="flex justify-center mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSystemReset}
-                  disabled={isResetting}
-                  className="text-xs flex items-center gap-1 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/30"
-                >
-                  {isResetting ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                      Clearing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Clear Local Data
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                This will sign you out and clear local data. Supabase accounts will not be deleted.
-              </p>
-              
-              {process.env.NODE_ENV !== 'production' && <LoginDebug />}
-            </div>
+            )}
           </div>
         </div>
       </div>

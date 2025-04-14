@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -5,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Smartphone } from 'lucide-react';
 
 const Index = () => {
+  // Only show development tools in non-production environments
+  const isProduction = import.meta.env.PROD;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -80,24 +84,26 @@ const Index = () => {
             </Card>
           </Link>
           
-          {/* Add new card for cross-platform testing */}
-          <Link to="/cross-platform-testing" className="transition-transform hover:scale-105">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center">
-                  <span className="bg-blue-100 p-2 rounded-md text-blue-500 mr-2">
-                    <Smartphone className="h-5 w-5" />
-                  </span>
-                  Cross-Platform Testing
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Test the rating system across different devices to ensure data consistency.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+          {/* Only show cross-platform testing in development */}
+          {!isProduction && (
+            <Link to="/cross-platform-testing" className="transition-transform hover:scale-105">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center">
+                    <span className="bg-blue-100 p-2 rounded-md text-blue-500 mr-2">
+                      <Smartphone className="h-5 w-5" />
+                    </span>
+                    Cross-Platform Testing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Test the rating system across different devices to ensure data consistency.
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
         
         <div className="text-center">
