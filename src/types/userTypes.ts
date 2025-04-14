@@ -1,4 +1,3 @@
-
 /**
  * Types definitions for user-related functionality
  */
@@ -38,7 +37,8 @@ export interface UserContextType {
 export interface TimestampedData<T> {
   data: T;
   timestamp: number;
-  deviceId: string; // To track which device last updated the data
+  deviceId: string;
+  platform?: string; // Add platform field
   version: number; // To track data versions for conflict resolution
 }
 

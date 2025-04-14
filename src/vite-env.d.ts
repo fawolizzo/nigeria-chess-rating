@@ -6,4 +6,5 @@ interface Window {
   ncrIsResetting: boolean;
   ncrForceSyncFunction: (keys?: string[]) => Promise<boolean>;
   ncrClearAllData: () => Promise<boolean>;
+  ncrRunDiagnostics: () => Record<string, any>;
 }
