@@ -5,6 +5,7 @@ import useSilentSync from '@/hooks/useSilentSync';
 import { Button } from '@/components/ui/button';
 import { STORAGE_KEY_USERS } from '@/types/userTypes';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { detectPlatform } from '@/utils/storageSync';
 
 interface SyncStatusIndicatorProps {
   onSyncComplete?: () => void;
@@ -19,11 +20,12 @@ const SyncStatusIndicator = ({
 }: SyncStatusIndicatorProps) => {
   const [showStatus, setShowStatus] = useState(false);
   const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
+  const platform = detectPlatform();
   
   // Check if in production mode
   const isProduction = import.meta.env.PROD;
   
-  // If in production and not forced to show, don't render anything unless syncing
+  // If in production and not forced to show, don't render anything
   if (isProduction && !forceShow) {
     return null;
   }
@@ -51,10 +53,10 @@ const SyncStatusIndicator = ({
       setShowStatusTimeout(timeoutId);
       
       // Log successful sync with emphasis on user data
-      logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Sync completed successfully${prioritizeUserData ? ' with user data prioritized' : ''}`);
+      logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Sync completed successfully on ${platform.type}${prioritizeUserData ? ' with user data prioritized' : ''}`);
     },
     onSyncError: (error) => {
-      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', 'Sync error:', error);
+      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', `Sync error on ${platform.type}:`, error);
       setShowStatus(true);
       
       // Hide the error after a longer delay
@@ -84,12 +86,12 @@ const SyncStatusIndicator = ({
       setShowStatus(true);
       
       // Always prioritize user data for manual syncs
-      logMessage(LogLevel.INFO, 'SyncStatusIndicator', 'Manual sync initiated with user data prioritized');
+      logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Manual sync initiated with user data prioritized on ${platform.type}`);
       await forceSync();
       
       // Status will be auto-hidden by the onSyncComplete callback
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', 'Manual sync error:', error);
+      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', `Manual sync error on ${platform.type}:`, error);
     }
   };
   
@@ -121,7 +123,7 @@ const SyncStatusIndicator = ({
         {isSyncing ? (
           <>
             <RefreshCw className="h-3 w-3 mr-1 animate-spin text-blue-500" />
-            <span className="text-blue-500">Syncing data...</span>
+            <span className="text-blue-500">Syncing data on {platform.type}...</span>
           </>
         ) : lastSyncSuccess ? (
           <>

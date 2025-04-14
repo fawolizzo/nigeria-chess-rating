@@ -5,6 +5,16 @@ import './index.css';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { detectPlatform } from '@/utils/storageSync';
 
+// Define global function types for TypeScript
+declare global {
+  interface Window {
+    ncrRunDiagnostics: () => any;
+    ncrForceSyncFunction: () => Promise<boolean>;
+    ncrClearAllData: () => void;
+    ncrIsResetting?: boolean;
+  }
+}
+
 try {
   // Ensure that the container element exists before rendering
   const container = document.getElementById("root");

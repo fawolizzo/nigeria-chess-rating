@@ -4,6 +4,9 @@ import { sendSyncEvent } from '@/utils/storageSync';
 import { logUserEvent } from '@/utils/debugLogger';
 import { sendEmailToUser } from './emailOperations';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { detectPlatform } from '@/utils/storageSync';
+import { saveToStorage } from '@/utils/storageUtils';
+import { STORAGE_KEYS } from '../userContextTypes';
 
 /**
  * Handle user approval operations
@@ -13,6 +16,9 @@ export const approveUserOperation = (
   users: User[],
   setUsers: React.Dispatch<React.SetStateAction<User[]>>
 ): void => {
+  const platform = detectPlatform();
+  logMessage(LogLevel.INFO, 'ApprovalOperations', `Approving user ${userId} on ${platform.type} platform`);
+  
   const updatedUsers = users.map(user => {
     if (user.id === userId) {
       return {
@@ -25,13 +31,24 @@ export const approveUserOperation = (
     return user;
   });
   
+  // Save to storage first to ensure data consistency
+  saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+  
+  // Then update the state
   setUsers(updatedUsers);
   
+  // Broadcast the change to other devices
   sendSyncEvent(SyncEventType.APPROVAL, userId);
   
   logUserEvent('approve-user', userId);
   
   sendApprovalEmail(updatedUsers, userId);
+  
+  // Force a sync event for the users key to ensure cross-platform consistency
+  setTimeout(() => {
+    sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEYS.USERS, updatedUsers);
+    logMessage(LogLevel.INFO, 'ApprovalOperations', `Broadcasted user approval update from ${platform.type} platform`);
+  }, 500);
 };
 
 /**
@@ -42,6 +59,9 @@ export const rejectUserOperation = (
   users: User[],
   setUsers: React.Dispatch<React.SetStateAction<User[]>>
 ): void => {
+  const platform = detectPlatform();
+  logMessage(LogLevel.INFO, 'ApprovalOperations', `Rejecting user ${userId} on ${platform.type} platform`);
+  
   const updatedUsers = users.map(user => {
     if (user.id === userId) {
       return {
@@ -53,11 +73,21 @@ export const rejectUserOperation = (
     return user;
   });
   
+  // Save to storage first to ensure data consistency
+  saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
+  
+  // Then update the state
   setUsers(updatedUsers);
   
   logUserEvent('reject-user', userId);
   
   sendRejectionEmail(updatedUsers, userId);
+  
+  // Force a sync event for the users key to ensure cross-platform consistency
+  setTimeout(() => {
+    sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEYS.USERS, updatedUsers);
+    logMessage(LogLevel.INFO, 'ApprovalOperations', `Broadcasted user rejection update from ${platform.type} platform`);
+  }, 500);
 };
 
 /**

@@ -6,29 +6,32 @@ import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { detectPlatform } from "@/utils/storageSync";
 
 const OrganizerApprovals: React.FC = () => {
   const { approveUser, rejectUser, users, forceSync } = useUser();
   const { toast } = useToast();
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoRefreshCount, setAutoRefreshCount] = useState(0);
+  const platform = detectPlatform();
   
-  // Load pending organizers directly from context
+  // Load pending organizers directly from context with extra logging
   const loadPendingOrganizers = () => {
     try {
       // Log the current state for debugging
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Loading pending organizers from ${users.length} total users`);
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Loading pending organizers from ${users.length} total users on ${platform.type} platform`);
       
       // Filter for pending tournament organizers directly from context
       const filteredUsers = users.filter(
         (user) => user.role === "tournament_organizer" && user.status === "pending"
       );
       
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Found ${filteredUsers.length} pending organizers`);
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Found ${filteredUsers.length} pending organizers on ${platform.type} platform`);
       
       // Dump detailed info about each pending organizer to help diagnose visibility issues
       filteredUsers.forEach((organizer, index) => {
-        logMessage(LogLevel.INFO, 'OrganizerApprovals', `Pending organizer #${index + 1}:`, {
+        logMessage(LogLevel.INFO, 'OrganizerApprovals', `Pending organizer #${index + 1} on ${platform.type}:`, {
           id: organizer.id,
           name: organizer.fullName,
           email: organizer.email,
@@ -40,7 +43,7 @@ const OrganizerApprovals: React.FC = () => {
       
       setPendingOrganizers(filteredUsers);
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', "Error loading pending organizers:", error);
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error loading pending organizers on ${platform.type}:`, error);
       toast({
         title: "Error Loading Organizers",
         description: "There was an error loading pending organizer applications.",
@@ -54,10 +57,41 @@ const OrganizerApprovals: React.FC = () => {
     // Load immediately when users change
     loadPendingOrganizers();
   }, [users]);
+
+  // Add an effect to periodically force sync and reload data in the background
+  useEffect(() => {
+    // Set up automatic refresh at a regular interval
+    const autoRefreshInterval = setInterval(() => {
+      handleAutomaticRefresh();
+      setAutoRefreshCount(prev => prev + 1);
+    }, 30000); // Every 30 seconds
+    
+    // Initial refresh when component mounts
+    handleAutomaticRefresh();
+    
+    return () => {
+      clearInterval(autoRefreshInterval);
+    };
+  }, []);
   
-  // Force refresh from all sources
+  // Automatic refresh function that runs silently in the background
+  const handleAutomaticRefresh = async () => {
+    try {
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Running silent background refresh on ${platform.type} platform`);
+      
+      // Force a silent sync to get the latest data
+      await forceSync();
+      
+      // Data will be updated via the users state change effect
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Silent background refresh completed on ${platform.type} platform`);
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during silent background refresh on ${platform.type}:`, error);
+    }
+  };
+  
+  // Force refresh from all sources - manual user action
   const handleForceRefresh = async () => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', 'Forcing refresh of all organizer data');
+    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Forcing refresh of all organizer data on ${platform.type} platform`);
     
     try {
       setIsRefreshing(true);
@@ -73,7 +107,7 @@ const OrganizerApprovals: React.FC = () => {
         description: "The organizer list has been refreshed with the latest data.",
       });
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', 'Error forcing refresh:', error);
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error forcing refresh on ${platform.type}:`, error);
       
       toast({
         title: "Refresh Error",
@@ -86,7 +120,7 @@ const OrganizerApprovals: React.FC = () => {
   };
 
   const handleApprove = (userId: string) => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Approving organizer with ID: ${userId}`);
+    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Approving organizer with ID: ${userId} on ${platform.type} platform`);
     approveUser(userId);
     toast({
       title: "Organizer approved",
@@ -96,7 +130,7 @@ const OrganizerApprovals: React.FC = () => {
   };
 
   const handleReject = (userId: string) => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Rejecting organizer with ID: ${userId}`);
+    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Rejecting organizer with ID: ${userId} on ${platform.type} platform`);
     rejectUser(userId);
     toast({
       title: "Organizer rejected",
@@ -129,7 +163,9 @@ const OrganizerApprovals: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400 mb-1">Debug Info (Dev Only):</p>
           <p className="text-gray-500 dark:text-gray-400">Total Users: {users.length}</p>
           <p className="text-gray-500 dark:text-gray-400">Pending Organizers: {pendingOrganizers.length}</p>
-          <p className="text-gray-500 dark:text-gray-400">Last Refresh: {new Date().toLocaleTimeString()}</p>
+          <p className="text-gray-500 dark:text-gray-400">Platform: {platform.type} ({platform.details || 'generic'})</p>
+          <p className="text-gray-500 dark:text-gray-400">Auto-Refresh Count: {autoRefreshCount}</p>
+          <p className="text-gray-500 dark:text-gray-400">Last Manual Refresh: {new Date().toLocaleTimeString()}</p>
         </div>
       )}
     </div>
