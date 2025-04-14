@@ -23,9 +23,9 @@ const Index = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           <Link to="/players" className="transition-transform hover:scale-105">
-            <Card>
+            <Card className="h-full">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
                   <span className="bg-blue-100 p-2 rounded-md text-blue-500 mr-2 flex-shrink-0">
@@ -33,7 +33,7 @@ const Index = () => {
                       <path d="M12 4.5C7 7.43 4 11.85 4 17v3h16v-3c0-5.15-3-9.57-8-12.5zM7.71 15h8.58l.29.29a.997.997 0 010 1.41L12 20.71l-4.59-4.59a.997.997 0 010-1.41L7.71 15z" />
                     </svg>
                   </span>
-                  <span className="break-words">Players</span>
+                  <span>Players</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -45,7 +45,7 @@ const Index = () => {
           </Link>
           
           <Link to="/tournaments" className="transition-transform hover:scale-105">
-            <Card>
+            <Card className="h-full">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
                   <span className="bg-green-100 p-2 rounded-md text-green-500 mr-2 flex-shrink-0">
@@ -53,7 +53,7 @@ const Index = () => {
                       <path d="M2 6a2 2 0 012-2h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM5 7h14a1 1 0 000-2H5a1 1 0 100 2zm0 10a1 1 0 100 2h14a1 1 0 100-2V9H5v8z" />
                     </svg>
                   </span>
-                  <span className="break-words">Tournaments</span>
+                  <span>Tournaments</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -65,7 +65,7 @@ const Index = () => {
           </Link>
           
           <Link to="/about" className="transition-transform hover:scale-105">
-            <Card>
+            <Card className="h-full">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-lg">
                   <span className="bg-yellow-100 p-2 rounded-md text-yellow-500 mr-2 flex-shrink-0">
@@ -73,7 +73,7 @@ const Index = () => {
                       <path d="M12 11a1 1 0 100-2 1 1 0 000 2zm4 0a1 1 0 100-2 1 1 0 000 2zm-8 0a1 1 0 100-2 1 1 0 000 2zm11.75-6.18L15 10.5l-3-3-8.75 11.18A1 1 0 003 20h18a1 1 0 00.75-1.18z" />
                     </svg>
                   </span>
-                  <span className="break-words">About</span>
+                  <span>About</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -87,13 +87,13 @@ const Index = () => {
           {/* Only show cross-platform testing in development */}
           {!isProduction && (
             <Link to="/cross-platform-testing" className="transition-transform hover:scale-105">
-              <Card>
+              <Card className="h-full">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center text-lg">
                     <span className="bg-blue-100 p-2 rounded-md text-blue-500 mr-2 flex-shrink-0">
                       <Smartphone className="h-5 w-5" />
                     </span>
-                    <span className="break-words">Cross-Platform Testing</span>
+                    <span>Cross-Platform Testing</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

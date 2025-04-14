@@ -20,7 +20,7 @@ export default function useProductionSync() {
   const { sync, forceSync, lastSyncSuccess, lastSyncTime } = useSilentSync({
     syncOnMount: true,
     keys: [STORAGE_KEY_USERS], // Prioritize user data
-    syncInterval: 30000, // Sync every 30 seconds in production for better cross-device performance
+    syncInterval: 15000, // Sync more frequently (every 15 seconds) to ensure cross-device updates
     prioritizeUserData: true,
     onSyncComplete: () => {
       logMessage(LogLevel.INFO, 'ProductionSync', `Background sync completed successfully on ${platformInfo.type} platform`);
@@ -28,11 +28,11 @@ export default function useProductionSync() {
     },
     onSyncError: (error) => {
       logMessage(LogLevel.ERROR, 'ProductionSync', `Background sync error on ${platformInfo.type} platform:`, error);
-      // Schedule a retry in 10 seconds
+      // Schedule a retry in 5 seconds (faster retry)
       setTimeout(() => {
         logMessage(LogLevel.INFO, 'ProductionSync', `Retrying background sync after error on ${platformInfo.type} platform`);
         forceSync();
-      }, 10000);
+      }, 5000);
     }
   });
   
@@ -50,12 +50,12 @@ export default function useProductionSync() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         logMessage(LogLevel.INFO, 'ProductionSync', `Tab became visible on ${platformInfo.type}, checking sync status`);
-        // Only sync if it's been more than 1 minute since last successful sync - reduced time for better cross-device updates
+        // Only sync if it's been more than 30 seconds since last successful sync - reduced time for better cross-device updates
         const timeSinceLastSync = lastSyncTime 
           ? (new Date().getTime() - lastSyncTime.getTime()) / 1000 
           : Infinity;
           
-        if (!lastSyncSuccess || timeSinceLastSync > 60) {
+        if (!lastSyncSuccess || timeSinceLastSync > 30) {
           logMessage(LogLevel.INFO, 'ProductionSync', `Initiating sync after tab visibility change on ${platformInfo.type}`);
           forceSync();
         }
@@ -78,13 +78,13 @@ export default function useProductionSync() {
     // Initial sync with a slight delay to ensure other components are loaded
     setTimeout(() => {
       forceSync();
-    }, 500);
+    }, 300);
     
-    // Set up a periodic full sync every 2 minutes to ensure data consistency across devices
+    // Set up a periodic full sync every 1 minute to ensure data consistency across devices
     const fullSyncInterval = setInterval(() => {
       logMessage(LogLevel.INFO, 'ProductionSync', `Performing scheduled full sync on ${platformInfo.type} platform`);
       forceSync();
-    }, 120000);
+    }, 60000);
     
     // Clean up
     return () => {

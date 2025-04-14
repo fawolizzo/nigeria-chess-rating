@@ -64,7 +64,7 @@ const OrganizerApprovals: React.FC = () => {
     const autoRefreshInterval = setInterval(() => {
       handleAutomaticRefresh();
       setAutoRefreshCount(prev => prev + 1);
-    }, 30000); // Every 30 seconds
+    }, 15000); // Every 15 seconds (more frequent)
     
     // Initial refresh when component mounts
     handleAutomaticRefresh();
@@ -126,7 +126,10 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer approved",
       description: "The tournament organizer has been approved successfully.",
     });
-    // Organizers will be updated via the users state change
+    // Force an immediate sync to broadcast the change
+    setTimeout(() => {
+      forceSync();
+    }, 500);
   };
 
   const handleReject = (userId: string) => {
@@ -136,7 +139,10 @@ const OrganizerApprovals: React.FC = () => {
       title: "Organizer rejected",
       description: "The tournament organizer has been rejected.",
     });
-    // Organizers will be updated via the users state change
+    // Force an immediate sync to broadcast the change
+    setTimeout(() => {
+      forceSync();
+    }, 500);
   };
 
   return (
@@ -158,7 +164,7 @@ const OrganizerApprovals: React.FC = () => {
         onApprove={handleApprove}
         onReject={handleReject}
       />
-      {process.env.NODE_ENV === 'development' && (
+      {!import.meta.env.PROD && (
         <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs">
           <p className="text-gray-500 dark:text-gray-400 mb-1">Debug Info (Dev Only):</p>
           <p className="text-gray-500 dark:text-gray-400">Total Users: {users.length}</p>

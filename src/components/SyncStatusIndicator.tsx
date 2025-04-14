@@ -146,7 +146,7 @@ const SyncStatusIndicator = ({
           onClick={handleManualSync}
           disabled={isSyncing}
         >
-          <RefreshCw className={`h-3 w-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
           {isSyncing ? 'Syncing...' : 'Sync now'}
         </Button>
       )}
