@@ -19,7 +19,7 @@ const RegistrationDebug = () => {
     return {
       totalUsers: Array.isArray(users) ? users.length : 0,
       ratingOfficers: Array.isArray(users) ? users.filter((u: any) => u.role === 'rating_officer').map((u: any) => ({
-        email: u.email,
+        email: '[Email hidden]',
         status: u.status,
         hasPassword: !!u.password,
         hasAccessCode: !!u.accessCode

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 
 // This is the access code for rating officers
-const RATING_OFFICER_ACCESS_CODE = "NCR2025";
+const RATING_OFFICER_ACCESS_CODE = "RNCR25";
 
 export const useAccessCode = () => {
   const [showAccessCode, setShowAccessCode] = useState(false);
@@ -13,10 +13,10 @@ export const useAccessCode = () => {
   const handleShowAccessCode = (role: string) => {
     setShowAccessCode(role === "rating_officer");
     
-    // Pre-fill the access code for testing purposes
+    // Reset access code when role changes
     if (role === "rating_officer") {
-      setAccessCode(RATING_OFFICER_ACCESS_CODE);
-      setIsAccessCodeValid(true);
+      setAccessCode("");
+      setIsAccessCodeValid(false);
     } else {
       setAccessCode("");
       setIsAccessCodeValid(false);

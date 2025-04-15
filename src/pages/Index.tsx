@@ -17,10 +17,10 @@ const Index = () => {
       
       <main className="container max-w-7xl mx-auto pt-20 pb-10 px-4 sm:px-6">
         <div className="text-center mb-10 mt-4 max-w-3xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight leading-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground leading-snug">
             Welcome to the Nigerian Chess Rating System
           </h1>
-          <p className="mt-4 text-base sm:text-lg text-muted-foreground px-4 mx-auto">
+          <p className="mt-4 text-base sm:text-lg text-muted-foreground">
             Manage players, tournaments, and ratings efficiently
           </p>
         </div>

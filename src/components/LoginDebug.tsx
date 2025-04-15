@@ -57,13 +57,13 @@ const LoginDebug = () => {
             )}
             {users.filter(u => u.role === 'rating_officer').map((officer, idx) => (
               <div key={idx} className="ml-2 mb-1 p-1 border-b border-gray-200 dark:border-gray-700">
-                <div><span className="text-blue-500">Email:</span> {officer.email}</div>
+                <div><span className="text-blue-500">Email:</span> [Email hidden]</div>
                 <div><span className="text-blue-500">Status:</span> {officer.status}</div>
                 <div><span className="text-blue-500">Has Password:</span> {officer.password ? "Yes" : "No"}</div>
-                <div><span className="text-blue-500">Access Code:</span> {officer.accessCode || "None"}</div>
+                <div><span className="text-blue-500">Access Code:</span> [Hidden]</div>
                 <div className="flex gap-2 mt-1">
                   <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 text-[10px] px-1 rounded">
-                    Use access code: {officer.accessCode || "N/A"}
+                    Use access code: [Hidden]
                   </span>
                 </div>
               </div>
@@ -93,7 +93,7 @@ const LoginDebug = () => {
             <div>Note: This debug panel is for development and testing purposes only.</div>
             <div className="mt-2 font-semibold">Login Tips:</div>
             <ul className="list-disc list-inside mt-1">
-              <li>Rating Officers: Use the access code shown above.</li>
+              <li>Rating Officers: Use your assigned access code.</li>
               <li>Tournament Organizers: Use the password you created during registration.</li>
               <li>Only approved Tournament Organizers can log in.</li>
             </ul>

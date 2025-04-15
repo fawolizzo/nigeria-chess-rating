@@ -78,7 +78,7 @@ function createUserObject(userData: any): User {
   // Generate access code for rating officers if one is not provided
   let accessCode = userData.accessCode;
   if (userData.role === 'rating_officer' && !accessCode) {
-    accessCode = "NCR2025"; // Use fixed access code for simplicity
+    accessCode = "RNCR25"; // Use updated access code
   }
   
   const status = userData.status || (userData.role === 'rating_officer' ? 'approved' as const : 'pending' as const);

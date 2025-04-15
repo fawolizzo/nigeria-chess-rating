@@ -1,5 +1,5 @@
 
-import { Check, Shield, Info } from "lucide-react";
+import { Shield, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FormLabel } from "@/components/ui/form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,17 +43,11 @@ const AccessCodeInput = ({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
-      <div className="flex justify-between items-center mt-1">
+      <div className="mt-1">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Required for Rating Officer registration
         </p>
-        {isAccessCodeValid && (
-          <p className="text-xs text-green-500 flex items-center">
-            <Check className="h-3 w-3 mr-1" /> Code valid - account will be auto-approved
-          </p>
-        )}
       </div>
-      {/* Only show test code in development - NEVER in production */}
     </div>
   );
 };

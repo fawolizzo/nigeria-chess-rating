@@ -8,22 +8,24 @@ import { Progress } from "@/components/ui/progress";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const OfficerDashboardContent: React.FC = () => {
-  const { syncDashboardData, isSyncing, lastSyncTime } = useOfficerDashboardSync();
+  const { syncDashboardData } = useOfficerDashboardSync();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(10);
+  const isMountedRef = useRef(true);
   
   // Initial sync and loading progress
   useEffect(() => {
-    let mounted = true;
+    // Mark component as mounted
+    isMountedRef.current = true;
     
     const performInitialSync = async () => {
       try {
         // Start with a minimum progress
-        setLoadingProgress(10);
+        if (isMountedRef.current) setLoadingProgress(10);
         
         // Simulate progress while sync is happening
         const progressInterval = setInterval(() => {
-          if (mounted) {
+          if (isMountedRef.current) {
             setLoadingProgress(prev => {
               // Don't go past 90% until we confirm sync is complete
               return prev < 90 ? prev + 10 : prev;
@@ -37,19 +39,19 @@ const OfficerDashboardContent: React.FC = () => {
         
         // Clear interval and set to 100%
         clearInterval(progressInterval);
-        if (mounted) {
+        if (isMountedRef.current) {
           setLoadingProgress(100);
           
           // Small delay to show completed progress before showing content
           setTimeout(() => {
-            if (mounted) {
+            if (isMountedRef.current) {
               setInitialLoadComplete(true);
             }
           }, 300);
         }
       } catch (error) {
         logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Initial sync failed:', error);
-        if (mounted) {
+        if (isMountedRef.current) {
           setInitialLoadComplete(true); // Show UI even if sync failed
         }
       }
@@ -58,7 +60,8 @@ const OfficerDashboardContent: React.FC = () => {
     performInitialSync();
     
     return () => {
-      mounted = false;
+      // Mark component as unmounted
+      isMountedRef.current = false;
     };
   }, [syncDashboardData]);
   

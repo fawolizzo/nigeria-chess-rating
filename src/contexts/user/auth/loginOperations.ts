@@ -7,9 +7,9 @@ import { STORAGE_KEYS } from '../userContextTypes';
 import { monitorSync } from '@/utils/monitorSync';
 import { supabase } from '@/integrations/supabase/client';
 
-// Default rating officer constants
+// Default rating officer constants - only for development reference
 const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
-const DEFAULT_ACCESS_CODE = "NCR2025";
+const DEFAULT_ACCESS_CODE = "RNCR25";
 
 /**
  * Login a user with email and password/access code
