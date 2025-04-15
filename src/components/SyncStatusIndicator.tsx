@@ -22,11 +22,12 @@ const SyncStatusIndicator = ({
   const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
   const platform = detectPlatform();
   
-  // Hide completely in production environments unless explicitly forced to show
+  // IMPORTANT: Always hide in production environments regardless of forceShow parameter
+  // This ensures sync indicators are never visible to end users
   const isProduction = import.meta.env.PROD;
   
-  // If in production and not forced to show, don't render anything
-  if (isProduction && !forceShow) {
+  // If in production, don't render anything at all
+  if (isProduction) {
     return null;
   }
   

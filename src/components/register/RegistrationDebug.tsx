@@ -5,9 +5,11 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getFromStorage } from '@/utils/storageUtils';
 
 const RegistrationDebug = () => {
-  // Only show in development mode
+  // Never show in production environment under any circumstances
   const isProduction = import.meta.env.PROD;
-  if (isProduction) return null;
+  if (isProduction) {
+    return null;
+  }
   
   const [expanded, setExpanded] = useState(false);
 

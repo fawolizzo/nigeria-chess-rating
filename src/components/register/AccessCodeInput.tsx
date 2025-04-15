@@ -15,7 +15,7 @@ const AccessCodeInput = ({
   isAccessCodeValid, 
   onChange 
 }: AccessCodeInputProps) => {
-  // Only show testing info in development
+  // In production environment, never show testing info
   const isProduction = import.meta.env.PROD;
   
   return (
@@ -53,12 +53,7 @@ const AccessCodeInput = ({
           </p>
         )}
       </div>
-      {/* Only show test code in development */}
-      {!isProduction && (
-        <p className="text-xs text-blue-500 mt-1">
-          For testing, use code: NCR2025
-        </p>
-      )}
+      {/* Only show test code in development - NEVER in production */}
     </div>
   );
 };
