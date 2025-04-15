@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { OfficerDashboardProvider } from "@/contexts/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
