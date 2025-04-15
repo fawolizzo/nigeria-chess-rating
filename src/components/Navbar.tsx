@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import Logo from "@/components/Logo";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,9 +29,7 @@ const Navbar = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
       <div className="container flex h-16 items-center justify-between px-4 max-w-7xl mx-auto">
-        <div className="flex items-center">
-          <Logo size="md" />
-        </div>
+        <div className="flex-1"></div>
         
         <nav className="hidden md:flex items-center space-x-1">
           <Link to="/">
