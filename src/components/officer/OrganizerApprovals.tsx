@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import OrganizerApprovalList from "@/components/OrganizerApprovalList";
@@ -7,31 +7,34 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { detectPlatform } from "@/utils/storageSync";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const OrganizerApprovals: React.FC = () => {
   const { approveUser, rejectUser, users, forceSync } = useUser();
   const { toast } = useToast();
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [autoRefreshCount, setAutoRefreshCount] = useState(0);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [showSyncAlert, setShowSyncAlert] = useState(false);
   const platform = detectPlatform();
   
-  // Load pending organizers directly from context with extra logging
-  const loadPendingOrganizers = () => {
+  // Load pending organizers directly from context with enhanced logging
+  const loadPendingOrganizers = useCallback(() => {
     try {
       // Log the current state for debugging
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Loading pending organizers from ${users.length} total users on ${platform.type} platform`);
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Loading pending organizers from ${users.length} total users on ${platformInfo.type} platform`);
       
       // Filter for pending tournament organizers directly from context
       const filteredUsers = users.filter(
         (user) => user.role === "tournament_organizer" && user.status === "pending"
       );
       
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Found ${filteredUsers.length} pending organizers on ${platform.type} platform`);
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Found ${filteredUsers.length} pending organizers on ${platformInfo.type} platform`);
       
       // Dump detailed info about each pending organizer to help diagnose visibility issues
       filteredUsers.forEach((organizer, index) => {
-        logMessage(LogLevel.INFO, 'OrganizerApprovals', `Pending organizer #${index + 1} on ${platform.type}:`, {
+        logMessage(LogLevel.INFO, 'OrganizerApprovals', `Pending organizer #${index + 1} on ${platformInfo.type}:`, {
           id: organizer.id,
           name: organizer.fullName,
           email: organizer.email,
@@ -42,29 +45,32 @@ const OrganizerApprovals: React.FC = () => {
       });
       
       setPendingOrganizers(filteredUsers);
+      setLastRefreshTime(new Date());
+      setShowSyncAlert(false);
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error loading pending organizers on ${platform.type}:`, error);
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error loading pending organizers on ${platformInfo.type}:`, error);
       toast({
         title: "Error Loading Organizers",
         description: "There was an error loading pending organizer applications.",
         variant: "destructive"
       });
     }
-  };
+  }, [users, toast]);
+  
+  const platformInfo = detectPlatform();
   
   // Effect for initial load and when users change
   useEffect(() => {
     // Load immediately when users change
     loadPendingOrganizers();
-  }, [users]);
+  }, [users, loadPendingOrganizers]);
 
-  // Add an effect to periodically force sync and reload data in the background
+  // Add an effect to periodically force sync and reload data
   useEffect(() => {
-    // Set up automatic refresh at a regular interval
+    // Set up automatic refresh at regular intervals (every 10 seconds)
     const autoRefreshInterval = setInterval(() => {
       handleAutomaticRefresh();
-      setAutoRefreshCount(prev => prev + 1);
-    }, 15000); // Every 15 seconds (more frequent)
+    }, 10000);
     
     // Initial refresh when component mounts
     handleAutomaticRefresh();
@@ -74,104 +80,128 @@ const OrganizerApprovals: React.FC = () => {
     };
   }, []);
   
-  // Automatic refresh function that runs silently in the background
+  // Automatic refresh function that runs in the background
   const handleAutomaticRefresh = async () => {
     try {
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Running silent background refresh on ${platform.type} platform`);
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Running background refresh on ${platformInfo.type} platform`);
       
       // Force a silent sync to get the latest data
       await forceSync();
       
       // Data will be updated via the users state change effect
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Silent background refresh completed on ${platform.type} platform`);
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Background refresh completed on ${platformInfo.type} platform`);
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during silent background refresh on ${platform.type}:`, error);
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during background refresh on ${platformInfo.type}:`, error);
+      setShowSyncAlert(true);
     }
   };
   
   // Force refresh from all sources - manual user action
   const handleForceRefresh = async () => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Forcing refresh of all organizer data on ${platform.type} platform`);
+    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Forcing manual refresh of all organizer data on ${platformInfo.type} platform`);
     
     try {
       setIsRefreshing(true);
       
+      // Show toast to indicate sync is happening
+      toast({
+        title: "Syncing Data",
+        description: "Fetching the latest organizer data from all devices...",
+      });
+      
       // Force a sync to get the latest data
       await forceSync();
       
-      // Reload pending organizers
-      loadPendingOrganizers();
-      
-      toast({
-        title: "Data Refreshed",
-        description: "The organizer list has been refreshed with the latest data.",
-      });
+      // Small delay to ensure everything is updated
+      setTimeout(() => {
+        loadPendingOrganizers();
+        
+        toast({
+          title: "Sync Complete",
+          description: "Successfully updated organizer data.",
+        });
+        
+        setIsRefreshing(false);
+      }, 1000);
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error forcing refresh on ${platform.type}:`, error);
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during manual refresh on ${platformInfo.type}:`, error);
       
       toast({
-        title: "Refresh Error",
-        description: "There was a problem refreshing the data. Please try again.",
+        title: "Sync Failed",
+        description: "There was an error syncing data. Please try again.",
         variant: "destructive"
       });
-    } finally {
+      
       setIsRefreshing(false);
+      setShowSyncAlert(true);
     }
   };
 
-  const handleApprove = (userId: string) => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Approving organizer with ID: ${userId} on ${platform.type} platform`);
-    approveUser(userId);
-    toast({
-      title: "Organizer approved",
-      description: "The tournament organizer has been approved successfully.",
-    });
-    // Force an immediate sync to broadcast the change
-    setTimeout(() => {
-      forceSync();
-    }, 500);
-  };
-
-  const handleReject = (userId: string) => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Rejecting organizer with ID: ${userId} on ${platform.type} platform`);
-    rejectUser(userId);
-    toast({
-      title: "Organizer rejected",
-      description: "The tournament organizer has been rejected.",
-    });
-    // Force an immediate sync to broadcast the change
-    setTimeout(() => {
-      forceSync();
-    }, 500);
-  };
-
   return (
-    <div>
-      <div className="flex justify-end mb-4">
+    <div className="space-y-4">
+      {showSyncAlert && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Sync Warning</AlertTitle>
+          <AlertDescription>
+            There might be issues syncing data across devices. Try manually refreshing below.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Pending Organizer Applications</h2>
         <Button 
-          variant="outline"
-          size="sm"
-          onClick={handleForceRefresh}
+          variant="outline" 
+          size="sm" 
+          onClick={handleForceRefresh} 
           disabled={isRefreshing}
-          className="text-xs text-gray-500 flex items-center gap-1"
+          className="flex items-center gap-1"
         >
-          <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh Data
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Syncing...' : 'Sync Now'}
         </Button>
       </div>
-      <OrganizerApprovalList
+      
+      {lastRefreshTime && (
+        <div className="text-xs text-muted-foreground">
+          Last updated: {lastRefreshTime.toLocaleTimeString()} on {platformInfo.type} device
+        </div>
+      )}
+      
+      <OrganizerApprovalList 
         pendingOrganizers={pendingOrganizers}
-        onApprove={handleApprove}
-        onReject={handleReject}
+        onApprove={(userId) => {
+          approveUser(userId);
+          // Refresh after a short delay to ensure sync has time to complete
+          setTimeout(() => {
+            handleForceRefresh();
+          }, 1000);
+        }}
+        onReject={(userId) => {
+          rejectUser(userId);
+          // Refresh after a short delay to ensure sync has time to complete
+          setTimeout(() => {
+            handleForceRefresh();
+          }, 1000);
+        }}
       />
-      {!import.meta.env.PROD && (
-        <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-          <p className="text-gray-500 dark:text-gray-400 mb-1">Debug Info (Dev Only):</p>
-          <p className="text-gray-500 dark:text-gray-400">Total Users: {users.length}</p>
-          <p className="text-gray-500 dark:text-gray-400">Pending Organizers: {pendingOrganizers.length}</p>
-          <p className="text-gray-500 dark:text-gray-400">Platform: {platform.type} ({platform.details || 'generic'})</p>
-          <p className="text-gray-500 dark:text-gray-400">Auto-Refresh Count: {autoRefreshCount}</p>
-          <p className="text-gray-500 dark:text-gray-400">Last Manual Refresh: {new Date().toLocaleTimeString()}</p>
+      
+      {pendingOrganizers.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          No pending organizer applications found.
+          {!isRefreshing && (
+            <div className="mt-2">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={handleForceRefresh}
+                className="text-xs"
+              >
+                Refresh Data
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
