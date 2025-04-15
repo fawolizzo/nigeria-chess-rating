@@ -15,14 +15,14 @@ interface SyncStatusIndicatorProps {
 
 const SyncStatusIndicator = ({ 
   onSyncComplete,
-  prioritizeUserData = true,  // Default to true to ensure user data is always prioritized
+  prioritizeUserData = true,
   forceShow = false
 }: SyncStatusIndicatorProps) => {
   const [showStatus, setShowStatus] = useState(false);
   const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
   const platform = detectPlatform();
   
-  // Check if in production mode
+  // Hide completely in production environments unless explicitly forced to show
   const isProduction = import.meta.env.PROD;
   
   // If in production and not forced to show, don't render anything
@@ -35,7 +35,7 @@ const SyncStatusIndicator = ({
     syncOnMount: true,
     keys: prioritizeUserData ? [STORAGE_KEY_USERS] : undefined,
     syncInterval: null,
-    prioritizeUserData,  // This ensures user data is synced first
+    prioritizeUserData,
     onSyncComplete: () => {
       if (onSyncComplete) onSyncComplete();
       
@@ -52,14 +52,12 @@ const SyncStatusIndicator = ({
       
       setShowStatusTimeout(timeoutId);
       
-      // Log successful sync with emphasis on user data
       logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Sync completed successfully on ${platform.type}${prioritizeUserData ? ' with user data prioritized' : ''}`);
     },
     onSyncError: (error) => {
       logMessage(LogLevel.ERROR, 'SyncStatusIndicator', `Sync error on ${platform.type}:`, error);
       setShowStatus(true);
       
-      // Hide the error after a longer delay
       if (showStatusTimeout) {
         clearTimeout(showStatusTimeout);
       }
@@ -85,7 +83,6 @@ const SyncStatusIndicator = ({
     try {
       setShowStatus(true);
       
-      // Always prioritize user data for manual syncs
       logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Manual sync initiated with user data prioritized on ${platform.type}`);
       await forceSync();
       
@@ -101,22 +98,7 @@ const SyncStatusIndicator = ({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  if (!showStatus && !isSyncing) {
-    return (
-      <div className="flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          onClick={handleManualSync}
-        >
-          <RefreshCw className="h-3 w-3 mr-1" />
-          Sync data
-        </Button>
-      </div>
-    );
-  }
-  
+  // Development-only UI for sync controls
   return (
     <div className="flex items-center justify-between text-xs">
       <div className="flex items-center">

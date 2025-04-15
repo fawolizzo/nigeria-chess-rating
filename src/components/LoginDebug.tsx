@@ -6,6 +6,10 @@ import { getFromStorage } from '@/utils/storageUtils';
 import { User } from '@/types/userTypes';
 
 const LoginDebug = () => {
+  // Only show in development mode
+  const isProduction = import.meta.env.PROD;
+  if (isProduction) return null;
+  
   const [expanded, setExpanded] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);

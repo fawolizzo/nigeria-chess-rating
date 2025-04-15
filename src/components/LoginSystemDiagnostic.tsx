@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import {
@@ -16,6 +15,10 @@ import { Loader2, RefreshCw, Check, X, AlertTriangle, Database } from "lucide-re
  * This is a developer-only component for troubleshooting issues
  */
 const LoginSystemDiagnostic: React.FC = () => {
+  // Only show in development mode
+  const isProduction = import.meta.env.PROD;
+  if (isProduction) return null;
+  
   const { users, refreshUserData, forceSync } = useUser();
   const [isChecking, setIsChecking] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
@@ -79,7 +82,7 @@ const LoginSystemDiagnostic: React.FC = () => {
     }
   };
   
-  return (
+  return isProduction ? null : (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold flex items-center">

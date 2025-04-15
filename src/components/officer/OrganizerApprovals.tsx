@@ -18,6 +18,7 @@ const OrganizerApprovals: React.FC = () => {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
   const [showSyncAlert, setShowSyncAlert] = useState(false);
   const platform = detectPlatform();
+  const isProduction = import.meta.env.PROD;
   
   // Load pending organizers directly from context with enhanced logging
   const loadPendingOrganizers = useCallback(() => {
@@ -105,8 +106,8 @@ const OrganizerApprovals: React.FC = () => {
       
       // Show toast to indicate sync is happening
       toast({
-        title: "Syncing Data",
-        description: "Fetching the latest organizer data from all devices...",
+        title: "Updating Data",
+        description: "Fetching the latest information...",
       });
       
       // Force a sync to get the latest data
@@ -117,7 +118,7 @@ const OrganizerApprovals: React.FC = () => {
         loadPendingOrganizers();
         
         toast({
-          title: "Sync Complete",
+          title: "Update Complete",
           description: "Successfully updated organizer data.",
         });
         
@@ -127,8 +128,8 @@ const OrganizerApprovals: React.FC = () => {
       logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during manual refresh on ${platformInfo.type}:`, error);
       
       toast({
-        title: "Sync Failed",
-        description: "There was an error syncing data. Please try again.",
+        title: "Update Failed",
+        description: "There was an error updating data. Please try again.",
         variant: "destructive"
       });
       
@@ -142,9 +143,9 @@ const OrganizerApprovals: React.FC = () => {
       {showSyncAlert && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Sync Warning</AlertTitle>
+          <AlertTitle>Update Warning</AlertTitle>
           <AlertDescription>
-            There might be issues syncing data across devices. Try manually refreshing below.
+            There might be issues retrieving the latest data. Try refreshing below.
           </AlertDescription>
         </Alert>
       )}
@@ -159,11 +160,12 @@ const OrganizerApprovals: React.FC = () => {
           className="flex items-center gap-1"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Syncing...' : 'Sync Now'}
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
       
-      {lastRefreshTime && (
+      {/* Only show technical platform/time info in development */}
+      {!isProduction && lastRefreshTime && (
         <div className="text-xs text-muted-foreground">
           Last updated: {lastRefreshTime.toLocaleTimeString()} on {platformInfo.type} device
         </div>

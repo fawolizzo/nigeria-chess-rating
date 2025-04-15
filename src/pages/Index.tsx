@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smartphone, Users, Calendar, InfoIcon } from 'lucide-react';
-import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 import { useProductionSync } from '@/hooks/useProductionSync';
 
 const Index = () => {
@@ -12,6 +11,7 @@ const Index = () => {
   const isProduction = import.meta.env.PROD;
   
   // Initialize the production sync hook to ensure data consistency across devices
+  // This runs silently in the background without UI indicators for end users
   useProductionSync();
 
   return (
@@ -19,21 +19,16 @@ const Index = () => {
       <Navbar />
       
       <div className="container max-w-7xl px-4 py-8 mx-auto">
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
             Welcome to the Nigerian Chess Rating System
           </h1>
-          <p className="text-muted-foreground mt-2 px-4 max-w-3xl mx-auto">
+          <p className="text-muted-foreground mt-4 px-4 max-w-3xl mx-auto">
             Manage players, tournaments, and ratings efficiently
           </p>
-          
-          {/* Add sync status indicator to show sync status */}
-          <div className="mt-2">
-            <SyncStatusIndicator forceShow={true} />
-          </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
           <Link to="/players" className="transition-transform hover:scale-105">
             <Card className="h-full shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
@@ -88,25 +83,27 @@ const Index = () => {
             </Card>
           </Link>
           
-          {/* Only show cross-platform testing in development */}
+          {/* Only show cross-platform testing in development and hide in production */}
           {!isProduction && (
-            <Link to="/cross-platform-testing" className="transition-transform hover:scale-105">
-              <Card className="h-full shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg">
-                    <span className="bg-blue-100 p-2 rounded-md text-blue-500 mr-2 flex-shrink-0">
-                      <Smartphone className="h-5 w-5" />
-                    </span>
-                    <span>Cross-Platform Testing</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Test the rating system across different devices to ensure data consistency.
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            <div className="hidden">
+              <Link to="/cross-platform-testing" className="transition-transform hover:scale-105">
+                <Card className="h-full shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center text-lg">
+                      <span className="bg-blue-100 p-2 rounded-md text-blue-500 mr-2 flex-shrink-0">
+                        <Smartphone className="h-5 w-5" />
+                      </span>
+                      <span>Cross-Platform Testing</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Test the rating system across different devices to ensure data consistency.
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           )}
         </div>
         

@@ -15,6 +15,9 @@ const AccessCodeInput = ({
   isAccessCodeValid, 
   onChange 
 }: AccessCodeInputProps) => {
+  // Only show testing info in development
+  const isProduction = import.meta.env.PROD;
+  
   return (
     <div>
       <FormLabel className="flex items-center gap-1">
@@ -50,9 +53,12 @@ const AccessCodeInput = ({
           </p>
         )}
       </div>
-      <p className="text-xs text-blue-500 mt-1">
-        For testing, use code: NCR2025
-      </p>
+      {/* Only show test code in development */}
+      {!isProduction && (
+        <p className="text-xs text-blue-500 mt-1">
+          For testing, use code: NCR2025
+        </p>
+      )}
     </div>
   );
 };
