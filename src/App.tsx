@@ -1,16 +1,16 @@
 
 import { Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import Home from "@/pages/Home";
+import Index from "@/pages/Index";
 import Register from "@/pages/Register";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
+import OrganizerDashboard from "@/pages/OrganizerDashboard";
 import OfficerDashboard from "@/pages/OfficerDashboard";
+import PlayerProfile from "@/pages/PlayerProfile";
 import TournamentManagement from "@/pages/TournamentManagement";
-import PlayerView from "@/pages/PlayerView";
 import Tournaments from "@/pages/Tournaments";
 import SystemTesting from "@/pages/SystemTesting";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "./components/theme-provider";
 import { useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
@@ -52,12 +52,12 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="ncr-theme-preference">
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Index />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<OrganizerDashboard />} />
         <Route path="/officer-dashboard" element={<OfficerDashboard />} />
-        <Route path="/player/:id" element={<PlayerView />} />
+        <Route path="/player/:id" element={<PlayerProfile />} />
         <Route path="/tournament/:id" element={<TournamentManagement />} />
         <Route path="/tournaments" element={<Tournaments />} />
         <Route path="/system-testing" element={<SystemTesting />} />
