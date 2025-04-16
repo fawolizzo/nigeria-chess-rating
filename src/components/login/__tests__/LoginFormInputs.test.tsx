@@ -90,8 +90,9 @@ describe('LoginFormInputs', () => {
     expect(togglePasswordVisibility).toHaveBeenCalledTimes(1);
   });
 
-  it('shows password in plain text when showPassword is true', () => {
-    render(<LoginFormWrapper showPassword={true} />);
+  it('shows password in plain text for both roles when showPassword is true', () => {
+    render(<LoginFormWrapper selectedRole="tournament_organizer" showPassword={true} />);
+    render(<LoginFormWrapper selectedRole="rating_officer" showPassword={true} />);
     
     const passwordInput = screen.getByLabelText(/Password|Access Code/i);
     expect(passwordInput).toHaveAttribute('type', 'text');
