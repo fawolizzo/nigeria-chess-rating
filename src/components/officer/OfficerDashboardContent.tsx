@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { OfficerDashboardProvider } from "@/contexts/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
+import OfficerDashboardHeader from "./OfficerDashboardHeader";
 import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +12,7 @@ const OfficerDashboardContent: React.FC = () => {
   const { syncDashboardData } = useOfficerDashboardSync();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(10);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const isMountedRef = useRef(true);
   
   // Initial sync and loading progress
@@ -65,6 +67,19 @@ const OfficerDashboardContent: React.FC = () => {
     };
   }, [syncDashboardData]);
   
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      await syncDashboardData();
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
   if (!initialLoadComplete) {
     return (
       <div className="p-6 space-y-4">
@@ -96,7 +111,10 @@ const OfficerDashboardContent: React.FC = () => {
   
   return (
     <OfficerDashboardProvider>
-      <OfficerDashboardTabs />
+      <div className="p-4">
+        <OfficerDashboardHeader onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+        <OfficerDashboardTabs />
+      </div>
     </OfficerDashboardProvider>
   );
 };
