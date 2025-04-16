@@ -62,6 +62,7 @@ function App() {
           <Route path="/player/:id" element={<PlayerProfile />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournament/:id" element={<TournamentDetails />} />
+          <Route path="/tournament-management/:id" element={<TournamentManagement />} />
           <Route path="/tournament-management" element={<TournamentManagement />} />
           <Route path="/system-testing" element={<SystemTesting />} />
           <Route path="/cross-platform-testing" element={<CrossPlatformTesting />} />

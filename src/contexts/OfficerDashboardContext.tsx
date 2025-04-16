@@ -100,7 +100,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, []);
   
-  // Initial load and refresh when the key changes
+  // Initial load and refresh when the key changes - MODIFIED: increased auto-refresh interval
   useEffect(() => {
     // Clear any existing timeout
     if (dataTimeoutRef.current) {
@@ -110,11 +110,11 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     // Load data immediately
     loadAllData();
     
-    // Set a much longer interval for auto refresh (5 minutes)
+    // Set a much longer interval for auto refresh (20 minutes instead of 5 minutes)
     // This dramatically reduces UI freezing
     dataTimeoutRef.current = setTimeout(() => {
       loadAllData();
-    }, 300000); // Refresh every 5 minutes
+    }, 1200000); // Refresh every 20 minutes instead of 5 minutes (300000ms)
     
     return () => {
       if (dataTimeoutRef.current) {

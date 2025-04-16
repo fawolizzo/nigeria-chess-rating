@@ -88,7 +88,7 @@ export function useOfficerDashboardSync() {
     };
   }, []);
   
-  // Set up auto-sync on component mount with longer interval
+  // Set up auto-sync on component mount with longer interval - MODIFIED: increased interval dramatically
   useEffect(() => {
     // Clear any existing interval
     if (syncTimeoutRef.current) {
@@ -98,11 +98,11 @@ export function useOfficerDashboardSync() {
     // Initial sync
     syncDashboardData();
     
-    // Set up timeout for regular syncs with a longer interval (2 minutes)
+    // Set up timeout for regular syncs with a longer interval (10 minutes instead of 2 minutes)
     // This is much less frequent to prevent UI freezing
     syncTimeoutRef.current = setTimeout(() => {
       syncDashboardData();
-    }, 120000); // Every 2 minutes
+    }, 600000); // Every 10 minutes instead of 2 minutes (120000ms)
     
     return () => {
       if (syncTimeoutRef.current) {
