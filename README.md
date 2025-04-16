@@ -1,4 +1,5 @@
-# Welcome to your Lovable project
+
+# Nigerian Chess Rating System
 
 ## Project info
 
@@ -36,29 +37,31 @@ npm i
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Running Tests
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+To run unit tests, use one of the following commands:
 
-**Use GitHub Codespaces**
+```sh
+# Run tests once
+npm test
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Run tests in watch mode (recommended during development)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
 
 ## What technologies are used for this project?
 
-This project is built with .
+This project is built with:
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
+- Jest and React Testing Library for testing
 
 ## How can I deploy this project?
 
