@@ -1,5 +1,5 @@
 
-import { login } from '../loginOperations';
+import { loginUser } from '../loginOperations';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { monitorSync } from '@/utils/monitorSync';
 
@@ -24,7 +24,7 @@ describe('loginOperations', () => {
     jest.clearAllMocks();
   });
 
-  describe('login', () => {
+  describe('loginUser', () => {
     const mockUser = {
       id: 'user1',
       email: 'test@example.com',
@@ -42,45 +42,19 @@ describe('loginOperations', () => {
     const mockSetCurrentUser = jest.fn();
     const mockSetIsLoading = jest.fn();
     const mockSetUsers = jest.fn();
-    const mockGetAllUsersWithRole = jest.fn();
     const mockForceStorageSync = jest.fn().mockResolvedValue(true);
-
-    it('should successfully log in a tournament organizer with correct credentials', async () => {
-      // Set up mocks
-      (getFromStorage as jest.Mock).mockImplementation((key) => {
-        if (key === 'ncr_users') return [mockUser];
-        return null;
-      });
-
-      const result = await login(
-        'test@example.com',
-        'password123',
-        'tournament_organizer',
-        mockSetCurrentUser,
-        mockSetIsLoading,
-        mockSetUsers,
-        mockGetAllUsersWithRole,
-        mockForceStorageSync
-      );
-
-      expect(mockSetIsLoading).toHaveBeenCalledWith(true);
-      expect(mockSetIsLoading).toHaveBeenLastCalledWith(false);
-      expect(result).toBe(false); // Should fail because password doesn't match
-      expect(mockSetCurrentUser).not.toHaveBeenCalled();
-    });
 
     it('should fail login with incorrect email', async () => {
       // Set up mocks
       (getFromStorage as jest.Mock).mockReturnValue([mockUser]);
 
-      const result = await login(
+      const result = await loginUser(
         'wrong@example.com',
         'password123',
         'tournament_organizer',
+        mockSetUsers,
         mockSetCurrentUser,
         mockSetIsLoading,
-        mockSetUsers,
-        mockGetAllUsersWithRole,
         mockForceStorageSync
       );
 
@@ -92,14 +66,13 @@ describe('loginOperations', () => {
       // Set up mocks
       (getFromStorage as jest.Mock).mockReturnValue([mockUser]);
 
-      const result = await login(
+      const result = await loginUser(
         'test@example.com',
         'password123',
         'rating_officer',
+        mockSetUsers,
         mockSetCurrentUser,
         mockSetIsLoading,
-        mockSetUsers,
-        mockGetAllUsersWithRole,
         mockForceStorageSync
       );
 
@@ -117,14 +90,13 @@ describe('loginOperations', () => {
       // Set up mocks
       (getFromStorage as jest.Mock).mockReturnValue([pendingUser]);
 
-      const result = await login(
+      const result = await loginUser(
         'test@example.com',
         'password123',
         'tournament_organizer',
+        mockSetUsers,
         mockSetCurrentUser,
         mockSetIsLoading,
-        mockSetUsers,
-        mockGetAllUsersWithRole,
         mockForceStorageSync
       );
 

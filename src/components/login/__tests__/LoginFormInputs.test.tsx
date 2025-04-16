@@ -11,7 +11,7 @@ import LoginFormInputs, { loginSchema } from '../LoginFormInputs';
 const LoginFormWrapper = ({
   showPassword = false,
   togglePasswordVisibility = jest.fn(),
-  selectedRole = 'tournament_organizer'
+  selectedRole = 'tournament_organizer' as const
 }) => {
   const form = useForm({
     resolver: zodResolver(loginSchema),
