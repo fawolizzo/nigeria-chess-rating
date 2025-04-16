@@ -1,22 +1,17 @@
 
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
-
-// Add global declarations for debugging and monitoring functions
-// These types match what's defined in the vite-env.d.ts file
-declare global {
-  interface Window {
-    ncrRunDiagnostics: () => Record<string, any>;
-    ncrForceSyncFunction: (keys?: string[]) => Promise<boolean>;
-    ncrClearAllData: () => Promise<boolean>;
-    ncrIsResetting: boolean;
-  }
-}
+import { UserProvider } from './contexts/UserContext'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <UserProvider>
+        <App />
+      </UserProvider>
+    </BrowserRouter>
   </React.StrictMode>,
 )
