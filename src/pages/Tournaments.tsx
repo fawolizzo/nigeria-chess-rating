@@ -9,7 +9,6 @@ import { PlusCircle, CalendarRange } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import StateSelector from "@/components/selectors/StateSelector";
 import SearchBar from "@/components/SearchBar";
-import HomeReset from "@/components/HomeReset";
 
 const Tournaments: React.FC = () => {
   const navigate = useNavigate();
@@ -112,8 +111,6 @@ const Tournaments: React.FC = () => {
                 Create Your First Tournament
               </Button>
             )}
-            
-            <HomeReset />
           </div>
         ) : (
           <div className="space-y-10">
@@ -161,8 +158,6 @@ const Tournaments: React.FC = () => {
                 </div>
               </div>
             )}
-            
-            <HomeReset />
           </div>
         )}
       </div>
