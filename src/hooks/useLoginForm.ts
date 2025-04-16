@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -91,8 +92,8 @@ export const useLoginForm = () => {
             description: "Welcome back! You are now logged in as a Rating Officer.",
           });
           
-          // Navigate to rating officer dashboard
-          navigate("/officer/dashboard");
+          // Navigate to rating officer dashboard - FIXED URL
+          navigate("/officer-dashboard");
           return;
         } else {
           throw new Error("Invalid access code for Rating Officer account");
@@ -121,7 +122,7 @@ export const useLoginForm = () => {
         });
         
         // Navigate to tournament organizer dashboard
-        navigate("/organizer/dashboard");
+        navigate("/organizer-dashboard");
       } else {
         logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
         
