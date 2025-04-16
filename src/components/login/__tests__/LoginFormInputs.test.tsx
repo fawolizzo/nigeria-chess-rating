@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 import { Form } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import LoginFormInputs, { loginSchema } from '../LoginFormInputs';
+import LoginFormInputs, { loginSchema, LoginFormData } from '../LoginFormInputs';
 
 // Create a wrapper component to provide the form context
 const LoginFormWrapper = ({
@@ -13,7 +13,7 @@ const LoginFormWrapper = ({
   togglePasswordVisibility = jest.fn(),
   selectedRole = 'tournament_organizer' as const
 }) => {
-  const form = useForm({
+  const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
