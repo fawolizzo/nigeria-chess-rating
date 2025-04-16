@@ -14,10 +14,7 @@ export const useAccessCode = () => {
     setShowAccessCode(role === "rating_officer");
     
     // Reset access code when role changes
-    if (role === "rating_officer") {
-      setAccessCode("");
-      setIsAccessCodeValid(false);
-    } else {
+    if (role !== "rating_officer") {
       setAccessCode("");
       setIsAccessCodeValid(false);
     }

@@ -15,20 +15,19 @@ const AccessCodeInput = ({
   isAccessCodeValid, 
   onChange 
 }: AccessCodeInputProps) => {
-  // In production environment, never show testing info
-  const isProduction = import.meta.env.PROD;
-  
   return (
     <div>
       <FormLabel className="flex items-center gap-1">
         <span>Access Code</span> 
+        <span className="text-red-500">*</span>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-gray-400 cursor-help" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Required for Rating Officer</p>
+              <p>Required for Rating Officer registration</p>
+              <p className="text-xs opacity-75 mt-1">For testing use: RNCR25</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -43,10 +42,15 @@ const AccessCodeInput = ({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
-      <div className="mt-1">
+      <div className="mt-1 flex justify-between">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Required for Rating Officer registration
         </p>
+        {isAccessCodeValid && (
+          <p className="text-xs text-green-500">
+            ✓ Valid access code
+          </p>
+        )}
       </div>
     </div>
   );

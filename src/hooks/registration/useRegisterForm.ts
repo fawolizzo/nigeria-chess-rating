@@ -39,16 +39,24 @@ export const useRegisterForm = () => {
   const selectedRole = form.watch("role");
   
   const onSubmit = async (data: RegisterFormData) => {
-    // For rating officers, ensure the access code is valid
+    console.log("Form submitted with data:", data);
+    console.log("Selected role:", selectedRole);
+    console.log("Access code:", accessCode);
+    console.log("Is access code valid:", isAccessCodeValid);
+    
+    // For rating officers, ensure there's a valid access code
     if (data.role === "rating_officer" && !isAccessCodeValid) {
+      console.log("Rating officer registration attempted without valid access code");
       return false;
     }
     
     return handleSubmit(data);
   };
 
-  // Only disable the submit button when actually submitting or when access code is invalid and role is rating officer
-  const isSubmitDisabled = isSubmitting || (selectedRole === "rating_officer" && !isAccessCodeValid);
+  // Only disable the submit button when actually submitting
+  // For rating officers, also require a valid access code
+  const isSubmitDisabled = isSubmitting || 
+    (selectedRole === "rating_officer" && !isAccessCodeValid);
 
   return {
     form,
