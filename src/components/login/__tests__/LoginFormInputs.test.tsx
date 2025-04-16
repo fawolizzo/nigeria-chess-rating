@@ -37,28 +37,42 @@ const LoginFormWrapper = ({
 };
 
 describe('LoginFormInputs', () => {
-  it('renders email input field', () => {
-    render(<LoginFormWrapper />);
-    
-    const emailInput = screen.getByLabelText(/Email/i);
-    expect(emailInput).toBeInTheDocument();
-    expect(emailInput).toHaveAttribute('type', 'email');
+  // Test for tournament organizer
+  describe('Tournament Organizer Role', () => {
+    it('renders email input field', () => {
+      render(<LoginFormWrapper selectedRole="tournament_organizer" />);
+      
+      const emailInput = screen.getByLabelText(/Email/i);
+      expect(emailInput).toBeInTheDocument();
+      expect(emailInput).toHaveAttribute('type', 'email');
+    });
+
+    it('renders password field for tournament organizer role', () => {
+      render(<LoginFormWrapper selectedRole="tournament_organizer" />);
+      
+      const passwordInput = screen.getByLabelText(/Password/i);
+      expect(passwordInput).toBeInTheDocument();
+      expect(passwordInput).toHaveAttribute('type', 'password');
+    });
   });
 
-  it('renders password field for tournament organizer role', () => {
-    render(<LoginFormWrapper selectedRole="tournament_organizer" />);
-    
-    const passwordInput = screen.getByLabelText(/Password/i);
-    expect(passwordInput).toBeInTheDocument();
-    expect(passwordInput).toHaveAttribute('type', 'password');
-  });
+  // Test for rating officer
+  describe('Rating Officer Role', () => {
+    it('renders email input field', () => {
+      render(<LoginFormWrapper selectedRole="rating_officer" />);
+      
+      const emailInput = screen.getByLabelText(/Email/i);
+      expect(emailInput).toBeInTheDocument();
+      expect(emailInput).toHaveAttribute('type', 'email');
+    });
 
-  it('renders access code field for rating officer role', () => {
-    render(<LoginFormWrapper selectedRole="rating_officer" />);
-    
-    const accessCodeInput = screen.getByLabelText(/Access Code/i);
-    expect(accessCodeInput).toBeInTheDocument();
-    expect(accessCodeInput).toHaveAttribute('type', 'password');
+    it('renders access code field for rating officer role', () => {
+      render(<LoginFormWrapper selectedRole="rating_officer" />);
+      
+      const accessCodeInput = screen.getByLabelText(/Access Code/i);
+      expect(accessCodeInput).toBeInTheDocument();
+      expect(accessCodeInput).toHaveAttribute('type', 'password');
+    });
   });
 
   it('toggles password visibility when the eye button is clicked', () => {
@@ -79,7 +93,8 @@ describe('LoginFormInputs', () => {
   it('shows password in plain text when showPassword is true', () => {
     render(<LoginFormWrapper showPassword={true} />);
     
-    const passwordInput = screen.getByLabelText(/Password/i);
+    const passwordInput = screen.getByLabelText(/Password|Access Code/i);
     expect(passwordInput).toHaveAttribute('type', 'text');
   });
 });
+
