@@ -59,7 +59,6 @@ const LoginFormInputs = ({
                   placeholder="Enter your email address" 
                   className="pl-10" 
                   type="email"
-                  disabled={selectedRole === "rating_officer"}
                   {...field}
                 />
               </div>
@@ -108,4 +107,3 @@ const LoginFormInputs = ({
 };
 
 export default LoginFormInputs;
-
