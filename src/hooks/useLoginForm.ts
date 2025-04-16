@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -34,22 +33,15 @@ export const useLoginForm = () => {
 
   const handleRoleChange = async (role: "tournament_organizer" | "rating_officer") => {
     form.setValue("role", role);
+    form.setValue("email", ""); // Ensure email is always cleared
     setError("");
     
-    // Pre-fill email for rating officer
+    // Create rating officer if it doesn't exist
     if (role === "rating_officer") {
-      form.setValue("email", "fawolizzo@gmail.com");
-      
-      // Create rating officer if it doesn't exist
       try {
         await createInitialRatingOfficerIfNeeded();
       } catch (error) {
         console.error("Error creating initial rating officer:", error);
-      }
-    } else {
-      // Clear email if switching back to tournament organizer
-      if (form.getValues("email") === "fawolizzo@gmail.com") {
-        form.setValue("email", "");
       }
     }
   };

@@ -64,11 +64,6 @@ const LoginFormInputs = ({
                 />
               </div>
             </FormControl>
-            {selectedRole === "rating_officer" && (
-              <FormDescription className="text-xs text-blue-600 dark:text-blue-400">
-                The default Rating Officer email is pre-filled
-              </FormDescription>
-            )}
             <FormMessage />
           </FormItem>
         )}
@@ -104,11 +99,6 @@ const LoginFormInputs = ({
                 </Button>
               </div>
             </FormControl>
-            {selectedRole === "rating_officer" && (
-              <FormDescription className="text-xs text-blue-600 dark:text-blue-400">
-                Default access code: NCR2025
-              </FormDescription>
-            )}
             <FormMessage />
           </FormItem>
         )}
@@ -118,3 +108,4 @@ const LoginFormInputs = ({
 };
 
 export default LoginFormInputs;
+
