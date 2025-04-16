@@ -56,13 +56,12 @@ export const useRegistrationSubmit = (
   // Register a rating officer (directly in local system only)
   const registerRatingOfficer = async (normalizedData: any): Promise<boolean> => {
     try {
-      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer with default email: ${DEFAULT_RATING_OFFICER_EMAIL}`);
+      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Attempting to register rating officer with email: ${normalizedData.email}`);
       
-      // Only register the Rating Officer in the local system
-      // This bypasses Supabase registration which may fail if the user already exists
+      // For Rating Officers in UAT, use the email provided by the user
       const success = await registerInLocalSystem({
         fullName: normalizedData.fullName,
-        email: DEFAULT_RATING_OFFICER_EMAIL, // Always use the default email
+        email: normalizedData.email, // Use the user-provided email
         phoneNumber: normalizedData.phoneNumber,
         state: normalizedData.state,
         role: "rating_officer" as const,
@@ -74,11 +73,11 @@ export const useRegistrationSubmit = (
         throw new Error("Failed to register Rating Officer in local system");
       }
       
-      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${DEFAULT_RATING_OFFICER_EMAIL}`);
+      logMessage(LogLevel.INFO, 'RegistrationSubmit', `Successfully registered rating officer: ${normalizedData.email}`);
       return true;
     } catch (error) {
       console.error("Error registering rating officer:", error);
-      logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${DEFAULT_RATING_OFFICER_EMAIL}`, error);
+      logMessage(LogLevel.ERROR, 'RegistrationSubmit', `Error registering rating officer: ${normalizedData.email}`, error);
       throw error;
     }
   };
@@ -127,7 +126,7 @@ export const useRegistrationSubmit = (
   };
 
   // Display success message and redirect to login
-  const handleRegistrationSuccess = (role: string) => {
+  const handleRegistrationSuccess = (role: string, email: string) => {
     const message = role === "tournament_organizer"
       ? "Registration successful! Your account is pending approval by a rating officer."
       : "Rating Officer account created successfully! You can now log in.";
@@ -142,9 +141,10 @@ export const useRegistrationSubmit = (
       variant: "default"
     });
     
+    // Add a small delay before redirecting to ensure the toast is seen
     setTimeout(() => {
       navigate("/login");
-    }, 2000);
+    }, 3000);
     
     return true;
   };
@@ -152,12 +152,6 @@ export const useRegistrationSubmit = (
   // Handle registration failure
   const handleRegistrationFailure = (error: any) => {
     console.error("Registration failed:", error);
-    
-    // Special handling for Rating Officer - treat as success even if Supabase fails
-    if (error?.message?.includes("already registered") && error?.email === DEFAULT_RATING_OFFICER_EMAIL) {
-      console.log("Rating officer already exists in Supabase, continuing with local registration");
-      return true;
-    }
     
     setErrorMessage("Registration failed. Please try again with a different email address.");
     
@@ -176,7 +170,7 @@ export const useRegistrationSubmit = (
     
     // Special handling for Rating Officer - treat as success even if Supabase fails
     if (error?.message?.includes("already registered") && 
-        (error?.email === DEFAULT_RATING_OFFICER_EMAIL || error?.path === "rating_officer")) {
+        error?.path === "rating_officer") {
       console.log("Rating officer already exists, treating as success");
       return true;
     }
@@ -203,14 +197,18 @@ export const useRegistrationSubmit = (
       variant: "destructive",
     });
     
+    setIsSubmitting(false);
     return false;
   };
 
   // Main submission handler
   const handleSubmit = async (data: RegisterFormData) => {
-    setIsSubmitting(true);
+    // Clear previous messages at the start
     setErrorMessage("");
     setSuccessMessage("");
+    
+    // Set submitting state immediately
+    setIsSubmitting(true);
     
     console.log("Registration form submitted with data:", data);
     
@@ -235,6 +233,12 @@ export const useRegistrationSubmit = (
         return false;
       }
       
+      // Show immediate feedback that submission is processing
+      toast({
+        title: "Processing",
+        description: "Creating your account...",
+      });
+      
       // Normalize and standardize email formats
       const normalizedData = {
         ...data,
@@ -248,7 +252,6 @@ export const useRegistrationSubmit = (
       let success = false;
       
       if (data.role === "rating_officer") {
-        // For rating officers, we ignore the provided email and use the default
         console.log("Attempting to register rating officer...");
         success = await registerRatingOfficer(normalizedData);
         console.log("Rating officer registration result:", success);
@@ -259,7 +262,7 @@ export const useRegistrationSubmit = (
       }
       
       if (success) {
-        return handleRegistrationSuccess(data.role);
+        return handleRegistrationSuccess(data.role, data.email);
       } else {
         return handleRegistrationFailure({ message: "Registration failed", email: data.email });
       }
@@ -268,13 +271,16 @@ export const useRegistrationSubmit = (
       
       // Special case for Rating Officer - always succeed regardless of Supabase errors
       if (data.role === "rating_officer") {
-        console.log("Ignoring error for rating officer registration, proceeding with success flow");
-        return handleRegistrationSuccess(data.role);
+        console.log("Rating officer registration - proceeding with success flow");
+        return handleRegistrationSuccess(data.role, data.email);
       }
       
       return handleRegistrationError(error);
     } finally {
-      setIsSubmitting(false);
+      // Ensure isSubmitting is set to false regardless of outcome
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 500);
     }
   };
 

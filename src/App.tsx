@@ -1,68 +1,75 @@
 
-import { Route, Routes } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import Index from "@/pages/Index";
-import Register from "@/pages/Register";
-import Login from "@/pages/Login";
-import OrganizerDashboard from "@/pages/OrganizerDashboard";
-import OfficerDashboard from "@/pages/OfficerDashboard";
-import PlayerProfile from "@/pages/PlayerProfile";
-import TournamentManagement from "@/pages/TournamentManagement";
-import Tournaments from "@/pages/Tournaments";
-import SystemTesting from "@/pages/SystemTesting";
-import { ThemeProvider } from "./components/theme-provider";
-import { useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/toaster';
+import Home from '@/pages/Index';
+import About from '@/pages/About';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import OfficerDashboard from '@/pages/OfficerDashboard';
+import OrganizerDashboard from '@/pages/OrganizerDashboard';
+import Players from '@/pages/Players';
+import PlayerProfile from '@/pages/PlayerProfile';
+import Tournaments from '@/pages/Tournaments';
+import TournamentDetails from '@/pages/TournamentDetails';
+import TournamentManagement from '@/pages/TournamentManagement';
+import NotFound from '@/pages/NotFound';
+import SystemTesting from '@/pages/SystemTesting';
+import CrossPlatformTesting from '@/pages/CrossPlatformTesting';
+import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 function App() {
-  const { refreshUserData, forceSync } = useUser();
-  
-  // Refresh data on mount and set up periodic refresh
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
   useEffect(() => {
-    const initialSync = async () => {
+    const initializeApp = async () => {
       try {
-        // First try a regular refresh
-        await refreshUserData();
-        
-        // Then do a full sync (will download from Supabase if available)
-        const syncResult = await forceSync();
-        logMessage(
-          LogLevel.INFO, 
-          'App', 
-          `Initial sync ${syncResult ? 'succeeded' : 'failed or partially succeeded'}`
-        );
+        // Basic app initialization
+        logMessage(LogLevel.INFO, 'App', 'Initializing application');
+        setIsInitialized(true);
       } catch (error) {
-        logMessage(LogLevel.ERROR, 'App', 'Error during initial data sync:', error);
+        logMessage(LogLevel.ERROR, 'App', 'Error initializing application:', error);
+        console.error('App initialization error:', error);
       }
     };
-    
-    initialSync();
-    
-    // Set up periodic refresh
-    const refreshInterval = setInterval(() => {
-      refreshUserData().catch(error => {
-        logMessage(LogLevel.ERROR, 'App', 'Error during periodic data refresh:', error);
-      });
-    }, 30000); // Every 30 seconds
-    
-    return () => clearInterval(refreshInterval);
-  }, [refreshUserData, forceSync]);
-  
+
+    initializeApp();
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <ThemeProvider defaultTheme="light" storageKey="ncr-theme-preference">
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<OrganizerDashboard />} />
-        <Route path="/officer-dashboard" element={<OfficerDashboard />} />
-        <Route path="/player/:id" element={<PlayerProfile />} />
-        <Route path="/tournament/:id" element={<TournamentManagement />} />
-        <Route path="/tournaments" element={<Tournaments />} />
-        <Route path="/system-testing" element={<SystemTesting />} />
-      </Routes>
-      <Toaster />
+    <ThemeProvider defaultTheme="light" storageKey="ncr-theme">
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/officer-dashboard" element={<OfficerDashboard />} />
+          <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/players" element={<Players />} />
+          <Route path="/player/:id" element={<PlayerProfile />} />
+          <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/tournament/:id" element={<TournamentDetails />} />
+          <Route path="/tournament-management" element={<TournamentManagement />} />
+          <Route path="/system-testing" element={<SystemTesting />} />
+          <Route path="/cross-platform-testing" element={<CrossPlatformTesting />} />
+          <Route path="/404" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/404" replace />} />
+        </Routes>
+        <Toaster />
+      </Router>
     </ThemeProvider>
   );
 }

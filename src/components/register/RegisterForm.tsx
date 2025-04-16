@@ -7,6 +7,8 @@ import RegisterFormFields from "./RegisterFormFields";
 import AccessCodeInput from "./AccessCodeInput";
 import RegistrationDebug from "./RegistrationDebug";
 import { useRegisterForm } from "@/hooks/registration/useRegisterForm";
+import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react";
 
 const RegisterForm = () => {
   const {
@@ -23,6 +25,40 @@ const RegisterForm = () => {
     setAccessCode,
     onSubmit
   } = useRegisterForm();
+  
+  const [submitProgress, setSubmitProgress] = useState(0);
+  
+  // Update progress bar when submitting
+  useEffect(() => {
+    if (isSubmitting) {
+      // Reset progress when starting submission
+      setSubmitProgress(0);
+      
+      // Simulate progress
+      const interval = setInterval(() => {
+        setSubmitProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(interval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 300);
+      
+      return () => {
+        clearInterval(interval);
+        // Complete progress when done
+        setSubmitProgress(100);
+      };
+    }
+  }, [isSubmitting]);
+  
+  // Show successful completion
+  useEffect(() => {
+    if (successMessage) {
+      setSubmitProgress(100);
+    }
+  }, [successMessage]);
   
   console.log("RegisterForm rendered with state:", {
     selectedRole,
@@ -41,7 +77,12 @@ const RegisterForm = () => {
     console.log("Access code (rating officer):", accessCode);
     console.log("Is access code valid:", isAccessCodeValid);
     
-    return onSubmit(data);
+    try {
+      return await onSubmit(data);
+    } catch (error) {
+      console.error("Error during form submission:", error);
+      return false;
+    }
   };
   
   return (
@@ -64,6 +105,13 @@ const RegisterForm = () => {
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md flex items-start">
           <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <p className="ml-3 text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+        </div>
+      )}
+      
+      {isSubmitting && (
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Creating your account...</p>
+          <Progress value={submitProgress} className="h-2" />
         </div>
       )}
       
@@ -106,18 +154,21 @@ const RegisterForm = () => {
           
           <Button
             type="submit"
-            className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+            className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white transition-all"
             disabled={isSubmitDisabled}
+            aria-label={isSubmitting ? "Creating Account..." : "Create Account"}
+            data-testid="register-button"
             onClick={() => {
               console.log("Submit button clicked");
               console.log("Form values:", form.getValues());
               console.log("Form state:", form.formState);
+              console.log("Button disabled state:", isSubmitDisabled);
             }}
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Registering...
+                Creating Account...
               </>
             ) : (
               <>
