@@ -14,7 +14,6 @@ import TournamentHeader from "@/components/tournament/TournamentHeader";
 import PlayersTab from "@/components/tournament/PlayersTab";
 import PairingsTab from "@/components/tournament/PairingsTab";
 import RoundController from "@/components/tournament/RoundController";
-import RemoveTournamentUtil from "@/components/tournament/RemoveTournamentUtil";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { generateSwissPairings, initializeStandingsByRating, PlayerStanding } from "@/lib/swissPairingService";
 
@@ -600,8 +599,6 @@ const TournamentManagement = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
-      {/* Run RemoveTournamentUtil automatically for this page load only */}
-      {id === "1742142855095" && <RemoveTournamentUtil />}
       
       <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto">
         {/* Tournament Header */}
