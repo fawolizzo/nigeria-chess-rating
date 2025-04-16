@@ -11,7 +11,7 @@ import LoginFormInputs, { loginSchema, LoginFormData } from '../LoginFormInputs'
 const LoginFormWrapper = ({
   showPassword = false,
   togglePasswordVisibility = jest.fn(),
-  selectedRole = 'tournament_organizer' as const
+  selectedRole = 'tournament_organizer' as LoginFormData['role'] // Fix the type here
 }) => {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -98,4 +98,3 @@ describe('LoginFormInputs', () => {
     expect(passwordInput).toHaveAttribute('type', 'text');
   });
 });
-
