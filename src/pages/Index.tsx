@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -25,16 +24,13 @@ const Index = () => {
           </p>
         </div>
         
-        {/* Centered logo section with increased size and reduced spacing */}
+        {/* Centered logo section with only the image */}
         <div className="flex flex-col items-center justify-center mb-10 mt-8">
           <img 
             src="/lovable-uploads/cd12c0fd-5c90-4320-89be-a3d543be8bd9.png" 
             alt="Nigerian Chess Rating System Logo" 
             className="h-40 sm:h-48 md:h-56" 
           />
-          <h2 className="mt-2 text-xl sm:text-2xl md:text-3xl font-bold text-nigeria-green">
-            NCR System
-          </h2>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
