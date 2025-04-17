@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "@/components/LoginForm";
-import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
@@ -13,16 +13,20 @@ const Login = () => {
 
   // Handle redirection for already authenticated users
   useEffect(() => {
-    if (!isLoading && isAuthenticated && currentUser) {
+    logMessage(LogLevel.INFO, 'Login', 'Auth state check', { 
+      isAuthenticated, isLoading, hasCurrentUser: !!currentUser 
+    });
+    
+    if (!isLoading && (isAuthenticated || currentUser)) {
       logMessage(LogLevel.INFO, 'Login', 'User already authenticated, redirecting', { 
-        role: currentUser.role, 
-        status: currentUser.status 
+        role: currentUser?.role, 
+        status: currentUser?.status 
       });
       
       // Determine where to redirect based on user role and status
-      if (currentUser.role === 'rating_officer') {
+      if (currentUser?.role === 'rating_officer') {
         navigate('/officer-dashboard');
-      } else if (currentUser.role === 'tournament_organizer') {
+      } else if (currentUser?.role === 'tournament_organizer') {
         if (currentUser.status === 'pending') {
           navigate('/pending-approval');
         } else if (currentUser.status === 'approved') {
@@ -45,7 +49,7 @@ const Login = () => {
   }
 
   // Only show the login form if not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !currentUser) {
     return <LoginForm />;
   }
 

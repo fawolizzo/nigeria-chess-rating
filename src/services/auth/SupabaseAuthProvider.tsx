@@ -11,22 +11,24 @@ export type SupabaseAuthContextProps = {
   session: Session | null;
   user: User | null;
   signIn: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string, metadata: any) => Promise<boolean>;
   signOut: () => Promise<void>;
   isLoading: boolean;
   isRatingOfficer: boolean;
   isTournamentOrganizer: boolean;
-  isAuthenticated: boolean; // Added isAuthenticated flag
+  isAuthenticated: boolean;
 };
 
 export const SupabaseAuthContext = createContext<SupabaseAuthContextProps>({
   session: null,
   user: null,
   signIn: async () => false,
+  signUp: async () => false,
   signOut: async () => {},
   isLoading: true,
   isRatingOfficer: false,
   isTournamentOrganizer: false,
-  isAuthenticated: false, // Initialize isAuthenticated flag
+  isAuthenticated: false,
 });
 
 export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
@@ -34,17 +36,25 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Add this state
-  const { login: localLogin } = useUser();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const { login: localLogin, currentUser } = useUser();
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
+
+  // Add signUp function to match the context type
+  const handleSignUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
+    // This is a placeholder - in a real implementation, this would call the signup service
+    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign up not fully implemented');
+    return false;
+  };
 
   const handleSignIn = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
       const success = await signInWithEmailAndPassword(email, password, localLogin);
       if (success) {
-        setIsAuthenticated(true); // Set authenticated on successful login
+        setIsAuthenticated(true);
+        logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign in successful');
       }
       return success;
     } catch (error) {
@@ -61,13 +71,27 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       await signOut();
       setSession(null);
       setUser(null);
-      setIsAuthenticated(false); // Clear authenticated state on logout
+      setIsAuthenticated(false);
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Effect to sync with currentUser from UserContext
+  useEffect(() => {
+    if (currentUser) {
+      // If we have a current user in the UserContext but no auth state,
+      // we should consider the user authenticated
+      setIsAuthenticated(true);
+      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User authenticated via UserContext', {
+        userId: currentUser.id,
+        role: currentUser.role,
+        email: currentUser.email
+      });
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Setting up auth state listener');
@@ -77,11 +101,10 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       logMessage(LogLevel.INFO, 'SupabaseAuthProvider', `Auth state changed: ${event}`);
       console.log(`Auth state change event: ${event}`);
-      console.log(`New session: ${JSON.stringify(newSession)}`);
       
       setSession(newSession);
       setUser(newSession?.user || null);
-      setIsAuthenticated(!!newSession); // Update authenticated state based on session
+      setIsAuthenticated(!!newSession);
 
       if (event === 'SIGNED_IN') {
         console.log(`Session data: ${JSON.stringify({ session: newSession })}`);
@@ -99,7 +122,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setSession(data.session);
           setUser(data.session?.user || null);
-          setIsAuthenticated(!!data.session); // Set authenticated state based on existing session
+          setIsAuthenticated(!!data.session);
           
           // If we have a session, log helpful info
           if (data.session) {
@@ -129,11 +152,12 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     session,
     user,
     signIn: handleSignIn,
+    signUp: handleSignUp,
     signOut: handleSignOut,
     isLoading: isLoading || !isInitialized,
     isRatingOfficer,
     isTournamentOrganizer,
-    isAuthenticated // Add isAuthenticated to context value
+    isAuthenticated
   };
 
   return (

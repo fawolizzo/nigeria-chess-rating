@@ -21,6 +21,9 @@ import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { format, isValid, parseISO, isBefore, startOfDay } from "date-fns";
 import { validateTimeControl } from "@/utils/timeControlValidation";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { setupNetworkDebugger } from "@/utils/networkDebugger";
+
+setupNetworkDebugger();
 
 interface Tournament {
   id: string;
@@ -117,6 +120,7 @@ const OrganizerDashboard = () => {
   const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
   const [customTimeControlError, setCustomTimeControlError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPageInitialized, setIsPageInitialized] = useState(false);
 
   const form = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentSchema),
@@ -137,46 +141,66 @@ const OrganizerDashboard = () => {
     const checkAuthAndLoadData = async () => {
       try {
         setIsLoading(true);
-        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Checking authentication state', { 
+        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Initializing dashboard', {
           isAuthenticated,
           hasCurrentUser: !!currentUser,
           userRole: currentUser?.role,
           userStatus: currentUser?.status
         });
 
-        if (authLoading) {
-          return;
-        }
-        
-        if (!isAuthenticated || !currentUser) {
-          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
-          navigate('/login');
-          return;
-        }
-        
-        if (currentUser.role !== 'tournament_organizer') {
-          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User is not a tournament organizer, redirecting');
-          if (currentUser.role === 'rating_officer') {
-            navigate('/officer-dashboard');
-          } else {
-            navigate('/login');
-          }
-          return;
-        }
-        
-        if (currentUser.status !== 'approved') {
-          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Tournament organizer not approved, redirecting');
-          navigate('/pending-approval');
-          return;
+        if (!isPageInitialized && currentUser) {
+          setIsPageInitialized(true);
+          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Page initialized with user data', {
+            userId: currentUser.id,
+            role: currentUser.role
+          });
         }
 
-        const savedTournaments = localStorage.getItem('tournaments');
-        if (savedTournaments) {
-          const allTournaments = JSON.parse(savedTournaments);
-          const myTournaments = allTournaments.filter(
-            (tournament: Tournament) => tournament.organizerId === currentUser.id
-          );
-          setTournaments(myTournaments);
+        if (authLoading) {
+          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Auth is still loading, waiting...');
+          return;
+        }
+        
+        if (currentUser && currentUser.role === 'tournament_organizer' && currentUser.status === 'approved') {
+          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments for organizer', {
+            organizerId: currentUser.id
+          });
+          
+          const savedTournaments = localStorage.getItem('tournaments');
+          if (savedTournaments) {
+            const allTournaments = JSON.parse(savedTournaments);
+            const myTournaments = allTournaments.filter(
+              (tournament: Tournament) => tournament.organizerId === currentUser.id
+            );
+            setTournaments(myTournaments);
+            logMessage(LogLevel.INFO, 'OrganizerDashboard', `Loaded ${myTournaments.length} tournaments for organizer`);
+          } else {
+            logMessage(LogLevel.INFO, 'OrganizerDashboard', 'No tournaments found in localStorage');
+          }
+        } else {
+          if (!authLoading) {
+            if (!currentUser) {
+              logMessage(LogLevel.INFO, 'OrganizerDashboard', 'No current user, redirecting to login');
+              navigate('/login');
+              return;
+            }
+            
+            if (currentUser.role !== 'tournament_organizer') {
+              logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User is not a tournament organizer, redirecting');
+              if (currentUser.role === 'rating_officer') {
+                navigate('/officer-dashboard');
+              } else {
+                navigate('/login');
+              }
+              return;
+            }
+            
+            if (currentUser.status !== 'approved') {
+              logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Tournament organizer not approved, redirecting');
+              navigate('/pending-approval');
+              return;
+            }
+          }
         }
       } catch (error) {
         console.error('Error in auth check:', error);
@@ -187,7 +211,7 @@ const OrganizerDashboard = () => {
     };
 
     checkAuthAndLoadData();
-  }, [currentUser, isAuthenticated, authLoading, navigate]);
+  }, [currentUser, isAuthenticated, authLoading, navigate, isPageInitialized]);
 
   const handleLogout = () => {
     logout();
@@ -288,7 +312,7 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
-  if (isLoading || authLoading) {
+  if ((isLoading || authLoading) && tournaments.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Navbar />
@@ -302,7 +326,10 @@ const OrganizerDashboard = () => {
     );
   }
 
-  if (!isAuthenticated || !currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
+  if (!isLoading && !authLoading && 
+      (!currentUser || 
+       currentUser.role !== 'tournament_organizer' || 
+       currentUser.status !== 'approved')) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Navbar />
