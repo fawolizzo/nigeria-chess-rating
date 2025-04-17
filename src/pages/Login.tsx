@@ -13,10 +13,20 @@ const Login = () => {
 
   // Handle redirection for already authenticated users
   useEffect(() => {
+    // Log detailed state for debugging
     logMessage(LogLevel.INFO, 'Login', 'Auth state check', { 
-      isAuthenticated, isLoading, hasCurrentUser: !!currentUser 
+      isAuthenticated, 
+      isLoading, 
+      hasCurrentUser: !!currentUser,
+      currentUserDetails: currentUser ? {
+        id: currentUser.id,
+        email: currentUser.email,
+        role: currentUser.role,
+        status: currentUser.status
+      } : null
     });
     
+    // Only redirect when auth loading is complete AND we have either authentication or a current user
     if (!isLoading && (isAuthenticated || currentUser)) {
       logMessage(LogLevel.INFO, 'Login', 'User already authenticated, redirecting', { 
         role: currentUser?.role, 
