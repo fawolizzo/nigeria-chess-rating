@@ -46,13 +46,13 @@ const Login = () => {
     }
   }, [isAuthenticated, isLoading, currentUser, navigate]);
 
-  // Show loading indicator while checking authentication
+  // Show a clear loading indicator with appropriate message
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Checking authentication state...</p>
+          <p className="text-gray-600 dark:text-gray-400">Verifying login status...</p>
         </div>
       </div>
     );

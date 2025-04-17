@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -52,42 +53,61 @@ const OrganizerDashboard = () => {
   const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const [activeTab, setActiveTab] = useState<Tournament['status']>("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
-  const { tournaments, isLoading, createTournament, loadTournaments } = useTournamentManager();
+  const { tournaments, isLoading: tournamentsLoading, createTournament, loadTournaments } = useTournamentManager();
+  const [initialAuthCheck, setInitialAuthCheck] = useState(false);
 
+  // First check authentication and redirect if needed
   useEffect(() => {
-    const checkAuthAndLoadData = async () => {
-      logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Checking auth state', {
+    // Set a flag after first auth check to prevent multiple redirects
+    if (!initialAuthCheck && !authLoading) {
+      setInitialAuthCheck(true);
+      
+      logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Initial auth check complete', {
         isAuthenticated,
-        authLoading,
         hasCurrentUser: !!currentUser,
         userRole: currentUser?.role,
         userStatus: currentUser?.status
       });
-
-      if (!authLoading && (!currentUser || !isAuthenticated)) {
+      
+      // Redirect unauthenticated users
+      if (!isAuthenticated && !currentUser) {
+        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
         navigate('/login');
         return;
       }
-
-      if (currentUser?.role !== 'tournament_organizer') {
-        if (currentUser?.role === 'rating_officer') {
+      
+      // Redirect users with incorrect role
+      if (currentUser && currentUser.role !== 'tournament_organizer') {
+        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User has incorrect role, redirecting', {
+          role: currentUser.role
+        });
+        
+        if (currentUser.role === 'rating_officer') {
           navigate('/officer-dashboard');
         } else {
           navigate('/login');
         }
         return;
       }
-
+      
+      // Redirect pending organizers
       if (currentUser?.status !== 'approved') {
+        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not approved, redirecting to pending', {
+          status: currentUser?.status
+        });
         navigate('/pending-approval');
         return;
       }
-
+    }
+  }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
+  
+  // Load tournaments data after authentication is confirmed
+  useEffect(() => {
+    if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
+      logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
       loadTournaments();
-    };
-
-    checkAuthAndLoadData();
-  }, [currentUser, isAuthenticated, authLoading, navigate, loadTournaments]);
+    }
+  }, [initialAuthCheck, currentUser, loadTournaments]);
 
   const handleLogout = () => {
     logout();
@@ -125,21 +145,26 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
-  if (isLoading || authLoading) {
+  // Show appropriate loading state
+  const isLoading = authLoading || tournamentsLoading || !initialAuthCheck;
+  
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Navbar />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
-            
+            <p className="text-gray-600 dark:text-gray-400">
+              {authLoading ? "Verifying your account..." : "Loading tournaments..."}
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Access checks - after loading is complete
   if (!currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -150,13 +175,19 @@ const OrganizerDashboard = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               You must be logged in as an approved tournament organizer to access this dashboard.
             </p>
-            
+            <Button
+              onClick={() => navigate('/login')}
+              className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+            >
+              Back to Login
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
+  // Main dashboard content - only shown when user is authenticated and data is loaded
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />

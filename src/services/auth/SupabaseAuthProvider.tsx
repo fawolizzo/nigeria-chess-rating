@@ -85,6 +85,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       // If we have a current user in the UserContext but no auth state,
       // we should consider the user authenticated
       setIsAuthenticated(true);
+      setIsLoading(false); // Important: Stop loading when we have a current user
       logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User authenticated via UserContext', {
         userId: currentUser.id,
         role: currentUser.role,
@@ -97,53 +98,70 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Setting up auth state listener');
     console.log('Initializing auth and getting session');
     
+    let isMounted = true; // Track component mount state for async operations
+    
     // First, set up the auth state change listener to catch future changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!isMounted) return;
+      
       logMessage(LogLevel.INFO, 'SupabaseAuthProvider', `Auth state changed: ${event}`);
       console.log(`Auth state change event: ${event}`);
       
       setSession(newSession);
       setUser(newSession?.user || null);
       setIsAuthenticated(!!newSession);
-
-      if (event === 'SIGNED_IN') {
-        console.log(`Session data: ${JSON.stringify({ session: newSession })}`);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log(`Session event: ${event}`);
+        setIsLoading(false); // Important: Stop loading on auth events
       }
     });
 
     // Then check for existing session
     const initializeAuth = async () => {
       try {
-        setIsLoading(true);
+        if (!isMounted) return;
+        
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
         } else {
-          setSession(data.session);
-          setUser(data.session?.user || null);
-          setIsAuthenticated(!!data.session);
-          
-          // If we have a session, log helpful info
-          if (data.session) {
-            console.log('Found existing session on initialization');
-            logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User already authenticated');
-          } else {
-            console.log('No existing session found on initialization');
+          if (isMounted) {
+            setSession(data.session);
+            setUser(data.session?.user || null);
+            setIsAuthenticated(!!data.session);
+            
+            // If we have a session, log helpful info
+            if (data.session) {
+              console.log('Found existing session on initialization');
+              logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User already authenticated');
+            } else {
+              console.log('No existing session found on initialization');
+            }
           }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
-        setIsLoading(false);
-        setIsInitialized(true);
+        if (isMounted) {
+          // Set loading false regardless of authentication state
+          // This prevents the loading state from getting stuck
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
       }
     };
 
-    initializeAuth();
+    // Initialize auth after a short delay to allow UserContext to initialize first
+    const initTimeout = setTimeout(() => {
+      initializeAuth();
+    }, 100);
 
-    // Cleanup function to unsubscribe from auth changes
+    // Cleanup function to unsubscribe from auth changes and handle unmounting
     return () => {
+      isMounted = false;
+      clearTimeout(initTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -154,7 +172,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     signIn: handleSignIn,
     signUp: handleSignUp,
     signOut: handleSignOut,
-    isLoading: isLoading || !isInitialized,
+    isLoading: isLoading && !isInitialized, // Only consider loading if not initialized
     isRatingOfficer,
     isTournamentOrganizer,
     isAuthenticated
