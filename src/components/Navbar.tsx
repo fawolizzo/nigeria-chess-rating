@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Sheet, 
@@ -19,13 +18,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { currentUser, logout } = useUser();
   const location = useLocation();
+  const navigate = useNavigate();
   
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    logMessage(LogLevel.INFO, 'Navbar', 'User logging out', { userId: currentUser?.id });
+    logout();
+    navigate("/login");
+    setIsOpen(false);
+  };
+
+  const getDashboardLink = () => {
+    if (!currentUser) return "/";
+    
+    if (currentUser.role === 'tournament_organizer') {
+      return currentUser.status === 'approved' ? "/organizer-dashboard" : "/pending-approval";
+    }
+    
+    if (currentUser.role === 'rating_officer') {
+      return "/officer-dashboard";
+    }
+    
+    return "/";
+  };
+
+  const dashboardLink = getDashboardLink();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
@@ -49,9 +73,9 @@ const Navbar = () => {
           {currentUser ? (
             <>
               {currentUser.role === 'tournament_organizer' && (
-                <Link to="/organizer-dashboard">
+                <Link to={dashboardLink}>
                   <Button 
-                    variant={isActive('/organizer-dashboard') ? "default" : "ghost"} 
+                    variant={isActive(dashboardLink) ? "default" : "ghost"} 
                     size="sm" 
                     className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
@@ -61,9 +85,9 @@ const Navbar = () => {
               )}
               
               {currentUser.role === 'rating_officer' && (
-                <Link to="/officer-dashboard">
+                <Link to={dashboardLink}>
                   <Button 
-                    variant={isActive('/officer-dashboard') ? "default" : "ghost"} 
+                    variant={isActive(dashboardLink) ? "default" : "ghost"} 
                     size="sm" 
                     className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
@@ -83,6 +107,7 @@ const Navbar = () => {
                     <span className="text-sm font-medium">{currentUser.fullName}</span>
                     <Badge variant="outline" className="ml-1 text-xs">
                       {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
+                      {currentUser.status !== 'approved' && ' (Pending)'}
                     </Badge>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
@@ -94,7 +119,7 @@ const Navbar = () => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="flex items-center text-red-500" onClick={logout}>
+                  <DropdownMenuItem className="flex items-center text-red-500" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -158,9 +183,9 @@ const Navbar = () => {
                 {currentUser ? (
                   <>
                     {currentUser.role === 'tournament_organizer' && (
-                      <Link to="/organizer-dashboard" onClick={() => setIsOpen(false)}>
+                      <Link to={dashboardLink} onClick={() => setIsOpen(false)}>
                         <Button 
-                          variant={isActive('/organizer-dashboard') ? "default" : "ghost"} 
+                          variant={isActive(dashboardLink) ? "default" : "ghost"} 
                           className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                         >
                           Organizer Dashboard
@@ -169,9 +194,9 @@ const Navbar = () => {
                     )}
                     
                     {currentUser.role === 'rating_officer' && (
-                      <Link to="/officer-dashboard" onClick={() => setIsOpen(false)}>
+                      <Link to={dashboardLink} onClick={() => setIsOpen(false)}>
                         <Button 
-                          variant={isActive('/officer-dashboard') ? "default" : "ghost"} 
+                          variant={isActive(dashboardLink) ? "default" : "ghost"} 
                           className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                         >
                           Rating Officer Dashboard
@@ -189,6 +214,7 @@ const Navbar = () => {
                         <div className="text-sm font-medium">{currentUser.fullName}</div>
                         <div className="text-xs text-muted-foreground">
                           {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
+                          {currentUser.status !== 'approved' && ' (Pending)'}
                         </div>
                       </div>
                     </div>
@@ -196,10 +222,7 @@ const Navbar = () => {
                     <Button 
                       variant="destructive" 
                       className="w-full mt-auto"
-                      onClick={() => {
-                        logout();
-                        setIsOpen(false);
-                      }}
+                      onClick={handleLogout}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
                       Log out

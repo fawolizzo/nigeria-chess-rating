@@ -14,14 +14,31 @@ const PendingApproval = () => {
   // Redirect if user is not logged in or is already approved
   useEffect(() => {
     if (!currentUser) {
+      logMessage(LogLevel.WARNING, 'PendingApproval', 'No user found, redirecting to login');
       navigate("/login");
       return;
     }
     
+    // If user is approved, redirect to appropriate dashboard
     if (currentUser.status === "approved") {
-      navigate(currentUser.role === "tournament_organizer" 
+      const dashboardPath = currentUser.role === "tournament_organizer" 
         ? "/organizer-dashboard" 
-        : "/officer-dashboard");
+        : "/officer-dashboard";
+      
+      logMessage(LogLevel.INFO, 'PendingApproval', 
+        `User ${currentUser.email} is approved, redirecting to ${dashboardPath}`);
+      
+      navigate(dashboardPath);
+      return;
+    }
+    
+    // If user is not a tournament organizer, redirect to home
+    if (currentUser.role !== "tournament_organizer") {
+      logMessage(LogLevel.WARNING, 'PendingApproval', 
+        `User ${currentUser.email} with role ${currentUser.role} accessed pending approval page`);
+      
+      navigate("/");
+      return;
     }
     
     logMessage(LogLevel.INFO, 'PendingApproval', `User ${currentUser.email} is in pending state`);

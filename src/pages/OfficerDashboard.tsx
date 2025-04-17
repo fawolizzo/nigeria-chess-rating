@@ -4,15 +4,17 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import OfficerDashboardContent from "@/components/officer/OfficerDashboardContent";
+import OfficerDashboardHeader from "@/components/officer/OfficerDashboardHeader";
 import ResetSystemData from "@/components/ResetSystemData";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const OfficerDashboard: React.FC = () => {
-  const { currentUser, isLoading, logout } = useUser();
+  const { currentUser, isLoading, logout, forceSync } = useUser();
   const navigate = useNavigate();
   const [isContentLoading, setIsContentLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   
   // Prevent access for non-rating officers
@@ -31,7 +33,17 @@ const OfficerDashboard: React.FC = () => {
           description: "This page is only accessible to Rating Officers",
           variant: "destructive",
         });
-        navigate("/");
+        
+        // Redirect based on user role
+        if (currentUser.role === "tournament_organizer") {
+          if (currentUser.status === "approved") {
+            navigate("/organizer-dashboard");
+          } else {
+            navigate("/pending-approval");
+          }
+        } else {
+          navigate("/");
+        }
         return;
       }
       
@@ -43,6 +55,27 @@ const OfficerDashboard: React.FC = () => {
   const handleSystemReset = () => {
     // Log out the current user after reset
     logout();
+    navigate("/login");
+  };
+  
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await forceSync();
+      toast({
+        title: "Data Refreshed",
+        description: "The dashboard data has been refreshed successfully.",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Refresh Failed",
+        description: "There was an error refreshing the data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
   
   if (isLoading || isContentLoading) {
@@ -57,7 +90,7 @@ const OfficerDashboard: React.FC = () => {
   }
   
   if (!currentUser || currentUser.role !== "rating_officer") {
-    return null;
+    return null; // Will be redirected by useEffect
   }
   
   return (
@@ -65,12 +98,7 @@ const OfficerDashboard: React.FC = () => {
       <Navbar />
       
       <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">Rating Officer Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Manage tournaments, players and rating calculations</p>
-          </div>
-        </div>
+        <OfficerDashboardHeader onRefresh={handleRefresh} isRefreshing={isRefreshing} />
         
         <div className="mb-6">
           <SyncStatusIndicator prioritizeUserData={true} />
