@@ -2,7 +2,8 @@
 import { createContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 
-export interface SupabaseAuthContextType {
+// Export the type for SupabaseAuthContextProps
+export type SupabaseAuthContextProps = {
   session: Session | null;
   user: User | null;
   signIn: (email: string, password: string) => Promise<boolean>;
@@ -11,10 +12,11 @@ export interface SupabaseAuthContextType {
   isLoading: boolean;
   isRatingOfficer: boolean;
   isTournamentOrganizer: boolean;
-}
+  isAuthenticated: boolean; // Added to match the context in SupabaseAuthProvider
+};
 
 // Create the context with default values
-export const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
+export const SupabaseAuthContext = createContext<SupabaseAuthContextProps>({
   session: null,
   user: null,
   signIn: async () => false,
@@ -23,4 +25,6 @@ export const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   isLoading: true,
   isRatingOfficer: false,
   isTournamentOrganizer: false,
+  isAuthenticated: false, // Added to match the context in SupabaseAuthProvider
 });
+
