@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,8 @@ import createInitialRatingOfficerIfNeeded from "@/utils/createInitialRatingOffic
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
-  const { signIn } = useSupabaseAuth();
+  const location = useLocation();
+  const { signIn, isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const { login: localLogin, currentUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -29,6 +30,25 @@ export const useLoginForm = () => {
       role: "tournament_organizer"
     }
   });
+
+  // Check for already authenticated users and redirect appropriately
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && currentUser) {
+      logMessage(LogLevel.INFO, 'useLoginForm', 'User already authenticated, redirecting');
+      
+      // Determine where to redirect based on user role
+      if (currentUser.role === 'rating_officer') {
+        navigate('/officer-dashboard');
+      } else if (currentUser.role === 'tournament_organizer') {
+        // Check status for tournament organizers
+        if (currentUser.status === 'pending') {
+          navigate('/pending-approval');
+        } else if (currentUser.status === 'approved') {
+          navigate('/organizer-dashboard');
+        }
+      }
+    }
+  }, [isAuthenticated, authLoading, currentUser, navigate]);
 
   const selectedRole = form.watch("role");
 

@@ -17,8 +17,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { format, isValid, parseISO, isBefore, startOfDay } from "date-fns";
 import { validateTimeControl } from "@/utils/timeControlValidation";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 interface Tournament {
   id: string;
@@ -106,6 +108,7 @@ const formatDisplayDate = (dateString: string): string => {
 
 const OrganizerDashboard = () => {
   const { currentUser, logout } = useUser();
+  const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const navigate = useNavigate();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [activeTab, setActiveTab] = useState("upcoming");
@@ -113,7 +116,8 @@ const OrganizerDashboard = () => {
   const [customTimeControl, setCustomTimeControl] = useState("");
   const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
   const [customTimeControlError, setCustomTimeControlError] = useState<string | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
+
   const form = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentSchema),
     defaultValues: {
@@ -130,25 +134,60 @@ const OrganizerDashboard = () => {
   });
 
   useEffect(() => {
-    if (!currentUser || 
-        currentUser.role !== 'tournament_organizer' || 
-        currentUser.status !== 'approved') {
-      navigate('/login');
-    }
-  }, [currentUser, navigate]);
+    const checkAuthAndLoadData = async () => {
+      try {
+        setIsLoading(true);
+        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Checking authentication state', { 
+          isAuthenticated,
+          hasCurrentUser: !!currentUser,
+          userRole: currentUser?.role,
+          userStatus: currentUser?.status
+        });
 
-  useEffect(() => {
-    const savedTournaments = localStorage.getItem('tournaments');
-    if (savedTournaments) {
-      const allTournaments = JSON.parse(savedTournaments);
-      if (currentUser) {
-        const myTournaments = allTournaments.filter(
-          (tournament: Tournament) => tournament.organizerId === currentUser.id
-        );
-        setTournaments(myTournaments);
+        if (authLoading) {
+          return;
+        }
+        
+        if (!isAuthenticated || !currentUser) {
+          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
+          navigate('/login');
+          return;
+        }
+        
+        if (currentUser.role !== 'tournament_organizer') {
+          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User is not a tournament organizer, redirecting');
+          if (currentUser.role === 'rating_officer') {
+            navigate('/officer-dashboard');
+          } else {
+            navigate('/login');
+          }
+          return;
+        }
+        
+        if (currentUser.status !== 'approved') {
+          logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Tournament organizer not approved, redirecting');
+          navigate('/pending-approval');
+          return;
+        }
+
+        const savedTournaments = localStorage.getItem('tournaments');
+        if (savedTournaments) {
+          const allTournaments = JSON.parse(savedTournaments);
+          const myTournaments = allTournaments.filter(
+            (tournament: Tournament) => tournament.organizerId === currentUser.id
+          );
+          setTournaments(myTournaments);
+        }
+      } catch (error) {
+        console.error('Error in auth check:', error);
+        logMessage(LogLevel.ERROR, 'OrganizerDashboard', 'Error checking auth state', { error });
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, [currentUser]);
+    };
+
+    checkAuthAndLoadData();
+  }, [currentUser, isAuthenticated, authLoading, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -161,7 +200,6 @@ const OrganizerDashboard = () => {
   };
 
   const handleCreateTournament = (data: TournamentFormValues) => {
-    // Validate custom time control if selected
     if (isCustomTimeControl) {
       const validation = validateTimeControl(customTimeControl);
       if (!validation.isValid) {
@@ -249,6 +287,39 @@ const OrganizerDashboard = () => {
   };
 
   const nextTournament = getUpcomingTournaments()[0];
+
+  if (isLoading || authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center max-w-md px-4">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Access Restricted</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              You must be logged in as an approved tournament organizer to access this dashboard.
+            </p>
+            <Button onClick={() => navigate('/login')}>
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

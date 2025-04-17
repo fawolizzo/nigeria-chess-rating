@@ -15,6 +15,7 @@ export type SupabaseAuthContextProps = {
   isLoading: boolean;
   isRatingOfficer: boolean;
   isTournamentOrganizer: boolean;
+  isAuthenticated: boolean; // Added isAuthenticated flag
 };
 
 export const SupabaseAuthContext = createContext<SupabaseAuthContextProps>({
@@ -25,6 +26,7 @@ export const SupabaseAuthContext = createContext<SupabaseAuthContextProps>({
   isLoading: true,
   isRatingOfficer: false,
   isTournamentOrganizer: false,
+  isAuthenticated: false, // Initialize isAuthenticated flag
 });
 
 export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
@@ -32,6 +34,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Add this state
   const { login: localLogin } = useUser();
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
@@ -40,6 +43,9 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       const success = await signInWithEmailAndPassword(email, password, localLogin);
+      if (success) {
+        setIsAuthenticated(true); // Set authenticated on successful login
+      }
       return success;
     } catch (error) {
       console.error('Sign in error:', error);
@@ -55,6 +61,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       await signOut();
       setSession(null);
       setUser(null);
+      setIsAuthenticated(false); // Clear authenticated state on logout
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -74,6 +81,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       
       setSession(newSession);
       setUser(newSession?.user || null);
+      setIsAuthenticated(!!newSession); // Update authenticated state based on session
 
       if (event === 'SIGNED_IN') {
         console.log(`Session data: ${JSON.stringify({ session: newSession })}`);
@@ -91,6 +99,15 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setSession(data.session);
           setUser(data.session?.user || null);
+          setIsAuthenticated(!!data.session); // Set authenticated state based on existing session
+          
+          // If we have a session, log helpful info
+          if (data.session) {
+            console.log('Found existing session on initialization');
+            logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User already authenticated');
+          } else {
+            console.log('No existing session found on initialization');
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -115,7 +132,8 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     signOut: handleSignOut,
     isLoading: isLoading || !isInitialized,
     isRatingOfficer,
-    isTournamentOrganizer
+    isTournamentOrganizer,
+    isAuthenticated // Add isAuthenticated to context value
   };
 
   return (

@@ -1,128 +1,59 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import Navbar from "@/components/Navbar";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import LoginForm from "@/components/LoginForm";
-import LoginDebug from "@/components/LoginDebug";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
+import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
-  const { toast } = useToast();
-  const [isResetting, setIsResetting] = useState(false);
-  
-  // Check if in production mode
-  const isProduction = import.meta.env.PROD;
-  
-  const handleSystemReset = async () => {
-    setIsResetting(true);
-    
-    try {
-      logMessage(LogLevel.WARNING, 'Login', "User initiated system reset");
-      
-      toast({
-        title: "System Reset",
-        description: "Signing out and clearing local data...",
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useSupabaseAuth();
+  const { currentUser } = useUser();
+
+  // Handle redirection for already authenticated users
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && currentUser) {
+      logMessage(LogLevel.INFO, 'Login', 'User already authenticated, redirecting', { 
+        role: currentUser.role, 
+        status: currentUser.status 
       });
       
-      // Sign out if signed in
-      await supabase.auth.signOut();
-      
-      // Clear localStorage
-      localStorage.clear();
-      
-      // Clear sessionStorage
-      sessionStorage.clear();
-      
-      logMessage(LogLevel.INFO, 'Login', "System reset completed successfully");
-      
-      toast({
-        title: "Reset Complete",
-        description: "You've been signed out and local data has been cleared. The page will reload now.",
-      });
-      
-      // Reload the page after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (error) {
-      console.error("[Login] Reset failed:", error);
-      logMessage(LogLevel.ERROR, 'Login', "Reset failed with error:", error);
-      
-      toast({
-        title: "Reset Failed",
-        description: "Failed to reset data. Please refresh the page and try again.",
-        variant: "destructive",
-      });
-      
-      // Still try to reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    } finally {
-      setIsResetting(false);
+      // Determine where to redirect based on user role and status
+      if (currentUser.role === 'rating_officer') {
+        navigate('/officer-dashboard');
+      } else if (currentUser.role === 'tournament_organizer') {
+        if (currentUser.status === 'pending') {
+          navigate('/pending-approval');
+        } else if (currentUser.status === 'approved') {
+          navigate('/organizer-dashboard');
+        }
+      }
     }
-  };
-  
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      
-      <div className="max-w-7xl mx-auto pt-24 sm:pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
-          <LoginForm />
-          
-          <div className="px-6 pb-6 text-center text-sm">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-nigeria-green dark:text-nigeria-green-light font-medium hover:underline">
-                Register
-              </Link>
-            </p>
-            
-            {/* Only show reset button in development */}
-            {!isProduction && (
-              <div className="mt-6 border-t pt-6 border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-center mb-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    Having login issues? Try clearing local data
-                  </p>
-                </div>
-                
-                <div className="flex justify-center mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSystemReset}
-                    disabled={isResetting}
-                    className="text-xs flex items-center gap-1 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/30"
-                  >
-                    {isResetting ? (
-                      <>
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        Clearing...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        Clear Local Data
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  This will sign you out and clear local data. Supabase accounts will not be deleted.
-                </p>
-                
-                {process.env.NODE_ENV !== 'production' && <LoginDebug />}
-              </div>
-            )}
-          </div>
+  }, [isAuthenticated, isLoading, currentUser, navigate]);
+
+  // Show loading indicator while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Checking authentication state...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Only show the login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
+  // This should never render as the useEffect should redirect authenticated users
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
       </div>
     </div>
   );

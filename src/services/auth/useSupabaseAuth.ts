@@ -1,5 +1,6 @@
 
 import { useContext } from 'react';
-import { SupabaseAuthContext } from './SupabaseAuthContext';
+import { SupabaseAuthContext, SupabaseAuthContextProps } from './SupabaseAuthContext';
 
-export const useSupabaseAuth = () => useContext(SupabaseAuthContext);
+// Updated return type to include all context properties
+export const useSupabaseAuth = (): SupabaseAuthContextProps => useContext(SupabaseAuthContext);
