@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -48,9 +49,9 @@ const Navbar = () => {
           {currentUser ? (
             <>
               {currentUser.role === 'tournament_organizer' && (
-                <Link to="/organizer">
+                <Link to="/organizer-dashboard">
                   <Button 
-                    variant={isActive('/organizer') ? "default" : "ghost"} 
+                    variant={isActive('/organizer-dashboard') ? "default" : "ghost"} 
                     size="sm" 
                     className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
@@ -60,9 +61,9 @@ const Navbar = () => {
               )}
               
               {currentUser.role === 'rating_officer' && (
-                <Link to="/officer">
+                <Link to="/officer-dashboard">
                   <Button 
-                    variant={isActive('/officer') ? "default" : "ghost"} 
+                    variant={isActive('/officer-dashboard') ? "default" : "ghost"} 
                     size="sm" 
                     className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
@@ -157,9 +158,9 @@ const Navbar = () => {
                 {currentUser ? (
                   <>
                     {currentUser.role === 'tournament_organizer' && (
-                      <Link to="/organizer" onClick={() => setIsOpen(false)}>
+                      <Link to="/organizer-dashboard" onClick={() => setIsOpen(false)}>
                         <Button 
-                          variant={isActive('/organizer') ? "default" : "ghost"} 
+                          variant={isActive('/organizer-dashboard') ? "default" : "ghost"} 
                           className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                         >
                           Organizer Dashboard
@@ -168,9 +169,9 @@ const Navbar = () => {
                     )}
                     
                     {currentUser.role === 'rating_officer' && (
-                      <Link to="/officer" onClick={() => setIsOpen(false)}>
+                      <Link to="/officer-dashboard" onClick={() => setIsOpen(false)}>
                         <Button 
-                          variant={isActive('/officer') ? "default" : "ghost"} 
+                          variant={isActive('/officer-dashboard') ? "default" : "ghost"} 
                           className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                         >
                           Rating Officer Dashboard

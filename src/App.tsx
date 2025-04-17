@@ -58,7 +58,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/officer-dashboard" element={<OfficerDashboard />} />
+          <Route path="/officer" element={<Navigate to="/officer-dashboard" replace />} />
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/organizer" element={<Navigate to="/organizer-dashboard" replace />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/players" element={<Players />} />
           <Route path="/player/:id" element={<PlayerProfile />} />
