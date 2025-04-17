@@ -30,7 +30,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
   const loadingInProgressRef = useRef(false);
   const dataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Optimized load function that prevents concurrent operations
+  // Optimized load function with improved error handling
   const loadAllData = useCallback(async () => {
     // Prevent multiple concurrent loads
     if (loadingInProgressRef.current) {
@@ -44,17 +44,12 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       
       logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Loading dashboard data');
       
-      // Ensure storage is synced with a timeout for safety
-      const syncPromise = Promise.race([
-        Promise.all([
-          syncStorage(['ncr_users']),
-          syncStorage(['ncr_players']),
-          syncStorage(['ncr_tournaments'])
-        ]),
-        new Promise(resolve => setTimeout(resolve, 3000)) // 3 second timeout
+      // Targeted sync with limited scope - only sync critical keys
+      await Promise.all([
+        syncStorage(['ncr_users']),
+        syncStorage(['ncr_players']),
+        syncStorage(['ncr_tournaments'])
       ]);
-      
-      await syncPromise;
       
       // Load tournaments based on their status
       const allTournaments = getAllTournaments();
@@ -89,7 +84,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
         loadingInProgressRef.current = false;
       }, 2000);
     }
-  }, [forceSync, toast]);
+  }, [toast]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -100,21 +95,18 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, []);
   
-  // Initial load and refresh when the key changes - MODIFIED: increased auto-refresh interval
+  // MAJOR CHANGE: Removed auto-refresh completely
+  // Only load data on mount and when refreshKey changes (manual refresh)
   useEffect(() => {
     // Clear any existing timeout
     if (dataTimeoutRef.current) {
       clearTimeout(dataTimeoutRef.current);
     }
     
-    // Load data immediately
+    // Load data immediately - only when component mounts or refresh is triggered
     loadAllData();
     
-    // Set a much longer interval for auto refresh (20 minutes instead of 5 minutes)
-    // This dramatically reduces UI freezing
-    dataTimeoutRef.current = setTimeout(() => {
-      loadAllData();
-    }, 1200000); // Refresh every 20 minutes instead of 5 minutes (300000ms)
+    // REMOVED: Periodic auto-refresh has been removed to eliminate blinking
     
     return () => {
       if (dataTimeoutRef.current) {

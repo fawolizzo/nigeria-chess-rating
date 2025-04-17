@@ -23,42 +23,21 @@ const OrganizerApprovals: React.FC = () => {
   // Load pending organizers directly from context with enhanced logging
   const loadPendingOrganizers = useCallback(() => {
     try {
-      // Log the current state for debugging
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Loading pending organizers from ${users.length} total users on ${platformInfo.type} platform`);
-      
       // Filter for pending tournament organizers directly from context
       const filteredUsers = users.filter(
         (user) => user.role === "tournament_organizer" && user.status === "pending"
       );
       
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Found ${filteredUsers.length} pending organizers on ${platformInfo.type} platform`);
-      
-      // Dump detailed info about each pending organizer to help diagnose visibility issues
-      filteredUsers.forEach((organizer, index) => {
-        logMessage(LogLevel.INFO, 'OrganizerApprovals', `Pending organizer #${index + 1} on ${platformInfo.type}:`, {
-          id: organizer.id,
-          name: organizer.fullName,
-          email: organizer.email,
-          state: organizer.state,
-          registrationDate: organizer.registrationDate,
-          lastModified: organizer.lastModified
-        });
-      });
+      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Found ${filteredUsers.length} pending organizers`);
       
       setPendingOrganizers(filteredUsers);
       setLastRefreshTime(new Date());
       setShowSyncAlert(false);
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error loading pending organizers on ${platformInfo.type}:`, error);
-      toast({
-        title: "Error Loading Organizers",
-        description: "There was an error loading pending organizer applications.",
-        variant: "destructive"
-      });
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error loading pending organizers:`, error);
+      setShowSyncAlert(true);
     }
-  }, [users, toast]);
-  
-  const platformInfo = detectPlatform();
+  }, [users]);
   
   // Effect for initial load and when users change
   useEffect(() => {
@@ -66,40 +45,12 @@ const OrganizerApprovals: React.FC = () => {
     loadPendingOrganizers();
   }, [users, loadPendingOrganizers]);
 
-  // Add an effect to periodically force sync and reload data
-  useEffect(() => {
-    // Set up automatic refresh at regular intervals (every 10 seconds)
-    const autoRefreshInterval = setInterval(() => {
-      handleAutomaticRefresh();
-    }, 10000);
-    
-    // Initial refresh when component mounts
-    handleAutomaticRefresh();
-    
-    return () => {
-      clearInterval(autoRefreshInterval);
-    };
-  }, []);
-  
-  // Automatic refresh function that runs in the background
-  const handleAutomaticRefresh = async () => {
-    try {
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Running background refresh on ${platformInfo.type} platform`);
-      
-      // Force a silent sync to get the latest data
-      await forceSync();
-      
-      // Data will be updated via the users state change effect
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Background refresh completed on ${platformInfo.type} platform`);
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during background refresh on ${platformInfo.type}:`, error);
-      setShowSyncAlert(true);
-    }
-  };
+  // MAJOR CHANGE: Removed automatic background refresh to prevent UI blinking
+  // Only refresh data when users change or manual refresh is triggered
   
   // Force refresh from all sources - manual user action
   const handleForceRefresh = async () => {
-    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Forcing manual refresh of all organizer data on ${platformInfo.type} platform`);
+    logMessage(LogLevel.INFO, 'OrganizerApprovals', `Forcing manual refresh of organizer data`);
     
     try {
       setIsRefreshing(true);
@@ -123,9 +74,9 @@ const OrganizerApprovals: React.FC = () => {
         });
         
         setIsRefreshing(false);
-      }, 1000);
+      }, 500); // Reduced from 1000ms to 500ms for faster feedback
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during manual refresh on ${platformInfo.type}:`, error);
+      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error during manual refresh:`, error);
       
       toast({
         title: "Update Failed",
@@ -135,6 +86,49 @@ const OrganizerApprovals: React.FC = () => {
       
       setIsRefreshing(false);
       setShowSyncAlert(true);
+    }
+  };
+
+  // Optimized approve/reject handlers
+  const handleApproveOrganizer = async (userId: string) => {
+    setIsRefreshing(true);
+    try {
+      await approveUser(userId);
+      // Update the local state immediately to give faster UI feedback
+      setPendingOrganizers(prev => prev.filter(organizer => organizer.id !== userId));
+      toast({
+        title: "Organizer Approved",
+        description: "The organizer has been approved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Approval Failed",
+        description: "There was an error approving the organizer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRejectOrganizer = async (userId: string) => {
+    setIsRefreshing(true);
+    try {
+      await rejectUser(userId);
+      // Update the local state immediately to give faster UI feedback
+      setPendingOrganizers(prev => prev.filter(organizer => organizer.id !== userId));
+      toast({
+        title: "Organizer Rejected",
+        description: "The organizer has been rejected.",
+      });
+    } catch (error) {
+      toast({
+        title: "Rejection Failed",
+        description: "There was an error rejecting the organizer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -167,26 +161,14 @@ const OrganizerApprovals: React.FC = () => {
       {/* Only show technical platform/time info in development */}
       {!isProduction && lastRefreshTime && (
         <div className="text-xs text-muted-foreground">
-          Last updated: {lastRefreshTime.toLocaleTimeString()} on {platformInfo.type} device
+          Last updated: {lastRefreshTime.toLocaleTimeString()}
         </div>
       )}
       
       <OrganizerApprovalList 
         pendingOrganizers={pendingOrganizers}
-        onApprove={(userId) => {
-          approveUser(userId);
-          // Refresh after a short delay to ensure sync has time to complete
-          setTimeout(() => {
-            handleForceRefresh();
-          }, 1000);
-        }}
-        onReject={(userId) => {
-          rejectUser(userId);
-          // Refresh after a short delay to ensure sync has time to complete
-          setTimeout(() => {
-            handleForceRefresh();
-          }, 1000);
-        }}
+        onApprove={handleApproveOrganizer}
+        onReject={handleRejectOrganizer}
       />
       
       {pendingOrganizers.length === 0 && (

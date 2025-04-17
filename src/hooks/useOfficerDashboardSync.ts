@@ -13,8 +13,8 @@ export function useOfficerDashboardSync() {
   const syncInProgressRef = useRef(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Function to sync all relevant data for the dashboard with debounce
-  const syncDashboardData = useCallback(async () => {
+  // Optimized sync function with debounce and better error handling
+  const syncDashboardData = useCallback(async (showToast = false) => {
     // Prevent multiple concurrent syncs
     if (syncInProgressRef.current) {
       logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Sync already in progress, skipping');
@@ -29,30 +29,7 @@ export function useOfficerDashboardSync() {
       // First sync the user data to ensure we have latest permissions
       await forceSync();
       
-      // Then sync all storage with a timeout to prevent UI freezing
-      const syncPromise = new Promise<boolean>((resolve) => {
-        // Set a maximum timeout to prevent hanging
-        const timeoutId = setTimeout(() => {
-          logMessage(LogLevel.WARNING, 'useOfficerDashboardSync', 'Sync operation timed out, continuing anyway');
-          resolve(false);
-        }, 5000);
-        
-        // Perform the actual sync
-        forceSyncAllStorage()
-          .then(() => {
-            clearTimeout(timeoutId);
-            resolve(true);
-          })
-          .catch((error) => {
-            logMessage(LogLevel.ERROR, 'useOfficerDashboardSync', 'Error in forceSyncAllStorage:', error);
-            clearTimeout(timeoutId);
-            resolve(false);
-          });
-      });
-      
-      await syncPromise;
-      
-      // Finally ensure critical keys are synced
+      // Only sync critical keys - this is a major optimization
       await Promise.all([
         syncStorage(['ncr_users']),
         syncStorage(['ncr_players']),
@@ -60,15 +37,26 @@ export function useOfficerDashboardSync() {
       ]);
       
       setLastSyncTime(new Date());
+      
+      // Only show toast for manual sync operations
+      if (showToast) {
+        toast({
+          title: "Dashboard Updated",
+          description: "Dashboard data has been refreshed",
+        });
+      }
+      
       logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Dashboard data sync completed');
       return true;
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useOfficerDashboardSync', 'Error syncing dashboard data:', error);
-      toast({
-        title: "Sync Error",
-        description: "There was an error syncing the dashboard data",
-        variant: "destructive"
-      });
+      if (showToast) {
+        toast({
+          title: "Sync Error",
+          description: "There was an error syncing the dashboard data",
+          variant: "destructive"
+        });
+      }
       return false;
     } finally {
       setIsSyncing(false);
@@ -88,21 +76,19 @@ export function useOfficerDashboardSync() {
     };
   }, []);
   
-  // Set up auto-sync on component mount with longer interval - MODIFIED: increased interval dramatically
+  // MAJOR CHANGE: Drastically reduced auto-sync frequency 
+  // Only sync once on mount and after user actions
   useEffect(() => {
     // Clear any existing interval
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
     }
     
-    // Initial sync
+    // Initial sync when component mounts
     syncDashboardData();
     
-    // Set up timeout for regular syncs with a longer interval (10 minutes instead of 2 minutes)
-    // This is much less frequent to prevent UI freezing
-    syncTimeoutRef.current = setTimeout(() => {
-      syncDashboardData();
-    }, 600000); // Every 10 minutes instead of 2 minutes (120000ms)
+    // REMOVED: Auto-refresh timeout has been removed entirely to stop blinking
+    // Only sync once on mount and after explicit user actions
     
     return () => {
       if (syncTimeoutRef.current) {

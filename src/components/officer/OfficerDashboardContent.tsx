@@ -11,29 +11,30 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 const OfficerDashboardContent: React.FC = () => {
   const { syncDashboardData } = useOfficerDashboardSync();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(10);
+  const [loadingProgress, setLoadingProgress] = useState(25); // Start higher for faster perceived loading
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMountedRef = useRef(true);
   
-  // Initial sync and loading progress
+  // Improved initial sync and loading performance
   useEffect(() => {
     // Mark component as mounted
     isMountedRef.current = true;
     
     const performInitialSync = async () => {
       try {
-        // Start with a minimum progress
-        if (isMountedRef.current) setLoadingProgress(10);
+        // Start with higher progress for faster perceived loading
+        if (isMountedRef.current) setLoadingProgress(25);
         
-        // Simulate progress while sync is happening
+        // Faster progress simulation to reduce perceived wait time
         const progressInterval = setInterval(() => {
           if (isMountedRef.current) {
             setLoadingProgress(prev => {
-              // Don't go past 90% until we confirm sync is complete
-              return prev < 90 ? prev + 10 : prev;
+              // Move faster to 95% to give perception of quicker loading
+              const increment = prev < 50 ? 15 : prev < 80 ? 10 : 5;
+              return prev < 95 ? prev + increment : prev;
             });
           }
-        }, 300);
+        }, 200); // Faster progress updates (200ms instead of 300ms)
         
         // Wait for actual sync
         logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Performing initial data sync');
@@ -44,12 +45,12 @@ const OfficerDashboardContent: React.FC = () => {
         if (isMountedRef.current) {
           setLoadingProgress(100);
           
-          // Small delay to show completed progress before showing content
+          // Shorter delay to show completed progress before showing content
           setTimeout(() => {
             if (isMountedRef.current) {
               setInitialLoadComplete(true);
             }
-          }, 300);
+          }, 200); // Reduced from 300ms to 200ms
         }
       } catch (error) {
         logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Initial sync failed:', error);
@@ -72,7 +73,8 @@ const OfficerDashboardContent: React.FC = () => {
     
     setIsRefreshing(true);
     try {
-      await syncDashboardData();
+      // Pass true to show toast notification for manual refresh
+      await syncDashboardData(true);
     } catch (error) {
       logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Refresh failed:', error);
     } finally {
