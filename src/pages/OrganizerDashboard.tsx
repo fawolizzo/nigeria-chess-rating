@@ -18,6 +18,7 @@ import * as z from "zod";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { format, isValid, parseISO, isBefore, startOfDay } from "date-fns";
+import { validateTimeControl } from "@/utils/timeControlValidation";
 
 interface Tournament {
   id: string;
@@ -111,6 +112,7 @@ const OrganizerDashboard = () => {
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
   const [customTimeControl, setCustomTimeControl] = useState("");
   const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
+  const [customTimeControlError, setCustomTimeControlError] = useState<string | null>(null);
   
   const form = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentSchema),
@@ -159,6 +161,19 @@ const OrganizerDashboard = () => {
   };
 
   const handleCreateTournament = (data: TournamentFormValues) => {
+    // Validate custom time control if selected
+    if (isCustomTimeControl) {
+      const validation = validateTimeControl(customTimeControl);
+      if (!validation.isValid) {
+        setCustomTimeControlError(validation.error);
+        toast({
+          title: "Invalid Time Control",
+          description: validation.error,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     const finalTimeControl = isCustomTimeControl ? customTimeControl : data.timeControl;
     
     if (isCustomTimeControl && !customTimeControl) {
@@ -206,6 +221,7 @@ const OrganizerDashboard = () => {
     form.reset();
     setIsCustomTimeControl(false);
     setCustomTimeControl("");
+    setCustomTimeControlError(null);
     
     toast({
       title: "Tournament Created",
@@ -595,6 +611,7 @@ const OrganizerDashboard = () => {
                               onValueChange={(value) => {
                                 if (value === "custom") {
                                   setIsCustomTimeControl(true);
+                                  setCustomTimeControlError(null);
                                   field.onChange("");
                                 } else {
                                   field.onChange(value);
@@ -620,9 +637,22 @@ const OrganizerDashboard = () => {
                             <div className="space-y-2">
                               <Input 
                                 value={customTimeControl}
-                                onChange={(e) => setCustomTimeControl(e.target.value)}
-                                placeholder="e.g., 60min + 30sec increment"
+                                onChange={(e) => {
+                                  setCustomTimeControl(e.target.value);
+                                  const validation = validateTimeControl(e.target.value);
+                                  setCustomTimeControlError(validation.isValid ? null : validation.error);
+                                }}
+                                placeholder="e.g., 90min or 15min + 10sec"
+                                className={customTimeControlError ? "border-red-500" : ""}
                               />
+                              {customTimeControlError && (
+                                <p className="text-sm text-red-500">{customTimeControlError}</p>
+                              )}
+                              <p className="text-sm text-muted-foreground">
+                                Format: Use XXmin for base time or XXmin + YYsec for time with increment
+                                <br />
+                                Examples: 90min, 15min + 10sec, 60min + 30sec
+                              </p>
                               <Button 
                                 type="button" 
                                 variant="outline" 
@@ -630,6 +660,7 @@ const OrganizerDashboard = () => {
                                 onClick={() => {
                                   setIsCustomTimeControl(false);
                                   setCustomTimeControl("");
+                                  setCustomTimeControlError(null);
                                 }}
                               >
                                 Use preset time control
