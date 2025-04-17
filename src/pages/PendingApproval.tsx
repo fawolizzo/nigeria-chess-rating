@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { ClockIcon, LogOutIcon, RefreshIcon } from "lucide-react";
+import { ClockIcon, LogOutIcon, RefreshCwIcon } from "lucide-react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const PendingApproval = () => {
@@ -73,7 +73,7 @@ const PendingApproval = () => {
                 className="flex items-center gap-2 w-full sm:w-auto"
                 onClick={handleRefresh}
               >
-                <RefreshIcon className="h-4 w-4" />
+                <RefreshCwIcon className="h-4 w-4" />
                 Check Approval Status
               </Button>
               
