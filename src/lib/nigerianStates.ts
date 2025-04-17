@@ -218,3 +218,20 @@ export const getStateByNameOrCode = (nameOrCode: string): StateData | undefined 
       s.code.toLowerCase() === nameOrCode.toLowerCase()
   );
 };
+
+// Add standard chess time controls
+export const TIME_CONTROLS = [
+  "90min",
+  "90min + 30sec",
+  "60min",
+  "60min + 30sec",
+  "30min",
+  "30min + 10sec",
+  "25min + 10sec",
+  "15min + 10sec",
+  "5min + 3sec",
+  "3min + 2sec"
+];
+
+// Export NIGERIAN_STATES as an alias to getAllStates() for backward compatibility
+export const NIGERIAN_STATES = getAllStates();

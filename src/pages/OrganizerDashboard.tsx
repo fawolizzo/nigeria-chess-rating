@@ -231,7 +231,13 @@ const OrganizerDashboard = () => {
           </DialogContent>
         </Dialog>
 
-        <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
+        <Tabs 
+          defaultValue={activeTab} 
+          className="w-full" 
+          onValueChange={(value: string) => {
+            setActiveTab(value as Tournament['status']);
+          }}
+        >
           <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
             <TabsTrigger value="upcoming" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Upcoming</TabsTrigger>
             <TabsTrigger value="pending" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Pending Approval</TabsTrigger>
