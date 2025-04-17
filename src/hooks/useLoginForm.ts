@@ -14,7 +14,7 @@ import createInitialRatingOfficerIfNeeded from "@/utils/createInitialRatingOffic
 export const useLoginForm = () => {
   const navigate = useNavigate();
   const { signIn } = useSupabaseAuth();
-  const { login: localLogin } = useUser();
+  const { login: localLogin, currentUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -121,7 +121,16 @@ export const useLoginForm = () => {
           description: "Welcome back! You are now logged in as a Tournament Organizer.",
         });
         
-        // Navigate to tournament organizer dashboard
+        // CHECK USER STATUS AFTER LOGIN
+        // Get the current user from context after successful login
+        if (currentUser && currentUser.status === "pending") {
+          // Redirect pending users to the pending approval page
+          console.log("User account is pending approval, redirecting to pending page");
+          navigate("/pending-approval");
+          return;
+        }
+        
+        // Navigate to tournament organizer dashboard for approved users
         navigate("/organizer-dashboard");
       } else {
         logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });

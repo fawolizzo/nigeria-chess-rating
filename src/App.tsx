@@ -17,6 +17,7 @@ import TournamentManagement from '@/pages/TournamentManagement';
 import NotFound from '@/pages/NotFound';
 import SystemTesting from '@/pages/SystemTesting';
 import CrossPlatformTesting from '@/pages/CrossPlatformTesting';
+import PendingApproval from '@/pages/PendingApproval';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/officer-dashboard" element={<OfficerDashboard />} />
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/players" element={<Players />} />
           <Route path="/player/:id" element={<PlayerProfile />} />
           <Route path="/tournaments" element={<Tournaments />} />

@@ -1,11 +1,14 @@
 
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { Home, AlertTriangle } from "lucide-react";
+import { Home, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/contexts/UserContext";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentUser } = useUser();
 
   useEffect(() => {
     console.error(
@@ -13,6 +16,29 @@ const NotFound = () => {
       location.pathname
     );
   }, [location.pathname]);
+
+  // Function to navigate back
+  const goBack = () => {
+    navigate(-1);
+  };
+
+  // Function to determine where to redirect the user
+  const getHomeLink = () => {
+    if (!currentUser) return "/";
+    
+    switch (currentUser.role) {
+      case "rating_officer":
+        return "/officer-dashboard";
+      case "tournament_organizer":
+        return currentUser.status === "approved" 
+          ? "/organizer-dashboard" 
+          : "/pending-approval";
+      default:
+        return "/";
+    }
+  };
+
+  const homeLink = getHomeLink();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
@@ -25,12 +51,24 @@ const NotFound = () => {
         <p className="text-gray-500 dark:text-gray-500 mb-8">
           Sorry, we couldn't find the page you're looking for. The URL <span className="font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{location.pathname}</span> doesn't exist.
         </p>
-        <Link to="/">
-          <Button size="lg" className="gap-2">
-            <Home className="h-4 w-4" />
-            Return to Home
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button 
+            variant="outline" 
+            onClick={goBack} 
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Go Back
           </Button>
-        </Link>
+          
+          <Link to={homeLink}>
+            <Button size="lg" className="gap-2 w-full">
+              <Home className="h-4 w-4" />
+              {currentUser ? "Return to Dashboard" : "Return to Home"}
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
