@@ -5,16 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
-import { normalizeCredentials } from "@/services/auth";
 import { useUser } from "@/contexts/UserContext";
-import createInitialRatingOfficerIfNeeded from "@/utils/createInitialRatingOfficer";
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
-  const { signIn } = useSupabaseAuth();
-  const { login: localLogin, currentUser } = useUser();
+  const { login: localLogin } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -31,7 +28,7 @@ export const useLoginForm = () => {
 
   const selectedRole = form.watch("role");
 
-  const handleRoleChange = async (role: "tournament_organizer" | "rating_officer") => {
+  const handleRoleChange = (role: "tournament_organizer" | "rating_officer") => {
     logMessage(LogLevel.INFO, 'useLoginForm', 'Role changed', {
       previousRole: selectedRole,
       newRole: role,
@@ -40,16 +37,6 @@ export const useLoginForm = () => {
     form.setValue("role", role);
     form.setValue("email", ""); // Clear email when role changes
     setError("");
-    
-    if (role === "rating_officer") {
-      try {
-        await createInitialRatingOfficerIfNeeded();
-      } catch (error) {
-        logMessage(LogLevel.ERROR, 'useLoginForm', 'Error creating initial rating officer', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
   };
 
   const togglePasswordVisibility = () => {
@@ -68,17 +55,12 @@ export const useLoginForm = () => {
     setError("");
     
     try {
-      const { normalizedEmail, normalizedPassword } = normalizeCredentials(data.email, data.password);
-      
       let success = false;
       
       if (data.role === "rating_officer") {
         // For rating officer, try local login directly
         try {
-          // Ensure rating officer exists first
-          await createInitialRatingOfficerIfNeeded();
-          
-          success = await localLogin(normalizedEmail, normalizedPassword, data.role);
+          success = await localLogin(data.email, data.password, data.role);
           
           if (success) {
             toast({
@@ -87,7 +69,6 @@ export const useLoginForm = () => {
             });
             
             navigate("/officer-dashboard");
-            return;
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -95,13 +76,22 @@ export const useLoginForm = () => {
           throw new Error("Invalid access code for Rating Officer account");
         }
       } else {
-        // For tournament organizer, try Supabase login first, then fall back to local login
+        // For tournament organizer, try Supabase login first
         try {
-          success = await signIn(normalizedEmail, normalizedPassword);
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: data.email.toLowerCase().trim(),
+            password: data.password,
+          });
           
-          if (!success) {
+          if (authError) {
             // If Supabase fails, try local login as fallback
-            success = await localLogin(normalizedEmail, normalizedPassword, data.role);
+            success = await localLogin(data.email, data.password, data.role);
+            
+            if (!success) {
+              throw new Error("Invalid credentials. Please check your email and password.");
+            }
+          } else {
+            success = true;
           }
           
           if (success) {
@@ -110,16 +100,7 @@ export const useLoginForm = () => {
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
             });
             
-            // Check user status for proper redirection
-            if (currentUser && currentUser.status === "pending") {
-              navigate("/pending-approval");
-              return;
-            }
-            
             navigate("/organizer-dashboard");
-            return;
-          } else {
-            throw new Error("Invalid credentials. Please check your email and password.");
           }
         } catch (error) {
           throw error;

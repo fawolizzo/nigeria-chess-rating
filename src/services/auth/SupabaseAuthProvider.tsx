@@ -4,7 +4,6 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { useUser } from '@/contexts/UserContext';
-import { signInWithEmailAndPassword, signOut } from './loginService';
 import { getUserRoleInfo } from './authUtils';
 
 export type SupabaseAuthContextProps = {
@@ -37,20 +36,29 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   
-  const { login: localLogin, currentUser } = useUser();
+  const { login: localLogin, currentUser, logout } = useUser();
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
 
-  // Enhanced sign in function
+  // Sign in function
   const handleSignIn = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const success = await signInWithEmailAndPassword(email, password, localLogin);
       
-      if (success) {
-        setIsAuthenticated(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password: password
+      });
+      
+      if (error) {
+        // Try local login as fallback
+        const success = await localLogin(email, password, 'tournament_organizer');
+        setIsAuthenticated(success);
+        return success;
       }
-      return success;
+      
+      setIsAuthenticated(!!data.session);
+      return !!data.session;
     } catch (error) {
       logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Sign in error', {
         error: error instanceof Error ? error.message : String(error),
@@ -63,10 +71,6 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Placeholder signup function
   const handleSignUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign up attempt', {
-      email,
-      metadata: JSON.stringify(metadata),
-    });
     return false;
   };
 
@@ -74,7 +78,13 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const handleSignOut = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      await signOut();
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear local state
+      logout();
+      
       setSession(null);
       setUser(null);
       setIsAuthenticated(false);
@@ -87,42 +97,21 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Effect to detect and sync with UserContext when it's the source of truth
+  // Effect to detect and sync with UserContext
   useEffect(() => {
     if (currentUser && !isAuthenticated && !isLoading) {
       setIsAuthenticated(true);
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Auth state synced from UserContext', {
-        userEmail: currentUser.email,
-        userRole: currentUser.role,
-      });
     }
   }, [currentUser, isAuthenticated, isLoading]);
 
-  // Initialize auth state with improved error handling and timeouts
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
     
-    // Add a hard timeout to ensure we don't get stuck in loading state
-    const hardTimeout = setTimeout(() => {
-      if (mounted && isLoading) {
-        logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'Auth initialization timed out', {
-          timestamp: new Date().toISOString()
-        });
-        if (mounted) {
-          setIsLoading(false);
-        }
-      }
-    }, 5000); // 5 second hard timeout
-
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
       
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', `Auth state changed: ${event}`, {
-        hasSession: !!newSession,
-      });
-      
-      // Update state for relevant auth events
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(newSession);
         setUser(newSession?.user || null);
@@ -141,16 +130,6 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data, error } = await supabase.auth.getSession();
         
-        if (error) {
-          logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Error getting initial session', {
-            error: error.message,
-          });
-          if (mounted) {
-            setIsLoading(false);
-          }
-          return;
-        }
-        
         if (mounted) {
           setSession(data.session);
           setUser(data.session?.user || null);
@@ -158,21 +137,16 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
           setIsLoading(false);
         }
       } catch (error) {
-        logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Error in getInitialSession', {
-          error: error instanceof Error ? error.message : String(error),
-        });
         if (mounted) {
           setIsLoading(false);
         }
       }
     };
 
-    // Execute auth initialization
     getInitialSession();
 
     return () => {
       mounted = false;
-      clearTimeout(hardTimeout);
       subscription.unsubscribe();
     };
   }, []);
