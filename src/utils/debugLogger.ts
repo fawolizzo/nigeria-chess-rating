@@ -4,8 +4,8 @@
  */
 
 // Configuration
-const DEBUG_MODE = process.env.NODE_ENV === 'development';
-const VERBOSE_LOGGING = false; // Set to true for even more detailed logs
+const DEBUG_MODE = process.env.NODE_ENV === 'development' || true; // Force enable for diagnostics
+const VERBOSE_LOGGING = true; // Force enable for detailed diagnostics
 
 // Log levels
 export enum LogLevel {
@@ -15,7 +15,8 @@ export enum LogLevel {
   SYNC = 'SYNC',
   AUTH = 'AUTH',
   API = 'API',
-  USER = 'USER' // Added USER level for user management logging
+  USER = 'USER', // Added USER level for user management logging
+  DIAGNOSTICS = 'DIAGNOSTICS' // Special level for enhanced diagnostics
 }
 
 // Colors for console logs
@@ -26,7 +27,22 @@ const LOG_COLORS = {
   [LogLevel.SYNC]: 'color: #2196F3',
   [LogLevel.AUTH]: 'color: #9C27B0',
   [LogLevel.API]: 'color: #00BCD4',
-  [LogLevel.USER]: 'color: #3F51B5' // Blue-purple for user management
+  [LogLevel.USER]: 'color: #3F51B5', // Blue-purple for user management
+  [LogLevel.DIAGNOSTICS]: 'color: #E91E63' // Pink for diagnostics
+};
+
+/**
+ * Format data for logging
+ */
+const formatData = (data: any): string => {
+  try {
+    if (typeof data === 'undefined') return 'undefined';
+    if (data === null) return 'null';
+    if (typeof data === 'object') return JSON.stringify(data, null, 2);
+    return String(data);
+  } catch (e) {
+    return `[Error formatting data: ${e}]`;
+  }
 };
 
 /**
@@ -38,11 +54,12 @@ export const logMessage = (
   message: string,
   data?: any
 ): void => {
-  if (!DEBUG_MODE) return;
+  if (!DEBUG_MODE && level !== LogLevel.DIAGNOSTICS) return;
 
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] [${level}] [${module}]:`;
 
+  // Always log to console
   if (data !== undefined) {
     console.log(`%c${prefix} ${message}`, LOG_COLORS[level] || 'color: inherit', data);
   } else {
@@ -50,7 +67,7 @@ export const logMessage = (
   }
 
   // Store logs in session for debugging
-  if (VERBOSE_LOGGING) {
+  if (VERBOSE_LOGGING || level === LogLevel.DIAGNOSTICS || level === LogLevel.ERROR) {
     try {
       const existingLogs = JSON.parse(sessionStorage.getItem('ncr_debug_logs') || '[]');
       existingLogs.push({
@@ -58,7 +75,7 @@ export const logMessage = (
         level,
         module,
         message,
-        data: data ? JSON.stringify(data) : undefined
+        data: data ? formatData(data) : undefined
       });
       
       // Keep only the last 1000 logs
@@ -206,11 +223,28 @@ export const checkStorageHealth = (): {
 };
 
 /**
+ * Special diagnostics logger for authentication flows
+ */
+export const logAuthDiagnostics = (
+  action: string,
+  component: string,
+  details?: any
+): void => {
+  logMessage(
+    LogLevel.DIAGNOSTICS,
+    'AuthDiagnostics',
+    `${action} in ${component}`,
+    {
+      ...details,
+      timestamp: new Date().toISOString()
+    }
+  );
+};
+
+/**
  * Get all stored logs
  */
 export const getAllLogs = (): any[] => {
-  if (!DEBUG_MODE || !VERBOSE_LOGGING) return [];
-  
   try {
     return JSON.parse(sessionStorage.getItem('ncr_debug_logs') || '[]');
   } catch (e) {
@@ -222,8 +256,6 @@ export const getAllLogs = (): any[] => {
  * Clear all stored logs
  */
 export const clearLogs = (): void => {
-  if (!DEBUG_MODE) return;
-  
   try {
     sessionStorage.removeItem('ncr_debug_logs');
   } catch (e) {
@@ -235,9 +267,34 @@ export const clearLogs = (): void => {
  * Enable verbose logging
  */
 export const enableVerboseLogging = (enable: boolean = true): void => {
-  if (DEBUG_MODE) {
-    (window as any).NCR_VERBOSE_LOGGING = enable;
-    console.log(`%c[Logger] Verbose logging ${enable ? 'enabled' : 'disabled'}`, 'color: #2196F3');
+  (window as any).NCR_VERBOSE_LOGGING = enable;
+  console.log(`%c[Logger] Verbose logging ${enable ? 'enabled' : 'disabled'}`, 'color: #2196F3');
+};
+
+// Add a global function to export all logged data as a text file
+export const exportLogsToFile = () => {
+  try {
+    const logs = getAllLogs();
+    if (logs.length === 0) {
+      console.log('%c[Logger] No logs to export', 'color: #FF9800');
+      return;
+    }
+
+    const logsText = JSON.stringify(logs, null, 2);
+    const blob = new Blob([logsText], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ncr-debug-logs-${new Date().toISOString().replace(/:/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('%c[Logger] Logs exported successfully', 'color: #4CAF50');
+  } catch (e) {
+    console.error('%c[Logger] Error exporting logs', 'color: #F44336', e);
   }
 };
 
@@ -248,8 +305,56 @@ if (DEBUG_MODE) {
     getAllLogs,
     clearLogs,
     enableVerboseLogging,
-    checkStorageHealth
+    exportLogsToFile,
+    checkStorageHealth: () => {
+      try {
+        const issues: string[] = [];
+        
+        // Check if localStorage is accessible
+        try {
+          localStorage.setItem('ncr_health_check', 'test');
+          localStorage.removeItem('ncr_health_check');
+        } catch (e) {
+          issues.push('localStorage is not accessible');
+        }
+        
+        // Check if sessionStorage is accessible
+        try {
+          sessionStorage.setItem('ncr_health_check', 'test');
+          sessionStorage.removeItem('ncr_health_check');
+        } catch (e) {
+          issues.push('sessionStorage is not accessible');
+        }
+        
+        // Check for critical data presence
+        const usersData = localStorage.getItem('ncr_users');
+        if (!usersData) {
+          issues.push('User data is missing');
+        } else {
+          try {
+            // Check if the data is valid JSON
+            const parsedUsers = JSON.parse(usersData);
+            if (!Array.isArray(parsedUsers)) {
+              issues.push('User data is not in expected format (not an array)');
+            }
+          } catch (e) {
+            issues.push('User data is corrupted (invalid JSON)');
+          }
+        }
+        
+        return {
+          healthy: issues.length === 0,
+          issues
+        };
+      } catch (error) {
+        return {
+          healthy: false,
+          issues: [`Failed to check storage health: ${error.message}`]
+        };
+      }
+    }
   };
   
-  console.log('%c[NCR Debug Logger] Initialized. Access utilities via window.ncrDebug', 'color: #2196F3');
+  console.log('%c[NCR Debug Logger] Initialized with ENHANCED DIAGNOSTICS. Access utilities via window.ncrDebug', 'color: #2196F3; font-weight: bold;');
+  console.log('%c[NCR Debug Logger] Use window.ncrDebug.exportLogsToFile() to save all logs to a file', 'color: #2196F3');
 }
