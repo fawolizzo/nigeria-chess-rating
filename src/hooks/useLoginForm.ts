@@ -35,7 +35,6 @@ export const useLoginForm = () => {
     logMessage(LogLevel.INFO, 'useLoginForm', 'Role changed', {
       previousRole: selectedRole,
       newRole: role,
-      timestamp: new Date().toISOString()
     });
     
     form.setValue("role", role);
@@ -48,7 +47,6 @@ export const useLoginForm = () => {
       } catch (error) {
         logMessage(LogLevel.ERROR, 'useLoginForm', 'Error creating initial rating officer', {
           error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString()
         });
       }
     }
@@ -62,7 +60,6 @@ export const useLoginForm = () => {
     logMessage(LogLevel.INFO, 'useLoginForm', 'Login form submitted', {
       email: data.email,
       role: data.role,
-      timestamp: new Date().toISOString()
     });
     
     if (isLoading) return;
@@ -73,100 +70,65 @@ export const useLoginForm = () => {
     try {
       const { normalizedEmail, normalizedPassword } = normalizeCredentials(data.email, data.password);
       
-      // Create a login timeout
-      const loginTimeout = setTimeout(() => {
-        if (isLoading) {
-          setIsLoading(false);
-          setError("Login request timed out. Please try again.");
-          
-          toast({
-            title: "Login Timeout",
-            description: "Request took too long. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }, 15000); // 15 second timeout
-      
-      // Try login based on role
       let success = false;
       
       if (data.role === "rating_officer") {
-        logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting rating officer login', {
-          timestamp: new Date().toISOString()
-        });
-        
-        // Ensure rating officer exists
-        await createInitialRatingOfficerIfNeeded();
-        
+        // For rating officer, try local login directly
         try {
+          // Ensure rating officer exists first
+          await createInitialRatingOfficerIfNeeded();
+          
           success = await localLogin(normalizedEmail, normalizedPassword, data.role);
+          
+          if (success) {
+            toast({
+              title: "Login Successful",
+              description: "Welcome back! You are now logged in as a Rating Officer.",
+            });
+            
+            navigate("/officer-dashboard");
+            return;
+          } else {
+            throw new Error("Invalid access code for Rating Officer account");
+          }
         } catch (error) {
-          throw new Error("Invalid access code for Rating Officer account");
-        }
-        
-        if (success) {
-          clearTimeout(loginTimeout);
-          
-          toast({
-            title: "Login Successful",
-            description: "Welcome back! You are now logged in as a Rating Officer.",
-          });
-          
-          navigate("/officer-dashboard");
-          return;
-        } else {
           throw new Error("Invalid access code for Rating Officer account");
         }
       } else {
-        // For tournament organizer, try Supabase login
-        logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting tournament organizer login', {
-          timestamp: new Date().toISOString()
-        });
-        
+        // For tournament organizer, try Supabase login first, then fall back to local login
         try {
-          // First try Supabase sign in
           success = await signIn(normalizedEmail, normalizedPassword);
-        } catch (error) {
-          logMessage(LogLevel.ERROR, 'useLoginForm', 'Supabase sign in failed, trying local login', {
-            error: error instanceof Error ? error.message : String(error),
-            timestamp: new Date().toISOString()
-          });
           
-          // If Supabase fails, try local login
-          success = await localLogin(normalizedEmail, normalizedPassword, data.role);
-        }
-        
-        clearTimeout(loginTimeout);
-        
-        if (success) {
-          toast({
-            title: "Login Successful",
-            description: "Welcome back! You are now logged in as a Tournament Organizer.",
-          });
-          
-          // Check user status for proper redirection
-          if (currentUser && currentUser.status === "pending") {
-            navigate("/pending-approval");
-            return;
+          if (!success) {
+            // If Supabase fails, try local login as fallback
+            success = await localLogin(normalizedEmail, normalizedPassword, data.role);
           }
           
-          navigate("/organizer-dashboard");
-        } else {
-          const errorMessage = "Invalid credentials. Please check your email and password.";
-          setError(errorMessage);
-          
-          toast({
-            title: "Login Failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
+          if (success) {
+            toast({
+              title: "Login Successful",
+              description: "Welcome back! You are now logged in as a Tournament Organizer.",
+            });
+            
+            // Check user status for proper redirection
+            if (currentUser && currentUser.status === "pending") {
+              navigate("/pending-approval");
+              return;
+            }
+            
+            navigate("/organizer-dashboard");
+            return;
+          } else {
+            throw new Error("Invalid credentials. Please check your email and password.");
+          }
+        } catch (error) {
+          throw error;
         }
       }
     } catch (error: any) {
       logMessage(LogLevel.ERROR, 'useLoginForm', 'Login error', {
         error: error.message,
         stack: error.stack,
-        timestamp: new Date().toISOString()
       });
       
       setError(error.message || "An unexpected error occurred during login.");

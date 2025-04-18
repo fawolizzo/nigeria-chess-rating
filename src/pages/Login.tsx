@@ -6,118 +6,211 @@ import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import LoginDebug from "@/components/LoginDebug";
+import { Button } from "@/components/ui/button";
+import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 
 const Login = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, user } = useSupabaseAuth();
-  const { currentUser } = useUser();
+  const { currentUser, forceSync } = useUser();
+  const [localLoading, setLocalLoading] = useState(true);
   const [loadingTime, setLoadingTime] = useState(0);
-  const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Set a maximum loading time
-  const MAX_LOADING_TIME = 5; // seconds
-  
-  // Timer to track loading duration for user feedback
+  // Direct check for authentication - simplified approach
   useEffect(() => {
-    if (!isLoading) {
-      // Reset timer when not loading
-      setLoadingTime(0);
-      setHasTimedOut(false);
-      return;
-    }
+    // Clear any existing error when component mounts
+    setError(null);
     
-    const intervalId = setInterval(() => {
-      const newTime = loadingTime + 1;
-      setLoadingTime(newTime);
-      
-      // Check for timeout
-      if (newTime >= MAX_LOADING_TIME) {
-        setHasTimedOut(true);
-        logMessage(LogLevel.WARNING, 'Login', 'Login verification timed out', {
-          loadingDuration: `${newTime}s`,
-          timestamp: new Date().toISOString()
+    // Initial loading delay - brief to allow auth to initialize
+    const initialTimer = setTimeout(() => {
+      setLocalLoading(false);
+    }, 2000);
+    
+    // Sync user data on load
+    const syncData = async () => {
+      try {
+        await forceSync();
+      } catch (err) {
+        // Sync errors are non-critical
+        logMessage(LogLevel.WARNING, 'Login', 'Error syncing data on login page load', {
+          error: err instanceof Error ? err.message : String(err),
         });
       }
+    };
+    
+    syncData();
+    
+    return () => {
+      clearTimeout(initialTimer);
+    };
+  }, []);
+  
+  // Simple loading timer
+  useEffect(() => {
+    if (!isLoading && !localLoading) return;
+    
+    const timerInterval = setInterval(() => {
+      setLoadingTime(prev => prev + 1);
     }, 1000);
     
-    return () => clearInterval(intervalId);
-  }, [isLoading, loadingTime]);
+    return () => clearInterval(timerInterval);
+  }, [isLoading, localLoading]);
   
-  // Handle authentication and redirection
+  // Simple redirect logic with safeguards
   useEffect(() => {
-    // Force reload if stuck loading for too long
-    if (hasTimedOut && isLoading) {
-      const forceReloadTimeout = setTimeout(() => {
-        // Force state reset after timeout
-        window.location.reload();
-      }, 10000); // Give extra time in case loading finishes
-      
-      return () => clearTimeout(forceReloadTimeout);
-    }
+    // Only proceed with redirect logic if not in loading state
+    if (isLoading || localLoading) return;
     
-    // Only redirect when not loading and either authenticated or have user data
-    if (!isLoading) {
-      if (isAuthenticated || currentUser) {
-        logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
-          userEmail: currentUser?.email || user?.email,
-          userRole: currentUser?.role,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Determine where to redirect based on user role
-        if (currentUser?.role === 'rating_officer') {
-          navigate('/officer-dashboard');
-        } else if (currentUser?.role === 'tournament_organizer') {
-          if (currentUser.status === 'pending') {
-            navigate('/pending-approval');
-          } else if (currentUser.status === 'approved') {
-            navigate('/organizer-dashboard');
-          }
+    // Authenticated user found - proceed with redirect
+    if (isAuthenticated || currentUser) {
+      logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
+        userEmail: currentUser?.email || user?.email,
+        userRole: currentUser?.role,
+      });
+      
+      // Determine where to redirect based on user role
+      if (currentUser?.role === 'rating_officer') {
+        navigate('/officer-dashboard');
+      } else if (currentUser?.role === 'tournament_organizer') {
+        if (currentUser.status === 'pending') {
+          navigate('/pending-approval');
+        } else if (currentUser.status === 'approved') {
+          navigate('/organizer-dashboard');
         }
       }
     }
-  }, [isAuthenticated, isLoading, currentUser, navigate, user, hasTimedOut]);
-
-  // Show loading indicator with timeout information
-  if (isLoading) {
+  }, [isAuthenticated, isLoading, localLoading, currentUser, navigate, user]);
+  
+  // Handle manual refresh
+  const handleManualRefresh = () => {
+    logMessage(LogLevel.INFO, 'Login', 'Manual refresh triggered');
+    window.location.reload();
+  };
+  
+  // Handle clearing login data
+  const handleClearLoginData = () => {
+    logMessage(LogLevel.INFO, 'Login', 'Clearing login data and refreshing');
+    localStorage.removeItem('sb-caagbqzwkgfhtzyizyzy-auth-token');
+    localStorage.removeItem('ncr_current_user');
+    sessionStorage.removeItem('ncr_current_user');
+    window.location.href = '/login';
+  };
+  
+  // Handle force sync
+  const handleForceSync = async () => {
+    logMessage(LogLevel.INFO, 'Login', 'Force sync triggered');
+    setLocalLoading(true);
+    
+    try {
+      await forceSync();
+      setError(null);
+    } catch (err) {
+      setError('Failed to sync user data. Please try refreshing the page.');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+  
+  // Timeout protection - if loading for too long, show error/recovery options
+  const isTimedOut = loadingTime > 5;
+  
+  // Show loading state
+  if (isLoading || localLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Verifying login status...</p>
-          <p className="text-xs text-gray-500 mt-2">
-            Waiting for {loadingTime}s
-          </p>
-          
-          {hasTimedOut && (
-            <div className="mt-6 space-y-3">
-              <p className="text-amber-600 text-sm">
-                Login verification is taking longer than expected.
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          {!isTimedOut ? (
+            <>
+              <Loader2 className="w-12 h-12 animate-spin mx-auto text-nigeria-green mb-4" />
+              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Verifying login status...
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                {loadingTime > 0 ? `Waiting for ${loadingTime}s` : 'Initializing...'}
               </p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark"
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-12 h-12 mx-auto text-amber-500 mb-4" />
+              <h2 className="text-xl font-medium text-amber-600 dark:text-amber-400 mb-2">
+                Login verification is taking longer than expected
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                This could be due to network issues or a temporary system delay.
+              </p>
+            </>
+          )}
+          
+          {isTimedOut && (
+            <div className="flex flex-col gap-3 max-w-xs mx-auto">
+              <Button 
+                onClick={handleManualRefresh}
+                className="bg-nigeria-green hover:bg-nigeria-green-dark"
               >
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Reload Page
-              </button>
-              <button 
-                onClick={() => {
-                  // Clear any persisted auth data and force reload
-                  localStorage.removeItem('sb-caagbqzwkgfhtzyizyzy-auth-token');
-                  localStorage.removeItem('ncr_current_user');
-                  window.location.href = '/login';
-                }}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 block w-full"
+              </Button>
+              
+              <Button 
+                onClick={handleForceSync}
+                variant="outline"
+                className="border-nigeria-green text-nigeria-green hover:bg-nigeria-green/10"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Force Sync
+              </Button>
+              
+              <Button 
+                onClick={handleClearLoginData}
+                variant="outline"
+                className="mt-2"
               >
                 Clear Login Data & Retry
-              </button>
+              </Button>
+            </div>
+          )}
+          
+          {/* Show sync indicator in development */}
+          {!import.meta.env.PROD && (
+            <div className="mt-6 w-full max-w-md">
+              <p className="text-xs text-gray-500 mb-2">Development Tools:</p>
+              <SyncStatusIndicator prioritizeUserData forceShow />
+              <LoginDebug />
             </div>
           )}
         </div>
-        
-        {/* Add debug component for development only */}
-        <div className="fixed bottom-4 right-4">
-          <LoginDebug />
+      </div>
+    );
+  }
+
+  // Show error state if there was a problem
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <AlertCircle className="w-12 h-12 mx-auto text-red-500 mb-4" />
+          <h2 className="text-xl font-medium text-red-600 dark:text-red-400 mb-2">
+            Authentication Error
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            {error}
+          </p>
+          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+            <Button 
+              onClick={handleManualRefresh}
+              className="bg-nigeria-green hover:bg-nigeria-green-dark"
+            >
+              Reload Page
+            </Button>
+            <Button 
+              onClick={handleClearLoginData}
+              variant="outline"
+            >
+              Clear Login Data & Retry
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -128,9 +221,11 @@ const Login = () => {
     return <LoginForm />;
   }
 
+  // Redirecting state
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-nigeria-green mb-2" />
         <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
       </div>
     </div>
