@@ -35,7 +35,7 @@ export const useLoginForm = () => {
   useEffect(() => {
     return () => {
       // Find and clear any timers that might be running
-      const highestTimeoutId = setTimeout(() => {}, 0);
+      const highestTimeoutId = window.setTimeout(() => {}, 0);
       for (let i = 0; i < highestTimeoutId; i++) {
         clearTimeout(i);
       }
