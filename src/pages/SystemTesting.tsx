@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getAllLogs, exportLogsToFile, LogLevel } from '@/utils/debugLogger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 const SystemTesting = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -135,7 +136,7 @@ const SystemTesting = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Session:</span>
-                  <Badge variant={authStatus.hasSession ? "success" : "destructive"}>
+                  <Badge variant={authStatus.hasSession ? "default" : "destructive"}>
                     {authStatus.hasSession ? "Active" : "None"}
                   </Badge>
                 </div>
@@ -179,13 +180,13 @@ const SystemTesting = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Users Data:</span>
-                  <Badge variant={storageData.ncr_users ? "success" : "destructive"}>
+                  <Badge variant={storageData.ncr_users ? "default" : "destructive"}>
                     {storageData.ncr_users ? "Present" : "Missing"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span>Current User:</span>
-                  <Badge variant={storageData.ncr_current_user ? "success" : "destructive"}>
+                  <Badge variant={storageData.ncr_current_user ? "default" : "destructive"}>
                     {storageData.ncr_current_user ? "Present" : "Missing"}
                   </Badge>
                 </div>
@@ -282,8 +283,8 @@ const SystemTesting = () => {
                       <Badge 
                         variant={
                           log.level === LogLevel.ERROR ? "destructive" : 
-                          log.level === LogLevel.WARNING ? "warning" :
-                          log.level === LogLevel.DIAGNOSTICS ? "default" : "outline"
+                          log.level === LogLevel.WARNING ? "outline" :
+                          "default"
                         }
                       >
                         {log.level}
