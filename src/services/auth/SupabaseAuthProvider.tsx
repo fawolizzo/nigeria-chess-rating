@@ -36,11 +36,13 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [initializationComplete, setInitializationComplete] = useState<boolean>(false);
+  
   const { login: localLogin, currentUser } = useUser();
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
 
-  // Enhanced sign in function with simplified flow
+  // Enhanced sign in function
   const handleSignIn = async (email: string, password: string): Promise<boolean> => {
     logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign in starting', {
       email,
@@ -98,28 +100,37 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Effect to sync with currentUser from UserContext - with simplified logic
+  // Effect to detect and sync with UserContext when it's the source of truth
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !isAuthenticated && !isLoading) {
       setIsAuthenticated(true);
-      setIsLoading(false);
+      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Auth state synced from UserContext', {
+        userEmail: currentUser.email,
+        userRole: currentUser.role,
+        timestamp: new Date().toISOString()
+      });
     }
-  }, [currentUser]);
+  }, [currentUser, isAuthenticated, isLoading]);
 
   // Initialize auth state with improved error handling and timeouts
   useEffect(() => {
+    if (initializationComplete) return;
+    
     let mounted = true;
     let authTimeout: NodeJS.Timeout;
-
-    // Ensure we don't get stuck in loading state
-    const safetyTimeout = setTimeout(() => {
+    
+    // Add a hard timeout to ensure we don't get stuck in loading state
+    const hardTimeout = setTimeout(() => {
       if (mounted && isLoading) {
-        logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'Auth initialization timeout - forcing completion', {
+        logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'Hard timeout reached, forcing completion', {
           timestamp: new Date().toISOString()
         });
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+          setInitializationComplete(true);
+        }
       }
-    }, 5000); // 5-second timeout as safety measure
+    }, 8000); // 8 second hard timeout
 
     // Set up auth state change listener with simplified approach
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
@@ -136,49 +147,62 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(newSession?.user || null);
         setIsAuthenticated(!!newSession);
         setIsLoading(false);
+        setInitializationComplete(true);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setUser(null);
         setIsAuthenticated(false);
         setIsLoading(false);
+        setInitializationComplete(true);
       }
     });
 
-    // Get initial session with simplified approach
+    // Get initial session with simplified approach and timeout protection
     const getInitialSession = async () => {
       try {
         // Set a timeout to prevent getting stuck
         authTimeout = setTimeout(() => {
           if (mounted && isLoading) {
-            logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'getSession timeout - forcing completion', {
+            logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'getSession timeout, forcing completion', {
               timestamp: new Date().toISOString()
             });
-            setIsLoading(false);
+            if (mounted) {
+              setIsLoading(false);
+              setInitializationComplete(true);
+            }
           }
         }, 3000);
 
         const { data, error } = await supabase.auth.getSession();
+        
+        clearTimeout(authTimeout);
         
         if (error) {
           logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Error getting initial session', {
             error: error.message,
             timestamp: new Date().toISOString()
           });
-          if (mounted) setIsLoading(false);
+          if (mounted) {
+            setIsLoading(false);
+            setInitializationComplete(true);
+          }
         } else if (mounted) {
           setSession(data.session);
           setUser(data.session?.user || null);
           setIsAuthenticated(!!data.session);
           setIsLoading(false);
+          setInitializationComplete(true);
         }
       } catch (error) {
+        clearTimeout(authTimeout);
         logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Error in getInitialSession', {
           error: error instanceof Error ? error.message : String(error),
           timestamp: new Date().toISOString()
         });
-        if (mounted) setIsLoading(false);
-      } finally {
-        clearTimeout(authTimeout);
+        if (mounted) {
+          setIsLoading(false);
+          setInitializationComplete(true);
+        }
       }
     };
 
@@ -187,11 +211,11 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       mounted = false;
-      clearTimeout(safetyTimeout);
+      clearTimeout(hardTimeout);
       clearTimeout(authTimeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isLoading, initializationComplete]);
 
   const value = {
     session,

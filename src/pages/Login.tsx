@@ -5,46 +5,56 @@ import LoginForm from "@/components/LoginForm";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import LoginDebug from "@/components/LoginDebug";
 
 const Login = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, user } = useSupabaseAuth();
   const { currentUser } = useUser();
   const [loadingTime, setLoadingTime] = useState(0);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
+  
+  // Set a maximum loading time
+  const MAX_LOADING_TIME = 5; // seconds
   
   // Timer to track loading duration for user feedback
   useEffect(() => {
-    if (!isLoading) return;
-    
-    // Set a global timestamp for load start if not already set
-    if (!window.authLoadStartTime) {
-      window.authLoadStartTime = Date.now();
+    if (!isLoading) {
+      // Reset timer when not loading
+      setLoadingTime(0);
+      setHasTimedOut(false);
+      return;
     }
     
     const intervalId = setInterval(() => {
-      setLoadingTime(Math.round((Date.now() - (window.authLoadStartTime || Date.now())) / 1000));
+      const newTime = loadingTime + 1;
+      setLoadingTime(newTime);
+      
+      // Check for timeout
+      if (newTime >= MAX_LOADING_TIME) {
+        setHasTimedOut(true);
+        logMessage(LogLevel.WARNING, 'Login', 'Login verification timed out', {
+          loadingDuration: `${newTime}s`,
+          timestamp: new Date().toISOString()
+        });
+      }
     }, 1000);
     
     return () => clearInterval(intervalId);
-  }, [isLoading]);
-  
-  // Add safety timeout to prevent infinite loading
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isLoading) {
-        logMessage(LogLevel.WARNING, 'Login', 'Forced timeout on login page loading', {
-          loadingDuration: `${Date.now() - (window.authLoadStartTime || Date.now())}ms`,
-          timestamp: new Date().toISOString()
-        });
-        window.authLoadStartTime = undefined;
-      }
-    }, 8000); // Force timeout after 8 seconds
-    
-    return () => clearTimeout(timeoutId);
-  }, []);
+  }, [isLoading, loadingTime]);
   
   // Handle authentication and redirection
   useEffect(() => {
+    // Force reload if stuck loading for too long
+    if (hasTimedOut && isLoading) {
+      const forceReloadTimeout = setTimeout(() => {
+        // Force state reset after timeout
+        window.location.reload();
+      }, 10000); // Give extra time in case loading finishes
+      
+      return () => clearTimeout(forceReloadTimeout);
+    }
+    
     // Only redirect when not loading and either authenticated or have user data
     if (!isLoading) {
       if (isAuthenticated || currentUser) {
@@ -66,7 +76,7 @@ const Login = () => {
         }
       }
     }
-  }, [isAuthenticated, isLoading, currentUser, navigate, user]);
+  }, [isAuthenticated, isLoading, currentUser, navigate, user, hasTimedOut]);
 
   // Show loading indicator with timeout information
   if (isLoading) {
@@ -78,14 +88,36 @@ const Login = () => {
           <p className="text-xs text-gray-500 mt-2">
             Waiting for {loadingTime}s
           </p>
-          {loadingTime > 5 && (
-            <button 
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark"
-            >
-              Reload Page
-            </button>
+          
+          {hasTimedOut && (
+            <div className="mt-6 space-y-3">
+              <p className="text-amber-600 text-sm">
+                Login verification is taking longer than expected.
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark"
+              >
+                Reload Page
+              </button>
+              <button 
+                onClick={() => {
+                  // Clear any persisted auth data and force reload
+                  localStorage.removeItem('sb-caagbqzwkgfhtzyizyzy-auth-token');
+                  localStorage.removeItem('ncr_current_user');
+                  window.location.href = '/login';
+                }}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 block w-full"
+              >
+                Clear Login Data & Retry
+              </button>
+            </div>
           )}
+        </div>
+        
+        {/* Add debug component for development only */}
+        <div className="fixed bottom-4 right-4">
+          <LoginDebug />
         </div>
       </div>
     );
@@ -93,8 +125,6 @@ const Login = () => {
 
   // Only show login form if not authenticated
   if (!isAuthenticated && !currentUser) {
-    // Reset load start time
-    window.authLoadStartTime = undefined;
     return <LoginForm />;
   }
 
@@ -106,12 +136,5 @@ const Login = () => {
     </div>
   );
 };
-
-// Add TypeScript declaration for the global window object
-declare global {
-  interface Window {
-    authLoadStartTime?: number;
-  }
-}
 
 export default Login;

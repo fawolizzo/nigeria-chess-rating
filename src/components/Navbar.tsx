@@ -9,6 +9,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Menu, ChevronDown, User, LogOut } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
+import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,20 +20,54 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { currentUser, logout } = useUser();
+  const { signOut } = useSupabaseAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const isActive = (path: string) => location.pathname === path;
 
-  const handleLogout = () => {
-    logMessage(LogLevel.INFO, 'Navbar', 'User logging out', { userId: currentUser?.id });
-    logout();
-    navigate("/login");
-    setIsOpen(false);
+  const handleLogout = async () => {
+    try {
+      logMessage(LogLevel.INFO, 'Navbar', 'User logging out', { userId: currentUser?.id });
+      
+      await signOut().catch((error) => {
+        logMessage(LogLevel.ERROR, 'Navbar', 'Error during Supabase sign out', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
+      });
+      
+      logout();
+      
+      try {
+        localStorage.removeItem('sb-caagbqzwkgfhtzyizyzy-auth-token');
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+      
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      
+      navigate("/login");
+      setIsOpen(false);
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'Navbar', 'Error during logout', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+      
+      toast({
+        title: "Logout Error",
+        description: "There was a problem logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getDashboardLink = () => {

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
+import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { normalizeCredentials } from "@/services/auth";
 import { useUser } from "@/contexts/UserContext";
@@ -73,7 +73,23 @@ export const useLoginForm = () => {
     try {
       const { normalizedEmail, normalizedPassword } = normalizeCredentials(data.email, data.password);
       
+      // Create a login timeout
+      const loginTimeout = setTimeout(() => {
+        if (isLoading) {
+          setIsLoading(false);
+          setError("Login request timed out. Please try again.");
+          
+          toast({
+            title: "Login Timeout",
+            description: "Request took too long. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }, 15000); // 15 second timeout
+      
       // Try login based on role
+      let success = false;
+      
       if (data.role === "rating_officer") {
         logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting rating officer login', {
           timestamp: new Date().toISOString()
@@ -82,9 +98,15 @@ export const useLoginForm = () => {
         // Ensure rating officer exists
         await createInitialRatingOfficerIfNeeded();
         
-        const success = await localLogin(normalizedEmail, normalizedPassword, data.role);
+        try {
+          success = await localLogin(normalizedEmail, normalizedPassword, data.role);
+        } catch (error) {
+          throw new Error("Invalid access code for Rating Officer account");
+        }
         
         if (success) {
+          clearTimeout(loginTimeout);
+          
           toast({
             title: "Login Successful",
             description: "Welcome back! You are now logged in as a Rating Officer.",
@@ -96,18 +118,25 @@ export const useLoginForm = () => {
           throw new Error("Invalid access code for Rating Officer account");
         }
       } else {
-        // For tournament organizer, try both local and Supabase login
+        // For tournament organizer, try Supabase login
         logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting tournament organizer login', {
           timestamp: new Date().toISOString()
         });
         
-        // First try local login
-        let success = await localLogin(normalizedEmail, normalizedPassword, data.role);
-        
-        // If local login fails, try Supabase
-        if (!success) {
+        try {
+          // First try Supabase sign in
           success = await signIn(normalizedEmail, normalizedPassword);
+        } catch (error) {
+          logMessage(LogLevel.ERROR, 'useLoginForm', 'Supabase sign in failed, trying local login', {
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString()
+          });
+          
+          // If Supabase fails, try local login
+          success = await localLogin(normalizedEmail, normalizedPassword, data.role);
         }
+        
+        clearTimeout(loginTimeout);
         
         if (success) {
           toast({
