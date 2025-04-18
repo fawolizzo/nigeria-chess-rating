@@ -16,7 +16,8 @@ export const signInWithEmailAndPassword = async (
   try {
     const startTime = Date.now();
     logMessage(LogLevel.INFO, 'authService', `Attempting sign in for: ${email}`, {
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      startTime
     });
     
     // Normalize inputs for consistent behavior
@@ -31,14 +32,20 @@ export const signInWithEmailAndPassword = async (
     
     // Try direct Supabase authentication first (more reliable)
     try {
+      logMessage(LogLevel.INFO, 'authService', `Starting Supabase auth for: ${normalizedEmail}`, {
+        timestamp: new Date().toISOString()
+      });
+      
       const authPromise = supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password: normalizedPassword,
       });
       
+      const timeoutDuration = 12000; // 12 seconds
+      
       const { data, error } = await Promise.race([
         authPromise,
-        createTimeoutPromise(7000) // 7 second timeout
+        createTimeoutPromise(timeoutDuration)
       ]);
       
       if (error) {
@@ -48,18 +55,34 @@ export const signInWithEmailAndPassword = async (
         });
         
         // If Supabase auth fails, try local login as tournament organizer
+        logMessage(LogLevel.INFO, 'authService', `Falling back to local login for: ${normalizedEmail}`, {
+          timestamp: new Date().toISOString()
+        });
+        
+        const localTimeoutDuration = 8000; // 8 seconds for local login
+        
         const localLoginSuccess = await Promise.race([
           localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer'),
-          createTimeoutPromise(5000) // 5 second timeout for local login
+          createTimeoutPromise(localTimeoutDuration)
         ]);
         
         if (localLoginSuccess) {
           logMessage(LogLevel.INFO, 'authService', 'Tournament organizer login successful via local auth', {
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            duration: `${Date.now() - startTime}ms`
           });
-          sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'tournament_organizer' });
+          
+          sendSyncEvent(SyncEventType.LOGIN, 'user', { 
+            email: normalizedEmail, 
+            role: 'tournament_organizer',
+            timestamp: Date.now()
+          });
+          
           return true;
         } else {
+          logMessage(LogLevel.ERROR, 'authService', 'Local login failed', {
+            timestamp: new Date().toISOString()
+          });
           return false;
         }
       }
@@ -72,9 +95,25 @@ export const signInWithEmailAndPassword = async (
       }
       
       logMessage(LogLevel.INFO, 'authService', 'Supabase sign in successful', {
-        totalDuration: `${Date.now() - startTime}ms`,
-        timestamp: new Date().toISOString()
+        duration: `${Date.now() - startTime}ms`,
+        timestamp: new Date().toISOString(),
+        user: data.user?.email,
+        sessionExpiry: data.session.expires_at 
+          ? new Date(data.session.expires_at * 1000).toISOString() 
+          : 'unknown'
       });
+      
+      // Also trigger local login to ensure user context is updated
+      try {
+        await localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer');
+      } catch (e) {
+        // If local login fails but Supabase succeeded, still return true
+        logMessage(LogLevel.WARNING, 'authService', 'Supabase auth succeeded but local login failed', {
+          error: e instanceof Error ? e.message : String(e),
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       return true;
       
     } catch (error) {
@@ -86,16 +125,25 @@ export const signInWithEmailAndPassword = async (
       
       try {
         // First try local login as tournament organizer (most common)
+        const localTimeoutDuration = 8000; // 8 seconds
+        
         const localLoginSuccess = await Promise.race([
           localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer'),
-          createTimeoutPromise(5000) // 5 second timeout for local login
+          createTimeoutPromise(localTimeoutDuration)
         ]);
         
         if (localLoginSuccess) {
           logMessage(LogLevel.INFO, 'authService', 'Tournament organizer login successful via local fallback', {
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            duration: `${Date.now() - startTime}ms`
           });
-          sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'tournament_organizer' });
+          
+          sendSyncEvent(SyncEventType.LOGIN, 'user', { 
+            email: normalizedEmail, 
+            role: 'tournament_organizer',
+            timestamp: Date.now()
+          });
+          
           return true;
         }
       } catch (localError) {

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +8,7 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { supabase } from "@/integrations/supabase/client";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { useUser } from "@/contexts/UserContext";
+import { signInWithEmailAndPassword } from "@/services/auth/loginService";
 
 export const useLoginForm = () => {
   const navigate = useNavigate();
@@ -16,7 +17,9 @@ export const useLoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
+  const [loginStage, setLoginStage] = useState("idle");
 
+  // Form setup with validation
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -27,6 +30,17 @@ export const useLoginForm = () => {
   });
 
   const selectedRole = form.watch("role");
+
+  // Clear any existing login timers on unmount
+  useEffect(() => {
+    return () => {
+      // Find and clear any timers that might be running
+      const highestTimeoutId = setTimeout(() => {}, 0);
+      for (let i = 0; i < highestTimeoutId; i++) {
+        clearTimeout(i);
+      }
+    };
+  }, []);
 
   const handleRoleChange = (role: "tournament_organizer" | "rating_officer") => {
     logMessage(LogLevel.INFO, 'useLoginForm', 'Role changed', {
@@ -53,16 +67,31 @@ export const useLoginForm = () => {
     
     setIsLoading(true);
     setError("");
+    setLoginStage("starting");
     
     try {
+      setLoginStage("validating_input");
       let success = false;
       
       if (data.role === "rating_officer") {
-        // For rating officer, try local login directly
+        // For rating officer, use local login with specific error handling
+        setLoginStage("authenticating_rating_officer");
+        
         try {
-          success = await localLogin(data.email, data.password, data.role);
+          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Rating Officer login');
+          
+          // Create a timeout promise
+          const loginPromise = localLogin(data.email, data.password, data.role);
+          const timeoutPromise = new Promise<boolean>((_, reject) => {
+            setTimeout(() => reject(new Error("Login timed out")), 15000);
+          });
+          
+          // Race the login against a timeout
+          success = await Promise.race([loginPromise, timeoutPromise]);
           
           if (success) {
+            setLoginStage("success");
+            
             toast({
               title: "Login Successful",
               description: "Welcome back! You are now logged in as a Rating Officer.",
@@ -72,27 +101,33 @@ export const useLoginForm = () => {
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
-        } catch (error) {
-          throw new Error("Invalid access code for Rating Officer account");
-        }
-      } else {
-        // For tournament organizer, try Supabase login first
-        try {
-          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-            email: data.email.toLowerCase().trim(),
-            password: data.password,
+        } catch (error: any) {
+          logMessage(LogLevel.ERROR, 'useLoginForm', 'Rating Officer login error', { 
+            error: error.message,
+            loginStage
           });
           
-          if (authError) {
-            // If Supabase fails, try local login as fallback
-            success = await localLogin(data.email, data.password, data.role);
-            
-            if (!success) {
-              throw new Error("Invalid credentials. Please check your email and password.");
-            }
-          } else {
-            success = true;
-          }
+          throw new Error(
+            error.message === "Login timed out" 
+              ? "Authentication timed out. Please try again." 
+              : "Invalid access code for Rating Officer account"
+          );
+        }
+      } else {
+        // For tournament organizer, use enhanced login service with timeouts
+        setLoginStage("authenticating_tournament_organizer");
+        
+        try {
+          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Tournament Organizer login via service');
+          
+          // Use the enhanced login service that handles both Supabase and local login
+          success = await signInWithEmailAndPassword(
+            data.email, 
+            data.password,
+            localLogin
+          );
+          
+          setLoginStage(success ? "success" : "failed");
           
           if (success) {
             toast({
@@ -100,14 +135,22 @@ export const useLoginForm = () => {
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
             });
             
-            navigate("/organizer-dashboard");
+            // Note: Navigation will happen automatically via the Login.tsx component
+            // based on user role and status
+          } else {
+            throw new Error("Invalid credentials. Please check your email and password.");
           }
-        } catch (error) {
+        } catch (error: any) {
+          logMessage(LogLevel.ERROR, 'useLoginForm', 'Tournament Organizer login error', { 
+            error: error.message,
+            loginStage
+          });
+          
           throw error;
         }
       }
     } catch (error: any) {
-      logMessage(LogLevel.ERROR, 'useLoginForm', 'Login error', {
+      logMessage(LogLevel.ERROR, 'useLoginForm', `Login error at stage: ${loginStage}`, {
         error: error.message,
         stack: error.stack,
       });
@@ -120,7 +163,11 @@ export const useLoginForm = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      // Only set loading to false if we're not in a success state
+      // This prevents flashing the form before navigation
+      if (loginStage !== "success") {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -132,6 +179,7 @@ export const useLoginForm = () => {
     showPassword,
     handleRoleChange,
     togglePasswordVisibility,
-    onSubmit
+    onSubmit,
+    loginStage
   };
 };

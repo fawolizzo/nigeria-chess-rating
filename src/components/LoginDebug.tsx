@@ -4,25 +4,99 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { getFromStorage } from '@/utils/storageUtils';
 import { User } from '@/types/userTypes';
+import { supabase } from '@/integrations/supabase/client';
 
 const LoginDebug = () => {
   // Only show in development mode
   const isProduction = import.meta.env.PROD;
   if (isProduction) return null;
   
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
+  const [supabaseSessionState, setSupabaseSessionState] = useState<string>("checking");
+  const [supabaseSession, setSupabaseSession] = useState<any>(null);
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [currentUserFromStorage, setCurrentUserFromStorage] = useState<User | null>(null);
+  const [browserStorageState, setBrowserStorageState] = useState<Record<string, boolean>>({
+    localStorage: false,
+    sessionStorage: false,
+    indexedDB: false
+  });
 
   useEffect(() => {
     if (expanded) {
       refreshUserData();
+      checkStorageAvailability();
+      checkSupabaseSession();
     }
   }, [expanded, refreshCount]);
 
   const refreshUserData = () => {
-    const users = getFromStorage<User[]>('ncr_users', []);
-    setUsers(users);
+    try {
+      const users = getFromStorage<User[]>('ncr_users', []);
+      const currentUser = getFromStorage<User>('ncr_current_user', null);
+      setUsers(users);
+      setCurrentUserFromStorage(currentUser);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  const checkStorageAvailability = () => {
+    // Check localStorage
+    try {
+      localStorage.setItem('ncr_test', 'test');
+      localStorage.removeItem('ncr_test');
+      setBrowserStorageState(prev => ({ ...prev, localStorage: true }));
+    } catch (e) {
+      setBrowserStorageState(prev => ({ ...prev, localStorage: false }));
+    }
+    
+    // Check sessionStorage
+    try {
+      sessionStorage.setItem('ncr_test', 'test');
+      sessionStorage.removeItem('ncr_test');
+      setBrowserStorageState(prev => ({ ...prev, sessionStorage: true }));
+    } catch (e) {
+      setBrowserStorageState(prev => ({ ...prev, sessionStorage: false }));
+    }
+    
+    // Check indexedDB
+    try {
+      const request = indexedDB.open('ncr_test', 1);
+      request.onsuccess = () => {
+        request.result.close();
+        indexedDB.deleteDatabase('ncr_test');
+        setBrowserStorageState(prev => ({ ...prev, indexedDB: true }));
+      };
+      request.onerror = () => {
+        setBrowserStorageState(prev => ({ ...prev, indexedDB: false }));
+      };
+    } catch (e) {
+      setBrowserStorageState(prev => ({ ...prev, indexedDB: false }));
+    }
+  };
+
+  const checkSupabaseSession = async () => {
+    try {
+      setSupabaseSessionState("checking");
+      
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        setSupabaseSessionState("error");
+        console.error("Supabase session error:", error);
+        return;
+      }
+      
+      setSupabaseSession(data.session);
+      setSupabaseUser(data.session?.user || null);
+      setSupabaseSessionState(data.session ? "active" : "none");
+    } catch (error) {
+      setSupabaseSessionState("error");
+      console.error("Error checking Supabase session:", error);
+    }
   };
 
   return (
@@ -50,6 +124,36 @@ const LoginDebug = () => {
             </Button>
           </div>
           
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded">
+              <h3 className="font-semibold mb-1">Browser Storage:</h3>
+              <div className="ml-2">
+                <div className={browserStorageState.localStorage ? "text-green-600" : "text-red-600"}>
+                  localStorage: {browserStorageState.localStorage ? "Available" : "Unavailable"}
+                </div>
+                <div className={browserStorageState.sessionStorage ? "text-green-600" : "text-red-600"}>
+                  sessionStorage: {browserStorageState.sessionStorage ? "Available" : "Unavailable"}
+                </div>
+                <div className={browserStorageState.indexedDB ? "text-green-600" : "text-red-600"}>
+                  indexedDB: {browserStorageState.indexedDB ? "Available" : "Unavailable"}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded">
+              <h3 className="font-semibold mb-1">Supabase Session:</h3>
+              <div className="ml-2">
+                <div className={supabaseSessionState === "active" ? "text-green-600" : 
+                        supabaseSessionState === "none" ? "text-yellow-600" : "text-red-600"}>
+                  Status: {supabaseSessionState}
+                </div>
+                {supabaseUser && (
+                  <div>User: {supabaseUser.email}</div>
+                )}
+              </div>
+            </div>
+          </div>
+          
           <div className="mt-2">
             <div className="font-semibold">Rating Officers:</div>
             {users.filter(u => u.role === 'rating_officer').length === 0 && (
@@ -57,13 +161,13 @@ const LoginDebug = () => {
             )}
             {users.filter(u => u.role === 'rating_officer').map((officer, idx) => (
               <div key={idx} className="ml-2 mb-1 p-1 border-b border-gray-200 dark:border-gray-700">
-                <div><span className="text-blue-500">Email:</span> [Email hidden]</div>
+                <div><span className="text-blue-500">Email:</span> {officer.email}</div>
                 <div><span className="text-blue-500">Status:</span> {officer.status}</div>
                 <div><span className="text-blue-500">Has Password:</span> {officer.password ? "Yes" : "No"}</div>
-                <div><span className="text-blue-500">Access Code:</span> [Hidden]</div>
+                <div><span className="text-blue-500">Access Code:</span> {officer.accessCode}</div>
                 <div className="flex gap-2 mt-1">
                   <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 text-[10px] px-1 rounded">
-                    Use access code: [Hidden]
+                    Use access code: {officer.accessCode || "RNCR25"}
                   </span>
                 </div>
               </div>
@@ -87,6 +191,19 @@ const LoginDebug = () => {
                 )}
               </div>
             ))}
+          </div>
+          
+          <div className="mt-2">
+            <div className="font-semibold">Current User from Storage:</div>
+            {currentUserFromStorage ? (
+              <div className="ml-2 p-1 bg-blue-50 dark:bg-blue-900/20 rounded">
+                <div><span className="text-blue-500">Email:</span> {currentUserFromStorage.email}</div>
+                <div><span className="text-blue-500">Role:</span> {currentUserFromStorage.role}</div>
+                <div><span className="text-blue-500">Status:</span> {currentUserFromStorage.status}</div>
+              </div>
+            ) : (
+              <div className="text-yellow-500 ml-2">No current user in storage</div>
+            )}
           </div>
           
           <div className="mt-3 text-gray-500 border-t pt-2 dark:border-gray-700">
