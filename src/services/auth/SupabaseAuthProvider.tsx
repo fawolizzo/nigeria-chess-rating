@@ -40,45 +40,24 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
 
-  // Log initialization of the auth provider
-  logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Provider initializing', {
-    timestamp: new Date().toISOString(),
-  });
-
-  // Placeholder signup function
-  const handleSignUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign up attempt', {
-      email,
-      metadata,
-      timestamp: new Date().toISOString()
-    });
-    return false;
-  };
-
-  // Sign in function
+  // Enhanced sign in function with simplified flow
   const handleSignIn = async (email: string, password: string): Promise<boolean> => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign in starting', {
+    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign in starting', {
       email,
       timestamp: new Date().toISOString()
     });
     
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       const success = await signInWithEmailAndPassword(email, password, localLogin);
-      
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign in result', {
-        success,
-        timestamp: new Date().toISOString()
-      });
       
       if (success) {
         setIsAuthenticated(true);
       }
       return success;
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign in error', {
+      logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Sign in error', {
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString()
       });
       return false;
@@ -87,26 +66,31 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Placeholder signup function
+  const handleSignUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
+    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign up attempt', {
+      email,
+      metadata: JSON.stringify(metadata),
+      timestamp: new Date().toISOString()
+    });
+    return false;
+  };
+
   // Sign out function
   const handleSignOut = async (): Promise<void> => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign out starting', {
+    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign out starting', {
       timestamp: new Date().toISOString()
     });
     
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       await signOut();
       setSession(null);
       setUser(null);
       setIsAuthenticated(false);
-      
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign out completed', {
-        timestamp: new Date().toISOString()
-      });
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', '[DIAGNOSTICS] Sign out error', {
+      logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Sign out error', {
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString()
       });
     } finally {
@@ -114,46 +98,39 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Effect to sync with currentUser from UserContext
+  // Effect to sync with currentUser from UserContext - with simplified logic
   useEffect(() => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Checking currentUser', {
-      hasCurrentUser: !!currentUser,
-      currentUserEmail: currentUser?.email,
-      currentUserRole: currentUser?.role,
-      timestamp: new Date().toISOString()
-    });
-    
     if (currentUser) {
       setIsAuthenticated(true);
       setIsLoading(false);
-      
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] User authenticated via UserContext', {
-        userId: currentUser.id,
-        role: currentUser.role,
-        timestamp: new Date().toISOString()
-      });
     }
   }, [currentUser]);
 
-  // Initialize auth state
+  // Initialize auth state with improved error handling and timeouts
   useEffect(() => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Initializing auth state', {
-      timestamp: new Date().toISOString()
-    });
-    
     let mounted = true;
-    const initStartTime = Date.now();
-    
-    // Set up auth state change listener
+    let authTimeout: NodeJS.Timeout;
+
+    // Ensure we don't get stuck in loading state
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'Auth initialization timeout - forcing completion', {
+          timestamp: new Date().toISOString()
+        });
+        setIsLoading(false);
+      }
+    }, 5000); // 5-second timeout as safety measure
+
+    // Set up auth state change listener with simplified approach
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
       
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', `[DIAGNOSTICS] Auth state changed: ${event}`, {
+      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', `Auth state changed: ${event}`, {
         hasSession: !!newSession,
-        userId: newSession?.user?.id,
         timestamp: new Date().toISOString()
       });
       
+      // Only update state for relevant auth events
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(newSession);
         setUser(newSession?.user || null);
@@ -167,48 +144,41 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Get initial session
+    // Get initial session with simplified approach
     const getInitialSession = async () => {
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Getting initial session', {
-        timestamp: new Date().toISOString()
-      });
-      
       try {
+        // Set a timeout to prevent getting stuck
+        authTimeout = setTimeout(() => {
+          if (mounted && isLoading) {
+            logMessage(LogLevel.WARNING, 'SupabaseAuthProvider', 'getSession timeout - forcing completion', {
+              timestamp: new Date().toISOString()
+            });
+            setIsLoading(false);
+          }
+        }, 3000);
+
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', '[DIAGNOSTICS] Error getting initial session', {
+          logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Error getting initial session', {
             error: error.message,
-            errorStatus: error.status,
-            errorName: error.name,
             timestamp: new Date().toISOString()
           });
+          if (mounted) setIsLoading(false);
         } else if (mounted) {
-          logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Initial session obtained', {
-            hasSession: !!data.session,
-            hasUser: !!data.session?.user,
-            sessionExpiresAt: data.session?.expires_at,
-            timestamp: new Date().toISOString()
-          });
-          
           setSession(data.session);
           setUser(data.session?.user || null);
           setIsAuthenticated(!!data.session);
-        }
-      } catch (error) {
-        logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', '[DIAGNOSTICS] Error in getInitialSession', {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          timestamp: new Date().toISOString()
-        });
-      } finally {
-        if (mounted) {
-          logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Initial session check completed', {
-            duration: `${Date.now() - initStartTime}ms`,
-            timestamp: new Date().toISOString()
-          });
           setIsLoading(false);
         }
+      } catch (error) {
+        logMessage(LogLevel.ERROR, 'SupabaseAuthProvider', 'Error in getInitialSession', {
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
+        });
+        if (mounted) setIsLoading(false);
+      } finally {
+        clearTimeout(authTimeout);
       }
     };
 
@@ -217,24 +187,11 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       mounted = false;
-      logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Auth provider unmounting', {
-        timestamp: new Date().toISOString()
-      });
+      clearTimeout(safetyTimeout);
+      clearTimeout(authTimeout);
       subscription.unsubscribe();
     };
   }, []);
-
-  // Additional debug log whenever loading state changes
-  useEffect(() => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', '[DIAGNOSTICS] Loading state changed', {
-      isLoading,
-      isAuthenticated,
-      hasSession: !!session,
-      hasUser: !!user,
-      hasCurrentUser: !!currentUser,
-      timestamp: new Date().toISOString()
-    });
-  }, [isLoading, isAuthenticated, session, user, currentUser]);
 
   const value = {
     session,
