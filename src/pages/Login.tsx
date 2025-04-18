@@ -10,30 +10,19 @@ const Login = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useSupabaseAuth();
   const { currentUser } = useUser();
-
-  // Handle redirection for already authenticated users
+  
   useEffect(() => {
-    // Log detailed state for debugging
     logMessage(LogLevel.INFO, 'Login', 'Auth state check', { 
       isAuthenticated, 
       isLoading, 
-      hasCurrentUser: !!currentUser,
-      currentUserDetails: currentUser ? {
-        id: currentUser.id,
-        email: currentUser.email,
-        role: currentUser.role,
-        status: currentUser.status
-      } : null
+      hasCurrentUser: !!currentUser
     });
     
-    // Only redirect when auth loading is complete AND we have either authentication or a current user
+    // Only redirect when not loading and either authenticated or have user data
     if (!isLoading && (isAuthenticated || currentUser)) {
-      logMessage(LogLevel.INFO, 'Login', 'User already authenticated, redirecting', { 
-        role: currentUser?.role, 
-        status: currentUser?.status 
-      });
+      logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting');
       
-      // Determine where to redirect based on user role and status
+      // Determine where to redirect based on user role
       if (currentUser?.role === 'rating_officer') {
         navigate('/officer-dashboard');
       } else if (currentUser?.role === 'tournament_organizer') {
@@ -46,7 +35,7 @@ const Login = () => {
     }
   }, [isAuthenticated, isLoading, currentUser, navigate]);
 
-  // Show a clear loading indicator with appropriate message
+  // Show loading indicator
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -58,12 +47,11 @@ const Login = () => {
     );
   }
 
-  // Only show the login form if not authenticated
+  // Only show login form if not authenticated
   if (!isAuthenticated && !currentUser) {
     return <LoginForm />;
   }
 
-  // This should never render as the useEffect should redirect authenticated users
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">

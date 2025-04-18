@@ -15,90 +15,60 @@ export const signInWithEmailAndPassword = async (
 ): Promise<boolean> => {
   try {
     logMessage(LogLevel.INFO, 'authService', `Attempting sign in for: ${email}`);
-    console.log(`Attempting sign in for: ${email}`);
     
-    // Normalize inputs for consistent behavior across devices
+    // Normalize inputs for consistent behavior
     const { normalizedEmail, normalizedPassword } = normalizeCredentials(email, password);
     
-    // First try local system login for rating officer role
-    console.log("Checking if this is a rating officer login");
+    // First try local login as rating officer
+    logMessage(LogLevel.INFO, 'authService', 'Attempting local login as rating officer');
     try {
-      // Try local login with rating officer role first
-      console.log("Attempting local login as rating officer with:", normalizedEmail);
       const localLoginSuccess = await localLogin(normalizedEmail, normalizedPassword, 'rating_officer');
       
       if (localLoginSuccess) {
-        console.log("Local login successful for rating officer:", normalizedEmail);
-        
-        // Send sync event to notify other devices
+        logMessage(LogLevel.INFO, 'authService', 'Rating officer login successful');
         sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'rating_officer' });
-        
         return true;
-      } else {
-        console.log("Local login as rating officer failed, will try tournament organizer next");
       }
     } catch (localError) {
-      console.log("Local login as rating officer failed with error:", localError);
+      logMessage(LogLevel.INFO, 'authService', 'Rating officer login failed, trying as tournament organizer');
     }
     
-    // Try local login for tournament organizer
+    // Try local login as tournament organizer
+    logMessage(LogLevel.INFO, 'authService', 'Attempting local login as tournament organizer');
     try {
-      console.log("Attempting local login as tournament organizer with:", normalizedEmail);
       const localLoginSuccess = await localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer');
       
       if (localLoginSuccess) {
-        console.log("Local login successful for tournament organizer:", normalizedEmail);
-        
-        // Send sync event to notify other devices
+        logMessage(LogLevel.INFO, 'authService', 'Tournament organizer login successful');
         sendSyncEvent(SyncEventType.LOGIN, 'user', { email: normalizedEmail, role: 'tournament_organizer' });
-        
         return true;
-      } else {
-        console.log("Local login as tournament organizer failed, will try Supabase");
       }
     } catch (localError) {
-      console.log("Local login as tournament organizer failed with error:", localError);
+      logMessage(LogLevel.INFO, 'authService', 'Tournament organizer login failed, trying Supabase');
     }
     
-    // If local login didn't succeed, try Supabase authentication
-    console.log("Proceeding with Supabase authentication");
+    // Try Supabase authentication
+    logMessage(LogLevel.INFO, 'authService', 'Attempting Supabase authentication');
     const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password: normalizedPassword,
     });
     
-    console.log('Supabase sign in response:', { 
-      user: data?.user?.email, 
-      error: error?.message 
-    });
-    
     if (error) {
-      logMessage(LogLevel.ERROR, 'authService', 'Sign in error:', error);
-      console.error('Sign in error:', error);
-      throw error;
+      logMessage(LogLevel.ERROR, 'authService', 'Supabase sign in error:', error);
+      return false;
     }
     
     if (!data.session) {
       logMessage(LogLevel.ERROR, 'authService', 'Sign in failed: No session created');
-      console.error('Sign in failed: No session created');
-      throw new Error('Login failed, no session created.');
+      return false;
     }
     
-    console.log('Supabase sign in successful for:', data.user?.email);
-    
-    // Check if the user has the correct role AFTER successful authentication
-    const userRole = data.user?.user_metadata?.role || data.user?.app_metadata?.role;
-    console.log(`User role from metadata after successful login: ${userRole}`);
-    
-    logMessage(
-      LogLevel.INFO, 
-      'authService', 
-      `Sign in successful for: ${data.user?.email} (${userRole || 'no role'})`
-    );
-    
+    logMessage(LogLevel.INFO, 'authService', 'Supabase sign in successful');
     return true;
+    
   } catch (error) {
-    console.error('Error in signIn method:', error);
+    logMessage(LogLevel.ERROR, 'authService', 'Error in signIn method:', error);
     return false;
   }
 };
@@ -109,21 +79,18 @@ export const signInWithEmailAndPassword = async (
 export const signOut = async (): Promise<void> => {
   try {
     logMessage(LogLevel.INFO, 'authService', 'Signing out user');
-    console.log('Signing out user');
     
     const { error } = await supabase.auth.signOut();
     
     if (error) {
       logMessage(LogLevel.ERROR, 'authService', 'Sign out error:', error);
-      console.error('Sign out error:', error);
       throw error;
     }
     
-    console.log('Sign out successful');
     logMessage(LogLevel.INFO, 'authService', 'Sign out successful');
     
   } catch (error) {
-    console.error('Error signing out:', error);
+    logMessage(LogLevel.ERROR, 'authService', 'Error signing out:', error);
     throw error;
   }
 };

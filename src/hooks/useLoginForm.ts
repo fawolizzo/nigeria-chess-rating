@@ -31,16 +31,18 @@ export const useLoginForm = () => {
     }
   });
 
-  // Check for already authenticated users and redirect appropriately
+  // Check for authentication and redirect if needed
   useEffect(() => {
     if (!authLoading && isAuthenticated && currentUser) {
-      logMessage(LogLevel.INFO, 'useLoginForm', 'User already authenticated, redirecting');
+      logMessage(LogLevel.INFO, 'useLoginForm', 'User authenticated, redirecting', {
+        role: currentUser.role,
+        status: currentUser.status
+      });
       
-      // Determine where to redirect based on user role
+      // Handle redirect based on role
       if (currentUser.role === 'rating_officer') {
         navigate('/officer-dashboard');
       } else if (currentUser.role === 'tournament_organizer') {
-        // Check status for tournament organizers
         if (currentUser.status === 'pending') {
           navigate('/pending-approval');
         } else if (currentUser.status === 'approved') {
@@ -54,10 +56,9 @@ export const useLoginForm = () => {
 
   const handleRoleChange = async (role: "tournament_organizer" | "rating_officer") => {
     form.setValue("role", role);
-    form.setValue("email", ""); // Ensure email is always cleared
+    form.setValue("email", ""); // Clear email when role changes
     setError("");
     
-    // Create rating officer if it doesn't exist
     if (role === "rating_officer") {
       try {
         await createInitialRatingOfficerIfNeeded();
@@ -88,31 +89,28 @@ export const useLoginForm = () => {
       
       const { normalizedEmail, normalizedPassword } = normalizeCredentials(data.email, data.password);
       
-      console.log(`Attempting to login with email: ${normalizedEmail} and role: ${data.role}`);
+      logMessage(LogLevel.INFO, 'useLoginForm', 'Login attempt', {
+        email: normalizedEmail,
+        role: data.role
+      });
       
-      // For rating officer, always use direct login method
+      // For rating officer, use direct login
       if (data.role === "rating_officer") {
-        console.log("Attempting Rating Officer login");
+        logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting rating officer login');
         
-        // Create rating officer if it doesn't exist
+        // Ensure rating officer exists
         await createInitialRatingOfficerIfNeeded();
         
         const localSuccess = await localLogin(normalizedEmail, normalizedPassword, data.role);
         
-        console.log(`Rating Officer login result: ${localSuccess ? "success" : "failed"}`);
-        
         if (localSuccess) {
-          logUserEvent("Login successful", undefined, { 
-            email: normalizedEmail, 
-            role: data.role 
-          });
+          logUserEvent("Login successful", undefined, { role: data.role });
           
           toast({
             title: "Login Successful",
             description: "Welcome back! You are now logged in as a Rating Officer.",
           });
           
-          // Navigate to rating officer dashboard - FIXED URL
           navigate("/officer-dashboard");
           return;
         } else {
@@ -121,41 +119,36 @@ export const useLoginForm = () => {
       }
       
       // For tournament organizer, try both local and Supabase login
-      console.log("Attempting Tournament Organizer login");
-      let success = await localLogin(normalizedEmail, normalizedPassword, data.role);
+      logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting tournament organizer login');
       
-      console.log(`Local login result for Tournament Organizer: ${success ? "success" : "failed"}`);
+      let success = await localLogin(normalizedEmail, normalizedPassword, data.role);
       
       // If local login fails, try Supabase
       if (!success) {
-        console.log("Local login failed, trying Supabase login");
+        logMessage(LogLevel.INFO, 'useLoginForm', 'Local login failed, trying Supabase');
         success = await signIn(normalizedEmail, normalizedPassword);
-        console.log(`Supabase login result: ${success ? "success" : "failed"}`);
       }
       
       if (success) {
-        logUserEvent("Login successful", undefined, { email: normalizedEmail, role: data.role });
+        logUserEvent("Login successful", undefined, { role: data.role });
         
         toast({
           title: "Login Successful",
           description: "Welcome back! You are now logged in as a Tournament Organizer.",
         });
         
-        // CHECK USER STATUS AFTER LOGIN
-        // Get the current user from context after successful login
+        // Check user status for proper redirection
         if (currentUser && currentUser.status === "pending") {
-          // Redirect pending users to the pending approval page
-          console.log("User account is pending approval, redirecting to pending page");
+          logMessage(LogLevel.INFO, 'useLoginForm', 'User pending approval, redirecting to pending page');
           navigate("/pending-approval");
           return;
         }
         
-        // Navigate to tournament organizer dashboard for approved users
         navigate("/organizer-dashboard");
       } else {
-        logUserEvent("Login failed", undefined, { email: normalizedEmail, role: data.role });
+        logUserEvent("Login failed", undefined, { role: data.role });
         
-        const errorMessage = "Invalid email or password for Tournament Organizer account. Please check your credentials and try again.";
+        const errorMessage = "Invalid credentials. Please check your email and password.";
         setError(errorMessage);
         
         toast({

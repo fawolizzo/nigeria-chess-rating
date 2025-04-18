@@ -35,19 +35,18 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const { login: localLogin, currentUser } = useUser();
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
 
-  // Add signUp function to match the context type
+  // Placeholder signup function
   const handleSignUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
-    // This is a placeholder - in a real implementation, this would call the signup service
     logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Sign up not fully implemented');
     return false;
   };
 
+  // Sign in function
   const handleSignIn = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
@@ -65,6 +64,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Sign out function
   const handleSignOut = async (): Promise<void> => {
     setIsLoading(true);
     try {
@@ -82,86 +82,67 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   // Effect to sync with currentUser from UserContext
   useEffect(() => {
     if (currentUser) {
-      // If we have a current user in the UserContext but no auth state,
-      // we should consider the user authenticated
       setIsAuthenticated(true);
-      setIsLoading(false); // Important: Stop loading when we have a current user
+      setIsLoading(false);
+      
       logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User authenticated via UserContext', {
         userId: currentUser.id,
-        role: currentUser.role,
-        email: currentUser.email
+        role: currentUser.role
       });
     }
   }, [currentUser]);
 
+  // Initialize auth state
   useEffect(() => {
-    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Setting up auth state listener');
-    console.log('Initializing auth and getting session');
+    logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'Initializing auth state');
     
-    let isMounted = true; // Track component mount state for async operations
+    let mounted = true;
     
-    // First, set up the auth state change listener to catch future changes
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (!isMounted) return;
+      if (!mounted) return;
       
       logMessage(LogLevel.INFO, 'SupabaseAuthProvider', `Auth state changed: ${event}`);
-      console.log(`Auth state change event: ${event}`);
-      
-      setSession(newSession);
-      setUser(newSession?.user || null);
-      setIsAuthenticated(!!newSession);
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log(`Session event: ${event}`);
-        setIsLoading(false); // Important: Stop loading on auth events
+        setSession(newSession);
+        setUser(newSession?.user || null);
+        setIsAuthenticated(!!newSession);
+        setIsLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoading(false);
       }
     });
 
-    // Then check for existing session
-    const initializeAuth = async () => {
+    // Get initial session
+    const getInitialSession = async () => {
       try {
-        if (!isMounted) return;
-        
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
-        } else {
-          if (isMounted) {
-            setSession(data.session);
-            setUser(data.session?.user || null);
-            setIsAuthenticated(!!data.session);
-            
-            // If we have a session, log helpful info
-            if (data.session) {
-              console.log('Found existing session on initialization');
-              logMessage(LogLevel.INFO, 'SupabaseAuthProvider', 'User already authenticated');
-            } else {
-              console.log('No existing session found on initialization');
-            }
-          }
+          console.error('Error getting initial session:', error);
+        } else if (mounted) {
+          setSession(data.session);
+          setUser(data.session?.user || null);
+          setIsAuthenticated(!!data.session);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('Error in getInitialSession:', error);
       } finally {
-        if (isMounted) {
-          // Set loading false regardless of authentication state
-          // This prevents the loading state from getting stuck
+        if (mounted) {
           setIsLoading(false);
-          setIsInitialized(true);
         }
       }
     };
 
-    // Initialize auth after a short delay to allow UserContext to initialize first
-    const initTimeout = setTimeout(() => {
-      initializeAuth();
-    }, 100);
+    // Execute auth initialization
+    getInitialSession();
 
-    // Cleanup function to unsubscribe from auth changes and handle unmounting
     return () => {
-      isMounted = false;
-      clearTimeout(initTimeout);
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -172,7 +153,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     signIn: handleSignIn,
     signUp: handleSignUp,
     signOut: handleSignOut,
-    isLoading: isLoading && !isInitialized, // Only consider loading if not initialized
+    isLoading,
     isRatingOfficer,
     isTournamentOrganizer,
     isAuthenticated
