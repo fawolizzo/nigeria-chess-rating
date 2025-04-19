@@ -1,7 +1,10 @@
+
 import { logMessage, LogLevel, logAuthDiagnostics } from '@/utils/debugLogger';
 import { normalizeCredentials } from './authUtils';
 import { authenticateWithSupabase } from './strategies/supabaseAuth';
 import { authenticateLocally } from './strategies/localAuth';
+import { withTimeout } from './timeoutUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Sign in with email and password with improved error handling and timeouts
