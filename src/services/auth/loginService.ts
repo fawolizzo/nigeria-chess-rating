@@ -1,13 +1,7 @@
-
-import { supabase } from '@/integrations/supabase/client';
 import { logMessage, LogLevel, logAuthDiagnostics } from '@/utils/debugLogger';
-import { sendSyncEvent } from '@/utils/storageSync';
-import { SyncEventType } from '@/types/userTypes';
 import { normalizeCredentials } from './authUtils';
-import { withTimeout } from './timeoutUtils';
-
-const LOCAL_LOGIN_TIMEOUT = 8000; // 8 seconds
-const SUPABASE_AUTH_TIMEOUT = 12000; // 12 seconds
+import { authenticateWithSupabase } from './strategies/supabaseAuth';
+import { authenticateLocally } from './strategies/localAuth';
 
 /**
  * Sign in with email and password with improved error handling and timeouts
@@ -26,31 +20,23 @@ export const signInWithEmailAndPassword = async (
     const { normalizedEmail, normalizedPassword } = normalizeCredentials(email, password);
     
     // Try Supabase authentication first
-    try {
-      const authResult = await withTimeout(
-        async () => supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password: normalizedPassword,
-        }),
-        SUPABASE_AUTH_TIMEOUT,
-        'Supabase Authentication'
-      );
-      
-      if (authResult.error) {
-        throw authResult.error;
-      }
-      
-      if (!authResult.data.session) {
-        throw new Error('No session created');
-      }
-      
+    const supabaseResult = await authenticateWithSupabase(normalizedEmail, normalizedPassword);
+    
+    if (supabaseResult.success) {
       // Try local login after successful Supabase auth
       try {
-        await withTimeout(
-          () => localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer'),
-          LOCAL_LOGIN_TIMEOUT,
-          'Local Login'
+        const localResult = await authenticateLocally(
+          normalizedEmail, 
+          normalizedPassword, 
+          'tournament_organizer',
+          localLogin
         );
+        
+        if (!localResult.success) {
+          logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth succeeded but local login failed', {
+            error: localResult.error
+          });
+        }
       } catch (e) {
         // If local login fails but Supabase succeeded, log warning but return true
         logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth succeeded but local login failed', {
@@ -64,36 +50,30 @@ export const signInWithEmailAndPassword = async (
       });
       
       return true;
-      
-    } catch (error) {
-      // If Supabase auth fails, try local login as tournament organizer
-      logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth failed, trying local login', {
-        error: error instanceof Error ? error.message : String(error)
-      });
-      
-      const localLoginSuccess = await withTimeout(
-        () => localLogin(normalizedEmail, normalizedPassword, 'tournament_organizer'),
-        LOCAL_LOGIN_TIMEOUT,
-        'Local Login Fallback'
-      );
-      
-      if (localLoginSuccess) {
-        logAuthDiagnostics('LOGIN_SUCCESS', 'loginService', {
-          method: 'local',
-          duration: Date.now() - startTime
-        });
-        
-        sendSyncEvent(SyncEventType.LOGIN, 'user', { 
-          email: normalizedEmail, 
-          role: 'tournament_organizer',
-          timestamp: Date.now()
-        });
-        
-        return true;
-      }
-      
-      throw error;
     }
+    
+    // If Supabase auth fails, try local login as tournament organizer
+    logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth failed, trying local login', {
+      error: supabaseResult.error
+    });
+    
+    const localResult = await authenticateLocally(
+      normalizedEmail, 
+      normalizedPassword, 
+      'tournament_organizer',
+      localLogin
+    );
+    
+    if (localResult.success) {
+      logAuthDiagnostics('LOGIN_SUCCESS', 'loginService', {
+        method: 'local',
+        duration: Date.now() - startTime
+      });
+      return true;
+    }
+    
+    throw new Error(localResult.error || 'Authentication failed');
+    
   } catch (error) {
     logAuthDiagnostics('LOGIN_ERROR', 'loginService', {
       error: error instanceof Error ? error.message : String(error),
