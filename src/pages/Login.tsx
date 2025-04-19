@@ -57,7 +57,7 @@ const Login = () => {
         userRole: currentUser.role,
       });
       
-      // Determine where to redirect based on user role
+      // Determine where to redirect based on user role and status
       if (currentUser.role === 'rating_officer') {
         navigate('/officer-dashboard');
       } else if (currentUser.role === 'tournament_organizer') {
@@ -65,7 +65,13 @@ const Login = () => {
           navigate('/pending-approval');
         } else if (currentUser.status === 'approved') {
           navigate('/organizer-dashboard');
+        } else {
+          // Fallback in case of unexpected status
+          navigate('/login');
         }
+      } else {
+        // Unexpected role
+        navigate('/login');
       }
     }
   }, [currentUser, isLoading, navigate]);
