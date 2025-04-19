@@ -19,6 +19,7 @@ import SystemTesting from '@/pages/SystemTesting';
 import CrossPlatformTesting from '@/pages/CrossPlatformTesting';
 import PendingApproval from '@/pages/PendingApproval';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { setupNetworkDebugger } from '@/utils/networkDebugger';
 
 function App() {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
@@ -26,6 +27,9 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Set up network debugger
+        setupNetworkDebugger();
+        
         // Basic app initialization
         logMessage(LogLevel.INFO, 'App', 'Initializing application');
         setIsInitialized(true);
