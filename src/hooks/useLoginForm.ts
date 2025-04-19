@@ -37,7 +37,7 @@ export const useLoginForm = () => {
       // Find and clear any timers that might be running
       const highestTimeoutId = window.setTimeout(() => {}, 0);
       for (let i = 0; i < highestTimeoutId; i++) {
-        clearTimeout(i);
+        window.clearTimeout(i);
       }
     };
   }, []);
@@ -97,7 +97,7 @@ export const useLoginForm = () => {
               description: "Welcome back! You are now logged in as a Rating Officer.",
             });
             
-            navigate("/officer-dashboard");
+            // Note: We won't navigate here as we rely on Login.tsx component's useEffect for navigation
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -162,10 +162,16 @@ export const useLoginForm = () => {
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
+      
+      setIsLoading(false);
     } finally {
-      // Only set loading to false if we're not in a success state
-      // This prevents flashing the form before navigation
-      if (loginStage !== "success") {
+      // Always set loading to false when login process completes
+      if (loginStage === "success") {
+        // Small delay before setting loading to false to allow context updates
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 100);
+      } else if (loginStage !== "success") {
         setIsLoading(false);
       }
     }

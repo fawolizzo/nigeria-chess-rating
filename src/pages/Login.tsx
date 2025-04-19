@@ -15,6 +15,7 @@ const Login = () => {
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [showTimeout, setShowTimeout] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
   
   // Track loading time
   useEffect(() => {
@@ -49,9 +50,13 @@ const Login = () => {
   
   // Handle navigation based on user role
   useEffect(() => {
-    if (isLoading) return;
+    if (redirecting) return; // Skip if already redirecting
+    if (isLoading) return; // Skip while loading
     
     if (currentUser) {
+      // Set redirecting flag to prevent multiple redirects
+      setRedirecting(true);
+      
       logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
         userEmail: currentUser.email,
         userRole: currentUser.role,
@@ -74,7 +79,7 @@ const Login = () => {
         navigate('/login');
       }
     }
-  }, [currentUser, isLoading, navigate]);
+  }, [currentUser, isLoading, navigate, redirecting]);
 
   // Handle manual refresh of user data
   const handleManualRefresh = async () => {
@@ -85,7 +90,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        {isLoading ? (
+        {isLoading && !redirecting ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 border-4 border-t-transparent border-nigeria-green rounded-full animate-spin mx-auto"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">
