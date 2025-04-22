@@ -2,27 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
-import OrganizerDashboardSkeleton from "@/components/organizer/OrganizerDashboardSkeleton";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { setupNetworkDebugger } from "@/utils/networkDebugger";
 import { useTournamentManager, TournamentFormValues } from "@/hooks/useTournamentManager";
-import { CreateTournamentForm } from "@/components/tournament/CreateTournamentForm";
-import { OrganizerDashboardHeader } from "@/components/tournament/OrganizerDashboardHeader";
-import { format, parseISO, isValid } from "date-fns";
-import Navbar from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { OrganizerStatsGrid } from "@/components/organizer/OrganizerStatsGrid";
-import { OrganizerTabs } from "@/components/organizer/OrganizerTabs";
 import { withTimeout } from "@/utils/monitorSync";
 import { OrganizerDashboardLayout } from "@/components/organizer/dashboard/OrganizerDashboardLayout";
 import { OrganizerDashboardLoader } from "@/components/organizer/dashboard/OrganizerDashboardLoader";
@@ -158,7 +141,7 @@ const OrganizerDashboard = () => {
         controller.abort();
       };
     }
-  }, [initialAuthCheck, currentUser, loadTournaments]);
+  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount]);
 
   const handleRetryLoading = () => {
     logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Retrying tournament data loading');
@@ -227,7 +210,6 @@ const OrganizerDashboard = () => {
   if (!currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center max-w-md px-4">
             <h2 className="text-xl font-semibold text-red-600 mb-2">Access Restricted</h2>
@@ -237,12 +219,6 @@ const OrganizerDashboard = () => {
                 <span className="block mt-2 text-sm text-red-500">Error: {authError}</span>
               )}
             </p>
-            <Button
-              onClick={() => navigate('/login')}
-              className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-            >
-              Back to Login
-            </Button>
           </div>
         </div>
       </div>

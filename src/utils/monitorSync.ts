@@ -65,14 +65,14 @@ export const monitorSync = async <T>(
 export { monitorSync as startSyncMonitoring };
 
 /**
- * Simpler version of monitorSync that returns a default value if the operation times out
+ * Simpler version of monitorSync that uses a callback when the operation times out
  */
 export const withTimeout = async <T>(
   operation: () => Promise<T>,
-  defaultValue: T,
   timeoutMs: number = 5000,
-  operationName: string = 'Operation'
-): Promise<T> => {
+  operationName: string = 'Operation',
+  onTimeout: () => void
+): Promise<T | undefined> => {
   return new Promise((resolve) => {
     let timeoutId: NodeJS.Timeout | null = null;
     let isResolved = false;
@@ -81,8 +81,9 @@ export const withTimeout = async <T>(
     timeoutId = setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
-        logMessage(LogLevel.WARNING, 'withTimeout', `${operationName} timed out after ${timeoutMs}ms, using default value`);
-        resolve(defaultValue);
+        logMessage(LogLevel.WARNING, 'withTimeout', `${operationName} timed out after ${timeoutMs}ms`);
+        if (onTimeout) onTimeout();
+        resolve(undefined);
       }
     }, timeoutMs);
 
@@ -100,7 +101,7 @@ export const withTimeout = async <T>(
           isResolved = true;
           logMessage(LogLevel.ERROR, 'withTimeout', `Error in ${operationName}:`, error);
           if (timeoutId) clearTimeout(timeoutId);
-          resolve(defaultValue);
+          resolve(undefined);
         }
       });
   });

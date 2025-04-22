@@ -15,8 +15,13 @@ export function OrganizerTabPanel({
   onViewDetails: (id: string) => void;
   onManage: (id: string) => void;
 }) {
-  // Add debug logging to track if we're getting tournaments correctly
-  console.log(`OrganizerTabPanel - Status: ${status}, Tournaments:`, tournaments);
+  // Add more detailed debug logging to diagnose issues
+  console.log(`OrganizerTabPanel - Status: ${status}, Tournaments count:`, tournaments?.length || 0);
+  if (!tournaments || tournaments.length === 0) {
+    console.log(`No tournaments found for status: ${status}`);
+  } else {
+    console.log(`First tournament for ${status}:`, tournaments[0]?.name || 'Unknown name');
+  }
   
   if (!tournaments || !tournaments.length) {
     return (
