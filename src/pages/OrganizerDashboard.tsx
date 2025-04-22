@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -36,6 +35,8 @@ import {
 import { Award, Calendar, Clock, Plus, Users, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { OrganizerStatsGrid } from "@/components/organizer/OrganizerStatsGrid";
+import { OrganizerTabs } from "@/components/organizer/OrganizerTabs";
 
 setupNetworkDebugger();
 
@@ -80,7 +81,6 @@ const OrganizerDashboard = () => {
   const [loadRetryCount, setLoadRetryCount] = useState(0);
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
-  // Improved authentication check
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
@@ -92,7 +92,6 @@ const OrganizerDashboard = () => {
         userStatus: currentUser?.status
       });
       
-      // Check for authentication issues
       if (!isAuthenticated || !currentUser) {
         setAuthError("User not authenticated");
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
@@ -100,7 +99,6 @@ const OrganizerDashboard = () => {
         return;
       }
       
-      // Check for correct role
       if (currentUser.role !== 'tournament_organizer') {
         setAuthError(`User has incorrect role: ${currentUser.role}`);
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User has incorrect role, redirecting', {
@@ -115,7 +113,6 @@ const OrganizerDashboard = () => {
         return;
       }
       
-      // Check for approval status
       if (currentUser?.status !== 'approved') {
         setAuthError(`User not approved: ${currentUser?.status}`);
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not approved, redirecting to pending', {
@@ -127,22 +124,19 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
-  // Load tournaments with timeout handling
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
       
-      // Set a timeout to catch hanging requests
       const timeoutId = setTimeout(() => {
         if (tournamentsLoading) {
           logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
           setHasTimedOut(true);
         }
-      }, 8000); // 8-second timeout
+      }, 8000);
       
       loadTournaments();
       
-      // Clear timeout on cleanup
       return () => clearTimeout(timeoutId);
     }
   }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount, tournamentsLoading]);
@@ -199,7 +193,6 @@ const OrganizerDashboard = () => {
     return <OrganizerDashboardSkeleton />;
   }
 
-  // Show timeout error with retry option
   if (hasTimedOut) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -263,7 +256,6 @@ const OrganizerDashboard = () => {
     );
   }
 
-  // Tournament data loaded successfully
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
@@ -274,54 +266,12 @@ const OrganizerDashboard = () => {
           onLogout={handleLogout}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="border-nigeria-green/10 shadow-card hover:shadow-card-hover transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 bg-gradient-nigeria-subtle">
-              <CardTitle className="text-sm font-medium">Total Tournaments</CardTitle>
-              <Calendar className="h-4 w-4 text-nigeria-green dark:text-nigeria-green-light" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{tournaments.length}</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Across all statuses
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-nigeria-yellow/10 shadow-card hover:shadow-card-hover transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 bg-gradient-to-r from-nigeria-yellow/5 to-transparent">
-              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-              <Users className="h-4 w-4 text-nigeria-yellow-dark dark:text-nigeria-yellow" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {filterTournamentsByStatus("pending").length}
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Tournaments waiting for approval
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="border-nigeria-accent/10 shadow-card hover:shadow-card-hover transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 bg-gradient-to-r from-nigeria-accent/5 to-transparent">
-              <CardTitle className="text-sm font-medium">Next Tournament</CardTitle>
-              <Clock className="h-4 w-4 text-nigeria-accent-dark dark:text-nigeria-accent-light" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {nextTournament
-                  ? formatDisplayDate(nextTournament.startDate)
-                  : "N/A"}
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {nextTournament
-                  ? nextTournament.name 
-                  : "No upcoming tournaments"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <OrganizerStatsGrid
+          tournaments={tournaments}
+          filterTournamentsByStatus={filterTournamentsByStatus}
+          nextTournament={nextTournament}
+          formatDisplayDate={formatDisplayDate}
+        />
 
         <Dialog open={isCreateTournamentOpen} onOpenChange={setIsCreateTournamentOpen}>
           <DialogContent className="sm:max-w-[600px]">
@@ -338,63 +288,14 @@ const OrganizerDashboard = () => {
           </DialogContent>
         </Dialog>
 
-        <Tabs 
-          defaultValue={activeTab} 
-          className="w-full" 
-          onValueChange={(value: string) => {
-            setActiveTab(value as Tournament['status']);
-          }}
-        >
-          <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
-            <TabsTrigger value="upcoming" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Upcoming</TabsTrigger>
-            <TabsTrigger value="pending" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Pending Approval</TabsTrigger>
-            <TabsTrigger value="ongoing" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Ongoing</TabsTrigger>
-            <TabsTrigger value="completed" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Completed</TabsTrigger>
-            <TabsTrigger value="rejected" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">Rejected</TabsTrigger>
-          </TabsList>
-
-          {["upcoming", "pending", "ongoing", "completed", "rejected"].map((status) => (
-            <TabsContent key={status} value={status} className="space-y-4">
-              {filterTournamentsByStatus(status as Tournament['status']).length === 0 ? (
-                <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                  <Award className="h-12 w-12 mx-auto text-gray-400" />
-                  <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
-                    No {status} tournaments
-                  </h3>
-                  <p className="mt-1 text-gray-500 dark:text-gray-400">
-                    {status === "pending" 
-                      ? "You don't have any tournaments waiting for approval."
-                      : status === "rejected"
-                        ? "You don't have any rejected tournaments."
-                        : `You don't have any ${status} tournaments scheduled.`
-                    }
-                  </p>
-                  {status === "upcoming" && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsCreateTournamentOpen(true)}
-                      className="mt-4 border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Tournament
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filterTournamentsByStatus(status as Tournament['status']).map((tournament) => (
-                    <TournamentDashboardCard
-                      key={tournament.id}
-                      tournament={tournament}
-                      onViewDetails={(id) => handleViewTournamentDetails(id)}
-                      onManage={(id) => handleManageTournament(id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
+        <OrganizerTabs
+          activeTab={activeTab}
+          setActiveTab={(tab) => setActiveTab(tab as Tournament['status'])}
+          getTournamentsByStatus={filterTournamentsByStatus}
+          onCreateTournament={() => setIsCreateTournamentOpen(true)}
+          onViewDetails={handleViewTournamentDetails}
+          onManage={handleManageTournament}
+        />
       </div>
     </div>
   );
