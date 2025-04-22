@@ -1,14 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, Clock, Award, Plus, MapPin, File, List, LogOut } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
+import OrganizerDashboardSkeleton from "@/components/organizer/OrganizerDashboardSkeleton";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { setupNetworkDebugger } from "@/utils/networkDebugger";
 import { useTournamentManager, TournamentFormValues } from "@/hooks/useTournamentManager";
@@ -56,9 +50,7 @@ const OrganizerDashboard = () => {
   const { tournaments, isLoading: tournamentsLoading, createTournament, loadTournaments } = useTournamentManager();
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
 
-  // First check authentication and redirect if needed
   useEffect(() => {
-    // Set a flag after first auth check to prevent multiple redirects
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
       
@@ -69,14 +61,12 @@ const OrganizerDashboard = () => {
         userStatus: currentUser?.status
       });
       
-      // Redirect unauthenticated users
       if (!isAuthenticated && !currentUser) {
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
         navigate('/login');
         return;
       }
       
-      // Redirect users with incorrect role
       if (currentUser && currentUser.role !== 'tournament_organizer') {
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User has incorrect role, redirecting', {
           role: currentUser.role
@@ -90,7 +80,6 @@ const OrganizerDashboard = () => {
         return;
       }
       
-      // Redirect pending organizers
       if (currentUser?.status !== 'approved') {
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not approved, redirecting to pending', {
           status: currentUser?.status
@@ -101,7 +90,6 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
-  // Load tournaments data after authentication is confirmed
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
@@ -145,26 +133,12 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
-  // Show appropriate loading state
   const isLoading = authLoading || tournamentsLoading || !initialAuthCheck;
   
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">
-              {authLoading ? "Verifying your account..." : "Loading tournaments..."}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <OrganizerDashboardSkeleton />;
   }
 
-  // Access checks - after loading is complete
   if (!currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -187,7 +161,6 @@ const OrganizerDashboard = () => {
     );
   }
 
-  // Main dashboard content - only shown when user is authenticated and data is loaded
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />

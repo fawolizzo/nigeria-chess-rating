@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "@/components/login/LoginForm";
@@ -17,7 +16,6 @@ const Login = () => {
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   
-  // Track loading time
   useEffect(() => {
     let timer: number | null = null;
     
@@ -29,7 +27,6 @@ const Login = () => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         setLoadingDuration(elapsed);
         
-        // After 8 seconds, show timeout warning
         if (elapsed >= 8 && !showTimeout) {
           setShowTimeout(true);
           logMessage(LogLevel.WARNING, 'Login', 'Login verification is taking longer than expected', {
@@ -48,13 +45,11 @@ const Login = () => {
     };
   }, [isLoading, showTimeout]);
   
-  // Handle navigation based on user role
   useEffect(() => {
-    if (redirecting) return; // Skip if already redirecting
-    if (isLoading) return; // Skip while loading
+    if (redirecting) return;
+    if (isLoading) return;
     
     if (currentUser) {
-      // Set redirecting flag to prevent multiple redirects
       setRedirecting(true);
       
       logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
@@ -63,7 +58,6 @@ const Login = () => {
         userStatus: currentUser.status,
       });
       
-      // Determine where to redirect based on user role and status
       if (currentUser.role === 'rating_officer') {
         navigate('/officer-dashboard');
       } else if (currentUser.role === 'tournament_organizer') {
@@ -72,17 +66,14 @@ const Login = () => {
         } else if (currentUser.status === 'approved') {
           navigate('/organizer-dashboard');
         } else {
-          // Fallback in case of unexpected status
           navigate('/');
         }
       } else {
-        // Unexpected role
         navigate('/');
       }
     }
   }, [currentUser, isLoading, navigate, redirecting]);
 
-  // Handle manual refresh of user data
   const handleManualRefresh = async () => {
     setShowTimeout(false);
     await refreshUserData();
@@ -90,16 +81,16 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md min-h-[400px] flex flex-col">
         {isLoading && !redirecting ? (
-          <div className="text-center py-8">
+          <div className="flex-1 flex flex-col items-center justify-center">
             <div className="w-16 h-16 border-4 border-t-transparent border-nigeria-green rounded-full animate-spin mx-auto"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">
               Verifying your account... {loadingDuration > 0 && `(${loadingDuration}s)`}
             </p>
             
             {showTimeout && (
-              <div className="mt-6">
+              <div className="mt-6 w-full">
                 <Alert variant="warning" className="mb-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
@@ -110,19 +101,12 @@ const Login = () => {
                 
                 <Button 
                   onClick={handleManualRefresh} 
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 w-full"
                   variant="outline"
                 >
                   <RefreshCw className="h-4 w-4" />
                   Retry Verification
                 </Button>
-                
-                <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded text-xs text-left overflow-auto max-h-60">
-                  <h4 className="font-semibold mb-2">Login Debug Information:</h4>
-                  <p>Start time: {loadingStartTime ? new Date(loadingStartTime).toISOString() : 'N/A'}</p>
-                  <p>Duration: {loadingDuration} seconds</p>
-                  <LoginDebug />
-                </div>
               </div>
             )}
           </div>
@@ -130,7 +114,6 @@ const Login = () => {
           <LoginForm />
         )}
         
-        {/* Show debug info in development when not loading */}
         {!isLoading && !import.meta.env.PROD && (
           <div className="mt-6">
             <LoginDebug />
