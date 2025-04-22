@@ -147,9 +147,9 @@ const OrganizerDashboard = () => {
             clearTimeout(timeoutId);
           }
         },
-        true, // Default value if the operation times out
-        20000, // Slightly longer than the abort timeout
-        'Tournament data loading'
+        20000, // Timeout duration in milliseconds
+        'Tournament data loading', // Operation description
+        () => { /* This is an empty callback for timeout, fixing the type error */ }
       );
       
       return () => {
