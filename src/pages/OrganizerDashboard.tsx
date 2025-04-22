@@ -10,6 +10,29 @@ import { CreateTournamentForm } from "@/components/tournament/CreateTournamentFo
 import { OrganizerDashboardHeader } from "@/components/tournament/OrganizerDashboardHeader";
 import { TournamentDashboardCard } from "@/components/tournament/TournamentDashboardCard";
 import { format, isValid, parseISO, isBefore, startOfDay } from "date-fns";
+import Navbar from "@/components/Navbar";
+import { Button } from "@/components/ui/button";
+import { 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardContent, 
+  CardFooter 
+} from "@/components/ui/card";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from "@/components/ui/dialog";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { Award, Calendar, Clock, Plus, Users } from "lucide-react";
 
 setupNetworkDebugger();
 
