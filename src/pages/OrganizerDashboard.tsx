@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -70,7 +69,6 @@ const OrganizerDashboard = () => {
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Enhanced auth check with better error handling and logging
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
@@ -114,24 +112,20 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
-  // Enhanced data loading with timeout and error handling
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
       
-      // Reset error state on each load attempt
       setLoadError(null);
       
-      // Use AbortController for fetch timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
         logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
         setHasTimedOut(true);
         setLoadError("Loading timed out. The server took too long to respond.");
-      }, 15000); // Increased timeout to 15 seconds for better reliability
+      }, 15000);
       
-      // Use the withTimeout utility to prevent indefinite loading
       withTimeout(
         async () => {
           try {
@@ -147,9 +141,13 @@ const OrganizerDashboard = () => {
             clearTimeout(timeoutId);
           }
         },
-        20000, // Timeout duration in milliseconds
-        'Tournament data loading', // Operation description
-        () => { /* This is an empty callback for timeout, fixing the type error */ }
+        20000,
+        'Tournament data loading',
+        () => {
+          logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament data loading timed out');
+          setHasTimedOut(true);
+          setLoadError("Loading timed out. Please try again.");
+        }
       );
       
       return () => {
@@ -157,7 +155,7 @@ const OrganizerDashboard = () => {
         controller.abort();
       };
     }
-  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount]);
+  }, [initialAuthCheck, currentUser, loadTournaments]);
 
   const handleRetryLoading = () => {
     logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Retrying tournament data loading');
@@ -182,7 +180,6 @@ const OrganizerDashboard = () => {
     const success = createTournament(data, customTimeControl, isCustomTimeControl);
     if (success) {
       setIsCreateTournamentOpen(false);
-      // Add a toast notification for successful creation
       toast({
         title: "Tournament Created",
         description: "Your tournament has been created successfully."
@@ -210,7 +207,6 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
-  // Improved loading state logic with better fallbacks
   const isLoading = authLoading || (tournamentsLoading && !hasTimedOut) || !initialAuthCheck;
   
   if (isLoading) {
