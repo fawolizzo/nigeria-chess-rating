@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -32,7 +33,9 @@ import {
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
-import { Award, Calendar, Clock, Plus, Users } from "lucide-react";
+import { Award, Calendar, Clock, Plus, Users, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 setupNetworkDebugger();
 
@@ -66,13 +69,18 @@ const formatDisplayDate = (dateString: string): string => {
 
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { currentUser, logout } = useUser();
   const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const [activeTab, setActiveTab] = useState<Tournament['status']>("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
   const { tournaments, isLoading: tournamentsLoading, createTournament, loadTournaments } = useTournamentManager();
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [loadRetryCount, setLoadRetryCount] = useState(0);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
 
+  // Improved authentication check
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
@@ -84,13 +92,17 @@ const OrganizerDashboard = () => {
         userStatus: currentUser?.status
       });
       
-      if (!isAuthenticated && !currentUser) {
+      // Check for authentication issues
+      if (!isAuthenticated || !currentUser) {
+        setAuthError("User not authenticated");
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
         navigate('/login');
         return;
       }
       
-      if (currentUser && currentUser.role !== 'tournament_organizer') {
+      // Check for correct role
+      if (currentUser.role !== 'tournament_organizer') {
+        setAuthError(`User has incorrect role: ${currentUser.role}`);
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User has incorrect role, redirecting', {
           role: currentUser.role
         });
@@ -103,7 +115,9 @@ const OrganizerDashboard = () => {
         return;
       }
       
+      // Check for approval status
       if (currentUser?.status !== 'approved') {
+        setAuthError(`User not approved: ${currentUser?.status}`);
         logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not approved, redirecting to pending', {
           status: currentUser?.status
         });
@@ -113,12 +127,35 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
+  // Load tournaments with timeout handling
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
+      
+      // Set a timeout to catch hanging requests
+      const timeoutId = setTimeout(() => {
+        if (tournamentsLoading) {
+          logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
+          setHasTimedOut(true);
+        }
+      }, 8000); // 8-second timeout
+      
       loadTournaments();
+      
+      // Clear timeout on cleanup
+      return () => clearTimeout(timeoutId);
     }
-  }, [initialAuthCheck, currentUser, loadTournaments]);
+  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount, tournamentsLoading]);
+
+  const handleRetryLoading = () => {
+    logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Retrying tournament data loading');
+    setHasTimedOut(false);
+    setLoadRetryCount(prev => prev + 1);
+    toast({
+      title: "Retrying",
+      description: "Attempting to load your tournament data again."
+    });
+  };
 
   const handleLogout = () => {
     logout();
@@ -156,10 +193,49 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
-  const isLoading = authLoading || tournamentsLoading || !initialAuthCheck;
+  const isLoading = authLoading || (tournamentsLoading && !hasTimedOut) || !initialAuthCheck;
   
   if (isLoading) {
     return <OrganizerDashboardSkeleton />;
+  }
+
+  // Show timeout error with retry option
+  if (hasTimedOut) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="max-w-7xl mx-auto pt-28 pb-20 px-4 sm:px-6 lg:px-8">
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Loading Error</AlertTitle>
+            <AlertDescription>
+              We couldn't load your tournament data. This might be due to network issues or server problems.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 text-center">
+            <h2 className="text-xl font-semibold mb-4">Unable to load your tournaments</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              We're having trouble loading your tournament information. Please try again or contact support if the problem persists.
+            </p>
+            <div className="flex justify-center gap-4">
+              <Button 
+                onClick={handleRetryLoading}
+                className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+              >
+                Retry Loading
+              </Button>
+              <Button 
+                onClick={handleLogout}
+                variant="outline"
+              >
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
@@ -171,6 +247,9 @@ const OrganizerDashboard = () => {
             <h2 className="text-xl font-semibold text-red-600 mb-2">Access Restricted</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               You must be logged in as an approved tournament organizer to access this dashboard.
+              {authError && (
+                <span className="block mt-2 text-sm text-red-500">Error: {authError}</span>
+              )}
             </p>
             <Button
               onClick={() => navigate('/login')}
@@ -184,6 +263,7 @@ const OrganizerDashboard = () => {
     );
   }
 
+  // Tournament data loaded successfully
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
