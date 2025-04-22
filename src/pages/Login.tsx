@@ -29,8 +29,8 @@ const Login = () => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         setLoadingDuration(elapsed);
         
-        // After 10 seconds, show timeout warning
-        if (elapsed >= 10 && !showTimeout) {
+        // After 8 seconds, show timeout warning
+        if (elapsed >= 8 && !showTimeout) {
           setShowTimeout(true);
           logMessage(LogLevel.WARNING, 'Login', 'Login verification is taking longer than expected', {
             elapsedTime: `${elapsed}s`,
@@ -60,6 +60,7 @@ const Login = () => {
       logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
         userEmail: currentUser.email,
         userRole: currentUser.role,
+        userStatus: currentUser.status,
       });
       
       // Determine where to redirect based on user role and status
@@ -72,11 +73,11 @@ const Login = () => {
           navigate('/organizer-dashboard');
         } else {
           // Fallback in case of unexpected status
-          navigate('/login');
+          navigate('/');
         }
       } else {
         // Unexpected role
-        navigate('/login');
+        navigate('/');
       }
     }
   }, [currentUser, isLoading, navigate, redirecting]);

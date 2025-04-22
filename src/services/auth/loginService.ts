@@ -22,42 +22,52 @@ export const signInWithEmailAndPassword = async (
     // Normalize inputs for consistent behavior
     const { normalizedEmail, normalizedPassword } = normalizeCredentials(email, password);
     
-    // Try Supabase authentication first
-    const supabaseResult = await authenticateWithSupabase(normalizedEmail, normalizedPassword);
-    
-    if (supabaseResult.success) {
-      // Try local login after successful Supabase auth
-      try {
-        const localResult = await authenticateLocally(
-          normalizedEmail, 
-          normalizedPassword, 
-          'tournament_organizer',
-          localLogin
-        );
+    // Try Supabase authentication first with improved error handling
+    try {
+      const supabaseResult = await authenticateWithSupabase(normalizedEmail, normalizedPassword);
+      
+      if (supabaseResult.success) {
+        logMessage(LogLevel.INFO, 'loginService', 'Supabase authentication successful', {
+          email: normalizedEmail
+        });
         
-        if (!localResult.success) {
+        // Try local login after successful Supabase auth
+        try {
+          const localResult = await authenticateLocally(
+            normalizedEmail, 
+            normalizedPassword, 
+            'tournament_organizer',
+            localLogin
+          );
+          
+          if (!localResult.success) {
+            logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth succeeded but local login failed', {
+              error: localResult.error
+            });
+          }
+        } catch (e) {
+          // If local login fails but Supabase succeeded, log warning but return true
           logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth succeeded but local login failed', {
-            error: localResult.error
+            error: e instanceof Error ? e.message : String(e)
           });
         }
-      } catch (e) {
-        // If local login fails but Supabase succeeded, log warning but return true
-        logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth succeeded but local login failed', {
-          error: e instanceof Error ? e.message : String(e)
+        
+        logAuthDiagnostics('LOGIN_SUCCESS', 'loginService', {
+          method: 'supabase',
+          duration: Date.now() - startTime
         });
+        
+        return true;
       }
-      
-      logAuthDiagnostics('LOGIN_SUCCESS', 'loginService', {
-        method: 'supabase',
-        duration: Date.now() - startTime
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'loginService', 'Supabase authentication error', {
+        error: error instanceof Error ? error.message : String(error)
       });
-      
-      return true;
     }
     
-    // If Supabase auth fails, try local login as tournament organizer
-    logMessage(LogLevel.WARNING, 'loginService', 'Supabase auth failed, trying local login', {
-      error: supabaseResult.error
+    // If Supabase auth fails or errors, try local login as tournament organizer
+    logMessage(LogLevel.INFO, 'loginService', 'Supabase auth failed, trying local login', {
+      email: normalizedEmail
     });
     
     const localResult = await authenticateLocally(
