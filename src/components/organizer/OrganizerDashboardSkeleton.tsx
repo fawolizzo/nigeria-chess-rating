@@ -4,6 +4,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Navbar from "@/components/Navbar";
 
 const OrganizerDashboardSkeleton = () => {
+  // Add timeout to prevent infinite skeleton state
+  React.useEffect(() => {
+    // Force skeleton to stop showing after 30 seconds max
+    const timeoutId = setTimeout(() => {
+      // This will force a page reload if we get stuck in skeleton mode
+      window.location.reload();
+    }, 30000);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />

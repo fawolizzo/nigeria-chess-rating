@@ -24,6 +24,13 @@ export function OrganizerTabs({
   onViewDetails: (id: string) => void;
   onManage: (id: string) => void;
 }) {
+  // Debug logging to track if we're getting data
+  console.log("OrganizerTabs - Active Tab:", activeTab);
+  TAB_STATUSES.forEach(status => {
+    const tournamentCount = getTournamentsByStatus(status).length;
+    console.log(`Tab ${status}: ${tournamentCount} tournaments`);
+  });
+
   return (
     <Tabs 
       defaultValue={activeTab} 

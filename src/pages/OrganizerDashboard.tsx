@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
@@ -8,17 +9,9 @@ import { setupNetworkDebugger } from "@/utils/networkDebugger";
 import { useTournamentManager, TournamentFormValues } from "@/hooks/useTournamentManager";
 import { CreateTournamentForm } from "@/components/tournament/CreateTournamentForm";
 import { OrganizerDashboardHeader } from "@/components/tournament/OrganizerDashboardHeader";
-import { TournamentDashboardCard } from "@/components/tournament/TournamentDashboardCard";
-import { format, isValid, parseISO, isBefore, startOfDay } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardContent, 
-  CardFooter 
-} from "@/components/ui/card";
 import { 
   Dialog, 
   DialogContent, 
@@ -26,17 +19,12 @@ import {
   DialogTitle, 
   DialogDescription 
 } from "@/components/ui/dialog";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { Award, Calendar, Clock, Plus, Users, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, RefreshCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OrganizerStatsGrid } from "@/components/organizer/OrganizerStatsGrid";
 import { OrganizerTabs } from "@/components/organizer/OrganizerTabs";
+import { withTimeout } from "@/utils/monitorSync";
 
 setupNetworkDebugger();
 
@@ -80,7 +68,9 @@ const OrganizerDashboard = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [loadRetryCount, setLoadRetryCount] = useState(0);
   const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Enhanced auth check with better error handling and logging
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
@@ -124,22 +114,50 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
+  // Enhanced data loading with timeout and error handling
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
       
+      // Reset error state on each load attempt
+      setLoadError(null);
+      
+      // Use AbortController for fetch timeout
+      const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        if (tournamentsLoading) {
-          logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
-          setHasTimedOut(true);
-        }
-      }, 8000);
+        controller.abort();
+        logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
+        setHasTimedOut(true);
+        setLoadError("Loading timed out. The server took too long to respond.");
+      }, 15000); // Increased timeout to 15 seconds for better reliability
       
-      loadTournaments();
+      // Use the withTimeout utility to prevent indefinite loading
+      withTimeout(
+        async () => {
+          try {
+            console.log('Starting tournament data load...');
+            await loadTournaments();
+            console.log('Tournament data load complete!');
+            clearTimeout(timeoutId);
+            setHasTimedOut(false);
+          } catch (error) {
+            console.error('Error loading tournament data:', error);
+            setLoadError(`Failed to load tournament data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setHasTimedOut(true);
+            clearTimeout(timeoutId);
+          }
+        },
+        true, // Default value if the operation times out
+        20000, // Slightly longer than the abort timeout
+        'Tournament data loading'
+      );
       
-      return () => clearTimeout(timeoutId);
+      return () => {
+        clearTimeout(timeoutId);
+        controller.abort();
+      };
     }
-  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount, tournamentsLoading]);
+  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount]);
 
   const handleRetryLoading = () => {
     logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Retrying tournament data loading');
@@ -164,6 +182,11 @@ const OrganizerDashboard = () => {
     const success = createTournament(data, customTimeControl, isCustomTimeControl);
     if (success) {
       setIsCreateTournamentOpen(false);
+      // Add a toast notification for successful creation
+      toast({
+        title: "Tournament Created",
+        description: "Your tournament has been created successfully."
+      });
     }
   };
 
@@ -187,13 +210,14 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
+  // Improved loading state logic with better fallbacks
   const isLoading = authLoading || (tournamentsLoading && !hasTimedOut) || !initialAuthCheck;
   
   if (isLoading) {
     return <OrganizerDashboardSkeleton />;
   }
 
-  if (hasTimedOut) {
+  if (hasTimedOut || loadError) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Navbar />
@@ -202,7 +226,7 @@ const OrganizerDashboard = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Loading Error</AlertTitle>
             <AlertDescription>
-              We couldn't load your tournament data. This might be due to network issues or server problems.
+              {loadError || "We couldn't load your tournament data. This might be due to network issues or server problems."}
             </AlertDescription>
           </Alert>
           
@@ -216,6 +240,7 @@ const OrganizerDashboard = () => {
                 onClick={handleRetryLoading}
                 className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
               >
+                <RefreshCcw className="mr-2 h-4 w-4" />
                 Retry Loading
               </Button>
               <Button 

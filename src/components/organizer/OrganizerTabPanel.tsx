@@ -15,11 +15,15 @@ export function OrganizerTabPanel({
   onViewDetails: (id: string) => void;
   onManage: (id: string) => void;
 }) {
-  if (!tournaments.length) {
+  // Add debug logging to track if we're getting tournaments correctly
+  console.log(`OrganizerTabPanel - Status: ${status}, Tournaments:`, tournaments);
+  
+  if (!tournaments || !tournaments.length) {
     return (
       <EmptyTabPanel status={status} onCreateTournament={onCreateTournament} />
     );
   }
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {tournaments.map((tournament) => (
