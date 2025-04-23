@@ -56,6 +56,17 @@ const OrganizerDashboard = () => {
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Log authentication status when the component mounts
+  useEffect(() => {
+    logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Dashboard mounted', {
+      isAuthenticated,
+      hasCurrentUser: !!currentUser,
+      userRole: currentUser?.role,
+      userStatus: currentUser?.status
+    });
+  }, []);
+  
+  // Authentication check on component mount
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
@@ -99,6 +110,7 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
+  // Load tournament data when authenticated
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');

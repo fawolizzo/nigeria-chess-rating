@@ -55,6 +55,15 @@ export function useTournamentManager() {
       return false;
     }
 
+    if (!currentUser?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create tournaments",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     const newTournament: Tournament = {
       id: `${Date.now()}`,
       name: data.name,
@@ -67,42 +76,79 @@ export function useTournamentManager() {
       status: "pending",
       timeControl: finalTimeControl,
       rounds: data.rounds,
-      organizerId: currentUser?.id || ""
+      organizerId: currentUser.id
     };
     
-    const existingTournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
-    const updatedTournaments = [newTournament, ...existingTournaments];
-    localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
-    setTournaments([newTournament, ...tournaments]);
-    
-    toast({
-      title: "Tournament Created",
-      description: `${data.name} has been submitted for approval.`,
-    });
-    
-    return true;
+    try {
+      // Get existing tournaments and add the new one
+      const existingTournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+      const updatedTournaments = [newTournament, ...existingTournaments];
+      
+      // Save to local storage
+      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+      
+      // Update state
+      setTournaments([newTournament, ...tournaments]);
+      
+      toast({
+        title: "Tournament Created",
+        description: `${data.name} has been submitted for approval.`,
+      });
+      
+      return true;
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'useTournamentManager', 'Error creating tournament:', error);
+      
+      toast({
+        title: "Error",
+        description: "Failed to create tournament. Please try again.",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
   }, [tournaments, currentUser, toast]);
 
   const loadTournaments = useCallback(async () => {
     logMessage(LogLevel.INFO, 'useTournamentManager', 'Loading tournaments started');
     try {
       setIsLoading(true);
-      // Simulate network delay to make loading state visible
-      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const savedTournaments = localStorage.getItem('tournaments');
-      if (savedTournaments) {
-        const allTournaments = JSON.parse(savedTournaments);
-        const myTournaments = allTournaments.filter(
-          (tournament: Tournament) => tournament.organizerId === currentUser?.id
-        );
-        
-        logMessage(LogLevel.INFO, 'useTournamentManager', `Loaded ${myTournaments.length} tournaments`);
-        setTournaments(myTournaments);
-      } else {
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'No tournaments found in storage');
-        setTournaments([]);
+      // Get organizer ID for filtering
+      const organizerId = currentUser?.id;
+      if (!organizerId) {
+        logMessage(LogLevel.ERROR, 'useTournamentManager', 'No organizer ID available');
+        throw new Error('User not authenticated properly');
       }
+      
+      // Fetch tournaments from local storage
+      let myTournaments: Tournament[] = [];
+      try {
+        const savedTournamentsStr = localStorage.getItem('tournaments');
+        if (savedTournamentsStr) {
+          const allTournaments = JSON.parse(savedTournamentsStr);
+          
+          if (Array.isArray(allTournaments)) {
+            myTournaments = allTournaments.filter(
+              (t: Tournament) => t && t.organizerId === organizerId
+            );
+            
+            logMessage(LogLevel.INFO, 'useTournamentManager', `Loaded ${myTournaments.length} tournaments for organizer ${organizerId}`);
+          } else {
+            logMessage(LogLevel.WARNING, 'useTournamentManager', 'Tournaments data in localStorage is not an array');
+          }
+        } else {
+          logMessage(LogLevel.INFO, 'useTournamentManager', 'No tournaments found in storage');
+        }
+      } catch (error) {
+        logMessage(LogLevel.ERROR, 'useTournamentManager', 'Error parsing tournaments from localStorage:', error);
+        throw new Error('Failed to load tournaments data');
+      }
+      
+      // Update state with fetched tournaments
+      setTournaments(myTournaments);
+      
+      return myTournaments;
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useTournamentManager', 'Error loading tournaments:', error);
       throw error; // Re-throw to be caught by the component

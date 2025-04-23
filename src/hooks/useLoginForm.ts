@@ -1,17 +1,14 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { supabase } from "@/integrations/supabase/client";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { useUser } from "@/contexts/UserContext";
 import { signInWithEmailAndPassword } from "@/services/auth/loginService";
 
 export const useLoginForm = () => {
-  const navigate = useNavigate();
   const { login: localLogin } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -97,8 +94,7 @@ export const useLoginForm = () => {
               description: "Welcome back! You are now logged in as a Rating Officer.",
             });
             
-            // Navigation is handled in Login.tsx component via useEffect
-            logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful, awaiting navigation');
+            logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful');
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -131,14 +127,12 @@ export const useLoginForm = () => {
           setLoginStage(success ? "success" : "failed");
           
           if (success) {
-            logMessage(LogLevel.INFO, 'useLoginForm', 'Tournament Organizer login successful, awaiting navigation');
+            logMessage(LogLevel.INFO, 'useLoginForm', 'Tournament Organizer login successful');
             
             toast({
               title: "Login Successful",
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
             });
-            
-            // Navigation is now handled in Login.tsx via useEffect
           } else {
             throw new Error("Invalid credentials. Please check your email and password.");
           }

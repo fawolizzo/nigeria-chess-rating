@@ -69,6 +69,20 @@ const Login = () => {
         userStatus: currentUser.status,
       });
       
+      // Log the intended redirect path
+      const redirectPath = currentUser.role === 'rating_officer' 
+        ? '/officer-dashboard' 
+        : (currentUser.role === 'tournament_organizer' 
+            ? (currentUser.status === 'pending' 
+                ? '/pending-approval' 
+                : '/organizer-dashboard')
+            : '/');
+      
+      logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`, {
+        currentRole: currentUser.role,
+        currentStatus: currentUser.status
+      });
+      
       // Delay the navigation slightly to ensure state updates properly
       setTimeout(() => {
         if (currentUser.role === 'rating_officer') {

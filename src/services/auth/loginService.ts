@@ -106,6 +106,7 @@ export const signOut = async (): Promise<void> => {
   try {
     logAuthDiagnostics('SIGNOUT_START', 'loginService', { timestamp: startTime });
     
+    // Using correct parameter order for withTimeout
     await withTimeout(
       () => supabase.auth.signOut(),
       'Sign Out',

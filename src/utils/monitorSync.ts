@@ -70,12 +70,13 @@ export { monitorSync as startSyncMonitoring };
  * @param operationName Name of the operation for logging
  * @param timeoutMs Timeout in milliseconds
  * @param onTimeout Optional callback to execute if operation times out
+ * @returns Result of the operation or undefined if it times out
  */
 export const withTimeout = async <T>(
   operation: () => Promise<T>,
   operationName: string = 'Operation',
   timeoutMs: number = 5000,
-  onTimeout?: () => any
+  onTimeout?: () => void
 ): Promise<T | undefined> => {
   return new Promise((resolve) => {
     let timeoutId: NodeJS.Timeout | null = null;
