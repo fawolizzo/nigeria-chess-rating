@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -6,7 +7,6 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { setupNetworkDebugger } from "@/utils/networkDebugger";
 import { useTournamentManager, TournamentFormValues } from "@/hooks/useTournamentManager";
 import { useToast } from "@/hooks/use-toast";
-import { withTimeout } from "@/utils/monitorSync";
 import { OrganizerDashboardLayout } from "@/components/organizer/dashboard/OrganizerDashboardLayout";
 import { OrganizerDashboardLoader } from "@/components/organizer/dashboard/OrganizerDashboardLoader";
 import { OrganizerTabsWrapper } from "@/components/organizer/dashboard/OrganizerTabsWrapper";
@@ -104,42 +104,35 @@ const OrganizerDashboard = () => {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
       
       setLoadError(null);
+      setHasTimedOut(false);
       
-      const controller = new AbortController();
+      // Load tournament data
+      const loadData = async () => {
+        try {
+          console.log('Starting tournament data load...');
+          await loadTournaments();
+          console.log('Tournament data load complete!');
+          setHasTimedOut(false);
+        } catch (error) {
+          console.error('Error loading tournament data:', error);
+          setLoadError(`Failed to load tournament data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          setHasTimedOut(true);
+        }
+      };
+      
+      // Set a timeout to catch if the operation takes too long
       const timeoutId = setTimeout(() => {
-        controller.abort();
         logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
         setHasTimedOut(true);
         setLoadError("Loading timed out. The server took too long to respond.");
       }, 15000);
       
-      withTimeout(
-        async () => {
-          try {
-            console.log('Starting tournament data load...');
-            await loadTournaments();
-            console.log('Tournament data load complete!');
-            clearTimeout(timeoutId);
-            setHasTimedOut(false);
-          } catch (error) {
-            console.error('Error loading tournament data:', error);
-            setLoadError(`Failed to load tournament data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            setHasTimedOut(true);
-            clearTimeout(timeoutId);
-          }
-        },
-        20000,
-        'Tournament data loading',
-        () => {
-          logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament data loading timed out');
-          setHasTimedOut(true);
-          setLoadError("Loading timed out. Please try again.");
-        }
-      );
+      // Execute the data loading
+      loadData();
       
+      // Clean up timeout on unmount
       return () => {
         clearTimeout(timeoutId);
-        controller.abort();
       };
     }
   }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount]);

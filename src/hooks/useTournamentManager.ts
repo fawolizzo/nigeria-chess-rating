@@ -83,22 +83,32 @@ export function useTournamentManager() {
     return true;
   }, [tournaments, currentUser, toast]);
 
-  const loadTournaments = useCallback(() => {
+  const loadTournaments = useCallback(async () => {
+    logMessage(LogLevel.INFO, 'useTournamentManager', 'Loading tournaments started');
     try {
       setIsLoading(true);
+      // Simulate network delay to make loading state visible
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const savedTournaments = localStorage.getItem('tournaments');
       if (savedTournaments) {
         const allTournaments = JSON.parse(savedTournaments);
         const myTournaments = allTournaments.filter(
           (tournament: Tournament) => tournament.organizerId === currentUser?.id
         );
-        setTournaments(myTournaments);
+        
         logMessage(LogLevel.INFO, 'useTournamentManager', `Loaded ${myTournaments.length} tournaments`);
+        setTournaments(myTournaments);
+      } else {
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'No tournaments found in storage');
+        setTournaments([]);
       }
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useTournamentManager', 'Error loading tournaments:', error);
+      throw error; // Re-throw to be caught by the component
     } finally {
       setIsLoading(false);
+      logMessage(LogLevel.INFO, 'useTournamentManager', 'Loading tournaments completed');
     }
   }, [currentUser?.id]);
 
