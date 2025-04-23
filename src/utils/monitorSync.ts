@@ -66,9 +66,9 @@ export { monitorSync as startSyncMonitoring };
 
 /**
  * Simpler version of monitorSync that uses a callback when the operation times out
+ * @param operation Function to execute with timeout
  * @param operationName Name of the operation for logging
  * @param timeoutMs Timeout in milliseconds
- * @param operation Function to execute with timeout
  * @param onTimeout Optional callback to execute if operation times out
  */
 export const withTimeout = async <T>(

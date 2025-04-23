@@ -51,11 +51,11 @@ const useSilentSync = ({
       logMessage(LogLevel.INFO, 'useSilentSync', `Starting sync ${keysToSync ? `for keys: ${keysToSync.join(', ')}` : 'for all keys'}`);
       
       // Use withTimeout to ensure sync doesn't hang
-      // Fixing parameter order: operation function, timeoutMs, operationName, onTimeout callback
+      // Fixing parameter order: operation, operationName, timeoutMs, onTimeout
       const result = await withTimeout(
         () => keysToSync ? forceSyncAllStorage(keysToSync) : forceSyncAllStorage(),
-        syncTimeout,
         'Storage Sync',
+        syncTimeout,
         () => {
           logMessage(LogLevel.WARNING, 'useSilentSync', 'Sync operation timed out');
           return false;
@@ -107,11 +107,11 @@ const useSilentSync = ({
     try {
       logMessage(LogLevel.INFO, 'useSilentSync', 'Force syncing with priority on user data');
       
-      // Fixing parameter order: operation function, timeoutMs, operationName, onTimeout callback
+      // Fixing parameter order: operation, operationName, timeoutMs, onTimeout
       const result = await withTimeout(
         () => forceSyncAllStorage(userDataKeys),
-        syncTimeout,
         'Force Storage Sync',
+        syncTimeout,
         () => {
           logMessage(LogLevel.WARNING, 'useSilentSync', 'Force sync operation timed out');
           return false;
