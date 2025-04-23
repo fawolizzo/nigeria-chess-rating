@@ -3,7 +3,7 @@ import { logMessage, LogLevel, logAuthDiagnostics } from '@/utils/debugLogger';
 import { normalizeCredentials } from './authUtils';
 import { authenticateWithSupabase } from './strategies/supabaseAuth';
 import { authenticateLocally } from './strategies/localAuth';
-import { withTimeout } from './timeoutUtils';
+import { withTimeout } from '@/utils/monitorSync';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -108,8 +108,9 @@ export const signOut = async (): Promise<void> => {
     
     await withTimeout(
       () => supabase.auth.signOut(),
-      3000, // 3-second timeout for sign out
-      'Sign Out'
+      'Sign Out',
+      5000, // 5-second timeout for sign out
+      () => logMessage(LogLevel.WARNING, 'loginService', 'Sign out operation timed out')
     );
     
     // Clear any potential local storage tokens

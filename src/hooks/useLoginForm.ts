@@ -97,7 +97,8 @@ export const useLoginForm = () => {
               description: "Welcome back! You are now logged in as a Rating Officer.",
             });
             
-            // Note: We won't navigate here as we rely on Login.tsx component's useEffect for navigation
+            // Navigation is handled in Login.tsx component via useEffect
+            logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful, awaiting navigation');
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -130,13 +131,14 @@ export const useLoginForm = () => {
           setLoginStage(success ? "success" : "failed");
           
           if (success) {
+            logMessage(LogLevel.INFO, 'useLoginForm', 'Tournament Organizer login successful, awaiting navigation');
+            
             toast({
               title: "Login Successful",
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
             });
             
-            // Note: Navigation will happen automatically via the Login.tsx component
-            // based on user role and status
+            // Navigation is now handled in Login.tsx via useEffect
           } else {
             throw new Error("Invalid credentials. Please check your email and password.");
           }
@@ -164,13 +166,14 @@ export const useLoginForm = () => {
       });
       
       setIsLoading(false);
+      setLoginStage("error");
     } finally {
-      // Always set loading to false when login process completes
       if (loginStage === "success") {
-        // Small delay before setting loading to false to allow context updates
+        // Don't reset loading state immediately on success to prevent UI flicker
+        // The Login component will handle the state transition and navigation
         setTimeout(() => {
           setIsLoading(false);
-        }, 100);
+        }, 300);
       } else if (loginStage !== "success") {
         setIsLoading(false);
       }

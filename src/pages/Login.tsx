@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "@/components/login/LoginForm";
@@ -15,6 +16,15 @@ const Login = () => {
   const [showTimeout, setShowTimeout] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  
+  // Debug logging for login page rendering
+  useEffect(() => {
+    logMessage(LogLevel.INFO, 'Login', 'Login page rendered', {
+      isLoading,
+      currentUserExists: !!currentUser,
+      redirectingStatus: redirecting
+    });
+  }, []);
   
   useEffect(() => {
     let timer: number | null = null;
@@ -46,9 +56,10 @@ const Login = () => {
   }, [isLoading, showTimeout]);
   
   useEffect(() => {
-    if (redirecting) return;
-    if (isLoading) return;
+    // Skip if already redirecting or still loading
+    if (redirecting || isLoading) return;
     
+    // If user is logged in, redirect based on role and status
     if (currentUser) {
       setRedirecting(true);
       
@@ -58,19 +69,22 @@ const Login = () => {
         userStatus: currentUser.status,
       });
       
-      if (currentUser.role === 'rating_officer') {
-        navigate('/officer-dashboard');
-      } else if (currentUser.role === 'tournament_organizer') {
-        if (currentUser.status === 'pending') {
-          navigate('/pending-approval');
-        } else if (currentUser.status === 'approved') {
-          navigate('/organizer-dashboard');
+      // Delay the navigation slightly to ensure state updates properly
+      setTimeout(() => {
+        if (currentUser.role === 'rating_officer') {
+          navigate('/officer-dashboard');
+        } else if (currentUser.role === 'tournament_organizer') {
+          if (currentUser.status === 'pending') {
+            navigate('/pending-approval');
+          } else if (currentUser.status === 'approved') {
+            navigate('/organizer-dashboard');
+          } else {
+            navigate('/');
+          }
         } else {
           navigate('/');
         }
-      } else {
-        navigate('/');
-      }
+      }, 100);
     }
   }, [currentUser, isLoading, navigate, redirecting]);
 
