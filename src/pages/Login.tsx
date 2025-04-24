@@ -8,6 +8,7 @@ import LoginDebug from "@/components/LoginDebug";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,7 +26,27 @@ const Login = () => {
       redirectingStatus: redirecting
     });
   }, []);
+
+  // Handle redirect after successful login
+  useEffect(() => {
+    if (!isLoading && currentUser && !redirecting) {
+      setRedirecting(true);
+      
+      logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
+        userEmail: currentUser.email,
+        userRole: currentUser.role,
+        userStatus: currentUser.status,
+      });
+
+      const redirectPath = getRedirectPath(currentUser);
+      logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`);
+      
+      // Force immediate navigation
+      navigate(redirectPath, { replace: true });
+    }
+  }, [currentUser, isLoading, navigate, redirecting]);
   
+  // Handle loading states and timeouts
   useEffect(() => {
     let timer: number | null = null;
     
@@ -54,95 +75,53 @@ const Login = () => {
       if (timer) clearInterval(timer);
     };
   }, [isLoading, showTimeout]);
-  
-  useEffect(() => {
-    // Skip if already redirecting or still loading
-    if (redirecting || isLoading) return;
-    
-    // If user is logged in, redirect based on role and status
-    if (currentUser) {
-      setRedirecting(true);
-      
-      logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
-        userEmail: currentUser.email,
-        userRole: currentUser.role,
-        userStatus: currentUser.status,
-      });
-      
-      // Log the intended redirect path
-      const redirectPath = currentUser.role === 'rating_officer' 
-        ? '/officer-dashboard' 
-        : (currentUser.role === 'tournament_organizer' 
-            ? (currentUser.status === 'pending' 
-                ? '/pending-approval' 
-                : '/organizer-dashboard')
-            : '/');
-      
-      logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`, {
-        currentRole: currentUser.role,
-        currentStatus: currentUser.status
-      });
-      
-      // Delay the navigation slightly to ensure state updates properly
-      setTimeout(() => {
-        if (currentUser.role === 'rating_officer') {
-          navigate('/officer-dashboard');
-        } else if (currentUser.role === 'tournament_organizer') {
-          if (currentUser.status === 'pending') {
-            navigate('/pending-approval');
-          } else if (currentUser.status === 'approved') {
-            navigate('/organizer-dashboard');
-          } else {
-            navigate('/');
-          }
-        } else {
-          navigate('/');
-        }
-      }, 100);
-    }
-  }, [currentUser, isLoading, navigate, redirecting]);
 
   const handleManualRefresh = async () => {
     setShowTimeout(false);
     await refreshUserData();
   };
 
+  // Loading state with spinner
+  if (isLoading || redirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+          <LoadingSpinner />
+          <p className="text-center text-gray-600 dark:text-gray-400">
+            {redirecting ? 'Redirecting to dashboard...' : `Verifying your account... ${loadingDuration > 0 ? `(${loadingDuration}s)` : ''}`}
+          </p>
+          
+          {showTimeout && !redirecting && (
+            <div className="mt-6">
+              <Alert variant="warning" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Verification is taking longer than expected. The server might be experiencing high load.
+                </AlertDescription>
+              </Alert>
+              
+              <Button 
+                onClick={handleManualRefresh} 
+                className="w-full flex items-center justify-center gap-2"
+                variant="outline"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry Verification
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Main login form
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md min-h-[400px] flex flex-col">
-        {isLoading && !redirecting ? (
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="w-16 h-16 border-4 border-t-transparent border-nigeria-green rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">
-              Verifying your account... {loadingDuration > 0 && `(${loadingDuration}s)`}
-            </p>
-            
-            {showTimeout && (
-              <div className="mt-6 w-full">
-                <Alert variant="warning" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Login verification is taking longer than expected. 
-                    The server might be experiencing high load or network issues.
-                  </AlertDescription>
-                </Alert>
-                
-                <Button 
-                  onClick={handleManualRefresh} 
-                  className="flex items-center gap-2 w-full"
-                  variant="outline"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Retry Verification
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <LoginForm />
-        )}
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <LoginForm />
         
-        {!isLoading && !import.meta.env.PROD && (
+        {!import.meta.env.PROD && (
           <div className="mt-6">
             <LoginDebug />
           </div>
@@ -151,5 +130,15 @@ const Login = () => {
     </div>
   );
 };
+
+// Helper function to determine redirect path
+function getRedirectPath(user: { role: string; status?: string }) {
+  if (user.role === 'rating_officer') {
+    return '/officer-dashboard';
+  } else if (user.role === 'tournament_organizer') {
+    return user.status === 'pending' ? '/pending-approval' : '/organizer-dashboard';
+  }
+  return '/';
+}
 
 export default Login;
