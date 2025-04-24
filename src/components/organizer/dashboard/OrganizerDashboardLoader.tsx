@@ -20,7 +20,7 @@ export function OrganizerDashboardLoader({
   onLogout: () => void;
 }) {
   if (isLoading) {
-    return <OrganizerDashboardSkeleton />;
+    return <OrganizerDashboardSkeleton onManualReload={onRetry} />;
   }
 
   if (hasTimedOut || loadError) {
@@ -43,9 +43,9 @@ export function OrganizerDashboardLoader({
             <div className="flex justify-center gap-4">
               <Button 
                 onClick={onRetry}
-                className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                className="bg-nigeria-green hover:bg-nigeria-green-dark text-white flex items-center gap-2"
               >
-                <RefreshCcw className="mr-2 h-4 w-4" />
+                <RefreshCcw className="h-4 w-4" />
                 Retry Loading
               </Button>
               <Button 

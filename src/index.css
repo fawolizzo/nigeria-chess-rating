@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,135 +5,73 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    --foreground: 224 71.4% 4.1%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    /* Nigerian green as primary color */
-    --primary: 157 100% 26.3%; /* #008751 */
-    --primary-foreground: 210 40% 98%;
-
-    /* Nigerian yellow as secondary color */
-    --secondary: 47 100% 51%; /* #ffcb05 */
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    /* Softer muted colors with better contrast */
-    --muted: 210 40% 93%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    /* Warm accent based on Nigerian colors */
-    --accent: 47 80% 92%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 220.9 39.3% 11%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Refined border colors */
-    --border: 157 60% 92%;
-    --input: 214.3 31.8% 91.4%;
-    /* Nigerian green for focus rings */
-    --ring: 157 100% 26.3%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Enhanced Nigerian colors */
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 71.4% 4.1%;
+    --radius: 0.75rem;
+    --nigeria-green: 115 100% 23%;
+    --nigeria-green-dark: 115 100% 20%;
     --nigeria-white: 0 0% 100%;
-    --nigeria-white-dim: 0 0% 91%;
-    --nigeria-green: 157 100% 26.3%;
-    --nigeria-green-light: 157 85% 40%;
-    --nigeria-green-dark: 157 100% 20%;
-    --nigeria-yellow: 47 100% 51%;
-    --nigeria-yellow-light: 47 91% 75%;
-    --nigeria-yellow-dark: 47 91% 40%;
-    --nigeria-accent: 25 95% 65%;
-    --nigeria-accent-light: 25 95% 75%;
-    --nigeria-accent-dark: 25 95% 55%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    /* Enhanced Nigerian green in dark mode */
-    --primary: 157 70% 40%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    /* Richer Nigerian yellow for dark mode */
-    --secondary: 47 80% 55%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    /* Warmer accent in dark mode */
-    --accent: 47 35% 30%;
-    --accent-foreground: 210 40% 98%;
-
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 220.9 39.3% 11%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Enhanced borders for dark mode */
-    --border: 157 30% 22%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-    
-    /* Enhanced Nigerian colors in dark mode */
-    --nigeria-white: 0 0% 95%;
-    --nigeria-white-dim: 0 0% 85%;
-    --nigeria-green: 157 80% 35%;
-    --nigeria-green-light: 157 75% 45%;
-    --nigeria-green-dark: 157 85% 25%;
-    --nigeria-yellow: 47 80% 65%;
-    --nigeria-yellow-light: 47 75% 75%;
-    --nigeria-yellow-dark: 47 85% 55%;
-    --nigeria-accent: 25 70% 50%;
-    --nigeria-accent-light: 25 70% 60%;
-    --nigeria-accent-dark: 25 70% 40%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 216 12.2% 83.9%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
-  
-  /* Ensure the root element takes full height */
-  html, body, #root {
-    height: 100%;
-    min-height: 100vh;
+
+  /* Custom animation class for slower pulse effect */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 }
 
