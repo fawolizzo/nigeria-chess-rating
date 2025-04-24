@@ -1,4 +1,3 @@
-
 import { 
   setupSystemTest, 
   teardownSystemTest, 
@@ -54,21 +53,18 @@ const runTournamentFlowTest = async (): Promise<boolean> => {
     const tournament: Tournament = {
       id: `tournament-${Date.now()}`,
       name: testTournament.name,
-      startDate: testTournament.startDate,
-      endDate: testTournament.endDate,
-      venue: testTournament.venue,
-      state: testTournament.state,
+      description: testTournament.description || '',
+      start_date: testTournament.startDate.toISOString().split('T')[0],
+      end_date: testTournament.endDate.toISOString().split('T')[0],
+      location: testTournament.venue,
       city: testTournament.city,
+      state: testTournament.state,
+      time_control: testTournament.timeControl,
       rounds: testTournament.rounds,
-      currentRound: 0,
-      timeControl: testTournament.timeControl,
-      organizerId: currentOrganizer.id,
-      registrationOpen: testTournament.registrationOpen,
-      status: testTournament.status,
-      players: players.map(p => p.id).slice(0, 2), // Add only approved players
-      pairings: [],
-      createdAt: new Date().toISOString(),
-      lastModified: Date.now()
+      organizer_id: currentOrganizer.id,
+      status: 'pending', // Changed from 'upcoming' to 'pending'
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
     
     const tournaments = [tournament];
