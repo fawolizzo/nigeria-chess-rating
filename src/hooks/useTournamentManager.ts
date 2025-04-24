@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { validateTimeControl } from "@/utils/timeControlValidation";
-import { Tournament } from "@/lib/mockData";
+import { Tournament } from "@/types/tournamentTypes";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { getStorageItem, setStorageItem } from "@/utils/storage";
 import { withTimeout } from "@/utils/monitorSync";
@@ -121,10 +121,15 @@ export function useTournamentManager() {
       location: data.location,
       city: data.city,
       state: data.state,
-      status: "pending",
+      status: "upcoming",
       timeControl: finalTimeControl,
       rounds: data.rounds,
-      organizerId: currentUser.id
+      organizerId: currentUser.id,
+      // Add required fields from Tournament type
+      venue: data.location,
+      registrationOpen: true,
+      createdAt: new Date().toISOString(),
+      lastModified: Date.now()
     };
     
     try {
@@ -192,94 +197,75 @@ export function useTournamentManager() {
         throw new Error('User not authenticated properly');
       }
       
-      // First try to get from Supabase
+      // We're not using Supabase here since the table structure doesn't match our app
+      // Instead, we'll use the mock data functions directly
       try {
-        console.log('Attempting to fetch tournaments from Supabase');
-        const { data: supabaseTournaments, error: supabaseError } = await supabase
-          .from('tournaments')
-          .select('*')
-          .eq('organizerId', organizerId);
+        console.log('Attempting to load tournaments from storage');
         
-        if (supabaseError) {
-          console.error('Supabase fetch error:', supabaseError);
-          throw new Error(`Supabase error: ${supabaseError.message}`);
-        }
-        
-        if (supabaseTournaments && supabaseTournaments.length > 0) {
-          console.log(`Successfully loaded ${supabaseTournaments.length} tournaments from Supabase`);
-          setTournaments(supabaseTournaments);
-          setLastSuccessfulLoad(Date.now());
-          await cacheResults(supabaseTournaments);
-          setIsLoading(false);
-          return supabaseTournaments;
-        }
-        
-        console.log('No tournaments found in Supabase, trying storage');
-      } catch (supabaseError) {
-        console.error('Failed to fetch from Supabase, falling back to storage:', supabaseError);
-        logMessage(LogLevel.WARNING, 'useTournamentManager', 'Supabase fetch failed, using storage fallback');
-      }
-      
-      // Use withTimeout to prevent hanging operations when accessing local storage
-      const loadedTournaments = await withTimeout<Tournament[]>(
-        async () => {
-          console.log('Attempting to load tournaments from storage');
-          
-          try {
-            // Fetch tournaments from enhanced storage
-            const allTournaments = await getStorageItem<Tournament[]>('tournaments', []);
+        // Use withTimeout to prevent hanging operations when accessing local storage
+        const loadedTournaments = await withTimeout<Tournament[]>(
+          async () => {
+            console.log('Loading tournaments from storage');
             
-            if (!allTournaments || !Array.isArray(allTournaments)) {
-              logMessage(LogLevel.WARNING, 'useTournamentManager', 'No tournaments found in storage, returning empty array');
+            try {
+              // Fetch tournaments from enhanced storage
+              const allTournaments = await getStorageItem<Tournament[]>('tournaments', []);
+              
+              if (!allTournaments || !Array.isArray(allTournaments)) {
+                logMessage(LogLevel.WARNING, 'useTournamentManager', 'No tournaments found in storage, returning empty array');
+                return [];
+              }
+              
+              const myTournaments = allTournaments.filter(
+                (t: Tournament) => t && t.organizerId === organizerId
+              );
+              
+              console.log(`Successfully loaded ${myTournaments.length} tournaments for organizer ${organizerId}`);
+              logMessage(LogLevel.INFO, 'useTournamentManager', `Loaded ${myTournaments.length} tournaments`);
+              return myTournaments;
+            } catch (storageError) {
+              console.error('Error accessing storage:', storageError);
+              logMessage(LogLevel.ERROR, 'useTournamentManager', 'Storage access failed', storageError);
+              
+              // Fallback to cache if available
+              if (cachedData) {
+                logMessage(LogLevel.INFO, 'useTournamentManager', 'Falling back to cached data');
+                return cachedData.data;
+              }
+              
+              // If no cache, return empty array instead of throwing
               return [];
             }
-            
-            const myTournaments = allTournaments.filter(
-              (t: Tournament) => t && t.organizerId === organizerId
-            );
-            
-            console.log(`Successfully loaded ${myTournaments.length} tournaments for organizer ${organizerId}`);
-            logMessage(LogLevel.INFO, 'useTournamentManager', `Loaded ${myTournaments.length} tournaments`);
-            return myTournaments;
-          } catch (storageError) {
-            console.error('Error accessing storage:', storageError);
-            logMessage(LogLevel.ERROR, 'useTournamentManager', 'Storage access failed', storageError);
-            
-            // Fallback to cache if available
-            if (cachedData) {
-              logMessage(LogLevel.INFO, 'useTournamentManager', 'Falling back to cached data');
-              return cachedData.data;
-            }
-            
-            // If no cache, return empty array instead of throwing
-            return [];
+          },
+          'Load Tournaments',
+          10000, // 10-second timeout
+          () => {
+            setLoadError("Loading timed out. The tournament data took too long to load.");
+            logMessage(LogLevel.ERROR, 'useTournamentManager', 'Loading tournaments timed out');
+            toast({
+              title: "Loading Timeout",
+              description: "Tournament data loading took too long. Please try again.",
+              variant: "destructive",
+            });
           }
-        },
-        'Load Tournaments',
-        10000, // 10-second timeout
-        () => {
-          setLoadError("Loading timed out. The tournament data took too long to load.");
-          logMessage(LogLevel.ERROR, 'useTournamentManager', 'Loading tournaments timed out');
-          toast({
-            title: "Loading Timeout",
-            description: "Tournament data loading took too long. Please try again.",
-            variant: "destructive",
-          });
+        );
+        
+        // Update state with fetched tournaments if we got results
+        if (loadedTournaments) {
+          setTournaments(loadedTournaments);
+          setLastSuccessfulLoad(Date.now());
+          await cacheResults(loadedTournaments);
+          return loadedTournaments;
+        } else {
+          // If withTimeout returned undefined, it means the operation timed out or failed
+          if (!loadError) {
+            setLoadError("Failed to load tournament data. Please try again.");
+          }
+          return [];
         }
-      );
-      
-      // Update state with fetched tournaments if we got results
-      if (loadedTournaments) {
-        setTournaments(loadedTournaments);
-        setLastSuccessfulLoad(Date.now());
-        await cacheResults(loadedTournaments);
-        return loadedTournaments;
-      } else {
-        // If withTimeout returned undefined, it means the operation timed out or failed
-        if (!loadError) {
-          setLoadError("Failed to load tournament data. Please try again.");
-        }
-        return [];
+      } catch (error) {
+        console.error('Failed to load tournaments:', error);
+        throw error;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
