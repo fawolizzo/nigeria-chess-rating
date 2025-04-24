@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@/contexts/user';
 import { validateTimeControl } from '@/utils/timeControlValidation';
 
 interface CreateTournamentFormData {
@@ -25,8 +26,14 @@ interface CreateTournamentFormData {
 export default function CreateTournament() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, control, formState: { errors } } = useForm<CreateTournamentFormData>();
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<CreateTournamentFormData>({
+    defaultValues: {
+      startDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 1))
+    }
+  });
 
   const onSubmit = async (data: CreateTournamentFormData) => {
     try {
@@ -41,11 +48,21 @@ export default function CreateTournament() {
         return;
       }
 
+      if (!currentUser || !currentUser.id) {
+        toast({
+          title: "Authentication Error",
+          description: "You must be logged in to create a tournament",
+          variant: "destructive",
+        });
+        navigate('/login');
+        return;
+      }
+
       setIsSubmitting(true);
       
       const { data: tournament, error } = await supabase
         .from('tournaments')
-        .insert([{
+        .insert({
           name: data.name,
           description: data.description,
           start_date: data.startDate.toISOString(),
@@ -55,8 +72,9 @@ export default function CreateTournament() {
           state: data.state,
           time_control: data.timeControl,
           rounds: parseInt(String(data.rounds)),
+          organizer_id: currentUser.id,
           status: 'pending'
-        }])
+        })
         .select()
         .single();
 
@@ -110,11 +128,17 @@ export default function CreateTournament() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Start Date</label>
-              <DatePicker date={control._formValues.startDate} setDate={(date) => control.setValue('startDate', date)} />
+              <DatePicker 
+                date={control._formValues.startDate} 
+                setDate={(date) => setValue('startDate', date as Date)} 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">End Date</label>
-              <DatePicker date={control._formValues.endDate} setDate={(date) => control.setValue('endDate', date)} />
+              <DatePicker 
+                date={control._formValues.endDate} 
+                setDate={(date) => setValue('endDate', date as Date)}
+              />
             </div>
           </div>
 
