@@ -27,7 +27,7 @@ export default function OrganizerDashboard() {
 
   return (
     <div className="container mx-auto py-8">
-      <DashboardHeader organizerName={organizer?.name || ''} />
+      <DashboardHeader organizerName={organizer?.fullName || ''} />
       <TournamentGrid tournaments={tournaments} />
     </div>
   );

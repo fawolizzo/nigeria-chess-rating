@@ -30,9 +30,11 @@ export const useOrganizer = () => {
         setError(null);
 
         // In a real app, you'd fetch tournaments from an API or database
-        // For now we'll use mock data from the user context
-        const userTournaments = organizer.tournaments || [];
-        setTournaments(userTournaments);
+        // For now we'll use mock data - we'll assume tournaments would be fetched elsewhere
+        // and are not directly on the user object
+        
+        // Mock empty tournaments array for now
+        setTournaments([]);
       } catch (err) {
         console.error('Error loading tournaments:', err);
         setError('Failed to load tournaments. Please try again.');
