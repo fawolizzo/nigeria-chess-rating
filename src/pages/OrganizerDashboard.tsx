@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -49,27 +48,28 @@ const OrganizerDashboard = () => {
   const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const [activeTab, setActiveTab] = useState<Tournament['status']>("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
-  const { tournaments, isLoading: tournamentsLoading, createTournament, loadTournaments } = useTournamentManager();
+  const { tournaments, isLoading: tournamentsLoading, loadError: tournamentLoadError, createTournament, loadTournaments, retry } = useTournamentManager();
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [loadRetryCount, setLoadRetryCount] = useState(0);
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingStage, setLoadingStage] = useState<string>("initializing");
 
-  // Log authentication status when the component mounts
   useEffect(() => {
     logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Dashboard mounted', {
       isAuthenticated,
       hasCurrentUser: !!currentUser,
       userRole: currentUser?.role,
-      userStatus: currentUser?.status
+      userStatus: currentUser?.status,
+      authLoading
     });
-  }, []);
+  }, [isAuthenticated, currentUser, authLoading]);
   
-  // Authentication check on component mount
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
+      setLoadingStage("checking authentication");
       
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Initial auth check complete', {
         isAuthenticated,
@@ -79,15 +79,17 @@ const OrganizerDashboard = () => {
       });
       
       if (!isAuthenticated || !currentUser) {
-        setAuthError("User not authenticated");
-        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not authenticated, redirecting to login');
+        const errorMsg = "User not authenticated";
+        setAuthError(errorMsg);
+        logMessage(LogLevel.WARNING, 'OrganizerDashboard', errorMsg);
         navigate('/login');
         return;
       }
       
       if (currentUser.role !== 'tournament_organizer') {
-        setAuthError(`User has incorrect role: ${currentUser.role}`);
-        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User has incorrect role, redirecting', {
+        const errorMsg = `User has incorrect role: ${currentUser.role}`;
+        setAuthError(errorMsg);
+        logMessage(LogLevel.WARNING, 'OrganizerDashboard', errorMsg, {
           role: currentUser.role
         });
         
@@ -100,8 +102,9 @@ const OrganizerDashboard = () => {
       }
       
       if (currentUser?.status !== 'approved') {
-        setAuthError(`User not approved: ${currentUser?.status}`);
-        logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User not approved, redirecting to pending', {
+        const errorMsg = `User not approved: ${currentUser?.status}`;
+        setAuthError(errorMsg);
+        logMessage(LogLevel.WARNING, 'OrganizerDashboard', errorMsg, {
           status: currentUser?.status
         });
         navigate('/pending-approval');
@@ -110,103 +113,109 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
-  // Load tournament data when authenticated
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
       
+      setLoadingStage("loading tournaments");
       setLoadError(null);
       setHasTimedOut(false);
       
-      // Load tournament data
       const loadData = async () => {
         try {
           console.log('Starting tournament data load...');
-          await loadTournaments();
-          console.log('Tournament data load complete!');
+          const result = await loadTournaments();
+          console.log('Tournament data load complete!', result);
           setHasTimedOut(false);
+          setLoadingStage("complete");
         } catch (error) {
           console.error('Error loading tournament data:', error);
-          setLoadError(`Failed to load tournament data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          setLoadError(`Failed to load tournament data: ${errorMessage}`);
           setHasTimedOut(true);
+          setLoadingStage("error");
         }
       };
       
-      // Set a timeout to catch if the operation takes too long
       const timeoutId = setTimeout(() => {
-        logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
-        setHasTimedOut(true);
-        setLoadError("Loading timed out. The server took too long to respond.");
+        if (tournamentsLoading) {
+          logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
+          setHasTimedOut(true);
+          setLoadError("Loading timed out. The server took too long to respond.");
+          setLoadingStage("timeout");
+        }
       }, 15000);
       
-      // Execute the data loading
       loadData();
       
-      // Clean up timeout on unmount
       return () => {
         clearTimeout(timeoutId);
       };
     }
-  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount]);
+  }, [initialAuthCheck, currentUser, loadTournaments, loadRetryCount, tournamentsLoading]);
 
-  const handleRetryLoading = () => {
+  const handleRetryLoading = useCallback(() => {
     logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Retrying tournament data loading');
     setHasTimedOut(false);
+    setLoadError(null);
+    setLoadingStage("retrying");
     setLoadRetryCount(prev => prev + 1);
     toast({
       title: "Retrying",
       description: "Attempting to load your tournament data again."
     });
-  };
+    retry();
+  }, [retry, toast]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
+    logMessage(LogLevel.INFO, 'OrganizerDashboard', 'User logging out');
     logout();
     navigate('/login');
-  };
+  }, [logout, navigate]);
 
-  const handleCreateTournament = (
-    data: TournamentFormValues,
-    customTimeControl: string,
-    isCustomTimeControl: boolean
-  ) => {
-    const success = createTournament(data, customTimeControl, isCustomTimeControl);
-    if (success) {
-      setIsCreateTournamentOpen(false);
-      toast({
-        title: "Tournament Created",
-        description: "Your tournament has been created successfully."
-      });
-    }
-  };
+  const handleCreateTournament = useCallback(
+    (data: TournamentFormValues, customTimeControl: string, isCustomTimeControl: boolean) => {
+      const success = createTournament(data, customTimeControl, isCustomTimeControl);
+      if (success) {
+        setIsCreateTournamentOpen(false);
+        toast({
+          title: "Tournament Created",
+          description: "Your tournament has been created successfully."
+        });
+      }
+    }, 
+    [createTournament, toast]
+  );
 
-  const handleViewTournamentDetails = (tournamentId: string) => {
+  const handleViewTournamentDetails = useCallback((tournamentId: string) => {
     navigate(`/tournament/${tournamentId}`);
-  };
+  }, [navigate]);
 
-  const handleManageTournament = (tournamentId: string) => {
+  const handleManageTournament = useCallback((tournamentId: string) => {
     navigate(`/tournament/${tournamentId}/manage`);
-  };
+  }, [navigate]);
 
-  const filterTournamentsByStatus = (status: Tournament['status']) => {
+  const filterTournamentsByStatus = useCallback((status: Tournament['status']) => {
     return tournaments.filter(tournament => tournament.status === status);
-  };
+  }, [tournaments]);
 
-  const getUpcomingTournaments = () => {
+  const getUpcomingTournaments = useCallback(() => {
     return tournaments
       .filter(t => t.status === "upcoming")
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-  };
+  }, [tournaments]);
 
   const nextTournament = getUpcomingTournaments()[0];
 
   const isLoading = authLoading || (tournamentsLoading && !hasTimedOut) || !initialAuthCheck;
   
-  if (isLoading || hasTimedOut || loadError) {
+  if (isLoading || hasTimedOut || loadError || tournamentLoadError) {
     return (
       <OrganizerDashboardLoader 
         isLoading={isLoading} 
+        loadingStage={loadingStage}
         hasTimedOut={hasTimedOut} 
-        loadError={loadError}
+        loadError={loadError || tournamentLoadError}
         onRetry={handleRetryLoading}
         onLogout={handleLogout}
       />

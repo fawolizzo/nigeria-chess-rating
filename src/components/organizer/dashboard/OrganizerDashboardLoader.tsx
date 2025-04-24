@@ -4,23 +4,28 @@ import OrganizerDashboardSkeleton from "@/components/organizer/OrganizerDashboar
 import Navbar from "@/components/Navbar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCcw } from "lucide-react";
+import { AlertTriangle, RefreshCcw, LogOut } from "lucide-react";
 
 export function OrganizerDashboardLoader({
   isLoading,
+  loadingStage,
   hasTimedOut,
   loadError,
   onRetry,
   onLogout,
 }: {
   isLoading: boolean;
+  loadingStage?: string;
   hasTimedOut: boolean;
   loadError: string | null;
   onRetry: () => void;
   onLogout: () => void;
 }) {
   if (isLoading) {
-    return <OrganizerDashboardSkeleton onManualReload={onRetry} />;
+    return <OrganizerDashboardSkeleton 
+      loadingStage={loadingStage || 'loading'} 
+      onManualReload={onRetry} 
+    />;
   }
 
   if (hasTimedOut || loadError) {
@@ -30,7 +35,9 @@ export function OrganizerDashboardLoader({
         <div className="max-w-7xl mx-auto pt-28 pb-20 px-4 sm:px-6 lg:px-8">
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Loading Error</AlertTitle>
+            <AlertTitle>
+              {hasTimedOut ? "Loading Timeout" : "Loading Error"}
+            </AlertTitle>
             <AlertDescription>
               {loadError || "We couldn't load your tournament data. This might be due to network issues or server problems."}
             </AlertDescription>
@@ -40,7 +47,7 @@ export function OrganizerDashboardLoader({
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               We're having trouble loading your tournament information. Please try again or contact support if the problem persists.
             </p>
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 
                 onClick={onRetry}
                 className="bg-nigeria-green hover:bg-nigeria-green-dark text-white flex items-center gap-2"
@@ -51,7 +58,9 @@ export function OrganizerDashboardLoader({
               <Button 
                 onClick={onLogout}
                 variant="outline"
+                className="flex items-center gap-2"
               >
+                <LogOut className="h-4 w-4" />
                 Logout
               </Button>
             </div>

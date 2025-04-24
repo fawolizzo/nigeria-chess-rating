@@ -3,16 +3,18 @@ import React, { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 interface OrganizerDashboardSkeletonProps {
   onManualReload?: () => void;
+  loadingStage?: string;
 }
 
 const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
-  onManualReload
+  onManualReload,
+  loadingStage = "loading"
 }) => {
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
@@ -22,7 +24,10 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
   // Monitor page visibility
   useEffect(() => {
     const handleVisibilityChange = () => {
-      setIsPageVisible(!document.hidden);
+      const isVisible = !document.hidden;
+      setIsPageVisible(isVisible);
+      logMessage(LogLevel.INFO, 'OrganizerDashboardSkeleton', 
+        `Page visibility changed: ${isVisible ? 'visible' : 'hidden'}`);
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -56,14 +61,19 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
       if (elapsedSeconds >= 30 && isPageVisible) {
         logMessage(LogLevel.ERROR, 'OrganizerDashboardSkeleton', 'Loading timeout exceeded, forcing reload');
         clearInterval(intervalId);
-        window.location.reload();
+        
+        if (onManualReload) {
+          onManualReload();
+        } else {
+          window.location.reload();
+        }
       }
     }, 1000);
     
     return () => {
       clearInterval(intervalId);
     };
-  }, [showWarning, showReload, isPageVisible]);
+  }, [showWarning, showReload, isPageVisible, onManualReload]);
 
   const handleManualReload = () => {
     logMessage(LogLevel.INFO, 'OrganizerDashboardSkeleton', 'User triggered manual reload');
@@ -71,6 +81,20 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
       onManualReload();
     } else {
       window.location.reload();
+    }
+  };
+
+  // Get stage-specific loading message
+  const getLoadingMessage = () => {
+    switch (loadingStage) {
+      case "checking authentication":
+        return "Checking your authentication status...";
+      case "loading tournaments":
+        return "Loading your tournament data...";
+      case "retrying":
+        return "Retrying data load...";
+      default:
+        return "Loading data...";
     }
   };
 
@@ -106,6 +130,17 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
           </Alert>
         )}
 
+        {/* Current Loading Stage Alert */}
+        {!showReload && !showWarning && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Loading</AlertTitle>
+            <AlertDescription>
+              {getLoadingMessage()} Please wait...
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header Skeleton */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div className="space-y-4 w-full md:w-auto">
@@ -120,7 +155,7 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
 
         {/* Loading Duration Indicator */}
         <div className="text-center mb-4 text-sm text-gray-500 dark:text-gray-400">
-          Loading data... {loadingDuration > 0 && `(${loadingDuration}s)`}
+          {loadingStage}: {loadingDuration > 0 && `(${loadingDuration}s)`}
         </div>
 
         {/* Stats Grid Skeleton */}
