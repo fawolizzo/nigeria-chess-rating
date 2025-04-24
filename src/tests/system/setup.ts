@@ -70,6 +70,7 @@ export const generateTestData = () => {
     ],
     testTournament: {
       name: `Test Tournament ${uniqueId}`,
+      // Change from Date objects to ISO strings to match our updated code
       startDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
       endDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], // 3 days later
       venue: "Test Venue",
@@ -78,7 +79,8 @@ export const generateTestData = () => {
       rounds: 5,
       timeControl: "90+30",
       registrationOpen: true,
-      status: "upcoming" as const
+      description: "Test Tournament Description", // Add description field
+      status: "pending" as const // Changed from 'upcoming' to 'pending' to match allowed types
     }
   };
 };

@@ -1,3 +1,4 @@
+
 import { 
   setupSystemTest, 
   teardownSystemTest, 
@@ -53,9 +54,9 @@ const runTournamentFlowTest = async (): Promise<boolean> => {
     const tournament: Tournament = {
       id: `tournament-${Date.now()}`,
       name: testTournament.name,
-      description: testTournament.description || '',
-      start_date: testTournament.startDate.toISOString().split('T')[0],
-      end_date: testTournament.endDate.toISOString().split('T')[0],
+      description: '', // Add empty description since it doesn't exist in testTournament
+      start_date: testTournament.startDate, // Use as is since it's already a string
+      end_date: testTournament.endDate, // Use as is since it's already a string
       location: testTournament.venue,
       city: testTournament.city,
       state: testTournament.state,
