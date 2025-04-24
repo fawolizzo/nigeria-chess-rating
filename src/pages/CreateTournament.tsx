@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Card } from '@/components/ui/card';
@@ -9,7 +9,15 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/user';
-import { validateTimeControl } from '@/utils/timeControlValidation';
+import { NIGERIA_STATES } from '@/data/nigeriaStates';
+import { TIME_CONTROLS, TimeControlValue } from '@/data/timeControls';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CreateTournamentFormData {
   name: string;
@@ -20,34 +28,40 @@ interface CreateTournamentFormData {
   city: string;
   state: string;
   rounds: number;
-  timeControl: string;
+  timeControl: TimeControlValue;
+  customTimeControl?: string;
 }
 
 export default function CreateTournament() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser } = useUser();
+  const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<CreateTournamentFormData>({
+  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<CreateTournamentFormData>({
     defaultValues: {
       startDate: new Date(),
       endDate: new Date(new Date().setDate(new Date().getDate() + 1))
     }
   });
 
+  const selectedTimeControl = watch('timeControl');
+
+  useEffect(() => {
+    setIsCustomTimeControl(selectedTimeControl === 'custom');
+  }, [selectedTimeControl]);
+
+  const validateCustomTimeControl = (value: string) => {
+    if (!value) return 'Time control is required';
+    const pattern = /^\d+\+\d+$/;
+    if (!pattern.test(value)) {
+      return 'Invalid format. Use format like "90+30"';
+    }
+    return true;
+  };
+
   const onSubmit = async (data: CreateTournamentFormData) => {
     try {
-      // Validate time control format
-      const timeControlValidation = validateTimeControl(data.timeControl);
-      if (!timeControlValidation.isValid) {
-        toast({
-          title: "Invalid Time Control",
-          description: timeControlValidation.error,
-          variant: "destructive",
-        });
-        return;
-      }
-
       if (!currentUser || !currentUser.id) {
         toast({
           title: "Authentication Error",
@@ -55,6 +69,17 @@ export default function CreateTournament() {
           variant: "destructive",
         });
         navigate('/login');
+        return;
+      }
+
+      const timeControlValue = data.timeControl === 'custom' ? data.customTimeControl : data.timeControl;
+
+      if (data.timeControl === 'custom' && !data.customTimeControl) {
+        toast({
+          title: "Validation Error",
+          description: "Custom time control is required",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -70,8 +95,8 @@ export default function CreateTournament() {
           location: data.location,
           city: data.city,
           state: data.state,
-          time_control: data.timeControl,
-          rounds: parseInt(String(data.rounds)),
+          time_control: timeControlValue,
+          rounds: data.rounds,
           organizer_id: currentUser.id,
           status: 'pending'
         })
@@ -162,18 +187,33 @@ export default function CreateTournament() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">State</label>
-              <Input {...register('state', { required: 'State is required' })} />
+              <Select onValueChange={(value) => setValue('state', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {NIGERIA_STATES.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.state && (
                 <p className="text-red-500 text-sm mt-1">{errors.state.message}</p>
               )}
             </div>
+            
             <div>
               <label className="block text-sm font-medium mb-1">Number of Rounds</label>
               <Input
                 type="number"
+                min="1"
+                max="15"
                 {...register('rounds', { 
                   required: 'Number of rounds is required',
-                  min: { value: 1, message: 'Must be at least 1 round' }
+                  min: { value: 1, message: 'Minimum 1 round' },
+                  max: { value: 15, message: 'Maximum 15 rounds' }
                 })}
               />
               {errors.rounds && (
@@ -184,16 +224,44 @@ export default function CreateTournament() {
 
           <div>
             <label className="block text-sm font-medium mb-1">Time Control</label>
-            <Input
-              {...register('timeControl', { required: 'Time control is required' })}
-              placeholder="e.g., 90min or 15min + 10sec"
-            />
-            {errors.timeControl && (
-              <p className="text-red-500 text-sm mt-1">{errors.timeControl.message}</p>
+            <Select onValueChange={(value) => {
+              setValue('timeControl', value as TimeControlValue);
+              setIsCustomTimeControl(value === 'custom');
+            }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select time control" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIME_CONTROLS.map(({ label, value }) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {isCustomTimeControl && (
+              <div className="mt-2">
+                <Input
+                  {...register('customTimeControl', {
+                    validate: validateCustomTimeControl
+                  })}
+                  placeholder="Enter time control (e.g., 90+30)"
+                  className="mt-2"
+                />
+                {errors.customTimeControl && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.customTimeControl.message}
+                  </p>
+                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Format: minutes+increment (e.g., 90+30 means 90 minutes + 30 seconds increment)
+                </p>
+              </div>
             )}
           </div>
 
-          <div className="flex justify-end space-x-4">
+          <div className="flex justify-end space-x-4 mt-6">
             <Button
               type="button"
               variant="outline"
@@ -202,7 +270,7 @@ export default function CreateTournament() {
               Cancel
             </Button>
             <Button 
-              type="submit" 
+              type="submit"
               disabled={isSubmitting}
               className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
             >
