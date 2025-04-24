@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 interface CreateTournamentFormData {
   name: string;
@@ -38,6 +40,7 @@ export default function CreateTournament() {
   const { currentUser } = useUser();
   const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<CreateTournamentFormData>({
     defaultValues: {
       startDate: new Date(),
@@ -84,12 +87,27 @@ export default function CreateTournament() {
       }
 
       setIsSubmitting(true);
+      setErrorMsg(null);
+      
+      console.log("Submitting tournament data:", {
+        name: data.name,
+        description: data.description || '',
+        start_date: data.startDate.toISOString(),
+        end_date: data.endDate.toISOString(),
+        location: data.location,
+        city: data.city,
+        state: data.state,
+        time_control: timeControlValue,
+        rounds: data.rounds,
+        organizer_id: currentUser.id,
+        status: 'pending'
+      });
       
       const { data: tournament, error } = await supabase
         .from('tournaments')
         .insert({
           name: data.name,
-          description: data.description,
+          description: data.description || '',
           start_date: data.startDate.toISOString(),
           end_date: data.endDate.toISOString(),
           location: data.location,
@@ -103,7 +121,11 @@ export default function CreateTournament() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating tournament:', error);
+        setErrorMsg(`Database error: ${error.message}`);
+        throw error;
+      }
 
       toast({
         title: 'Success',
@@ -111,7 +133,7 @@ export default function CreateTournament() {
       });
 
       navigate(`/tournament/${tournament.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating tournament:', error);
       toast({
         title: 'Error',
@@ -127,6 +149,13 @@ export default function CreateTournament() {
     <div className="container mx-auto py-8">
       <Card className="max-w-2xl mx-auto p-6">
         <h1 className="text-2xl font-bold mb-6">Create New Tournament</h1>
+        
+        {errorMsg && (
+          <Alert variant="warning" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{errorMsg}</AlertDescription>
+          </Alert>
+        )}
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
@@ -154,15 +183,16 @@ export default function CreateTournament() {
             <div>
               <label className="block text-sm font-medium mb-1">Start Date</label>
               <DatePicker 
-                date={control._formValues.startDate} 
-                setDate={(date) => setValue('startDate', date as Date)} 
+                date={watch('startDate')}
+                setDate={(date) => date && setValue('startDate', date)} 
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">End Date</label>
               <DatePicker 
-                date={control._formValues.endDate} 
-                setDate={(date) => setValue('endDate', date as Date)}
+                date={watch('endDate')}
+                setDate={(date) => date && setValue('endDate', date)}
+                minDate={watch('startDate')}
               />
             </div>
           </div>
@@ -212,6 +242,7 @@ export default function CreateTournament() {
                 max="15"
                 {...register('rounds', { 
                   required: 'Number of rounds is required',
+                  valueAsNumber: true,
                   min: { value: 1, message: 'Minimum 1 round' },
                   max: { value: 15, message: 'Maximum 15 rounds' }
                 })}
