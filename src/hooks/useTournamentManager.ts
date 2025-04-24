@@ -68,7 +68,7 @@ export function useTournamentManager() {
         timeControl: isCustomTimeControl ? customTimeControl : tournamentData.timeControl,
         organizerId: currentUser.id,
         registrationOpen: true,
-        status: 'draft',
+        status: 'upcoming', // Changed from 'draft' to 'upcoming' to match allowed statuses
         createdAt: new Date().toISOString(),
         lastModified: Date.now(),
         pairings: [],

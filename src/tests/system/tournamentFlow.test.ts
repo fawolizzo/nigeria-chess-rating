@@ -1,3 +1,4 @@
+
 import { 
   setupSystemTest, 
   teardownSystemTest, 
@@ -34,13 +35,13 @@ const runTournamentFlowTest = async (): Promise<boolean> => {
     const currentOrganizer = JSON.parse(localStorage.getItem('ncr_current_user') || 'null');
     
     // Initialize players and tournaments in localStorage
-    const players: Player[] = testPlayers.map((player, index) => ({
+    const players = testPlayers.map((player, index) => ({
       id: `player-${index + 1}`,
       name: player.name,
       rating: player.rating,
       nationalId: player.nationalId,
       state: player.state,
-      status: player.status,
+      status: player.status as 'active' | 'inactive' | 'pending' | 'approved', // Cast to match our Player interface
       gamesPlayed: 0,
       organizerId: currentOrganizer.id,
       registrationDate: new Date().toISOString(),

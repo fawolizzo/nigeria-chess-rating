@@ -1,3 +1,4 @@
+
 // Define the Player interface
 export interface Player {
   id: string;
@@ -5,7 +6,7 @@ export interface Player {
   rating?: number;
   nationalId?: string;
   state?: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'pending' | 'approved'; // Added 'approved' status
   gamesPlayed?: number;
   organizerId?: string;
   registrationDate?: string;
@@ -30,7 +31,7 @@ export interface Pairing {
 export interface Tournament {
   id: string;
   name: string;
-  description?: string; // Added optional description
+  description?: string;
   startDate: string;
   endDate: string;
   venue: string;
@@ -41,7 +42,7 @@ export interface Tournament {
   timeControl: string;
   organizerId: string;
   registrationOpen: boolean;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'processed' | 'pending';
+  status: 'upcoming' | 'ongoing' | 'completed' | 'processed' | 'pending' | 'draft'; // Added 'draft' status
   players?: string[];
   pairings?: Pairing[];
   createdAt: string;
@@ -50,7 +51,7 @@ export interface Tournament {
 
 export interface TournamentFormValues {
   name: string;
-  description: string; // Ensures description is part of the form values
+  description: string;
   startDate: Date;
   endDate: Date;
   location: string;
