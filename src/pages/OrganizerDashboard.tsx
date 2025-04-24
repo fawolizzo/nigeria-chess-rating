@@ -5,7 +5,8 @@ import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { setupNetworkDebugger } from "@/utils/networkDebugger";
-import { useTournamentManager, TournamentFormValues } from "@/hooks/useTournamentManager";
+import { useTournamentManager } from "@/hooks/useTournamentManager"; // Fix the import to use the named export
+import { TournamentFormValues } from "@/hooks/useTournamentManager";
 import { useToast } from "@/hooks/use-toast";
 import { OrganizerDashboardLayout } from "@/components/organizer/dashboard/OrganizerDashboardLayout";
 import { OrganizerDashboardLoader } from "@/components/organizer/dashboard/OrganizerDashboardLoader";

@@ -1,8 +1,37 @@
 
+// Define the Player interface
+export interface Player {
+  id: string;
+  name: string;
+  rating?: number;
+  nationalId?: string;
+  state?: string;
+  status: 'active' | 'inactive' | 'pending';
+  gamesPlayed?: number;
+  organizerId?: string;
+  registrationDate?: string;
+  lastModified?: number;
+  fideId?: string;
+  federation?: string;
+  dateOfBirth?: string;
+  email?: string;
+  phone?: string;
+}
+
+// Define the Pairing interface
+export interface Pairing {
+  roundNumber: number;
+  matches: {
+    whiteId: string;
+    blackId: string;
+    result: '1-0' | '0-1' | '1/2-1/2' | '*';
+  }[];
+}
+
 export interface Tournament {
   id: string;
   name: string;
-  description?: string; // Add optional description
+  description?: string; // Added optional description
   startDate: string;
   endDate: string;
   venue: string;
@@ -18,4 +47,16 @@ export interface Tournament {
   pairings?: Pairing[];
   createdAt: string;
   lastModified: number;
+}
+
+export interface TournamentFormValues {
+  name: string;
+  description: string; // Ensures description is part of the form values
+  startDate: Date;
+  endDate: Date;
+  location: string;
+  city: string;
+  state: string;
+  rounds: number;
+  timeControl: string;
 }
