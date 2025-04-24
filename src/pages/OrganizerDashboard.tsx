@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
@@ -48,7 +49,14 @@ const OrganizerDashboard = () => {
   const { isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
   const [activeTab, setActiveTab] = useState<Tournament['status']>("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
-  const { tournaments, isLoading: tournamentsLoading, loadError: tournamentLoadError, createTournament, loadTournaments, retry } = useTournamentManager();
+  const { 
+    tournaments, 
+    isLoading: tournamentsLoading, 
+    loadError: tournamentLoadError, 
+    createTournament, 
+    loadTournaments, 
+    retry 
+  } = useTournamentManager();
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [loadRetryCount, setLoadRetryCount] = useState(0);
@@ -66,6 +74,7 @@ const OrganizerDashboard = () => {
     });
   }, [isAuthenticated, currentUser, authLoading]);
   
+  // Authentication check & redirect if needed
   useEffect(() => {
     if (!initialAuthCheck && !authLoading) {
       setInitialAuthCheck(true);
@@ -78,6 +87,7 @@ const OrganizerDashboard = () => {
         userStatus: currentUser?.status
       });
       
+      // Check if user is authenticated
       if (!isAuthenticated || !currentUser) {
         const errorMsg = "User not authenticated";
         setAuthError(errorMsg);
@@ -86,6 +96,7 @@ const OrganizerDashboard = () => {
         return;
       }
       
+      // Check if user has correct role
       if (currentUser.role !== 'tournament_organizer') {
         const errorMsg = `User has incorrect role: ${currentUser.role}`;
         setAuthError(errorMsg);
@@ -101,6 +112,7 @@ const OrganizerDashboard = () => {
         return;
       }
       
+      // Check if user is approved
       if (currentUser?.status !== 'approved') {
         const errorMsg = `User not approved: ${currentUser?.status}`;
         setAuthError(errorMsg);
@@ -113,6 +125,7 @@ const OrganizerDashboard = () => {
     }
   }, [currentUser, isAuthenticated, authLoading, navigate, initialAuthCheck]);
   
+  // Load tournaments data after auth check is complete
   useEffect(() => {
     if (initialAuthCheck && currentUser?.role === 'tournament_organizer' && currentUser?.status === 'approved') {
       logMessage(LogLevel.INFO, 'OrganizerDashboard', 'Loading tournaments data');
@@ -137,6 +150,7 @@ const OrganizerDashboard = () => {
         }
       };
       
+      // Set a timeout to detect if loading takes too long
       const timeoutId = setTimeout(() => {
         if (tournamentsLoading) {
           logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Tournament loading timed out');
@@ -173,6 +187,7 @@ const OrganizerDashboard = () => {
     navigate('/login');
   }, [logout, navigate]);
 
+  // Tournament management functions
   const handleCreateTournament = useCallback(
     (data: TournamentFormValues, customTimeControl: string, isCustomTimeControl: boolean) => {
       const success = createTournament(data, customTimeControl, isCustomTimeControl);
@@ -207,8 +222,10 @@ const OrganizerDashboard = () => {
 
   const nextTournament = getUpcomingTournaments()[0];
 
+  // Determine if we are in a loading state
   const isLoading = authLoading || (tournamentsLoading && !hasTimedOut) || !initialAuthCheck;
   
+  // Show loader if in loading state or if there's an error
   if (isLoading || hasTimedOut || loadError || tournamentLoadError) {
     return (
       <OrganizerDashboardLoader 
@@ -222,6 +239,7 @@ const OrganizerDashboard = () => {
     );
   }
 
+  // Show access restricted message if user doesn't have correct role/approval
   if (!currentUser || currentUser.role !== 'tournament_organizer' || currentUser.status !== 'approved') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -240,6 +258,7 @@ const OrganizerDashboard = () => {
     );
   }
 
+  // Render dashboard content
   return (
     <OrganizerDashboardLayout
       currentUser={currentUser}

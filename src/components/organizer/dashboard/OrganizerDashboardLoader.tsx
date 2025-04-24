@@ -21,6 +21,7 @@ export function OrganizerDashboardLoader({
   onRetry: () => void;
   onLogout: () => void;
 }) {
+  // Show skeleton loader when loading
   if (isLoading) {
     return <OrganizerDashboardSkeleton 
       loadingStage={loadingStage || 'loading'} 
@@ -28,6 +29,7 @@ export function OrganizerDashboardLoader({
     />;
   }
 
+  // Show error UI if there's an error or timeout
   if (hasTimedOut || loadError) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

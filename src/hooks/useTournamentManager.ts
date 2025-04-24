@@ -7,6 +7,7 @@ import { Tournament } from "@/lib/mockData";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { getStorageItem, setStorageItem } from "@/utils/storage";
 import { withTimeout } from "@/utils/monitorSync";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface TournamentFormValues {
   name: string;
@@ -191,7 +192,35 @@ export function useTournamentManager() {
         throw new Error('User not authenticated properly');
       }
       
-      // Use withTimeout to prevent hanging operations
+      // First try to get from Supabase
+      try {
+        console.log('Attempting to fetch tournaments from Supabase');
+        const { data: supabaseTournaments, error: supabaseError } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('organizerId', organizerId);
+        
+        if (supabaseError) {
+          console.error('Supabase fetch error:', supabaseError);
+          throw new Error(`Supabase error: ${supabaseError.message}`);
+        }
+        
+        if (supabaseTournaments && supabaseTournaments.length > 0) {
+          console.log(`Successfully loaded ${supabaseTournaments.length} tournaments from Supabase`);
+          setTournaments(supabaseTournaments);
+          setLastSuccessfulLoad(Date.now());
+          await cacheResults(supabaseTournaments);
+          setIsLoading(false);
+          return supabaseTournaments;
+        }
+        
+        console.log('No tournaments found in Supabase, trying storage');
+      } catch (supabaseError) {
+        console.error('Failed to fetch from Supabase, falling back to storage:', supabaseError);
+        logMessage(LogLevel.WARNING, 'useTournamentManager', 'Supabase fetch failed, using storage fallback');
+      }
+      
+      // Use withTimeout to prevent hanging operations when accessing local storage
       const loadedTournaments = await withTimeout<Tournament[]>(
         async () => {
           console.log('Attempting to load tournaments from storage');
