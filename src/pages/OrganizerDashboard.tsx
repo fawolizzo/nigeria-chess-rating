@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOrganizer } from '@/contexts/UserContext';
+import { useOrganizer } from '@/hooks/useOrganizer';
 import { DashboardLoader } from '@/components/organizer/dashboard/DashboardLoader';
 import { DashboardError } from '@/components/organizer/dashboard/DashboardError';
 import { DashboardHeader } from '@/components/organizer/dashboard/DashboardHeader';
