@@ -1,4 +1,3 @@
-
 // Define the Player interface
 export interface Player {
   id: string;

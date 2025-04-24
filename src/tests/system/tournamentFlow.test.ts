@@ -1,4 +1,3 @@
-
 import { 
   setupSystemTest, 
   teardownSystemTest, 
@@ -10,9 +9,6 @@ import {
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { Tournament, Player } from "@/types/tournamentTypes";
 
-/**
- * System tests for the tournament management flow
- */
 const runTournamentFlowTest = async (): Promise<boolean> => {
   try {
     logMessage(LogLevel.INFO, 'SystemTest', '===== STARTING TOURNAMENT FLOW TEST =====');

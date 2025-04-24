@@ -1,12 +1,12 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
-import { Tournament } from "@/types/tournamentTypes";
+import { Tournament, TournamentFormValues } from "@/types/tournamentTypes";
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
-// Export as a named function (not default export)
 export function useTournamentManager() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +41,7 @@ export function useTournamentManager() {
 
   const createTournament = useCallback(
     (
-      tournamentData: any,
+      tournamentData: TournamentFormValues,
       customTimeControl: string,
       isCustomTimeControl: boolean
     ): boolean => {
@@ -68,7 +68,7 @@ export function useTournamentManager() {
         timeControl: isCustomTimeControl ? customTimeControl : tournamentData.timeControl,
         organizerId: currentUser.id,
         registrationOpen: true,
-        status: 'upcoming',
+        status: 'draft',
         createdAt: new Date().toISOString(),
         lastModified: Date.now(),
         pairings: [],
@@ -86,7 +86,7 @@ export function useTournamentManager() {
           title: "Tournament Created",
           description: "Your tournament has been created successfully.",
         });
-        logMessage(LogLevel.SUCCESS, 'useTournamentManager', 'Tournament created successfully', { tournamentId: newTournament.id });
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournament created successfully', { tournamentId: newTournament.id });
         return true;
       } catch (error) {
         toast({
@@ -121,4 +121,4 @@ export function useTournamentManager() {
   };
 }
 
-// Remove any default export if it exists
+export type { TournamentFormValues };
