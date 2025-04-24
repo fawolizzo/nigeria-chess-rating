@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
-import { Tournament, TournamentFormValues } from "@/types/tournamentTypes";
+import { Tournament, TournamentFormData } from "@/types/tournamentTypes";
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { logMessage, LogLevel } from "@/utils/debugLogger";
@@ -22,7 +22,7 @@ export function useTournamentManager() {
       const storedTournaments = localStorage.getItem('ncr_tournaments');
       if (storedTournaments) {
         const parsedTournaments: Tournament[] = JSON.parse(storedTournaments);
-        setTournaments(parsedTournaments.filter(t => t.organizerId === currentUser?.id));
+        setTournaments(parsedTournaments.filter(t => t.organizer_id === currentUser?.id));
         logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournaments loaded from localStorage', { count: parsedTournaments.length });
       } else {
         setTournaments([]);
@@ -41,7 +41,7 @@ export function useTournamentManager() {
 
   const createTournament = useCallback(
     (
-      tournamentData: TournamentFormValues,
+      tournamentData: TournamentFormData,
       customTimeControl: string,
       isCustomTimeControl: boolean
     ): boolean => {
@@ -59,20 +59,17 @@ export function useTournamentManager() {
         id: uuidv4(),
         name: tournamentData.name,
         description: tournamentData.description,
-        startDate: format(tournamentData.startDate, 'yyyy-MM-dd'),
-        endDate: format(tournamentData.endDate, 'yyyy-MM-dd'),
-        venue: tournamentData.location,
-        state: tournamentData.state,
+        start_date: format(tournamentData.startDate, 'yyyy-MM-dd'),
+        end_date: format(tournamentData.endDate, 'yyyy-MM-dd'),
+        location: tournamentData.location,
         city: tournamentData.city,
+        state: tournamentData.state,
         rounds: tournamentData.rounds,
-        timeControl: isCustomTimeControl ? customTimeControl : tournamentData.timeControl,
-        organizerId: currentUser.id,
-        registrationOpen: true,
-        status: 'upcoming', // Changed from 'draft' to 'upcoming' to match allowed statuses
-        createdAt: new Date().toISOString(),
-        lastModified: Date.now(),
-        pairings: [],
-        players: []
+        time_control: isCustomTimeControl ? customTimeControl : tournamentData.timeControl,
+        organizer_id: currentUser.id,
+        status: 'pending', // Use 'pending' instead of 'upcoming' to match the allowed status values
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       try {
@@ -80,7 +77,7 @@ export function useTournamentManager() {
         const tournamentsArray = existingTournaments ? JSON.parse(existingTournaments) : [];
         tournamentsArray.push(newTournament);
         localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsArray));
-        setTournaments(tournamentsArray.filter(t => t.organizerId === currentUser?.id));
+        setTournaments(tournamentsArray.filter(t => t.organizer_id === currentUser?.id));
 
         toast({
           title: "Tournament Created",
@@ -121,4 +118,5 @@ export function useTournamentManager() {
   };
 }
 
-export type { TournamentFormValues };
+// Re-export the type for backward compatibility
+export type { TournamentFormData as TournamentFormValues };

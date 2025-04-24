@@ -89,11 +89,15 @@ export default function CreateTournament() {
       setIsSubmitting(true);
       setErrorMsg(null);
       
+      // Format dates properly for database
+      const formattedStartDate = data.startDate.toISOString().split('T')[0];
+      const formattedEndDate = data.endDate.toISOString().split('T')[0];
+      
       console.log("Submitting tournament data:", {
         name: data.name,
         description: data.description || '',
-        start_date: data.startDate.toISOString(),
-        end_date: data.endDate.toISOString(),
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
         location: data.location,
         city: data.city,
         state: data.state,
@@ -108,8 +112,8 @@ export default function CreateTournament() {
         .insert({
           name: data.name,
           description: data.description || '',
-          start_date: data.startDate.toISOString(),
-          end_date: data.endDate.toISOString(),
+          start_date: formattedStartDate,
+          end_date: formattedEndDate,
           location: data.location,
           city: data.city,
           state: data.state,

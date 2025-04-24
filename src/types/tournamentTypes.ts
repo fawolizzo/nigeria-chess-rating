@@ -1,3 +1,4 @@
+
 export interface Tournament {
   id: string;
   name: string;
@@ -26,4 +27,16 @@ export interface TournamentFormData {
   rounds: number;
   timeControl: string;
   customTimeControl?: string;
+}
+
+// Alias for backward compatibility
+export type TournamentFormValues = TournamentFormData;
+
+// Define Player type to fix TypeScript error in tests
+export interface Player {
+  id: string;
+  name: string;
+  email: string;
+  rating?: number;
+  fide_id?: string;
 }
