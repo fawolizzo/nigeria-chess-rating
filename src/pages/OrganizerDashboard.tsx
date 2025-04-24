@@ -27,7 +27,15 @@ export default function OrganizerDashboard() {
 
   return (
     <div className="container mx-auto py-8">
-      <DashboardHeader organizerName={organizer?.fullName || ''} />
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold">Welcome, {organizer?.fullName || 'Organizer'}</h1>
+        <button
+          onClick={() => navigate('/tournaments/new')}
+          className="bg-nigeria-green hover:bg-nigeria-green-dark text-white px-4 py-2 rounded-md transition-colors"
+        >
+          Create Tournament
+        </button>
+      </div>
       <TournamentGrid tournaments={tournaments} />
     </div>
   );

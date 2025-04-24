@@ -1,8 +1,7 @@
 
-import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
+import { Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from '@/pages/Index';
 import About from '@/pages/About';
 import Login from '@/pages/Login';
@@ -14,45 +13,13 @@ import PlayerProfile from '@/pages/PlayerProfile';
 import Tournaments from '@/pages/Tournaments';
 import TournamentDetails from '@/pages/TournamentDetails';
 import TournamentManagement from '@/pages/TournamentManagement';
+import CreateTournament from '@/pages/CreateTournament';
 import NotFound from '@/pages/NotFound';
+import PendingApproval from '@/pages/PendingApproval';
 import SystemTesting from '@/pages/SystemTesting';
 import CrossPlatformTesting from '@/pages/CrossPlatformTesting';
-import PendingApproval from '@/pages/PendingApproval';
-import { logMessage, LogLevel } from '@/utils/debugLogger';
-import { setupNetworkDebugger } from '@/utils/networkDebugger';
 
 function App() {
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
-
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Set up network debugger
-        setupNetworkDebugger();
-        
-        // Basic app initialization
-        logMessage(LogLevel.INFO, 'App', 'Initializing application');
-        setIsInitialized(true);
-      } catch (error) {
-        logMessage(LogLevel.ERROR, 'App', 'Error initializing application:', error);
-        console.error('App initialization error:', error);
-      }
-    };
-
-    initializeApp();
-  }, []);
-
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-nigeria-green border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Initializing...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <ThemeProvider defaultTheme="light" storageKey="ncr-theme">
       <Router>
@@ -68,13 +35,14 @@ function App() {
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournament/:id" element={<TournamentDetails />} />
           
-          {/* Dashboard routes with alternate paths */}
+          {/* Dashboard routes */}
           <Route path="/officer-dashboard" element={<OfficerDashboard />} />
           <Route path="/officer" element={<Navigate to="/officer-dashboard" replace />} />
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
           <Route path="/organizer" element={<Navigate to="/organizer-dashboard" replace />} />
           
           {/* Tournament management routes */}
+          <Route path="/tournaments/new" element={<CreateTournament />} />
           <Route path="/tournament-management/:id" element={<TournamentManagement />} />
           <Route path="/tournament-management" element={<TournamentManagement />} />
           
