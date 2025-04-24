@@ -54,16 +54,16 @@ const runTournamentFlowTest = async (): Promise<boolean> => {
     const tournament: Tournament = {
       id: `tournament-${Date.now()}`,
       name: testTournament.name,
-      description: '', // Add empty description since it doesn't exist in testTournament
-      start_date: testTournament.startDate, // Use as is since it's already a string
-      end_date: testTournament.endDate, // Use as is since it's already a string
+      description: testTournament.description, // Use the description from testTournament that we added in setup.ts
+      start_date: testTournament.startDate, // Already a string from setup.ts
+      end_date: testTournament.endDate, // Already a string from setup.ts
       location: testTournament.venue,
       city: testTournament.city,
       state: testTournament.state,
       time_control: testTournament.timeControl,
       rounds: testTournament.rounds,
       organizer_id: currentOrganizer.id,
-      status: 'pending', // Changed from 'upcoming' to 'pending'
+      status: 'pending', // Use pending to match our Tournament interface
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
