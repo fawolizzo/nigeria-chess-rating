@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { saveToStorage, clearAllData } from "@/utils/storageUtils";
 import { STORAGE_KEYS } from "@/contexts/user/userContextTypes";
@@ -70,16 +69,15 @@ export const generateTestData = () => {
     ],
     testTournament: {
       name: `Test Tournament ${uniqueId}`,
-      // Change from Date objects to ISO strings to match our updated code
-      startDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
-      endDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], // 3 days later
+      description: `Description for Test Tournament ${uniqueId}`, // Added the description field
+      startDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow as ISO string date
+      endDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0], // 3 days later as ISO string date
       venue: "Test Venue",
       state: "Lagos",
       city: "Lagos",
       rounds: 5,
       timeControl: "90+30",
       registrationOpen: true,
-      description: "Test Tournament Description", // Add description field
       status: "pending" as const // Changed from 'upcoming' to 'pending' to match allowed types
     }
   };
