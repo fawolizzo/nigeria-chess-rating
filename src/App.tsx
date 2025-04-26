@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   createBrowserRouter,
@@ -19,138 +20,141 @@ import TournamentDetails from './pages/TournamentDetails';
 import TournamentManagement from './pages/TournamentManagement';
 import SystemTesting from './pages/SystemTesting';
 import Profile from './pages/Profile';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <Home />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/tournaments",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <Tournaments />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/tournaments/:tournamentId",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <TournamentDetails />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/tournament-management/:tournamentId",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <TournamentManagement />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/players",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <Players />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/about",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <About />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/login",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <Login />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/register",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <Register />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/organizer-dashboard",
     element: (
-      <>
-        <Navbar />
+      <ErrorBoundary>
         <OrganizerDashboard />
-        <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/officer-dashboard",
     element: (
-      <>
-        <Navbar />
+      <ErrorBoundary>
         <OfficerDashboard />
-        <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/pending-approval",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <PendingApproval />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/system-testing",
     element: (
-      <>
+      <ErrorBoundary>
         <Navbar />
         <SystemTesting />
         <Footer />
-      </>
+      </ErrorBoundary>
     ),
   },
   {
     path: "/profile",
-    element: <Profile />,
+    element: (
+      <ErrorBoundary>
+        <Profile />
+      </ErrorBoundary>
+    ),
   },
 ]);
 
 function App() {
   return (
     <div className="app-container">
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+      </ErrorBoundary>
     </div>
   );
 }

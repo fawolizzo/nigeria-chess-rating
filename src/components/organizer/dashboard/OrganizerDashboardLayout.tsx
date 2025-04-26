@@ -21,12 +21,15 @@ export function OrganizerDashboardLayout({
   onCreateTournament: () => void;
   children: React.ReactNode;
 }) {
+  // Add null check for currentUser to prevent accessing properties when it's null
+  const userName = currentUser?.fullName || 'User';
+  
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
       <div className="max-w-7xl mx-auto pt-28 pb-20 px-4 sm:px-6 lg:px-8">
         <OrganizerDashboardHeader
-          userName={currentUser.fullName}
+          userName={userName}
           onCreateTournament={onCreateTournament}
         />
         <OrganizerStatsGrid

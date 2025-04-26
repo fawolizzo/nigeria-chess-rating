@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,12 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
-      logMessage(LogLevel.INFO, 'Navbar', 'User logging out', { userId: currentUser?.id });
+      logMessage(LogLevel.INFO, 'Navbar', 'User logging out', { 
+        userId: currentUser?.id 
+      });
+      
+      // Set isOpen to false immediately to avoid UI issues during logout
+      setIsOpen(false);
       
       await signOut().catch((error) => {
         logMessage(LogLevel.ERROR, 'Navbar', 'Error during Supabase sign out', { 
@@ -38,6 +44,7 @@ const Navbar = () => {
         });
       });
       
+      // Call the logout function which will clear currentUser
       logout();
       
       try {
@@ -51,8 +58,10 @@ const Navbar = () => {
         description: "You have been successfully logged out.",
       });
       
-      navigate("/login");
-      setIsOpen(false);
+      // Navigate to login after a brief delay to allow state updates
+      setTimeout(() => {
+        navigate("/login");
+      }, 100);
     } catch (error) {
       logMessage(LogLevel.ERROR, 'Navbar', 'Error during logout', { 
         error: error instanceof Error ? error.message : String(error) 
@@ -66,9 +75,19 @@ const Navbar = () => {
     }
   };
 
+  // Safely determine dashboard link, with a default
   const dashboardLink = currentUser?.role === 'tournament_organizer' 
     ? '/organizer-dashboard' 
     : '/officer-dashboard';
+
+  // Get display name safely
+  const displayName = currentUser?.fullName || 'User';
+  // Get first letter for avatar safely
+  const avatarInitial = displayName ? displayName.charAt(0).toUpperCase() : 'U';
+  // Get role text safely
+  const roleText = currentUser?.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer';
+  // Get approval status safely
+  const pendingText = currentUser?.status !== 'approved' ? ' (Pending)' : '';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
@@ -97,19 +116,19 @@ const Navbar = () => {
                 <Button variant="ghost" className="relative h-8 flex items-center gap-2" size="sm">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="bg-nigeria-green text-white">
-                      {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+                      {avatarInitial}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium hidden sm:inline">{currentUser.fullName}</span>
+                  <span className="text-sm font-medium hidden sm:inline">{displayName}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
-                    <span>{currentUser.fullName}</span>
+                    <span>{displayName}</span>
                     <span className="text-xs text-muted-foreground">
-                      {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
-                      {currentUser.status !== 'approved' && ' (Pending)'}
+                      {roleText}
+                      {pendingText}
                     </span>
                   </div>
                 </DropdownMenuLabel>
@@ -200,21 +219,21 @@ const Navbar = () => {
                         variant="outline" 
                         className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                       >
-                        {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'} Dashboard
+                        {roleText} Dashboard
                       </Button>
                     </Link>
                     
                     <div className="py-2 flex items-center px-2">
                       <Avatar className="h-8 w-8 mr-2">
                         <AvatarFallback className="bg-nigeria-green text-white">
-                          {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+                          {avatarInitial}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="text-sm font-medium">{currentUser.fullName}</div>
+                        <div className="text-sm font-medium">{displayName}</div>
                         <div className="text-xs text-muted-foreground">
-                          {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
-                          {currentUser.status !== 'approved' && ' (Pending)'}
+                          {roleText}
+                          {pendingText}
                         </div>
                       </div>
                     </div>
