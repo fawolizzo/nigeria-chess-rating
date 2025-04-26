@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -95,7 +94,8 @@ export const useLoginForm = () => {
             });
             
             logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful');
-            // Do NOT set isLoading to false here - let Login component handle the state transition
+            
+            // Important: Keep isLoading true so that the Login component handles the redirection
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -133,8 +133,10 @@ export const useLoginForm = () => {
             toast({
               title: "Login Successful",
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
+              duration: 3000, // Show for 3 seconds
             });
-            // Do NOT set isLoading to false here - let Login component handle the state transition
+            
+            // Important: Keep isLoading true so that the Login component handles the redirection
           } else {
             throw new Error("Invalid credentials. Please check your email and password.");
           }

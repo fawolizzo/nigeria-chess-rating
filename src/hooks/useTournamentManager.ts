@@ -32,19 +32,24 @@ export function useTournamentManager() {
       const storedTournaments = localStorage.getItem('ncr_tournaments');
       if (storedTournaments) {
         const parsedTournaments: Tournament[] = JSON.parse(storedTournaments);
-        const userTournaments = parsedTournaments.filter(t => t.organizer_id === currentUser?.id);
-        setTournaments(userTournaments);
         
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournaments loaded from localStorage', { 
-          total: parsedTournaments.length,
-          userTournaments: userTournaments.length,
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournaments raw data loaded', { 
+          totalCount: parsedTournaments.length,
+        });
+        
+        // Explicitly filter by the current user's ID
+        const userTournaments = parsedTournaments.filter(t => t.organizer_id === currentUser?.id);
+        
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'Filtered tournaments for current user', { 
+          userTournamentsCount: userTournaments.length,
           userId: currentUser?.id
         });
         
+        setTournaments(userTournaments);
         return userTournaments;
       } else {
-        setTournaments([]);
         logMessage(LogLevel.INFO, 'useTournamentManager', 'No tournaments found in localStorage');
+        setTournaments([]);
         return [];
       }
     } catch (error) {
@@ -73,6 +78,11 @@ export function useTournamentManager() {
         return false;
       }
 
+      logMessage(LogLevel.INFO, 'useTournamentManager', 'Creating tournament', { 
+        tournamentName: tournamentData.name,
+        userId: currentUser.id
+      });
+
       const newTournament: Tournament = {
         id: uuidv4(),
         name: tournamentData.name,
@@ -93,6 +103,12 @@ export function useTournamentManager() {
       try {
         const existingTournaments = localStorage.getItem('ncr_tournaments');
         const tournamentsArray = existingTournaments ? JSON.parse(existingTournaments) : [];
+        
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'Adding new tournament to storage', { 
+          existingCount: tournamentsArray.length,
+          newTournamentId: newTournament.id
+        });
+        
         tournamentsArray.push(newTournament);
         localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsArray));
         

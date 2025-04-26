@@ -17,17 +17,19 @@ const Login = () => {
   const [showTimeout, setShowTimeout] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [redirectAttempts, setRedirectAttempts] = useState(0);
   
   // Debug logging for login page rendering
   useEffect(() => {
     logMessage(LogLevel.INFO, 'Login', 'Login page rendered', {
       isLoading,
       currentUserExists: !!currentUser,
-      redirectingStatus: redirecting
+      redirectingStatus: redirecting,
+      redirectAttempts
     });
-  }, [isLoading, currentUser, redirecting]);
+  }, [isLoading, currentUser, redirecting, redirectAttempts]);
 
-  // Handle redirect after successful login - Fixed to properly handle redirection
+  // Handle redirect after successful login with improved reliability
   useEffect(() => {
     if (!isLoading && currentUser && !redirecting) {
       setRedirecting(true);
@@ -41,12 +43,26 @@ const Login = () => {
       const redirectPath = getRedirectPath(currentUser);
       logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`);
       
-      // Add a small delay to ensure state updates before navigation
-      setTimeout(() => {
+      // Use both immediate and delayed navigation to improve reliability
+      try {
         navigate(redirectPath, { replace: true });
-      }, 500);
+        
+        // Add a backup redirect with a small delay
+        setTimeout(() => {
+          setRedirectAttempts(prev => prev + 1);
+          if (window.location.pathname === '/login') {
+            logMessage(LogLevel.WARNING, 'Login', 'Delayed redirect triggered', {
+              attempt: redirectAttempts + 1,
+              currentPath: window.location.pathname
+            });
+            navigate(redirectPath, { replace: true });
+          }
+        }, 800);
+      } catch (error) {
+        logMessage(LogLevel.ERROR, 'Login', 'Navigation error', { error });
+      }
     }
-  }, [currentUser, isLoading, navigate, redirecting]);
+  }, [currentUser, isLoading, navigate, redirecting, redirectAttempts]);
   
   // Handle loading states and timeouts
   useEffect(() => {
