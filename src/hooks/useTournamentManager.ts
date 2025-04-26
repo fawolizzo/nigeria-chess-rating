@@ -82,20 +82,27 @@ export function useTournamentManager() {
         tournamentName: tournamentData.name,
         userId: currentUser.id
       });
+      
+      // Format dates properly - ensure they are in YYYY-MM-DD format for consistency
+      const formattedStartDate = format(tournamentData.startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(tournamentData.endDate, 'yyyy-MM-dd');
+      
+      // IMPORTANT FIX: Ensure consistent field naming with rest of the application
+      const timeControlValue = isCustomTimeControl ? customTimeControl : tournamentData.timeControl;
 
       const newTournament: Tournament = {
         id: uuidv4(),
         name: tournamentData.name,
         description: tournamentData.description,
-        start_date: format(tournamentData.startDate, 'yyyy-MM-dd'),
-        end_date: format(tournamentData.endDate, 'yyyy-MM-dd'),
+        start_date: formattedStartDate,  // Use snake_case for consistency
+        end_date: formattedEndDate,      // Use snake_case for consistency
         location: tournamentData.location,
         city: tournamentData.city,
         state: tournamentData.state,
         rounds: tournamentData.rounds,
-        time_control: isCustomTimeControl ? customTimeControl : tournamentData.timeControl,
+        time_control: timeControlValue,  // Use snake_case for consistency
         organizer_id: currentUser.id,
-        status: 'pending',
+        status: 'pending',               // Always set status to 'pending' for new tournaments
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -118,9 +125,12 @@ export function useTournamentManager() {
 
         toast({
           title: "Tournament Created",
-          description: "Your tournament has been created successfully.",
+          description: "Your tournament has been created successfully and is pending approval.",
         });
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournament created successfully', { tournamentId: newTournament.id });
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournament created successfully', { 
+          tournamentId: newTournament.id,
+          status: newTournament.status
+        });
         return true;
       } catch (error) {
         toast({

@@ -8,9 +8,10 @@ import ApprovedTournaments from "./ApprovedTournaments";
 import ApprovedOrganizers from "./ApprovedOrganizers";
 import { useDashboard } from "@/contexts/OfficerDashboardContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 const OfficerDashboardTabs: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("organizers");
+  const [activeTab, setActiveTab] = useState<string>("pending-tournaments");
   const [mounted, setMounted] = useState(false);
   const { 
     pendingTournaments, 
@@ -26,8 +27,23 @@ const OfficerDashboardTabs: React.FC = () => {
     setMounted(true);
   }, []);
 
+  // Log the counts of tournaments for debugging
+  useEffect(() => {
+    logMessage(LogLevel.INFO, 'OfficerDashboardTabs', 'Dashboard data loaded', {
+      pendingTournamentsCount: pendingTournaments.length,
+      completedTournamentsCount: completedTournaments.length,
+      pendingPlayersCount: pendingPlayers.length,
+      pendingOrganizersCount: pendingOrganizers.length
+    });
+  }, [pendingTournaments, completedTournaments, pendingPlayers, pendingOrganizers]);
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    
+    // If changing to pending-tournaments tab, refresh to ensure latest data
+    if (value === "pending-tournaments") {
+      refreshDashboard();
+    }
   };
   
   if (!mounted) {
@@ -53,7 +69,7 @@ const OfficerDashboardTabs: React.FC = () => {
   return (
     <div>
       <Tabs 
-        defaultValue="organizers" 
+        defaultValue="pending-tournaments" 
         value={activeTab} 
         onValueChange={handleTabChange}
         className="w-full"

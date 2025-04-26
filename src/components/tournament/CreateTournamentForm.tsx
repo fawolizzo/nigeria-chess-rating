@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,19 +32,17 @@ const tournamentSchema = z.object({
   ),
   timeControl: z.string().min(2, "Time control is required")
 }).refine(data => {
-  // Ensure both dates are valid Date objects
   return data.startDate instanceof Date && !isNaN(data.startDate.getTime()) &&
          data.endDate instanceof Date && !isNaN(data.endDate.getTime());
 }, {
   message: "Both start date and end date must be valid dates",
   path: ["startDate"]
 }).refine(data => {
-  // Only check if end date is after start date if both dates are valid
   if (data.startDate instanceof Date && !isNaN(data.startDate.getTime()) &&
       data.endDate instanceof Date && !isNaN(data.endDate.getTime())) {
     return data.endDate >= data.startDate;
   }
-  return true; // Skip this validation if dates aren't valid (first refine will catch that)
+  return true;
 }, {
   message: "End date must be on or after start date",
   path: ["endDate"]
@@ -75,13 +72,11 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
       rounds: 9,
       timeControl: ""
     },
-    mode: "onChange" // Validate on change instead of just on submit
+    mode: "onChange"
   });
 
-  // Watch for form state changes to update the isFormValid state
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      // Check if the form is valid
       form.trigger().then(isValid => {
         const hasCustomTimeControlError = isCustomTimeControl && !customTimeControl;
         setIsFormValid(isValid && !hasCustomTimeControlError);
@@ -93,10 +88,16 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
 
   const handleSubmit = (data: TournamentFormValues) => {
     if (!isFormValid) return;
+    
+    console.log("Creating tournament with data:", {
+      ...data, 
+      timeControl: isCustomTimeControl ? customTimeControl : data.timeControl,
+      isCustomTimeControl
+    });
+    
     onSubmit(data, customTimeControl, isCustomTimeControl);
   };
 
-  // Format date for display in debug messages (if needed)
   const formatDateForDisplay = (date: Date | undefined) => {
     if (!date) return "undefined";
     if (!(date instanceof Date) || isNaN(date.getTime())) return "Invalid Date";
@@ -299,7 +300,6 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
                             setCustomTimeControlError(
                               e.target.value ? null : "Custom time control is required"
                             );
-                            // Update form validity when custom time control changes
                             form.trigger().then(isValid => {
                               setIsFormValid(isValid && !!e.target.value);
                             });

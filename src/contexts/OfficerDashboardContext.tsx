@@ -44,7 +44,9 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       
       logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Loading dashboard data');
       
-      // Targeted sync with limited scope - only sync critical keys
+      // Force synchronization of critical storage before loading data
+      // This ensures we have the latest data from localStorage
+      await forceSync();
       await Promise.all([
         syncStorage(['ncr_users']),
         syncStorage(['ncr_players']),
@@ -53,8 +55,18 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       
       // Load tournaments based on their status
       const allTournaments = getAllTournaments();
-      setPendingTournaments(allTournaments.filter(t => t.status === "pending"));
-      setCompletedTournaments(allTournaments.filter(t => t.status === "completed"));
+      
+      // Debug the tournaments found - this will help find issues
+      logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Found ${allTournaments.length} total tournaments:`, 
+        allTournaments.map(t => ({ id: t.id, name: t.name, status: t.status })));
+      
+      const pending = allTournaments.filter(t => t.status === "pending");
+      const completed = allTournaments.filter(t => t.status === "completed");
+      
+      logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Filtered tournaments: ${pending.length} pending, ${completed.length} completed`);
+      
+      setPendingTournaments(pending);
+      setCompletedTournaments(completed);
       
       // Load pending players
       const allPlayers = getAllPlayers();
@@ -67,7 +79,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       );
       setPendingOrganizers(filteredOrganizers);
       
-      logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Dashboard data loaded');
+      logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Dashboard data loaded successfully');
       
     } catch (error) {
       logMessage(LogLevel.ERROR, 'OfficerDashboardContext', "Error loading dashboard data:", error);
@@ -82,9 +94,9 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       // Add a small delay before allowing another load
       setTimeout(() => {
         loadingInProgressRef.current = false;
-      }, 2000);
+      }, 1000);
     }
-  }, [toast]);
+  }, [toast, forceSync]);
   
   // Clean up on unmount
   useEffect(() => {
@@ -95,8 +107,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, []);
   
-  // MAJOR CHANGE: Removed auto-refresh completely
-  // Only load data on mount and when refreshKey changes (manual refresh)
+  // Load data on mount and when refreshKey changes (manual refresh)
   useEffect(() => {
     // Clear any existing timeout
     if (dataTimeoutRef.current) {
@@ -105,8 +116,6 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     
     // Load data immediately - only when component mounts or refresh is triggered
     loadAllData();
-    
-    // REMOVED: Periodic auto-refresh has been removed to eliminate blinking
     
     return () => {
       if (dataTimeoutRef.current) {
@@ -119,8 +128,8 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Manual dashboard refresh requested');
     setRefreshKey(prev => prev + 1);
     toast({
-      title: "Dashboard refreshed",
-      description: "The dashboard has been refreshed with the latest data.",
+      title: "Refreshing dashboard...",
+      description: "The dashboard is being refreshed with the latest data.",
     });
   }, [toast]);
   

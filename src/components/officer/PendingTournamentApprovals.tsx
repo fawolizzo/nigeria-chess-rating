@@ -56,16 +56,25 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
     }
   };
 
-  // Format date helper function
-  const formatDate = (dateString: string) => {
+  // Format date helper function - handles both date strings and date objects
+  const formatDate = (dateInput: string | Date) => {
     try {
-      const date = parseISO(dateString);
-      if (isValid(date)) {
-        return format(date, "MMM dd, yyyy");
-      } 
-      return dateString;
+      // If it's already a Date object
+      if (dateInput instanceof Date) {
+        return isValid(dateInput) ? format(dateInput, "MMM dd, yyyy") : "Invalid date";
+      }
+      
+      // If it's a string that needs parsing
+      if (typeof dateInput === 'string') {
+        // Handle both formats: ISO strings and yyyy-MM-dd format
+        const date = dateInput.includes('T') ? parseISO(dateInput) : new Date(dateInput);
+        return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
+      }
+      
+      return "Unknown date";
     } catch (error) {
-      return dateString;
+      console.error("Error formatting date:", { dateInput });
+      return "Invalid date";
     }
   };
 
@@ -101,11 +110,11 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
                 <div className="flex flex-col gap-1 text-sm text-muted-foreground mb-3">
                   <div>
                     <Calendar className="inline-block h-4 w-4 mr-1" />
-                    {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
+                    {formatDate(tournament.start_date || tournament.startDate)} - {formatDate(tournament.end_date || tournament.endDate)}
                   </div>
                   <div>Location: {tournament.location}, {tournament.city}, {tournament.state}</div>
                   <div>Rounds: {tournament.rounds}</div>
-                  <div>Time Control: {tournament.timeControl}</div>
+                  <div>Time Control: {tournament.time_control || tournament.timeControl}</div>
                 </div>
                 <div className="flex justify-end gap-2 mt-2">
                   <Button
