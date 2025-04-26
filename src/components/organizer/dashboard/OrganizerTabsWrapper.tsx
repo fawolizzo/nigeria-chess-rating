@@ -3,6 +3,7 @@ import React from "react";
 import { OrganizerTabs } from "@/components/organizer/OrganizerTabs";
 import { CreateTournamentForm } from "@/components/tournament/CreateTournamentForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { TournamentFormData } from "@/types/tournamentTypes";
 
 export function OrganizerTabsWrapper({
   activeTab,
@@ -23,7 +24,7 @@ export function OrganizerTabsWrapper({
   onManage: (id: string) => void;
   isCreateTournamentOpen: boolean;
   setIsCreateTournamentOpen: (open: boolean) => void;
-  handleCreateTournament: (data: any, customTimeControl: string, isCustomTimeControl: boolean) => void;
+  handleCreateTournament: (data: TournamentFormData, customTimeControl: string, isCustomTimeControl: boolean) => boolean;
 }) {
   return (
     <>

@@ -10,13 +10,16 @@ import { DashboardError } from '@/components/organizer/dashboard/DashboardError'
 import { format } from 'date-fns';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { useToast } from '@/hooks/use-toast';
+import { TournamentFormData } from '@/types/tournamentTypes';
 
 export default function OrganizerDashboard() {
   const navigate = useNavigate();
   const { currentUser, logout } = useUser();
-  const { tournaments, isLoading, loadError, loadTournaments } = useTournamentManager();
+  const { tournaments, isLoading, loadError, loadTournaments, createTournament } = useTournamentManager();
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [activeTab, setActiveTab] = useState('upcoming');
+  const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
 
   // Ensure user is authenticated and authorized
   useEffect(() => {
@@ -66,8 +69,28 @@ export default function OrganizerDashboard() {
   }, [isInitialized, currentUser, loadTournaments]);
   
   // Handle create tournament action
-  const handleCreateTournament = () => {
-    navigate('/tournaments/new');
+  const handleCreateTournament = (data: TournamentFormData, customTimeControl: string, isCustomTimeControl: boolean) => {
+    const success = createTournament(data, customTimeControl, isCustomTimeControl);
+    if (success) {
+      setIsCreateTournamentOpen(false);
+      setActiveTab('pending'); // Switch to pending tab to show the new tournament
+    }
+    return success;
+  };
+
+  // Open create tournament modal
+  const onCreateTournament = () => {
+    setIsCreateTournamentOpen(true);
+  };
+  
+  // Handle tournament details view
+  const onViewDetails = (id: string) => {
+    navigate(`/tournaments/${id}`);
+  };
+  
+  // Handle tournament management
+  const onManage = (id: string) => {
+    navigate(`/tournament-management/${id}`);
   };
   
   // Handle logout action
@@ -123,12 +146,19 @@ export default function OrganizerDashboard() {
       filterTournamentsByStatus={filterTournamentsByStatus}
       nextTournament={nextTournament}
       formatDisplayDate={formatDisplayDate}
-      onCreateTournament={handleCreateTournament}
+      onCreateTournament={onCreateTournament}
       onLogout={handleLogout}
     >
       <OrganizerTabsWrapper 
-        tournaments={tournaments}
-        formatDisplayDate={formatDisplayDate}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        filterTournamentsByStatus={filterTournamentsByStatus}
+        onCreateTournament={onCreateTournament}
+        onViewDetails={onViewDetails}
+        onManage={onManage}
+        isCreateTournamentOpen={isCreateTournamentOpen}
+        setIsCreateTournamentOpen={setIsCreateTournamentOpen}
+        handleCreateTournament={handleCreateTournament}
       />
     </OrganizerDashboardLayout>
   );
