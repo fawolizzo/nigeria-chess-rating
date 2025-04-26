@@ -35,14 +35,24 @@ const OfficerDashboardTabs: React.FC = () => {
       pendingPlayersCount: pendingPlayers.length,
       pendingOrganizersCount: pendingOrganizers.length
     });
+    
+    // More detailed logging for debugging
+    if (pendingTournaments.length > 0) {
+      console.log("Pending tournaments in dashboard:", pendingTournaments);
+    } else {
+      console.log("No pending tournaments found in dashboard");
+    }
   }, [pendingTournaments, completedTournaments, pendingPlayers, pendingOrganizers]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     
-    // If changing to pending-tournaments tab, refresh to ensure latest data
+    // Refresh dashboard when changing tabs to ensure latest data
+    refreshDashboard();
+    
+    // Specifically fetch fresh data when changing to pending-tournaments tab
     if (value === "pending-tournaments") {
-      refreshDashboard();
+      logMessage(LogLevel.INFO, 'OfficerDashboardTabs', 'Refreshing pending tournaments tab');
     }
   };
   

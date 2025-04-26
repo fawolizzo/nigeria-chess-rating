@@ -53,8 +53,27 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
         syncStorage(['ncr_tournaments'])
       ]);
       
-      // Load tournaments based on their status
-      const allTournaments = getAllTournaments();
+      // Load tournaments directly from localStorage for most up-to-date data
+      const storedTournamentsJSON = localStorage.getItem('ncr_tournaments');
+      let allTournaments: Tournament[] = [];
+      
+      if (storedTournamentsJSON) {
+        try {
+          allTournaments = JSON.parse(storedTournamentsJSON);
+          
+          // Debug the parsed tournaments
+          logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Successfully parsed ${allTournaments.length} tournaments from localStorage`);
+          console.log("Parsed tournaments:", allTournaments);
+        } catch (parseError) {
+          logMessage(LogLevel.ERROR, 'OfficerDashboardContext', 'Error parsing tournaments from localStorage:', parseError);
+          // Fallback to the getAllTournaments function
+          allTournaments = getAllTournaments();
+        }
+      } else {
+        // Fallback to getAllTournaments function if no localStorage data
+        allTournaments = getAllTournaments();
+        logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'No tournaments in localStorage, using getAllTournaments() function');
+      }
       
       // Debug the tournaments found - this will help find issues
       logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Found ${allTournaments.length} total tournaments:`, 
@@ -64,6 +83,8 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       const completed = allTournaments.filter(t => t.status === "completed");
       
       logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Filtered tournaments: ${pending.length} pending, ${completed.length} completed`);
+      console.log("Pending tournaments:", pending);
+      console.log("Completed tournaments:", completed);
       
       setPendingTournaments(pending);
       setCompletedTournaments(completed);
@@ -106,6 +127,22 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       }
     };
   }, []);
+  
+  // Set up storage event listener for real-time updates
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'ncr_tournaments') {
+        logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Tournament data changed in another window/tab, refreshing');
+        loadAllData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [loadAllData]);
   
   // Load data on mount and when refreshKey changes (manual refresh)
   useEffect(() => {

@@ -24,6 +24,10 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
         status: "upcoming"
       };
       
+      // Log before update for debugging
+      console.log("Approving tournament:", tournament);
+      console.log("Updated tournament data:", updatedTournament);
+      
       updateTournament(updatedTournament);
       
       toast({
@@ -43,6 +47,10 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
         ...tournament,
         status: "rejected"
       };
+      
+      // Log before update for debugging
+      console.log("Rejecting tournament:", tournament);
+      console.log("Updated tournament data:", updatedTournament);
       
       updateTournament(updatedTournament);
       
@@ -115,6 +123,7 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
                   <div>Location: {tournament.location}, {tournament.city}, {tournament.state}</div>
                   <div>Rounds: {tournament.rounds}</div>
                   <div>Time Control: {tournament.time_control || tournament.timeControl}</div>
+                  <div className="text-xs text-gray-400">Tournament ID: {tournament.id}</div>
                 </div>
                 <div className="flex justify-end gap-2 mt-2">
                   <Button

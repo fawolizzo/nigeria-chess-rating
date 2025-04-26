@@ -87,22 +87,22 @@ export function useTournamentManager() {
       const formattedStartDate = format(tournamentData.startDate, 'yyyy-MM-dd');
       const formattedEndDate = format(tournamentData.endDate, 'yyyy-MM-dd');
       
-      // IMPORTANT FIX: Ensure consistent field naming with rest of the application
+      // Use consistent field naming with the rest of the application
       const timeControlValue = isCustomTimeControl ? customTimeControl : tournamentData.timeControl;
 
       const newTournament: Tournament = {
         id: uuidv4(),
         name: tournamentData.name,
-        description: tournamentData.description,
-        start_date: formattedStartDate,  // Use snake_case for consistency
-        end_date: formattedEndDate,      // Use snake_case for consistency
+        description: tournamentData.description || "",
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
         location: tournamentData.location,
         city: tournamentData.city,
         state: tournamentData.state,
         rounds: tournamentData.rounds,
-        time_control: timeControlValue,  // Use snake_case for consistency
+        time_control: timeControlValue,
         organizer_id: currentUser.id,
-        status: 'pending',               // Always set status to 'pending' for new tournaments
+        status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -116,8 +116,16 @@ export function useTournamentManager() {
           newTournamentId: newTournament.id
         });
         
+        // Debug log to verify tournament data before saving
+        console.log("Saving tournament to localStorage:", newTournament);
+        
         tournamentsArray.push(newTournament);
         localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsArray));
+        
+        // Broadcast a storage sync event to notify other tabs/windows
+        if (window.sendSyncEvent) {
+          window.sendSyncEvent('STORAGE_UPDATED', 'ncr_tournaments');
+        }
         
         // Update local state with user's tournaments only
         const userTournaments = tournamentsArray.filter(t => t.organizer_id === currentUser?.id);
