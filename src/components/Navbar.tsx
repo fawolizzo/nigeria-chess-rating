@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -115,7 +114,10 @@ const Navbar = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(dashboardLink)}>
+                <DropdownMenuItem 
+                  onClick={() => navigate(dashboardLink)}
+                  className={isActive(dashboardLink) ? "bg-accent text-accent-foreground font-medium" : ""}
+                >
                   <User className="mr-2 h-4 w-4" />
                   Dashboard
                 </DropdownMenuItem>
