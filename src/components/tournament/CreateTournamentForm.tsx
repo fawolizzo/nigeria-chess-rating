@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,20 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { NIGERIAN_STATES, TIME_CONTROLS } from "@/lib/nigerianStates";
 import { TournamentFormValues } from "@/hooks/useTournamentManager";
+import { format } from "date-fns";
 
 const tournamentSchema = z.object({
   name: z.string().min(5, "Tournament name must be at least 5 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  startDate: z.date().refine(date => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date >= today;
-  }, { message: "Start date cannot be in the past" }),
-  endDate: z.date().refine(date => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date >= today;
-  }, { message: "End date cannot be in the past" }),
+  startDate: z.date({
+    required_error: "Start date is required",
+    invalid_type_error: "Start date is invalid",
+  }),
+  endDate: z.date({
+    required_error: "End date is required",
+    invalid_type_error: "End date is invalid",
+  }),
   location: z.string().min(3, "Location is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
@@ -32,8 +32,22 @@ const tournamentSchema = z.object({
     z.number().min(1)
   ),
   timeControl: z.string().min(2, "Time control is required")
-}).refine(data => data.endDate >= data.startDate, {
-  message: "End date must be after start date",
+}).refine(data => {
+  // Ensure both dates are valid Date objects
+  return data.startDate instanceof Date && !isNaN(data.startDate.getTime()) &&
+         data.endDate instanceof Date && !isNaN(data.endDate.getTime());
+}, {
+  message: "Both start date and end date must be valid dates",
+  path: ["startDate"]
+}).refine(data => {
+  // Only check if end date is after start date if both dates are valid
+  if (data.startDate instanceof Date && !isNaN(data.startDate.getTime()) &&
+      data.endDate instanceof Date && !isNaN(data.endDate.getTime())) {
+    return data.endDate >= data.startDate;
+  }
+  return true; // Skip this validation if dates aren't valid (first refine will catch that)
+}, {
+  message: "End date must be on or after start date",
   path: ["endDate"]
 });
 
@@ -46,6 +60,7 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
   const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
   const [customTimeControl, setCustomTimeControl] = useState("");
   const [customTimeControlError, setCustomTimeControlError] = useState<string | null>(null);
+  const [isFormValid, setIsFormValid] = useState(false);
 
   const form = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentSchema),
@@ -60,10 +75,32 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
       rounds: 9,
       timeControl: ""
     },
+    mode: "onChange" // Validate on change instead of just on submit
   });
 
+  // Watch for form state changes to update the isFormValid state
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      // Check if the form is valid
+      form.trigger().then(isValid => {
+        const hasCustomTimeControlError = isCustomTimeControl && !customTimeControl;
+        setIsFormValid(isValid && !hasCustomTimeControlError);
+      });
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form, form.watch, isCustomTimeControl, customTimeControl]);
+
   const handleSubmit = (data: TournamentFormValues) => {
+    if (!isFormValid) return;
     onSubmit(data, customTimeControl, isCustomTimeControl);
+  };
+
+  // Format date for display in debug messages (if needed)
+  const formatDateForDisplay = (date: Date | undefined) => {
+    if (!date) return "undefined";
+    if (!(date instanceof Date) || isNaN(date.getTime())) return "Invalid Date";
+    return format(date, "yyyy-MM-dd");
   };
 
   return (
@@ -126,6 +163,7 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
                 <DatePicker
                   date={field.value}
                   setDate={field.onChange}
+                  minDate={form.getValues("startDate")}
                 />
                 <FormMessage />
               </FormItem>
@@ -258,7 +296,13 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
                           value={customTimeControl}
                           onChange={(e) => {
                             setCustomTimeControl(e.target.value);
-                            // setCustomTimeControlError(validateTimeControl(e.target.value));
+                            setCustomTimeControlError(
+                              e.target.value ? null : "Custom time control is required"
+                            );
+                            // Update form validity when custom time control changes
+                            form.trigger().then(isValid => {
+                              setIsFormValid(isValid && !!e.target.value);
+                            });
                           }}
                           placeholder="e.g., 90min or 15min + 10sec"
                           className={customTimeControlError ? "border-red-500" : ""}
@@ -288,7 +332,12 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">Create Tournament</Button>
+          <Button 
+            type="submit" 
+            disabled={!isFormValid || form.formState.isSubmitting}
+          >
+            Create Tournament
+          </Button>
         </div>
       </form>
     </Form>
