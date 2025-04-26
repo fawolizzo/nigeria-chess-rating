@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useToast } from "@/hooks/use-toast";
+import { CircleDot } from "lucide-react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,7 +66,6 @@ const Navbar = () => {
     }
   };
 
-  // Dynamically set dashboard route based on user's role
   const dashboardLink = currentUser?.role === 'tournament_organizer' 
     ? '/organizer-dashboard' 
     : '/officer-dashboard';
@@ -116,10 +116,17 @@ const Navbar = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => navigate(dashboardLink)}
-                  className={isActive(dashboardLink) ? "bg-accent text-accent-foreground font-medium" : ""}
+                  className={isActive(dashboardLink) 
+                    ? "bg-accent text-accent-foreground font-medium flex items-center justify-between" 
+                    : "flex items-center justify-between"}
                 >
-                  <User className="mr-2 h-4 w-4" />
-                  Dashboard
+                  <div className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </div>
+                  {isActive(dashboardLink) && (
+                    <CircleDot className="text-green-500 h-4 w-4" />
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 h-4 w-4" />
