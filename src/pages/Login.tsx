@@ -25,9 +25,9 @@ const Login = () => {
       currentUserExists: !!currentUser,
       redirectingStatus: redirecting
     });
-  }, []);
+  }, [isLoading, currentUser, redirecting]);
 
-  // Handle redirect after successful login
+  // Handle redirect after successful login - Fixed to properly handle redirection
   useEffect(() => {
     if (!isLoading && currentUser && !redirecting) {
       setRedirecting(true);
@@ -41,8 +41,10 @@ const Login = () => {
       const redirectPath = getRedirectPath(currentUser);
       logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`);
       
-      // Force immediate navigation
-      navigate(redirectPath, { replace: true });
+      // Add a small delay to ensure state updates before navigation
+      setTimeout(() => {
+        navigate(redirectPath, { replace: true });
+      }, 500);
     }
   }, [currentUser, isLoading, navigate, redirecting]);
   

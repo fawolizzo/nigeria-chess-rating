@@ -95,6 +95,7 @@ export const useLoginForm = () => {
             });
             
             logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful');
+            // Do NOT set isLoading to false here - let Login component handle the state transition
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -133,6 +134,7 @@ export const useLoginForm = () => {
               title: "Login Successful",
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
             });
+            // Do NOT set isLoading to false here - let Login component handle the state transition
           } else {
             throw new Error("Invalid credentials. Please check your email and password.");
           }
@@ -161,16 +163,6 @@ export const useLoginForm = () => {
       
       setIsLoading(false);
       setLoginStage("error");
-    } finally {
-      if (loginStage === "success") {
-        // Don't reset loading state immediately on success to prevent UI flicker
-        // The Login component will handle the state transition and navigation
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 300);
-      } else if (loginStage !== "success") {
-        setIsLoading(false);
-      }
     }
   };
 

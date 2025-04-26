@@ -19,25 +19,43 @@ export function useTournamentManager() {
     setLoadError(null);
 
     try {
+      logMessage(LogLevel.INFO, 'useTournamentManager', 'Loading tournaments', {
+        userId: currentUser?.id
+      });
+      
+      if (!currentUser?.id) {
+        logMessage(LogLevel.WARNING, 'useTournamentManager', 'No current user ID, cannot load tournaments');
+        setTournaments([]);
+        return [];
+      }
+
       const storedTournaments = localStorage.getItem('ncr_tournaments');
       if (storedTournaments) {
         const parsedTournaments: Tournament[] = JSON.parse(storedTournaments);
-        setTournaments(parsedTournaments.filter(t => t.organizer_id === currentUser?.id));
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournaments loaded from localStorage', { count: parsedTournaments.length });
+        const userTournaments = parsedTournaments.filter(t => t.organizer_id === currentUser?.id);
+        setTournaments(userTournaments);
+        
+        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournaments loaded from localStorage', { 
+          total: parsedTournaments.length,
+          userTournaments: userTournaments.length,
+          userId: currentUser?.id
+        });
+        
+        return userTournaments;
       } else {
         setTournaments([]);
         logMessage(LogLevel.INFO, 'useTournamentManager', 'No tournaments found in localStorage');
+        return [];
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setLoadError(`Failed to load tournaments: ${errorMessage}`);
       logMessage(LogLevel.ERROR, 'useTournamentManager', 'Error loading tournaments from localStorage', error);
+      return [];
     } finally {
       setIsLoading(false);
     }
-
-    return tournaments;
-  }, [currentUser?.id, tournaments]);
+  }, [currentUser?.id]);
 
   const createTournament = useCallback(
     (
@@ -67,7 +85,7 @@ export function useTournamentManager() {
         rounds: tournamentData.rounds,
         time_control: isCustomTimeControl ? customTimeControl : tournamentData.timeControl,
         organizer_id: currentUser.id,
-        status: 'pending', // Use 'pending' instead of 'upcoming' to match the allowed status values
+        status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -77,7 +95,10 @@ export function useTournamentManager() {
         const tournamentsArray = existingTournaments ? JSON.parse(existingTournaments) : [];
         tournamentsArray.push(newTournament);
         localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsArray));
-        setTournaments(tournamentsArray.filter(t => t.organizer_id === currentUser?.id));
+        
+        // Update local state with user's tournaments only
+        const userTournaments = tournamentsArray.filter(t => t.organizer_id === currentUser?.id);
+        setTournaments(userTournaments);
 
         toast({
           title: "Tournament Created",
