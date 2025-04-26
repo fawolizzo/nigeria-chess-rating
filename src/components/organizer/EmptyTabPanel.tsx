@@ -1,6 +1,5 @@
 
-import { Award, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Award } from "lucide-react";
 
 export function EmptyTabPanel({ status, onCreateTournament }: { status: string, onCreateTournament: () => void }) {
   return (
@@ -17,16 +16,6 @@ export function EmptyTabPanel({ status, onCreateTournament }: { status: string, 
             : `You don't have any ${status} tournaments scheduled.`
         }
       </p>
-      {status === "upcoming" && (
-        <Button 
-          variant="outline" 
-          onClick={onCreateTournament}
-          className="mt-4 border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Tournament
-        </Button>
-      )}
     </div>
   );
 }
