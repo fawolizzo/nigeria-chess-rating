@@ -72,7 +72,7 @@ export function OrganizerStatsGrid({
           <div className="text-2xl font-bold">
             {nextTournament
               ? formatDisplayDate(nextTournament.startDate)
-              : "N/A"}
+              : "None Scheduled"}
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {nextTournament ? nextTournament.name : "No upcoming tournaments"}

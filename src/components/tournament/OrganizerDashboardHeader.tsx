@@ -1,17 +1,15 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, LogOut } from "lucide-react";
+import { Plus } from "lucide-react";
 
 interface OrganizerDashboardHeaderProps {
   userName?: string;
   onCreateTournament: () => void;
-  onLogout: () => void;
 }
 
 export function OrganizerDashboardHeader({
   userName,
-  onCreateTournament,
-  onLogout
+  onCreateTournament
 }: OrganizerDashboardHeaderProps) {
   return (
     <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -24,23 +22,13 @@ export function OrganizerDashboardHeader({
         </p>
       </div>
       
-      <div className="mt-4 sm:mt-0 flex space-x-4">
-        <Button 
-          onClick={onCreateTournament}
-          className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Tournament
-        </Button>
-        <Button 
-          onClick={onLogout}
-          variant="outline"
-          className="border-nigeria-green/30 text-nigeria-green hover:bg-nigeria-green/5"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Logout
-        </Button>
-      </div>
+      <Button 
+        onClick={onCreateTournament}
+        className="mt-4 sm:mt-0 bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Create Tournament
+      </Button>
     </div>
   );
 }

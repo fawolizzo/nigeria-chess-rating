@@ -11,7 +11,6 @@ export function OrganizerDashboardLayout({
   nextTournament,
   formatDisplayDate,
   onCreateTournament,
-  onLogout,
   children,
 }: {
   currentUser: any;
@@ -20,7 +19,6 @@ export function OrganizerDashboardLayout({
   nextTournament: any;
   formatDisplayDate: (dateString: string) => string;
   onCreateTournament: () => void;
-  onLogout: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -30,7 +28,6 @@ export function OrganizerDashboardLayout({
         <OrganizerDashboardHeader
           userName={currentUser.fullName}
           onCreateTournament={onCreateTournament}
-          onLogout={onLogout}
         />
         <OrganizerStatsGrid
           tournaments={tournaments}
