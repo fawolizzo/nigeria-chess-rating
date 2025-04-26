@@ -177,7 +177,6 @@ export default function OrganizerDashboard() {
       nextTournament={nextTournament}
       formatDisplayDate={formatDisplayDate}
       onCreateTournament={onCreateTournament}
-      onLogout={handleLogout}
     >
       <OrganizerTabsWrapper 
         activeTab={activeTab}
