@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,11 @@ const Navbar = () => {
     }
   };
 
+  // Dynamically set dashboard route based on user's role
+  const dashboardLink = currentUser?.role === 'tournament_organizer' 
+    ? '/organizer-dashboard' 
+    : '/officer-dashboard';
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
       <div className="container flex h-16 items-center justify-between px-4 max-w-7xl mx-auto">
@@ -109,7 +115,7 @@ const Navbar = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(currentUser.role === 'tournament_organizer' ? '/organizer-dashboard' : '/officer-dashboard')}>
+                <DropdownMenuItem onClick={() => navigate(dashboardLink)}>
                   <User className="mr-2 h-4 w-4" />
                   Dashboard
                 </DropdownMenuItem>
@@ -180,27 +186,14 @@ const Navbar = () => {
                 
                 {currentUser ? (
                   <>
-                    {currentUser.role === 'tournament_organizer' && (
-                      <Link to={dashboardLink} onClick={() => setIsOpen(false)}>
-                        <Button 
-                          variant={isActive(dashboardLink) ? "default" : "ghost"} 
-                          className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-                        >
-                          Organizer Dashboard
-                        </Button>
-                      </Link>
-                    )}
-                    
-                    {currentUser.role === 'rating_officer' && (
-                      <Link to={dashboardLink} onClick={() => setIsOpen(false)}>
-                        <Button 
-                          variant={isActive(dashboardLink) ? "default" : "ghost"} 
-                          className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-                        >
-                          Rating Officer Dashboard
-                        </Button>
-                      </Link>
-                    )}
+                    <Link to={dashboardLink} onClick={() => setIsOpen(false)}>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                      >
+                        {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'} Dashboard
+                      </Button>
+                    </Link>
                     
                     <div className="py-2 flex items-center px-2">
                       <Avatar className="h-8 w-8 mr-2">
@@ -227,16 +220,14 @@ const Navbar = () => {
                     </Button>
                   </>
                 ) : (
-                  <>
-                    <div className="flex space-x-2 mt-4">
-                      <Link to="/login" onClick={() => setIsOpen(false)} className="flex-1">
-                        <Button variant="outline" className="w-full">Log In</Button>
-                      </Link>
-                      <Link to="/register" onClick={() => setIsOpen(false)} className="flex-1">
-                        <Button className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white">Register</Button>
-                      </Link>
-                    </div>
-                  </>
+                  <div className="flex space-x-2 mt-4">
+                    <Link to="/login" onClick={() => setIsOpen(false)} className="flex-1">
+                      <Button variant="outline" className="w-full">Log In</Button>
+                    </Link>
+                    <Link to="/register" onClick={() => setIsOpen(false)} className="flex-1">
+                      <Button className="w-full bg-nigeria-green hover:bg-nigeria-green-dark text-white">Register</Button>
+                    </Link>
+                  </div>
                 )}
               </nav>
             </SheetContent>
