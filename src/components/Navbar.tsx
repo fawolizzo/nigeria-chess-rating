@@ -1,13 +1,9 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetTrigger 
-} from "@/components/ui/sheet";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, ChevronDown, User, LogOut } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Menu, User, LogOut } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { useSupabaseAuth } from "@/services/auth/useSupabaseAuth";
 import {
@@ -18,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useToast } from "@/hooks/use-toast";
 
@@ -70,22 +65,6 @@ const Navbar = () => {
     }
   };
 
-  const getDashboardLink = () => {
-    if (!currentUser) return "/";
-    
-    if (currentUser.role === 'tournament_organizer') {
-      return currentUser.status === 'approved' ? "/organizer-dashboard" : "/pending-approval";
-    }
-    
-    if (currentUser.role === 'rating_officer') {
-      return "/officer-dashboard";
-    }
-    
-    return "/";
-  };
-
-  const dashboardLink = getDashboardLink();
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background">
       <div className="container flex h-16 items-center justify-between px-4 max-w-7xl mx-auto">
@@ -104,63 +83,47 @@ const Navbar = () => {
           <Link to="/about">
             <Button variant={isActive('/about') ? "default" : "ghost"} size="sm">About</Button>
           </Link>
-          
+        </nav>
+
+        <div className="flex items-center gap-2">
           {currentUser ? (
-            <>
-              {currentUser.role === 'tournament_organizer' && (
-                <Link to={dashboardLink}>
-                  <Button 
-                    variant={isActive(dashboardLink) ? "default" : "ghost"} 
-                    size="sm" 
-                    className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-                  >
-                    Organizer Dashboard
-                  </Button>
-                </Link>
-              )}
-              
-              {currentUser.role === 'rating_officer' && (
-                <Link to={dashboardLink}>
-                  <Button 
-                    variant={isActive(dashboardLink) ? "default" : "ghost"} 
-                    size="sm" 
-                    className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
-                  >
-                    Rating Officer Dashboard
-                  </Button>
-                </Link>
-              )}
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 flex items-center gap-2" size="sm">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-nigeria-green text-white">
-                        {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{currentUser.fullName}</span>
-                    <Badge variant="outline" className="ml-1 text-xs">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 flex items-center gap-2" size="sm">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="bg-nigeria-green text-white">
+                      {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium hidden sm:inline">{currentUser.fullName}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span>{currentUser.fullName}</span>
+                    <span className="text-xs text-muted-foreground">
                       {currentUser.role === 'tournament_organizer' ? 'Organizer' : 'Rating Officer'}
                       {currentUser.status !== 'approved' && ' (Pending)'}
-                    </Badge>
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="flex items-center text-red-500" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+                    </span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(currentUser.role === 'tournament_organizer' ? '/organizer-dashboard' : '/officer-dashboard')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-red-500" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <>
               <Link to="/login">
@@ -171,8 +134,8 @@ const Navbar = () => {
               </Link>
             </>
           )}
-        </nav>
-        
+        </div>
+
         <div className="md:hidden">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
