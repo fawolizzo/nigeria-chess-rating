@@ -12,12 +12,12 @@ interface OrganizerApprovalsProps {
 
 const OrganizerApprovals: React.FC<OrganizerApprovalsProps> = ({ onApprovalUpdate }) => {
   const { pendingOrganizers, refreshDashboard } = useDashboard();
-  const { users, setUsers } = useUser();
+  const { users, approveUser, rejectUser } = useUser();
   
   const handleApprove = (userId: string) => {
     try {
       logMessage(LogLevel.INFO, 'OrganizerApprovals', `Approving organizer: ${userId}`);
-      approveUserOperation(userId, users, setUsers);
+      approveUser(userId);
       
       // Refresh the dashboard data after approval
       refreshDashboard();
@@ -34,7 +34,7 @@ const OrganizerApprovals: React.FC<OrganizerApprovalsProps> = ({ onApprovalUpdat
   const handleReject = (userId: string) => {
     try {
       logMessage(LogLevel.INFO, 'OrganizerApprovals', `Rejecting organizer: ${userId}`);
-      rejectUserOperation(userId, users, setUsers);
+      rejectUser(userId);
       
       // Refresh the dashboard data after rejection
       refreshDashboard();
