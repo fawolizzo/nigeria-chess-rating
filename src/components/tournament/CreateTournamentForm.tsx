@@ -1,54 +1,17 @@
-import { useState, useEffect } from "react";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { NIGERIAN_STATES } from "@/lib/nigerianStates";
-import { TIME_CONTROLS, TimeControlValue } from "@/data/timeControls";
+import { Form } from "@/components/ui/form";
 import { TournamentFormValues } from "@/hooks/useTournamentManager";
 import { format } from "date-fns";
-import { validateTimeControl } from "@/utils/timeControlValidation";
 
-const tournamentSchema = z.object({
-  name: z.string().min(5, "Tournament name must be at least 5 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  startDate: z.date({
-    required_error: "Start date is required",
-    invalid_type_error: "Start date is invalid",
-  }),
-  endDate: z.date({
-    required_error: "End date is required",
-    invalid_type_error: "End date is invalid",
-  }),
-  location: z.string().min(3, "Location is required"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State is required"),
-  rounds: z.preprocess(
-    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
-    z.number().min(1)
-  ),
-  timeControl: z.string().min(2, "Time control is required")
-}).refine(data => {
-  return data.startDate instanceof Date && !isNaN(data.startDate.getTime()) &&
-         data.endDate instanceof Date && !isNaN(data.endDate.getTime());
-}, {
-  message: "Both start date and end date must be valid dates",
-  path: ["startDate"]
-}).refine(data => {
-  if (data.startDate instanceof Date && !isNaN(data.startDate.getTime()) &&
-      data.endDate instanceof Date && !isNaN(data.endDate.getTime())) {
-    return data.endDate >= data.startDate;
-  }
-  return true;
-}, {
-  message: "End date must be on or after start date",
-  path: ["endDate"]
-});
+import { tournamentSchema, TournamentFormSchemaType } from "./form/TournamentFormSchema";
+import { TournamentBasicDetails } from "./form/TournamentBasicDetails";
+import { TournamentDateSelection } from "./form/TournamentDateSelection";
+import { TournamentLocationFields } from "./form/TournamentLocationFields";
+import { TournamentConfigFields } from "./form/TournamentConfigFields";
+import { useCustomTimeControl } from "./form/useCustomTimeControl";
 
 interface CreateTournamentFormProps {
   onSubmit: (data: TournamentFormValues, customTimeControl: string, isCustomTimeControl: boolean) => void;
@@ -56,12 +19,7 @@ interface CreateTournamentFormProps {
 }
 
 export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFormProps) {
-  const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
-  const [customTimeControl, setCustomTimeControl] = useState("");
-  const [customTimeControlError, setCustomTimeControlError] = useState<string | null>(null);
-  const [isFormValid, setIsFormValid] = useState(false);
-
-  const form = useForm<TournamentFormValues>({
+  const form = useForm<TournamentFormSchemaType>({
     resolver: zodResolver(tournamentSchema),
     defaultValues: {
       name: "",
@@ -77,45 +35,17 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
     mode: "onChange"
   });
 
-  // Validate the custom time control whenever it changes
-  useEffect(() => {
-    if (isCustomTimeControl) {
-      const validationResult = validateTimeControl(customTimeControl);
-      if (!validationResult.isValid) {
-        setCustomTimeControlError(validationResult.error || "Invalid time control format");
-      } else {
-        setCustomTimeControlError(null);
-      }
-    } else {
-      setCustomTimeControlError(null);
-    }
-  }, [customTimeControl, isCustomTimeControl]);
+  const {
+    isCustomTimeControl,
+    setIsCustomTimeControl,
+    customTimeControl,
+    setCustomTimeControl,
+    customTimeControlError,
+    setCustomTimeControlError,
+    isFormValid
+  } = useCustomTimeControl(form);
 
-  // Monitor form validity including custom time control
-  useEffect(() => {
-    const subscription = form.watch(() => {
-      // We need to check both the form validity and the custom time control validity
-      form.trigger().then(isValid => {
-        const hasCustomTimeControlError = isCustomTimeControl && 
-          (!customTimeControl || customTimeControlError !== null);
-        
-        setIsFormValid(isValid && !hasCustomTimeControlError);
-        
-        // Debug form validation
-        console.log("Form validation status:", {
-          formIsValid: isValid,
-          isCustomTimeControl,
-          customTimeControl,
-          hasCustomTimeControlError,
-          finalIsValid: isValid && !hasCustomTimeControlError
-        });
-      });
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [form, isCustomTimeControl, customTimeControl, customTimeControlError]);
-
-  const handleSubmit = (data: TournamentFormValues) => {
+  const handleSubmit = (data: TournamentFormSchemaType) => {
     if (!isFormValid) return;
     
     console.log("Creating tournament with data:", {
@@ -136,221 +66,18 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tournament Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter tournament name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+        <TournamentBasicDetails form={form} />
+        <TournamentDateSelection form={form} />
+        <TournamentLocationFields form={form} />
+        <TournamentConfigFields 
+          form={form}
+          isCustomTimeControl={isCustomTimeControl}
+          setIsCustomTimeControl={setIsCustomTimeControl}
+          customTimeControl={customTimeControl}
+          setCustomTimeControl={setCustomTimeControl}
+          customTimeControlError={customTimeControlError}
+          setCustomTimeControlError={setCustomTimeControlError}
         />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Provide a description of your tournament" 
-                  rows={3} 
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="startDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Start Date</FormLabel>
-                <DatePicker
-                  date={field.value}
-                  setDate={field.onChange}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="endDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>End Date</FormLabel>
-                <DatePicker
-                  date={field.value}
-                  setDate={field.onChange}
-                  minDate={form.getValues("startDate")}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Venue Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter venue name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>City</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter city" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="state"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>State</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {NIGERIAN_STATES.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="rounds"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Number of Rounds</FormLabel>
-                <Select
-                  onValueChange={(value) => field.onChange(parseInt(value, 10))}
-                  value={field.value.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select rounds" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {[5, 6, 7, 8, 9, 11].map((num) => (
-                      <SelectItem key={num} value={num.toString()}>
-                        {num} Rounds
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div>
-            <FormField
-              control={form.control}
-              name="timeControl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Time Control</FormLabel>
-                  <div className="space-y-2">
-                    {!isCustomTimeControl ? (
-                      <Select 
-                        onValueChange={(value) => {
-                          if (value === "custom") {
-                            setIsCustomTimeControl(true);
-                            setCustomTimeControlError(null);
-                            field.onChange("");
-                          } else {
-                            field.onChange(value);
-                          }
-                        }} 
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select time control" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {TIME_CONTROLS.map((timeControl) => (
-                            <SelectItem key={timeControl.value} value={timeControl.value}>
-                              {timeControl.label}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="custom">Custom Time Control</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="space-y-2">
-                        <Input 
-                          value={customTimeControl}
-                          onChange={(e) => {
-                            setCustomTimeControl(e.target.value);
-                            // Validation will be handled by the useEffect
-                          }}
-                          placeholder="e.g., 90min or 15min + 10sec"
-                          className={customTimeControlError ? "border-red-500" : ""}
-                        />
-                        {customTimeControlError && (
-                          <p className="text-sm text-red-500">{customTimeControlError}</p>
-                        )}
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setIsCustomTimeControl(false)}
-                        >
-                          Use preset time control
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
 
         <div className="mt-6 flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={onCancel}>
