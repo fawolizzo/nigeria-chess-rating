@@ -1,62 +1,49 @@
 
-import React from "react";
-import OrganizerApprovalList from "../OrganizerApprovalList";
-import { useDashboard } from "@/contexts/OfficerDashboardContext";
+import React, { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
-import { approveUserOperation, rejectUserOperation } from "@/contexts/user/auth/approvalOperations";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
+import OrganizerApprovalList from "@/components/OrganizerApprovalList";
 
 interface OrganizerApprovalsProps {
-  onApprovalUpdate?: () => void;
+  onApprovalUpdate: () => void;
 }
 
 const OrganizerApprovals: React.FC<OrganizerApprovalsProps> = ({ onApprovalUpdate }) => {
-  const { pendingOrganizers, refreshDashboard } = useDashboard();
-  const { users, approveUser, rejectUser } = useUser();
+  const { users } = useUser();
+  const [localPendingOrganizers, setLocalPendingOrganizers] = useState<any[]>([]);
   
+  // Get pending tournament organizers
+  const pendingOrganizers = users.filter(
+    (user) => user.role === "tournament_organizer" && user.status === "pending"
+  );
+  
+  // Handler for approval
   const handleApprove = (userId: string) => {
-    try {
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Approving organizer: ${userId}`);
-      approveUser(userId);
-      
-      // Refresh the dashboard data after approval
-      refreshDashboard();
-      
-      // Notify parent component of the update
-      if (onApprovalUpdate) {
-        onApprovalUpdate();
-      }
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error approving organizer: ${error}`);
-    }
+    // onApprovalUpdate will trigger a dashboard refresh from the parent component
+    onApprovalUpdate();
+    
+    // Update local state to provide immediate feedback to user
+    setLocalPendingOrganizers(
+      localPendingOrganizers.filter(organizer => organizer.id !== userId)
+    );
   };
   
+  // Handler for rejection
   const handleReject = (userId: string) => {
-    try {
-      logMessage(LogLevel.INFO, 'OrganizerApprovals', `Rejecting organizer: ${userId}`);
-      rejectUser(userId);
-      
-      // Refresh the dashboard data after rejection
-      refreshDashboard();
-      
-      // Notify parent component of the update
-      if (onApprovalUpdate) {
-        onApprovalUpdate();
-      }
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerApprovals', `Error rejecting organizer: ${error}`);
-    }
+    // onApprovalUpdate will trigger a dashboard refresh from the parent component
+    onApprovalUpdate();
+    
+    // Update local state to provide immediate feedback to user
+    setLocalPendingOrganizers(
+      localPendingOrganizers.filter(organizer => organizer.id !== userId)
+    );
   };
-
+  
   return (
-    <div>
-      <h3 className="text-lg font-medium mb-4">Pending Tournament Organizer Approvals</h3>
-      <OrganizerApprovalList
-        pendingOrganizers={pendingOrganizers}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
-    </div>
+    <OrganizerApprovalList 
+      pendingOrganizers={pendingOrganizers} 
+      onApprove={handleApprove}
+      onReject={handleReject}
+    />
   );
 };
 
