@@ -8,7 +8,7 @@ export interface OrganizerStatsGridProps {
   tournaments: any[];
   filterTournamentsByStatus: (status: string) => any[];
   nextTournament: any | undefined;
-  formatDisplayDate: (dateString: string) => string;
+  formatDisplayDate: (dateString: string | undefined | null) => string;
 }
 
 export function OrganizerStatsGrid({
@@ -71,7 +71,7 @@ export function OrganizerStatsGrid({
         <CardContent>
           <div className="text-2xl font-bold">
             {nextTournament
-              ? formatDisplayDate(nextTournament.startDate)
+              ? formatDisplayDate(nextTournament.start_date)
               : "None Scheduled"}
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

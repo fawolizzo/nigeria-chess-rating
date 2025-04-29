@@ -7,7 +7,7 @@ import { OrganizerDashboardLayout } from '@/components/organizer/dashboard/Organ
 import { OrganizerTabsWrapper } from '@/components/organizer/dashboard/OrganizerTabsWrapper';
 import { DashboardLoader } from '@/components/organizer/dashboard/DashboardLoader';
 import { DashboardError } from '@/components/organizer/dashboard/DashboardError';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { useToast } from '@/hooks/use-toast';
 import { TournamentFormData } from '@/types/tournamentTypes';
@@ -146,20 +146,73 @@ export default function OrganizerDashboard() {
     return tournaments.filter(t => t.status === status);
   };
   
-  // Format display date
-  const formatDisplayDate = (dateString: string) => {
+  // Format display date with improved error handling
+  const formatDisplayDate = (dateString: string | undefined | null) => {
+    if (!dateString) {
+      return 'N/A';
+    }
+    
     try {
-      return format(new Date(dateString), 'MMM dd, yyyy');
+      // First, try to parse as ISO string (with time component)
+      if (dateString.includes('T')) {
+        const parsedDate = parseISO(dateString);
+        if (isValid(parsedDate)) {
+          return format(parsedDate, 'MMM dd, yyyy');
+        }
+      }
+      
+      // Next, try as simple date string (YYYY-MM-DD)
+      const date = new Date(dateString);
+      if (isValid(date)) {
+        return format(date, 'MMM dd, yyyy');
+      }
+      
+      // If all parsing attempts fail
+      logMessage(LogLevel.WARNING, 'OrganizerDashboard', 'Could not parse date string', { dateString });
+      return 'N/A';
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'OrganizerDashboard', 'Error formatting date', { dateString });
-      return 'Invalid date';
+      logMessage(LogLevel.ERROR, 'OrganizerDashboard', 'Error formatting date', { dateString, error });
+      return 'N/A';
+    }
+  };
+  
+  // Get next tournament with improved error handling
+  const getNextTournament = () => {
+    if (!tournaments || !Array.isArray(tournaments) || tournaments.length === 0) {
+      return undefined;
+    }
+    
+    try {
+      // Filter for upcoming and ongoing tournaments
+      const validTournaments = tournaments.filter(t => 
+        (t.status === 'upcoming' || t.status === 'ongoing') && 
+        t.start_date // Ensure there's a start date
+      );
+      
+      if (validTournaments.length === 0) {
+        return undefined;
+      }
+      
+      // Sort by start date
+      return validTournaments.sort((a, b) => {
+        const dateA = new Date(a.start_date);
+        const dateB = new Date(b.start_date);
+        
+        // Check if dates are valid before comparing
+        if (!isValid(dateA) && !isValid(dateB)) return 0;
+        if (!isValid(dateA)) return 1;
+        if (!isValid(dateB)) return -1;
+        
+        return dateA.getTime() - dateB.getTime();
+      })[0];
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'OrganizerDashboard', 'Error finding next tournament', error);
+      return undefined;
     }
   };
   
   // Get next tournament
-  const nextTournament = tournaments && tournaments.length > 0 ? 
-    tournaments.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0] : 
-    null;
+  const nextTournament = getNextTournament();
   
   if (!isAccessChecked || isLoading) {
     return <DashboardLoader />;
