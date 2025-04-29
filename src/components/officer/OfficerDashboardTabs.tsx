@@ -56,6 +56,11 @@ const OfficerDashboardTabs: React.FC = () => {
     }
   };
   
+  const handleRefreshContent = () => {
+    logMessage(LogLevel.INFO, 'OfficerDashboardTabs', 'Manually refreshing dashboard content');
+    refreshDashboard();
+  };
+  
   if (!mounted) {
     return (
       <div className="p-4">
@@ -124,12 +129,12 @@ const OfficerDashboardTabs: React.FC = () => {
         </div>
         <TabsContent value="organizers" className="p-4 focus-visible:outline-none focus-visible:ring-0">
           <div className="space-y-8">
-            <OrganizerApprovals />
+            <OrganizerApprovals onApprovalUpdate={handleRefreshContent} />
             <ApprovedOrganizers />
           </div>
         </TabsContent>
         <TabsContent value="players" className="p-4 focus-visible:outline-none focus-visible:ring-0">
-          <PlayerManagement onPlayerApproval={refreshDashboard} />
+          <PlayerManagement onPlayerApproval={handleRefreshContent} />
         </TabsContent>
         <TabsContent value="pending-tournaments" className="p-4 focus-visible:outline-none focus-visible:ring-0">
           {pendingTournaments.length === 0 ? (
@@ -139,14 +144,14 @@ const OfficerDashboardTabs: React.FC = () => {
           ) : (
             <PendingTournamentApprovals 
               tournaments={pendingTournaments}
-              onApprovalUpdate={refreshDashboard} 
+              onApprovalUpdate={handleRefreshContent} 
             />
           )}
         </TabsContent>
         <TabsContent value="approved-tournaments" className="p-4 focus-visible:outline-none focus-visible:ring-0">
           <ApprovedTournaments 
             completedTournaments={completedTournaments}
-            onTournamentProcessed={refreshDashboard} 
+            onTournamentProcessed={handleRefreshContent} 
           />
         </TabsContent>
       </Tabs>

@@ -19,6 +19,12 @@ export const approveUserOperation = (
   const platform = detectPlatform();
   logMessage(LogLevel.INFO, 'ApprovalOperations', `Approving user ${userId} on ${platform.type} platform`);
   
+  // Find the user we're approving to log their info
+  const userToApprove = users.find(u => u.id === userId);
+  if (userToApprove) {
+    logMessage(LogLevel.INFO, 'ApprovalOperations', `Approving user: ${userToApprove.email}, role: ${userToApprove.role}`);
+  }
+  
   const updatedUsers = users.map(user => {
     if (user.id === userId) {
       return {
@@ -61,6 +67,12 @@ export const rejectUserOperation = (
 ): void => {
   const platform = detectPlatform();
   logMessage(LogLevel.INFO, 'ApprovalOperations', `Rejecting user ${userId} on ${platform.type} platform`);
+  
+  // Find the user we're rejecting to log their info
+  const userToReject = users.find(u => u.id === userId);
+  if (userToReject) {
+    logMessage(LogLevel.INFO, 'ApprovalOperations', `Rejecting user: ${userToReject.email}, role: ${userToReject.role}`);
+  }
   
   const updatedUsers = users.map(user => {
     if (user.id === userId) {

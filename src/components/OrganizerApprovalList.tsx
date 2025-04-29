@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { UserCheck, UserX, User, MapPin, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 interface OrganizerApprovalListProps {
   pendingOrganizers: any[];
@@ -16,6 +17,42 @@ const OrganizerApprovalList: React.FC<OrganizerApprovalListProps> = ({
   onApprove,
   onReject
 }) => {
+  const { toast } = useToast();
+
+  const handleApprove = (userId: string) => {
+    try {
+      onApprove(userId);
+      toast({
+        title: "Organizer Approved",
+        description: "The organizer has been approved successfully.",
+      });
+    } catch (error) {
+      console.error("Error approving organizer:", error);
+      toast({
+        title: "Approval Failed",
+        description: "There was an error approving the organizer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = (userId: string) => {
+    try {
+      onReject(userId);
+      toast({
+        title: "Organizer Rejected",
+        description: "The organizer has been rejected.",
+      });
+    } catch (error) {
+      console.error("Error rejecting organizer:", error);
+      toast({
+        title: "Rejection Failed",
+        description: "There was an error rejecting the organizer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (pendingOrganizers.length === 0) {
     return (
       <Card>
@@ -80,7 +117,7 @@ const OrganizerApprovalList: React.FC<OrganizerApprovalListProps> = ({
                   variant="outline"
                   size="sm"
                   className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-900/20"
-                  onClick={() => onReject(organizer.id)}
+                  onClick={() => handleReject(organizer.id)}
                 >
                   <UserX className="h-4 w-4 mr-1" />
                   Reject
@@ -88,7 +125,7 @@ const OrganizerApprovalList: React.FC<OrganizerApprovalListProps> = ({
                 <Button
                   size="sm"
                   className="bg-green-600 hover:bg-green-700"
-                  onClick={() => onApprove(organizer.id)}
+                  onClick={() => handleApprove(organizer.id)}
                 >
                   <UserCheck className="h-4 w-4 mr-1" />
                   Approve

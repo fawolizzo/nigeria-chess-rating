@@ -4,8 +4,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Calendar, AlertCircle } from "lucide-react";
 import { updateTournament } from "@/lib/mockData";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { format, isValid, parseISO } from "date-fns";
+import { useDashboard } from "@/contexts/OfficerDashboardContext";
 
 interface PendingTournamentApprovalsProps {
   tournaments: any[];
@@ -16,6 +17,9 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
   tournaments,
   onApprovalUpdate,
 }) => {
+  const { toast } = useToast();
+  const { refreshDashboard } = useDashboard();
+  
   const handleApproveTournament = (tournamentId: string) => {
     const tournament = tournaments.find(t => t.id === tournamentId);
     if (tournament) {
@@ -24,19 +28,36 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
         status: "upcoming"
       };
       
-      // Log before update for debugging
-      console.log("Approving tournament:", tournament);
-      console.log("Updated tournament data:", updatedTournament);
-      
-      updateTournament(updatedTournament);
-      
-      toast({
-        title: "Tournament Approved",
-        description: `${tournament.name} has been approved successfully.`,
-        variant: "default",
-      });
-      
-      onApprovalUpdate();
+      try {
+        // Log before update for debugging
+        console.log("Approving tournament:", tournament);
+        console.log("Updated tournament data:", updatedTournament);
+        
+        // Update the tournament in the mock data
+        updateTournament(updatedTournament);
+        
+        // Show success toast
+        toast({
+          title: "Tournament Approved",
+          description: `${tournament.name} has been approved successfully.`,
+          variant: "default",
+        });
+        
+        // Refresh the dashboard data
+        if (onApprovalUpdate) {
+          onApprovalUpdate();
+        }
+        
+        // Additional refresh to ensure data consistency across components
+        refreshDashboard();
+      } catch (error) {
+        console.error("Error approving tournament:", error);
+        toast({
+          title: "Approval Failed",
+          description: "There was an error approving the tournament. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -48,19 +69,36 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
         status: "rejected"
       };
       
-      // Log before update for debugging
-      console.log("Rejecting tournament:", tournament);
-      console.log("Updated tournament data:", updatedTournament);
-      
-      updateTournament(updatedTournament);
-      
-      toast({
-        title: "Tournament Rejected",
-        description: `${tournament.name} has been rejected.`,
-        variant: "destructive",
-      });
-      
-      onApprovalUpdate();
+      try {
+        // Log before update for debugging
+        console.log("Rejecting tournament:", tournament);
+        console.log("Updated tournament data:", updatedTournament);
+        
+        // Update the tournament in the mock data
+        updateTournament(updatedTournament);
+        
+        // Show rejection toast
+        toast({
+          title: "Tournament Rejected",
+          description: `${tournament.name} has been rejected.`,
+          variant: "destructive",
+        });
+        
+        // Refresh the dashboard data
+        if (onApprovalUpdate) {
+          onApprovalUpdate();
+        }
+        
+        // Additional refresh to ensure data consistency across components
+        refreshDashboard();
+      } catch (error) {
+        console.error("Error rejecting tournament:", error);
+        toast({
+          title: "Rejection Failed",
+          description: "There was an error rejecting the tournament. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
