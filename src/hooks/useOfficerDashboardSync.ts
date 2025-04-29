@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { syncStorage, forceSyncAllStorage } from "@/utils/storageUtils";
+import { syncStorage } from "@/utils/storageUtils";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
@@ -12,17 +12,21 @@ export function useOfficerDashboardSync() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const syncInProgressRef = useRef(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const syncLockRef = useRef(false);
   
   // Optimized sync function with debounce and better error handling
   const syncDashboardData = useCallback(async (showToast = false) => {
-    // Prevent multiple concurrent syncs
-    if (syncInProgressRef.current) {
-      logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Sync already in progress, skipping');
+    // Prevent multiple concurrent syncs with lock
+    if (syncInProgressRef.current || syncLockRef.current) {
+      logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Sync already in progress or locked, skipping');
       return false;
     }
     
+    // Set locks to prevent multiple syncs
+    syncInProgressRef.current = true;
+    syncLockRef.current = true;
+    
     try {
-      syncInProgressRef.current = true;
       setIsSyncing(true);
       logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Starting dashboard data sync');
       
@@ -60,10 +64,14 @@ export function useOfficerDashboardSync() {
       return false;
     } finally {
       setIsSyncing(false);
-      // Add a small delay before allowing another sync
+      
+      // Release the immediate lock
+      syncInProgressRef.current = false;
+      
+      // Add a delay before releasing the lock to prevent rapid subsequent syncs
       setTimeout(() => {
-        syncInProgressRef.current = false;
-      }, 1000);
+        syncLockRef.current = false;
+      }, 3000); // 3 second cooldown between syncs
     }
   }, [forceSync, toast]);
   
@@ -76,21 +84,29 @@ export function useOfficerDashboardSync() {
     };
   }, []);
   
-  // MAJOR CHANGE: Drastically reduced auto-sync frequency 
-  // Only sync once on mount and after user actions
+  // Only sync once on mount - CRITICAL fix to prevent multiple 100% loading indicators
   useEffect(() => {
+    // If sync is already in progress or locked, don't start another one
+    if (syncLockRef.current || syncInProgressRef.current) return;
+    
     // Clear any existing interval
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
     }
     
-    // Initial sync when component mounts
-    syncDashboardData();
+    // Set lock to prevent additional syncs during mount
+    syncLockRef.current = true;
     
-    // REMOVED: Auto-refresh timeout has been removed entirely to stop blinking
-    // Only sync once on mount and after explicit user actions
+    // Small delay before initial sync to allow UI to render first
+    const timer = setTimeout(() => {
+      syncDashboardData().finally(() => {
+        // Release lock after sync completes
+        syncLockRef.current = false;
+      });
+    }, 100);
     
     return () => {
+      clearTimeout(timer);
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
       }

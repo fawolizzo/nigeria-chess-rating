@@ -41,15 +41,15 @@ const OfficerDashboardContent: React.FC = () => {
         // Start with initial progress
         if (isMountedRef.current) setLoadingProgress(10);
         
-        // Fast progress simulation for perceived performance
+        // Fast progress simulation for perceived performance but limit updates
         progressIntervalRef.current = setInterval(() => {
           if (isMountedRef.current) {
             setLoadingProgress(prev => {
               // Cap at 90% until actual data is loaded
-              return prev < 90 ? prev + 5 : prev;
+              return prev < 90 ? prev + 2 : prev;
             });
           }
-        }, 150);
+        }, 300); // Slower interval to reduce renders
         
         // Wait for actual sync
         logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Performing initial data sync');
@@ -62,7 +62,7 @@ const OfficerDashboardContent: React.FC = () => {
         }
         
         // Ensure minimum loading time to prevent flash
-        await new Promise(resolve => setTimeout(resolve, 750));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Clear interval and set to 100%
         clearProgressInterval();
@@ -77,7 +77,7 @@ const OfficerDashboardContent: React.FC = () => {
               setInitialLoadComplete(true);
               setIsLoadingSyncing(false);
             }
-          }, 300);
+          }, 500); // Longer transition to avoid flicker
         }
       } catch (error) {
         logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Initial sync failed:', error);

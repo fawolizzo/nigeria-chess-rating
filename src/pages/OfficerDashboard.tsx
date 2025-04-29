@@ -9,6 +9,7 @@ import ResetSystemData from "@/components/ResetSystemData";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 const OfficerDashboard: React.FC = () => {
   const { currentUser, isLoading, logout, forceSync } = useUser();
@@ -48,7 +49,11 @@ const OfficerDashboard: React.FC = () => {
       }
       
       logMessage(LogLevel.INFO, 'OfficerDashboard', `Rating officer logged in: ${currentUser.email}`);
-      setIsContentLoading(false);
+      
+      // Small delay to avoid content flashing
+      setTimeout(() => {
+        setIsContentLoading(false);
+      }, 100);
     }
   }, [currentUser, isLoading, navigate, toast]);
   
@@ -82,7 +87,7 @@ const OfficerDashboard: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-nigeria-green"></div>
+          <LoadingSpinner />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
