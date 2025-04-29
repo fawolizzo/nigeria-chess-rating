@@ -8,4 +8,9 @@ export const TIME_CONTROLS = [
   { label: 'Custom', value: 'custom' }
 ] as const;
 
+export type TimeControl = {
+  label: string;
+  value: string;
+};
+
 export type TimeControlValue = typeof TIME_CONTROLS[number]['value'];

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { NIGERIAN_STATES, TIME_CONTROLS } from "@/lib/nigerianStates";
+import { NIGERIAN_STATES } from "@/lib/nigerianStates";
+import { TIME_CONTROLS, TimeControlValue } from "@/data/timeControls";
 import { TournamentFormValues } from "@/hooks/useTournamentManager";
 import { format } from "date-fns";
 import { validateTimeControl } from "@/utils/timeControlValidation";
