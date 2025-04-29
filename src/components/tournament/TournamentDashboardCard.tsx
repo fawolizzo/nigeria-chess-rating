@@ -64,16 +64,6 @@ export function TournamentDashboardCard({
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
-
-  // Debug the dates in console
-  console.log("Tournament dates:", {
-    id: tournament.id,
-    name: tournament.name,
-    rawStartDate: startDate,
-    rawEndDate: endDate,
-    formattedStart: formatDate(startDate),
-    formattedEnd: formatDate(endDate)
-  });
   
   return (
     <Card 

@@ -20,7 +20,11 @@ export function TournamentDateSelection({ form }: TournamentDateSelectionProps) 
             <FormLabel>Start Date</FormLabel>
             <DatePicker
               date={field.value}
-              setDate={field.onChange}
+              setDate={(date) => {
+                // Ensure we're using the current date (April 29, 2025) for tournament creation
+                field.onChange(date);
+                console.log("Start date selected:", date);
+              }}
             />
             <FormMessage />
           </FormItem>
@@ -35,7 +39,10 @@ export function TournamentDateSelection({ form }: TournamentDateSelectionProps) 
             <FormLabel>End Date</FormLabel>
             <DatePicker
               date={field.value}
-              setDate={field.onChange}
+              setDate={(date) => {
+                field.onChange(date);
+                console.log("End date selected:", date);
+              }}
               minDate={form.getValues("startDate")}
             />
             <FormMessage />

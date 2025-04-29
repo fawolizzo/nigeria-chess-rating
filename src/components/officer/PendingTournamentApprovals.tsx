@@ -102,7 +102,7 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
     }
   };
 
-  // Format date helper function - handles both date strings and date objects
+  // Format date helper function with improved timezone handling for YYYY-MM-DD format
   const formatDate = (dateInput: string | Date) => {
     try {
       // If it's already a Date object
@@ -113,13 +113,33 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
       // If it's a string that needs parsing
       if (typeof dateInput === 'string') {
         // Handle both formats: ISO strings and yyyy-MM-dd format
-        const date = dateInput.includes('T') ? parseISO(dateInput) : new Date(dateInput);
+        // For YYYY-MM-DD format - create the date in local timezone without UTC conversion
+        const dateParts = dateInput.split('-');
+        if (dateParts.length === 3) {
+          const year = parseInt(dateParts[0], 10);
+          const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS
+          const day = parseInt(dateParts[2], 10);
+          
+          const date = new Date(year, month, day);
+          if (isValid(date)) {
+            return format(date, "MMM dd, yyyy");
+          }
+        }
+        
+        // Fallback to ISO string parsing
+        if (dateInput.includes('T')) {
+          const date = parseISO(dateInput);
+          return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
+        }
+        
+        // Last resort - try direct parsing
+        const date = new Date(dateInput);
         return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
       }
       
       return "Unknown date";
     } catch (error) {
-      console.error("Error formatting date:", { dateInput });
+      console.error("Error formatting date:", { dateInput, error });
       return "Invalid date";
     }
   };

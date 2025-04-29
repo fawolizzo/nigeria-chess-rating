@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
