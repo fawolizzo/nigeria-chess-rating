@@ -19,7 +19,7 @@ export default function OrganizerDashboard() {
   const { toast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isAccessChecked, setIsAccessChecked] = useState(false);
-  const [activeTab, setActiveTab] = useState('upcoming');
+  const [activeTab, setActiveTab] = useState('approved'); // Changed from 'upcoming' to 'approved'
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
 
   // Ensure user is authenticated and authorized

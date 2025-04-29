@@ -7,7 +7,8 @@ import {
 } from "@/components/ui/tabs";
 import { OrganizerTabPanel } from "./OrganizerTabPanel";
 
-const TAB_STATUSES = ["upcoming", "pending", "ongoing", "completed", "rejected"];
+// Update to use the correct status values from the Tournament type
+const TAB_STATUSES = ["approved", "pending", "completed", "processed", "rejected"];
 
 export function OrganizerTabs({
   activeTab,
@@ -39,17 +40,17 @@ export function OrganizerTabs({
       value={activeTab}
     >
       <TabsList className="mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
-        <TabsTrigger value="upcoming" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
-          Upcoming
+        <TabsTrigger value="approved" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
+          Approved
         </TabsTrigger>
         <TabsTrigger value="pending" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
           Pending Approval
         </TabsTrigger>
-        <TabsTrigger value="ongoing" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
-          Ongoing
-        </TabsTrigger>
         <TabsTrigger value="completed" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
           Completed
+        </TabsTrigger>
+        <TabsTrigger value="processed" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
+          Processed
         </TabsTrigger>
         <TabsTrigger value="rejected" className="nigeria-tab data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900">
           Rejected
