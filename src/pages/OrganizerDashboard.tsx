@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
@@ -7,7 +6,7 @@ import { OrganizerDashboardLayout } from '@/components/organizer/dashboard/Organ
 import { OrganizerTabsWrapper } from '@/components/organizer/dashboard/OrganizerTabsWrapper';
 import { DashboardLoader } from '@/components/organizer/dashboard/DashboardLoader';
 import { DashboardError } from '@/components/organizer/dashboard/DashboardError';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { useToast } from '@/hooks/use-toast';
 import { TournamentFormData } from '@/types/tournamentTypes';
@@ -146,22 +145,28 @@ export default function OrganizerDashboard() {
     return tournaments.filter(t => t.status === status);
   };
   
-  // Format display date with improved error handling
+  // Format display date with improved timezone handling for YYYY-MM-DD format
   const formatDisplayDate = (dateString: string | undefined | null) => {
     if (!dateString) {
       return 'N/A';
     }
     
     try {
-      // First, try to parse as ISO string (with time component)
-      if (dateString.includes('T')) {
-        const parsedDate = parseISO(dateString);
-        if (isValid(parsedDate)) {
-          return format(parsedDate, 'MMM dd, yyyy');
+      // For YYYY-MM-DD format - create the date in local timezone without UTC conversion
+      // This ensures we get the same date that was entered by the user
+      const dateParts = dateString.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS
+        const day = parseInt(dateParts[2], 10);
+        
+        const date = new Date(year, month, day);
+        if (isValid(date)) {
+          return format(date, 'MMM dd, yyyy');
         }
       }
       
-      // Next, try as simple date string (YYYY-MM-DD)
+      // Fallback for other date formats
       const date = new Date(dateString);
       if (isValid(date)) {
         return format(date, 'MMM dd, yyyy');
@@ -195,8 +200,21 @@ export default function OrganizerDashboard() {
       
       // Sort by start date
       return validTournaments.sort((a, b) => {
-        const dateA = new Date(a.start_date);
-        const dateB = new Date(b.start_date);
+        // Create dates from YYYY-MM-DD strings using local timezone
+        const parseLocalDate = (dateStr: string) => {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            return new Date(
+              parseInt(parts[0], 10),
+              parseInt(parts[1], 10) - 1,
+              parseInt(parts[2], 10)
+            );
+          }
+          return new Date(dateStr);
+        };
+        
+        const dateA = parseLocalDate(a.start_date);
+        const dateB = parseLocalDate(b.start_date);
         
         // Check if dates are valid before comparing
         if (!isValid(dateA) && !isValid(dateB)) return 0;

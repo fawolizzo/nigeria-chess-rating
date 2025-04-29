@@ -1,7 +1,7 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Calendar, Users, Clock } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns";
+import { format, isValid } from "date-fns";
 import { useEffect } from "react";
 
 export interface OrganizerStatsGridProps {
@@ -20,6 +20,14 @@ export function OrganizerStatsGrid({
     console.log("StatsGrid - Tournaments received:", tournaments?.length || 0);
     console.log("StatsGrid - Next tournament:", nextTournament ? nextTournament.name : "None");
     
+    // Log date information if we have a next tournament
+    if (nextTournament) {
+      console.log("StatsGrid - Start date:", {
+        raw: nextTournament.start_date,
+        formatted: formatDisplayDate(nextTournament.start_date)
+      });
+    }
+    
     // Validate we have valid data structures
     if (!Array.isArray(tournaments)) {
       console.error("StatsGrid Error: tournaments is not an array", tournaments);
@@ -28,7 +36,7 @@ export function OrganizerStatsGrid({
     if (nextTournament && typeof nextTournament !== 'object') {
       console.error("StatsGrid Error: nextTournament is not an object", nextTournament);
     }
-  }, [tournaments, nextTournament]);
+  }, [tournaments, nextTournament, formatDisplayDate]);
 
   // Get pending count safely
   const pendingCount = Array.isArray(tournaments) 

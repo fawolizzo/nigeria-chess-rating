@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Clock, Users } from "lucide-react";
-import { format, isValid, parseISO } from "date-fns";
+import { format, isValid } from "date-fns";
 
 interface TournamentDashboardCardProps {
   tournament: any;
@@ -19,16 +19,22 @@ export function TournamentDashboardCard({
 }: TournamentDashboardCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   
-  // Format date helper function handling multiple possible date formats
+  // Format date helper function with proper timezone handling
   const formatDate = (dateInput: string) => {
     try {
-      // If it's in ISO format with time (e.g. "2025-04-29T00:00:00.000Z")
-      if (dateInput.includes('T')) {
-        const date = parseISO(dateInput);
+      // For YYYY-MM-DD format - create the date in local timezone without UTC conversion
+      // This ensures we get the same date that was entered by the user
+      const dateParts = dateInput.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS
+        const day = parseInt(dateParts[2], 10);
+        
+        const date = new Date(year, month, day);
         return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
       }
       
-      // If it's in simple YYYY-MM-DD format (e.g. "2025-04-29")
+      // Fallback for other date formats
       const date = new Date(dateInput);
       return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
     } catch (error) {

@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, Users, Clock, Award, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,25 @@ const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
   const isMobile = useIsMobile();
   
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-US', options);
+    try {
+      // For YYYY-MM-DD format - parse without timezone issues
+      const dateParts = dateString.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS
+        const day = parseInt(dateParts[2], 10);
+        
+        const date = new Date(year, month, day);
+        const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        return date.toLocaleDateString('en-US', options);
+      }
+      
+      // Fallback for other formats
+      return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (error) {
+      console.error("Error formatting date in TournamentCard:", error, { dateString });
+      return "Invalid date";
+    }
   };
 
   const getStatusClass = (status: Tournament['status']) => {
