@@ -24,8 +24,8 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
     defaultValues: {
       name: "",
       description: "",
-      startDate: undefined,
-      endDate: undefined,
+      startDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
       location: "",
       city: "",
       state: "",
@@ -54,13 +54,8 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
       isCustomTimeControl
     });
     
-    onSubmit(data, customTimeControl, isCustomTimeControl);
-  };
-
-  const formatDateForDisplay = (date: Date | undefined) => {
-    if (!date) return "undefined";
-    if (!(date instanceof Date) || isNaN(date.getTime())) return "Invalid Date";
-    return format(date, "yyyy-MM-dd");
+    // Since data is fully validated by zod, we know all required fields are present
+    onSubmit(data as TournamentFormValues, customTimeControl, isCustomTimeControl);
   };
 
   return (
