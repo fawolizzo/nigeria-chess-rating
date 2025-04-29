@@ -85,6 +85,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     
     sendSyncEvent(SyncEventType.LOGOUT);
     
+    // Fixed: Directly use the imported logUserEvent function
     logUserEvent('logout', currentUser?.id);
   };
   
@@ -143,10 +144,5 @@ export const useUser = (): UserContextType => {
   return context;
 };
 
-// Helper function for logUserEvent to avoid direct import from utils
-const logUserEvent = (action: string, userId?: string, metadata?: Record<string, any>) => {
-  if (typeof window !== 'undefined') {
-    const { logUserEvent: logEvent } = require('@/utils/debugLogger');
-    logEvent(action, userId, metadata);
-  }
-};
+// Fixed: Direct import and use of logUserEvent from debugLogger
+import { logUserEvent } from '@/utils/debugLogger';

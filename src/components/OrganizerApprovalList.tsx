@@ -1,11 +1,9 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserCheck, UserX, User, MapPin, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/contexts/UserContext";
 
 interface OrganizerApprovalListProps {
   pendingOrganizers: any[];
@@ -19,14 +17,10 @@ const OrganizerApprovalList: React.FC<OrganizerApprovalListProps> = ({
   onReject
 }) => {
   const { toast } = useToast();
-  const { approveUser, rejectUser } = useUser();
 
   const handleApprove = (userId: string) => {
     try {
-      // First call the UserContext method to update global state
-      approveUser(userId);
-      
-      // Then call the provided callback for local state updates
+      // Call the parent component's handler which will update the context
       onApprove(userId);
       
       toast({
@@ -45,10 +39,7 @@ const OrganizerApprovalList: React.FC<OrganizerApprovalListProps> = ({
 
   const handleReject = (userId: string) => {
     try {
-      // First call the UserContext method to update global state
-      rejectUser(userId);
-      
-      // Then call the provided callback for local state updates
+      // Call the parent component's handler which will update the context
       onReject(userId);
       
       toast({

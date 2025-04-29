@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Calendar, AlertCircle } from "lucide-react";
@@ -7,6 +7,7 @@ import { updateTournament } from "@/lib/mockData";
 import { useToast } from "@/hooks/use-toast";
 import { format, isValid, parseISO } from "date-fns";
 import { useDashboard } from "@/contexts/OfficerDashboardContext";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 interface PendingTournamentApprovalsProps {
   tournaments: any[];
@@ -19,8 +20,12 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
 }) => {
   const { toast } = useToast();
   const { refreshDashboard } = useDashboard();
+  const [processingIds, setProcessingIds] = useState<string[]>([]);
   
   const handleApproveTournament = (tournamentId: string) => {
+    // Set processing state to prevent multiple clicks
+    setProcessingIds(prev => [...prev, tournamentId]);
+    
     const tournament = tournaments.find(t => t.id === tournamentId);
     if (tournament) {
       const updatedTournament = {
@@ -30,8 +35,7 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
       
       try {
         // Log before update for debugging
-        console.log("Approving tournament:", tournament);
-        console.log("Updated tournament data:", updatedTournament);
+        logMessage(LogLevel.INFO, 'PendingTournamentApprovals', `Approving tournament: ${tournament.name} (${tournamentId})`);
         
         // Update the tournament in the mock data
         updateTournament(updatedTournament);
@@ -44,24 +48,34 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
         });
         
         // Refresh the dashboard data
-        if (onApprovalUpdate) {
-          onApprovalUpdate();
-        }
+        onApprovalUpdate();
         
         // Additional refresh to ensure data consistency across components
-        refreshDashboard();
+        setTimeout(() => {
+          refreshDashboard();
+          // Remove from processing state
+          setProcessingIds(prev => prev.filter(id => id !== tournamentId));
+        }, 500);
       } catch (error) {
         console.error("Error approving tournament:", error);
+        logMessage(LogLevel.ERROR, 'PendingTournamentApprovals', `Error approving tournament: ${error}`);
+        
         toast({
           title: "Approval Failed",
           description: "There was an error approving the tournament. Please try again.",
           variant: "destructive",
         });
+        
+        // Remove from processing state
+        setProcessingIds(prev => prev.filter(id => id !== tournamentId));
       }
     }
   };
   
   const handleRejectTournament = (tournamentId: string) => {
+    // Set processing state to prevent multiple clicks
+    setProcessingIds(prev => [...prev, tournamentId]);
+    
     const tournament = tournaments.find(t => t.id === tournamentId);
     if (tournament) {
       const updatedTournament = {
@@ -71,8 +85,7 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
       
       try {
         // Log before update for debugging
-        console.log("Rejecting tournament:", tournament);
-        console.log("Updated tournament data:", updatedTournament);
+        logMessage(LogLevel.INFO, 'PendingTournamentApprovals', `Rejecting tournament: ${tournament.name} (${tournamentId})`);
         
         // Update the tournament in the mock data
         updateTournament(updatedTournament);
@@ -85,19 +98,26 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
         });
         
         // Refresh the dashboard data
-        if (onApprovalUpdate) {
-          onApprovalUpdate();
-        }
+        onApprovalUpdate();
         
         // Additional refresh to ensure data consistency across components
-        refreshDashboard();
+        setTimeout(() => {
+          refreshDashboard();
+          // Remove from processing state
+          setProcessingIds(prev => prev.filter(id => id !== tournamentId));
+        }, 500);
       } catch (error) {
         console.error("Error rejecting tournament:", error);
+        logMessage(LogLevel.ERROR, 'PendingTournamentApprovals', `Error rejecting tournament: ${error}`);
+        
         toast({
           title: "Rejection Failed",
           description: "There was an error rejecting the tournament. Please try again.",
           variant: "destructive",
         });
+        
+        // Remove from processing state
+        setProcessingIds(prev => prev.filter(id => id !== tournamentId));
       }
     }
   };
@@ -187,20 +207,22 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
+                    disabled={processingIds.includes(tournament.id)}
                     onClick={() => handleRejectTournament(tournament.id)}
                     className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-900 dark:hover:bg-red-950 dark:text-red-400"
                   >
                     <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    {processingIds.includes(tournament.id) ? "Processing..." : "Reject"}
                   </Button>
                   <Button
                     variant="default"
                     size="sm"
+                    disabled={processingIds.includes(tournament.id)}
                     onClick={() => handleApproveTournament(tournament.id)}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Approve
+                    {processingIds.includes(tournament.id) ? "Processing..." : "Approve"}
                   </Button>
                 </div>
               </div>
