@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, RefreshCw, AlertCircle } from "lucide-react";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import Navbar from "@/components/Navbar";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
@@ -141,21 +142,13 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
           </Alert>
         )}
 
-        {/* Header Skeleton */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div className="space-y-4 w-full md:w-auto">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-          <div className="flex gap-4 mt-4 md:mt-0">
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-        </div>
-
-        {/* Loading Duration Indicator */}
-        <div className="text-center mb-4 text-sm text-gray-500 dark:text-gray-400">
-          {loadingStage}: {loadingDuration > 0 && `(${loadingDuration}s)`}
+        {/* Main Loading Indicator */}
+        <div className="flex flex-col items-center justify-center mb-8">
+          <LoadingSpinner />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            {loadingStage}: {loadingDuration > 0 && `(${loadingDuration}s)`}
+          </p>
         </div>
 
         {/* Stats Grid Skeleton */}
@@ -177,7 +170,7 @@ const OrganizerDashboardSkeleton: React.FC<OrganizerDashboardSkeletonProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="space-y-4">
-                  <Skeleton className={`h-32 w-full rounded-lg ${showReload ? 'animate-pulse-slow' : 'animate-pulse'}`} />
+                  <Skeleton className="h-32 w-full rounded-lg animate-pulse" />
                 </div>
               ))}
             </div>
