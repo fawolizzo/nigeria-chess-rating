@@ -1,3 +1,4 @@
+
 /**
  * Types definitions for user-related functionality
  */
@@ -60,7 +61,9 @@ export enum SyncEventType {
   LOGIN = 'LOGIN',
   APPROVAL = 'APPROVAL',
   FORCE_SYNC = 'FORCE_SYNC',
-  CLEAR_DATA = 'CLEAR_DATA'
+  CLEAR_DATA = 'CLEAR_DATA',
+  SYNC = 'SYNC',           // Add SYNC event type
+  SYNC_REQUEST = 'SYNC_REQUEST'  // Add SYNC_REQUEST event type
 }
 
 // Function to generate a unique device ID
