@@ -183,9 +183,9 @@ export default function OrganizerDashboard() {
     }
     
     try {
-      // Filter for upcoming and ongoing tournaments
+      // Updated to filter for approved tournaments instead of upcoming/ongoing
       const validTournaments = tournaments.filter(t => 
-        (t.status === 'upcoming' || t.status === 'ongoing') && 
+        t.status === 'approved' && 
         t.start_date // Ensure there's a start date
       );
       
