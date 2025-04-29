@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { NIGERIAN_STATES, TIME_CONTROLS } from "@/lib/nigerianStates";
 import { TournamentFormValues } from "@/hooks/useTournamentManager";
 import { format } from "date-fns";
+import { validateTimeControl } from "@/utils/timeControlValidation";
 
 const tournamentSchema = z.object({
   name: z.string().min(5, "Tournament name must be at least 5 characters"),
@@ -75,16 +77,43 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
     mode: "onChange"
   });
 
+  // Validate the custom time control whenever it changes
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    if (isCustomTimeControl) {
+      const validationResult = validateTimeControl(customTimeControl);
+      if (!validationResult.isValid) {
+        setCustomTimeControlError(validationResult.error || "Invalid time control format");
+      } else {
+        setCustomTimeControlError(null);
+      }
+    } else {
+      setCustomTimeControlError(null);
+    }
+  }, [customTimeControl, isCustomTimeControl]);
+
+  // Monitor form validity including custom time control
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      // We need to check both the form validity and the custom time control validity
       form.trigger().then(isValid => {
-        const hasCustomTimeControlError = isCustomTimeControl && !customTimeControl;
+        const hasCustomTimeControlError = isCustomTimeControl && 
+          (!customTimeControl || customTimeControlError !== null);
+        
         setIsFormValid(isValid && !hasCustomTimeControlError);
+        
+        // Debug form validation
+        console.log("Form validation status:", {
+          formIsValid: isValid,
+          isCustomTimeControl,
+          customTimeControl,
+          hasCustomTimeControlError,
+          finalIsValid: isValid && !hasCustomTimeControlError
+        });
       });
     });
     
     return () => subscription.unsubscribe();
-  }, [form, form.watch, isCustomTimeControl, customTimeControl]);
+  }, [form, isCustomTimeControl, customTimeControl, customTimeControlError]);
 
   const handleSubmit = (data: TournamentFormValues) => {
     if (!isFormValid) return;
@@ -284,8 +313,8 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
                         </FormControl>
                         <SelectContent>
                           {TIME_CONTROLS.map((timeControl) => (
-                            <SelectItem key={timeControl} value={timeControl}>
-                              {timeControl}
+                            <SelectItem key={timeControl.value} value={timeControl.value}>
+                              {timeControl.label}
                             </SelectItem>
                           ))}
                           <SelectItem value="custom">Custom Time Control</SelectItem>
@@ -297,12 +326,7 @@ export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFor
                           value={customTimeControl}
                           onChange={(e) => {
                             setCustomTimeControl(e.target.value);
-                            setCustomTimeControlError(
-                              e.target.value ? null : "Custom time control is required"
-                            );
-                            form.trigger().then(isValid => {
-                              setIsFormValid(isValid && !!e.target.value);
-                            });
+                            // Validation will be handled by the useEffect
                           }}
                           placeholder="e.g., 90min or 15min + 10sec"
                           className={customTimeControlError ? "border-red-500" : ""}
