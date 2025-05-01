@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -5,7 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { useUser } from "@/contexts/UserContext";
-import { signInWithEmailAndPassword } from "@/services/auth/loginService";
 
 export const useLoginForm = () => {
   const { login: localLogin } = useUser();
@@ -67,23 +67,24 @@ export const useLoginForm = () => {
     
     try {
       setLoginStage("validating_input");
-      let success = false;
       
       if (data.role === "rating_officer") {
-        // For rating officer, use local login with specific error handling
+        // For rating officer, use simplified direct login
         setLoginStage("authenticating_rating_officer");
         
         try {
           logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Rating Officer login');
           
-          // Create a timeout promise
-          const loginPromise = localLogin(data.email, data.password, data.role);
-          const timeoutPromise = new Promise<boolean>((_, reject) => {
-            setTimeout(() => reject(new Error("Login timed out")), 15000);
+          // Try to login with 10 second timeout
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Login timed out")), 10000);
           });
           
-          // Race the login against a timeout
-          success = await Promise.race([loginPromise, timeoutPromise]);
+          // Use Promise.race to implement timeout
+          const success = await Promise.race([
+            localLogin(data.email, data.password, data.role),
+            timeoutPromise
+          ]) as boolean;
           
           if (success) {
             setLoginStage("success");
@@ -112,18 +113,21 @@ export const useLoginForm = () => {
           );
         }
       } else {
-        // For tournament organizer, use enhanced login service with timeouts
+        // For tournament organizer, login directly
         setLoginStage("authenticating_tournament_organizer");
         
         try {
-          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Tournament Organizer login via service');
+          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Tournament Organizer login');
           
-          // Use the enhanced login service that handles both Supabase and local login
-          success = await signInWithEmailAndPassword(
-            data.email, 
-            data.password,
-            localLogin
-          );
+          // Simple login with timeout
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Login timed out")), 10000);
+          });
+          
+          const success = await Promise.race([
+            localLogin(data.email, data.password, data.role),
+            timeoutPromise
+          ]) as boolean;
           
           setLoginStage(success ? "success" : "failed");
           
@@ -133,10 +137,8 @@ export const useLoginForm = () => {
             toast({
               title: "Login Successful",
               description: "Welcome back! You are now logged in as a Tournament Organizer.",
-              duration: 3000, // Show for 3 seconds
+              duration: 3000,
             });
-            
-            // Important: Keep isLoading true so that the Login component handles the redirection
           } else {
             throw new Error("Invalid credentials. Please check your email and password.");
           }

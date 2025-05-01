@@ -5,7 +5,6 @@ import { sendSyncEvent } from '@/utils/storageSync';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { STORAGE_KEYS } from '../userContextTypes';
 import { monitorSync } from '@/utils/monitorSync';
-import { supabase } from '@/integrations/supabase/client';
 
 // Default rating officer constants - only for development reference
 const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
@@ -82,26 +81,17 @@ export const loginUser = async (
       let credentialsValid = false;
       
       if (role === 'rating_officer') {
-        // For rating officers, verify access code
+        // For rating officers, verify access code directly
         credentialsValid = authValue === DEFAULT_ACCESS_CODE;
         console.log(`Rating officer access code valid: ${credentialsValid}`);
       } else {
-        // For tournament organizers, attempt to sign in with Supabase
+        // For tournament organizers, use password directly
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: normalizedEmail,
-            password: authValue
-          });
-          
-          if (error) {
-            console.error("Supabase authentication error:", error);
-            throw new Error('Invalid password');
-          }
-          
-          credentialsValid = !!data.user;
+          // Direct password comparison for tournament organizers
+          credentialsValid = authValue === user.password;
           console.log(`Tournament organizer credentials valid: ${credentialsValid}`);
         } catch (error) {
-          console.error("Error during Supabase authentication:", error);
+          console.error("Error during authentication:", error);
           throw new Error('Invalid password');
         }
       }

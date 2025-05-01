@@ -43,7 +43,7 @@ const Login = () => {
       const redirectPath = getRedirectPath(currentUser);
       logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`);
       
-      // Use both immediate and delayed navigation to improve reliability
+      // Use immediate navigation with a backup timeout
       try {
         navigate(redirectPath, { replace: true });
         
@@ -57,16 +57,20 @@ const Login = () => {
             });
             navigate(redirectPath, { replace: true });
           }
-        }, 800);
+        }, 500); // Reduced delay for faster response
       } catch (error) {
         logMessage(LogLevel.ERROR, 'Login', 'Navigation error', { error });
+        // Even if navigation fails, we'll try again
+        setTimeout(() => {
+          navigate(redirectPath, { replace: true });
+        }, 1000);
       }
     }
   }, [currentUser, isLoading, navigate, redirecting, redirectAttempts]);
   
   // Handle loading states and timeouts
   useEffect(() => {
-    let timer: number | null = null;
+    let timer: number | undefined;
     
     if (isLoading) {
       const startTime = Date.now();
@@ -76,7 +80,7 @@ const Login = () => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         setLoadingDuration(elapsed);
         
-        if (elapsed >= 8 && !showTimeout) {
+        if (elapsed >= 5 && !showTimeout) { // Reduced timeout threshold
           setShowTimeout(true);
           logMessage(LogLevel.WARNING, 'Login', 'Login verification is taking longer than expected', {
             elapsedTime: `${elapsed}s`,
@@ -90,7 +94,7 @@ const Login = () => {
     }
     
     return () => {
-      if (timer) clearInterval(timer);
+      if (timer) window.clearInterval(timer);
     };
   }, [isLoading, showTimeout]);
 
@@ -104,7 +108,9 @@ const Login = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-          <LoadingSpinner />
+          <div className="flex justify-center">
+            <LoadingSpinner size="lg" />
+          </div>
           <p className="text-center text-gray-600 dark:text-gray-400">
             {redirecting ? 'Redirecting to dashboard...' : `Verifying your account... ${loadingDuration > 0 ? `(${loadingDuration}s)` : ''}`}
           </p>

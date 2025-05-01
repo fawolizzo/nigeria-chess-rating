@@ -1,14 +1,33 @@
 
-import React from 'react';
+import React from "react";
+import { cn } from "@/lib/utils";
 
-export const LoadingSpinner = () => (
-  <div className="flex justify-center">
-    <div className="w-12 h-12 border-4 border-t-transparent border-nigeria-green rounded-full animate-spin"></div>
-  </div>
-);
+type SpinnerSize = "sm" | "md" | "lg" | "xl";
 
-export const SmallLoadingSpinner = () => (
-  <div className="flex justify-center">
-    <div className="w-6 h-6 border-2 border-t-transparent border-nigeria-green rounded-full animate-spin"></div>
-  </div>
-);
+interface LoadingSpinnerProps {
+  className?: string;
+  size?: SpinnerSize;
+}
+
+const sizeClasses: Record<SpinnerSize, string> = {
+  sm: "w-4 h-4 border-2",
+  md: "w-6 h-6 border-2",
+  lg: "w-8 h-8 border-2",
+  xl: "w-12 h-12 border-3",
+};
+
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+  className, 
+  size = "md" 
+}) => {
+  return (
+    <div 
+      className={cn(
+        "rounded-full border-t-transparent border-green-600 dark:border-green-500 animate-spin",
+        sizeClasses[size],
+        className
+      )}
+      style={{ animation: "spin 1s linear infinite" }} 
+    />
+  );
+};

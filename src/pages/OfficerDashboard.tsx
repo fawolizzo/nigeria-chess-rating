@@ -18,7 +18,7 @@ const OfficerDashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   
-  // Prevent access for non-rating officers
+  // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
     if (!isLoading) {
       if (!currentUser) {
@@ -51,9 +51,11 @@ const OfficerDashboard: React.FC = () => {
       logMessage(LogLevel.INFO, 'OfficerDashboard', `Rating officer logged in: ${currentUser.email}`);
       
       // Small delay to avoid content flashing
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setIsContentLoading(false);
-      }, 100);
+      }, 50);
+      
+      return () => clearTimeout(timer);
     }
   }, [currentUser, isLoading, navigate, toast]);
   
@@ -87,7 +89,7 @@ const OfficerDashboard: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="flex flex-col items-center">
-          <LoadingSpinner />
+          <LoadingSpinner size="xl" />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
