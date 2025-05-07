@@ -12,15 +12,16 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 const OfficerDashboard: React.FC = () => {
-  const { currentUser, isLoading, logout, forceSync } = useUser();
+  const { currentUser, isLoading: isUserLoading, logout, forceSync } = useUser();
   const navigate = useNavigate();
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadingTimeoutExceeded, setLoadingTimeoutExceeded] = useState(false);
   const { toast } = useToast();
   
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
-    if (!isLoading) {
+    if (!isUserLoading) {
       if (!currentUser) {
         logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
         navigate("/login");
@@ -57,7 +58,20 @@ const OfficerDashboard: React.FC = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [currentUser, isLoading, navigate, toast]);
+  }, [currentUser, isUserLoading, navigate, toast]);
+  
+  // Add timeout protection to prevent infinite loading state
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (isContentLoading) {
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Loading timeout exceeded, forcing content display');
+        setLoadingTimeoutExceeded(true);
+        setIsContentLoading(false);
+      }
+    }, 10000); // 10 second timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [isContentLoading]);
   
   const handleSystemReset = () => {
     // Log out the current user after reset
@@ -85,7 +99,20 @@ const OfficerDashboard: React.FC = () => {
     }
   };
   
-  if (isLoading || isContentLoading) {
+  // If user data is still loading, show loading
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
+        <div className="flex flex-col items-center">
+          <LoadingSpinner size="xl" />
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking credentials...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // If content is loading and timeout not exceeded, show loading
+  if (isContentLoading && !loadingTimeoutExceeded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="flex flex-col items-center">
@@ -96,6 +123,7 @@ const OfficerDashboard: React.FC = () => {
     );
   }
   
+  // User authentication check
   if (!currentUser || currentUser.role !== "rating_officer") {
     return null; // Will be redirected by useEffect
   }
