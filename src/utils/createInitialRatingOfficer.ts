@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { getFromStorage, saveToStorage } from "@/utils/storageUtils";
 
-// Default constants
-const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
-const DEFAULT_ACCESS_CODE = "NCR2025";
+// Default constants - updated for testing
+const DEFAULT_RATING_OFFICER_EMAIL = "ncro@ncr.com";
+const DEFAULT_ACCESS_CODE = "RNCR25";
 const STORAGE_KEY_USERS = "ncr_users";
 
 // This function handles creating the initial rating officer account if it doesn't exist

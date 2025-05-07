@@ -6,8 +6,8 @@ import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { STORAGE_KEYS } from '../userContextTypes';
 import { monitorSync } from '@/utils/monitorSync';
 
-// Default rating officer constants - only for development reference
-const DEFAULT_RATING_OFFICER_EMAIL = "fawolizzo@gmail.com";
+// Default rating officer constants - updated for testing phase
+const DEFAULT_RATING_OFFICER_EMAIL = "ncro@ncr.com";
 const DEFAULT_ACCESS_CODE = "RNCR25";
 
 /**
