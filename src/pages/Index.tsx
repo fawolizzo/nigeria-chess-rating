@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
@@ -6,9 +7,17 @@ import { Users, Calendar, InfoIcon } from 'lucide-react';
 import { useProductionSync } from '@/hooks/useProductionSync';
 
 const Index = () => {
-  // Initialize the production sync hook to ensure data consistency across devices
-  // This runs silently in the background without UI indicators for end users
-  useProductionSync();
+  // Wrap the hook usage in an error boundary (via try/catch) to prevent blocking rendering
+  React.useEffect(() => {
+    try {
+      // Initialize the production sync hook
+      const cleanup = useProductionSync();
+      return cleanup;
+    } catch (error) {
+      console.error("Error initializing production sync:", error);
+      // Continue rendering even if sync fails
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

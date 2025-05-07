@@ -16,7 +16,6 @@ const OfficerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadingTimeoutExceeded, setLoadingTimeoutExceeded] = useState(false);
   const { toast } = useToast();
   
   // Prevent access for non-rating officers and handle redirects
@@ -51,27 +50,14 @@ const OfficerDashboard: React.FC = () => {
       
       logMessage(LogLevel.INFO, 'OfficerDashboard', `Rating officer logged in: ${currentUser.email}`);
       
-      // Small delay to avoid content flashing
+      // Use a very short delay to prevent flash of loading state
       const timer = setTimeout(() => {
         setIsContentLoading(false);
-      }, 50);
+      }, 10);
       
       return () => clearTimeout(timer);
     }
   }, [currentUser, isUserLoading, navigate, toast]);
-  
-  // Add timeout protection to prevent infinite loading state
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isContentLoading) {
-        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Loading timeout exceeded, forcing content display');
-        setLoadingTimeoutExceeded(true);
-        setIsContentLoading(false);
-      }
-    }, 10000); // 10 second timeout
-    
-    return () => clearTimeout(timeoutId);
-  }, [isContentLoading]);
   
   const handleSystemReset = () => {
     // Log out the current user after reset
@@ -99,25 +85,13 @@ const OfficerDashboard: React.FC = () => {
     }
   };
   
-  // If user data is still loading, show loading
+  // Show minimal loading state for user authentication check only
   if (isUserLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="flex flex-col items-center">
-          <LoadingSpinner size="xl" />
+          <LoadingSpinner size="lg" />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Checking credentials...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // If content is loading and timeout not exceeded, show loading
-  if (isContentLoading && !loadingTimeoutExceeded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="flex flex-col items-center">
-          <LoadingSpinner size="xl" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
     );

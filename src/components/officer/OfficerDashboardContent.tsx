@@ -26,21 +26,21 @@ const OfficerDashboardContent: React.FC = () => {
     });
   }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing]);
   
-  // Force completion after component mount with a delay
+  // Force rendering after a short timeout regardless of loading state
   React.useEffect(() => {
-    const forceCompleteTimeout = setTimeout(() => {
-      if (!initialLoadComplete) {
-        logMessage(LogLevel.WARNING, 'OfficerDashboardContent', 'Forcing dashboard to show content due to timeout');
-        // We don't change the state variable here, but instead render the content anyway
-      }
-    }, 8000); // 8-second backup timeout
-    
-    return () => clearTimeout(forceCompleteTimeout);
+    if (!initialLoadComplete) {
+      // Short timeout to ensure dashboard renders even if data sync is slow
+      const forceRenderTimeout = setTimeout(() => {
+        logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Force rendering dashboard after timeout');
+      }, 3000); // 3 seconds is enough to wait for initial data
+      
+      return () => clearTimeout(forceRenderTimeout);
+    }
   }, [initialLoadComplete]);
   
-  // If loading takes too long, show content anyway
-  if (!initialLoadComplete && loadingProgress === 100) {
-    logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Loading progress at 100% but not marked complete, showing content');
+  // Show content if loading is at 100% even if not marked complete
+  if (!initialLoadComplete && loadingProgress >= 95) {
+    logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Loading progress at 95%+ but not marked complete, showing content anyway');
     return (
       <OfficerDashboardProvider>
         <div className="p-4">
