@@ -10,6 +10,10 @@ import { monitorSync } from '@/utils/monitorSync';
 const DEFAULT_RATING_OFFICER_EMAIL = "ncro@ncr.com";
 const DEFAULT_ACCESS_CODE = "RNCR25";
 
+// Default tournament organizer constants - for testing phase
+const DEFAULT_TOURNAMENT_ORGANIZER_EMAIL = "org@ncr.com";
+const DEFAULT_TOURNAMENT_ORGANIZER_PASSWORD = "#organizer";
+
 /**
  * Login a user with email and password/access code
  */
@@ -32,7 +36,14 @@ export const loginUser = async (
       await forceSyncAllStorage([STORAGE_KEYS.USERS]);
       
       // For rating officers, always use the default email address
-      const loginEmail = role === 'rating_officer' ? DEFAULT_RATING_OFFICER_EMAIL : email;
+      let loginEmail = email;
+      if (role === 'rating_officer') {
+        loginEmail = DEFAULT_RATING_OFFICER_EMAIL;
+      } 
+      // For tournament organizers, check if it's the default email
+      else if (role === 'tournament_organizer' && (email === DEFAULT_TOURNAMENT_ORGANIZER_EMAIL || email.trim() === '')) {
+        loginEmail = DEFAULT_TOURNAMENT_ORGANIZER_EMAIL;
+      }
       
       // Normalize email to lowercase
       const normalizedEmail = loginEmail.toLowerCase().trim();
@@ -67,6 +78,22 @@ export const loginUser = async (
           accessCode: DEFAULT_ACCESS_CODE
         };
       }
+      // If no Tournament Organizer found, create one in memory for default login
+      else if (!user && role === 'tournament_organizer' && normalizedEmail === DEFAULT_TOURNAMENT_ORGANIZER_EMAIL.toLowerCase()) {
+        console.log('Creating temporary Tournament Organizer in memory for login attempt');
+        user = {
+          id: 'temp-tournament-organizer-id',
+          email: DEFAULT_TOURNAMENT_ORGANIZER_EMAIL,
+          fullName: 'Test Tournament Organizer',
+          phoneNumber: '',
+          state: 'Lagos',
+          role: 'tournament_organizer',
+          status: 'approved',
+          registrationDate: new Date().toISOString(),
+          lastModified: Date.now(),
+          password: DEFAULT_TOURNAMENT_ORGANIZER_PASSWORD
+        };
+      }
       
       if (!user) {
         throw new Error(`No ${role} account found with this email`);
@@ -87,8 +114,13 @@ export const loginUser = async (
       } else {
         // For tournament organizers, use password directly
         try {
-          // Direct password comparison for tournament organizers
-          credentialsValid = authValue === user.password;
+          // For default tournament organizer, verify with default password
+          if (normalizedEmail === DEFAULT_TOURNAMENT_ORGANIZER_EMAIL.toLowerCase()) {
+            credentialsValid = authValue === DEFAULT_TOURNAMENT_ORGANIZER_PASSWORD;
+          } else {
+            // Direct password comparison for other tournament organizers
+            credentialsValid = authValue === user.password;
+          }
           console.log(`Tournament organizer credentials valid: ${credentialsValid}`);
         } catch (error) {
           console.error("Error during authentication:", error);
@@ -105,8 +137,8 @@ export const loginUser = async (
       }
       
       // If this is a temporary user, save it to storage
-      if (user.id === 'temp-rating-officer-id') {
-        console.log('Saving temporary Rating Officer to persistent storage');
+      if (user.id.startsWith('temp-')) {
+        console.log('Saving temporary user to persistent storage');
         user.id = crypto.randomUUID(); // Generate a proper UUID
         
         // Add user to the users array
