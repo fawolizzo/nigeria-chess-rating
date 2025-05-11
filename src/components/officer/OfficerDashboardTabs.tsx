@@ -9,6 +9,8 @@ import ApprovedOrganizers from "./ApprovedOrganizers";
 import { useDashboard } from "@/contexts/OfficerDashboardContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
+import { SyncStatusMonitor } from "./dashboard/SyncStatusMonitor";
 
 const OfficerDashboardTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("pending-tournaments");
@@ -21,6 +23,8 @@ const OfficerDashboardTabs: React.FC = () => {
     refreshDashboard,
     isLoading
   } = useDashboard();
+  
+  const { syncDashboardData, isSyncing, syncSuccess, lastSyncTime } = useOfficerDashboardSync();
 
   // Use an effect to set mounted state to ensure consistent rendering
   useEffect(() => {
@@ -61,6 +65,10 @@ const OfficerDashboardTabs: React.FC = () => {
     refreshDashboard();
   };
   
+  const handleManualSync = () => {
+    syncDashboardData(true); // true to show toast notification
+  };
+  
   if (!mounted) {
     return (
       <div className="p-4">
@@ -83,6 +91,16 @@ const OfficerDashboardTabs: React.FC = () => {
   
   return (
     <div>
+      <div className="flex justify-between items-center mb-4 px-2">
+        <h3 className="text-sm font-medium text-gray-500">Dashboard Controls</h3>
+        <SyncStatusMonitor 
+          isSyncing={isSyncing}
+          syncSuccess={syncSuccess}
+          lastSyncTime={lastSyncTime}
+          onSyncClick={handleManualSync}
+        />
+      </div>
+      
       <Tabs 
         defaultValue="pending-tournaments" 
         value={activeTab} 
