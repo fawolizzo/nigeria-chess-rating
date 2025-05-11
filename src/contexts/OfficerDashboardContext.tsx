@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { getAllTournaments, getAllPlayers, Tournament } from "@/lib/mockData";
 import { getAllUsersFromStorage } from "@/utils/userUtils";
-import { syncStorage, getFromStorage } from "@/utils/storageUtils";
+import { syncStorage } from "@/utils/storageUtils";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
@@ -31,19 +31,10 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
   const loadAttemptsRef = useRef(0);
   const dataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Optimized load function with improved error handling and timeouts
   const loadAllData = useCallback(async () => {
     // Prevent multiple concurrent loads and limit retries
     if (loadingInProgressRef.current) {
       logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Data loading already in progress, skipping');
-      return;
-    }
-    
-    if (loadAttemptsRef.current > 5) {
-      logMessage(LogLevel.WARNING, 'OfficerDashboardContext', 'Exceeded maximum load attempts, showing empty data');
-      setIsLoading(false);
-      setPendingTournaments([]);
-      setCompletedTournaments([]);
       return;
     }
     
@@ -55,63 +46,58 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       
       logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Loading dashboard data');
       
-      // Use a Promise with timeout to prevent infinite loading
-      const syncPromise = async () => {
-        try {
-          // Skip syncing on repeated attempts
-          if (loadAttemptsRef.current <= 2) {
-            await forceSync();
-            await Promise.all([
-              syncStorage(['ncr_users']),
-              syncStorage(['ncr_players']),
-              syncStorage(['ncr_tournaments'])
-            ]);
-          }
-        } catch (syncError) {
-          logMessage(LogLevel.ERROR, 'OfficerDashboardContext', 'Error syncing storage, continuing with local data:', syncError);
-          // Continue with local data
-        }
-      };
-      
-      // Set a timeout for the sync operation
-      const timeoutPromise = new Promise<void>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Storage sync timed out'));
-        }, 3000); // 3 second timeout
-      });
-      
       // Try syncing with timeout
       try {
+        const syncPromise = async () => {
+          await forceSync();
+          await Promise.all([
+            syncStorage(['ncr_users']),
+            syncStorage(['ncr_players']),
+            syncStorage(['ncr_tournaments'])
+          ]);
+        };
+        
+        const timeoutPromise = new Promise<void>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Storage sync timed out'));
+          }, 3000);
+        });
+        
         await Promise.race([syncPromise(), timeoutPromise]);
       } catch (timeoutErr) {
         logMessage(LogLevel.WARNING, 'OfficerDashboardContext', 'Storage sync timed out, proceeding with local data');
       }
       
-      // Load tournaments directly from localStorage for most up-to-date data
-      const storedTournamentsJSON = localStorage.getItem('ncr_tournaments');
-      let allTournaments: Tournament[] = [];
-      
-      if (storedTournamentsJSON) {
-        try {
-          allTournaments = JSON.parse(storedTournamentsJSON);
-          logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Successfully parsed ${allTournaments.length} tournaments from localStorage`);
-        } catch (parseError) {
-          logMessage(LogLevel.ERROR, 'OfficerDashboardContext', 'Error parsing tournaments from localStorage:', parseError);
-          // Fallback to the getAllTournaments function
+      // Load tournaments
+      try {
+        // First try from localStorage
+        const storedTournamentsJSON = localStorage.getItem('ncr_tournaments');
+        let allTournaments: Tournament[] = [];
+        
+        if (storedTournamentsJSON) {
+          try {
+            allTournaments = JSON.parse(storedTournamentsJSON);
+            logMessage(LogLevel.INFO, 'OfficerDashboardContext', `Loaded ${allTournaments.length} tournaments from localStorage`);
+          } catch (parseError) {
+            // Fallback to the getAllTournaments function
+            allTournaments = getAllTournaments();
+          }
+        } else {
+          // Fallback to getAllTournaments function if no localStorage data
           allTournaments = getAllTournaments();
         }
-      } else {
-        // Fallback to getAllTournaments function if no localStorage data
-        allTournaments = getAllTournaments();
-        logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'No tournaments in localStorage, using getAllTournaments() function');
+        
+        const pending = Array.isArray(allTournaments) ? allTournaments.filter(t => t && t.status === "pending") : [];
+        const completed = Array.isArray(allTournaments) ? allTournaments.filter(t => t && t.status === "completed") : [];
+        
+        setPendingTournaments(pending);
+        setCompletedTournaments(completed);
+      } catch (tournamentError) {
+        logMessage(LogLevel.ERROR, 'OfficerDashboardContext', 'Error loading tournaments:', tournamentError);
+        // Set empty arrays rather than failing completely
+        setPendingTournaments([]);
+        setCompletedTournaments([]);
       }
-      
-      // Allow empty arrays without throwing errors
-      const pending = Array.isArray(allTournaments) ? allTournaments.filter(t => t && t.status === "pending") : [];
-      const completed = Array.isArray(allTournaments) ? allTournaments.filter(t => t && t.status === "completed") : [];
-      
-      setPendingTournaments(pending);
-      setCompletedTournaments(completed);
       
       // Load pending players
       try {
@@ -122,7 +108,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
         setPendingPlayers([]);
       }
       
-      // Load pending organizers directly from storage for the most up-to-date data
+      // Load pending organizers
       try {
         const allUsers = getAllUsersFromStorage();
         const filteredOrganizers = Array.isArray(allUsers) ? allUsers.filter(
@@ -162,24 +148,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, []);
   
-  // Set up storage event listener for real-time updates
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'ncr_tournaments') {
-        logMessage(LogLevel.INFO, 'OfficerDashboardContext', 'Tournament data changed in another window/tab, refreshing');
-        loadAllData();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [loadAllData]);
-  
   // Load data on mount and when refreshKey changes (manual refresh)
-  // With backup timeout to prevent infinite loading state
   useEffect(() => {
     // Clear any existing timeout
     if (dataTimeoutRef.current) {
@@ -195,7 +164,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
         logMessage(LogLevel.WARNING, 'OfficerDashboardContext', 'Loading dashboard data timed out, forcing completion');
         setIsLoading(false);
       }
-    }, 10000); // 10 seconds max loading time
+    }, 8000); // 8 seconds max loading time
     
     return () => {
       if (dataTimeoutRef.current) {

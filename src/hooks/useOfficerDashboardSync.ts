@@ -9,44 +9,44 @@ export function useOfficerDashboardSync() {
   const { forceSync } = useUser();
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const syncInProgressRef = useRef(false);
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const syncLockRef = useRef(false);
+  const mountedRef = useRef(true);
   
-  // Optimized sync function with debounce and better error handling
+  // Optimized sync function with better error handling
   const syncDashboardData = useCallback(async (showToast = false) => {
-    // Prevent multiple concurrent syncs with lock
-    if (syncInProgressRef.current || syncLockRef.current) {
-      logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Sync already in progress or locked, skipping');
+    // Prevent multiple concurrent syncs
+    if (syncInProgressRef.current || !mountedRef.current) {
       return false;
     }
     
-    // Set locks to prevent multiple syncs
     syncInProgressRef.current = true;
-    syncLockRef.current = true;
     
     try {
-      setIsSyncing(true);
+      if (mountedRef.current) setIsSyncing(true);
       logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Starting dashboard data sync');
       
       // First sync the user data to ensure we have latest permissions
       await forceSync();
       
-      // Only sync critical keys - this is a major optimization
+      // Only sync critical keys
       await Promise.all([
         syncStorage(['ncr_users']),
         syncStorage(['ncr_players']),
         syncStorage(['ncr_tournaments'])
       ]);
       
-      setLastSyncTime(new Date());
+      if (mountedRef.current) {
+        setLastSyncTime(new Date());
+        setSyncSuccess(true);
+      }
       
       // Only show toast for manual sync operations
-      if (showToast) {
+      if (showToast && mountedRef.current) {
         toast({
           title: "Dashboard Updated",
-          description: "Dashboard data has been refreshed",
+          description: "Dashboard data has been refreshed successfully",
         });
       }
       
@@ -54,68 +54,51 @@ export function useOfficerDashboardSync() {
       return true;
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useOfficerDashboardSync', 'Error syncing dashboard data:', error);
-      if (showToast) {
-        toast({
-          title: "Sync Error",
-          description: "There was an error syncing the dashboard data",
-          variant: "destructive"
-        });
+      
+      if (mountedRef.current) {
+        setSyncSuccess(false);
+        
+        if (showToast) {
+          toast({
+            title: "Sync Error",
+            description: "There was an error syncing the dashboard data",
+            variant: "destructive"
+          });
+        }
       }
+      
       return false;
     } finally {
-      setIsSyncing(false);
-      
-      // Release the immediate lock
-      syncInProgressRef.current = false;
+      if (mountedRef.current) setIsSyncing(false);
       
       // Add a delay before releasing the lock to prevent rapid subsequent syncs
       setTimeout(() => {
-        syncLockRef.current = false;
-      }, 3000); // 3 second cooldown between syncs
+        syncInProgressRef.current = false;
+      }, 1000);
     }
   }, [forceSync, toast]);
   
-  // Clear any existing timeouts when unmounting
+  // Only sync once on mount
   useEffect(() => {
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, []);
-  
-  // Only sync once on mount - CRITICAL fix to prevent multiple 100% loading indicators
-  useEffect(() => {
-    // If sync is already in progress or locked, don't start another one
-    if (syncLockRef.current || syncInProgressRef.current) return;
-    
-    // Clear any existing interval
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
-    }
-    
-    // Set lock to prevent additional syncs during mount
-    syncLockRef.current = true;
+    mountedRef.current = true;
     
     // Small delay before initial sync to allow UI to render first
     const timer = setTimeout(() => {
-      syncDashboardData().finally(() => {
-        // Release lock after sync completes
-        syncLockRef.current = false;
-      });
+      if (mountedRef.current) {
+        syncDashboardData();
+      }
     }, 100);
     
     return () => {
+      mountedRef.current = false;
       clearTimeout(timer);
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
     };
   }, [syncDashboardData]);
   
   return {
     syncDashboardData,
     isSyncing,
+    syncSuccess,
     lastSyncTime
   };
 }
