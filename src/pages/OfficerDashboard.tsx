@@ -17,7 +17,7 @@ const OfficerDashboard: React.FC = () => {
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
-  const refreshToastShownRef = useRef(false);
+  const refreshToastIdRef = useRef<string | null>(null);
   
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
@@ -68,29 +68,35 @@ const OfficerDashboard: React.FC = () => {
   
   const handleRefresh = async () => {
     try {
+      // If already refreshing, don't start another refresh operation
+      if (isRefreshing) return;
+      
       setIsRefreshing(true);
       
-      if (!refreshToastShownRef.current) {
-        toast({
-          title: "Refreshing Data",
-          description: "The dashboard data is being refreshed...",
-          duration: 3000,
-        });
-        refreshToastShownRef.current = true;
+      // Dismiss any existing refresh toast before showing a new one
+      if (refreshToastIdRef.current) {
+        toast.dismiss(refreshToastIdRef.current);
       }
+      
+      // Show refresh toast and store its ID
+      const { id } = toast({
+        title: "Refreshing Data",
+        description: "The dashboard data is being refreshed...",
+        duration: 3000,
+      });
+      refreshToastIdRef.current = id;
       
       await forceSync();
       
+      // Show success toast
       toast({
         title: "Data Refreshed",
         description: "The dashboard data has been refreshed successfully.",
-        duration: 3000,
+        duration: 2000,
       });
       
-      // Small delay before allowing new toast
-      setTimeout(() => {
-        refreshToastShownRef.current = false;
-      }, 500);
+      // Clear the toast ID after successful completion
+      refreshToastIdRef.current = null;
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
@@ -99,7 +105,7 @@ const OfficerDashboard: React.FC = () => {
         variant: "destructive",
         duration: 5000,
       });
-      refreshToastShownRef.current = false;
+      refreshToastIdRef.current = null;
     } finally {
       setIsRefreshing(false);
     }

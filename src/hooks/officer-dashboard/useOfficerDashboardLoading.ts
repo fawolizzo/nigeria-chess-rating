@@ -13,13 +13,15 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
   const { loadingProgress, incrementProgress, resetProgress, completeProgress } = useProgressManager();
   const { syncDashboardData, resetAttemptCounter } = useDashboardSync();
   const mounted = useRef(true);
+  const syncInProgressRef = useRef(false);
   
   const loadDashboardData = useCallback(async () => {
-    if (!mounted.current) return;
+    if (!mounted.current || syncInProgressRef.current) return;
     
     try {
       logMessage(LogLevel.INFO, 'useOfficerDashboardLoading', 'Starting dashboard data loading');
       
+      syncInProgressRef.current = true;
       setIsLoadingSyncing(true);
       setLoadingFailed(false);
       setErrorDetails(undefined);
@@ -27,7 +29,9 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       incrementProgress(15);
       
       // Immediate progress update to show activity
-      setTimeout(() => incrementProgress(20), 100);
+      setTimeout(() => {
+        if (mounted.current) incrementProgress(20);
+      }, 100);
       
       try {
         // Attempt to sync data
@@ -57,6 +61,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
             setInitialLoadComplete(true);
             setIsLoadingSyncing(false);
             resetAttemptCounter();
+            syncInProgressRef.current = false;
           }
         }, 500);
       }
@@ -71,12 +76,13 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         setLoadingFailed(true);
         setIsLoadingSyncing(false);
         setErrorDetails(`Loading error: ${errorMessage}`);
+        syncInProgressRef.current = false;
       }
     }
   }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter]);
   
   const handleRetry = useCallback(() => {
-    if (isLoadingSyncing) return;
+    if (isLoadingSyncing || syncInProgressRef.current) return;
     
     resetProgress();
     resetAttemptCounter();
@@ -106,6 +112,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         completeProgress();
         setInitialLoadComplete(true);
         setIsLoadingSyncing(false);
+        syncInProgressRef.current = false;
         
         if (!errorDetails) {
           setErrorDetails('Dashboard loaded with limited data due to timeout.');
@@ -115,6 +122,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
     
     return () => {
       mounted.current = false;
+      syncInProgressRef.current = false;
       clearTimeout(maxTimeoutId);
       progressIntervals.forEach(clearTimeout);
     };

@@ -19,7 +19,7 @@ export default function OfficerDashboardPage() {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
-  const refreshToastShownRef = useRef(false);
+  const refreshToastIdRef = useRef<string | null>(null);
   
   // Check authentication and role
   useEffect(() => {
@@ -53,29 +53,35 @@ export default function OfficerDashboardPage() {
   // Handle manual data refresh
   const handleRefresh = async () => {
     try {
+      // If already refreshing, don't start another refresh operation
+      if (isRefreshing) return;
+      
       setIsRefreshing(true);
       
-      if (!refreshToastShownRef.current) {
-        toast({
-          title: "Refreshing Data",
-          description: "The dashboard data is being refreshed...",
-          duration: 3000,
-        });
-        refreshToastShownRef.current = true;
+      // Dismiss any existing refresh toast before showing a new one
+      if (refreshToastIdRef.current) {
+        toast.dismiss(refreshToastIdRef.current);
       }
+      
+      // Show toast with a unique ID and store the reference
+      const { id } = toast({
+        title: "Refreshing Data",
+        description: "The dashboard data is being refreshed...",
+        duration: 3000,
+      });
+      refreshToastIdRef.current = id;
       
       await forceSync();
       
+      // Show success toast and clear the refresh toast ID
       toast({
         title: "Data Refreshed",
         description: "The dashboard data has been refreshed successfully.",
-        duration: 3000,
+        duration: 2000,
       });
       
-      // Add a small delay before allowing new toasts
-      setTimeout(() => {
-        refreshToastShownRef.current = false;
-      }, 500);
+      // Clear the toast ID reference
+      refreshToastIdRef.current = null;
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
@@ -84,7 +90,7 @@ export default function OfficerDashboardPage() {
         variant: "destructive",
         duration: 5000,
       });
-      refreshToastShownRef.current = false;
+      refreshToastIdRef.current = null;
     } finally {
       setIsRefreshing(false);
     }

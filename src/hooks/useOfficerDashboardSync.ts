@@ -16,6 +16,7 @@ export function useOfficerDashboardSync() {
   const mountedRef = useRef(true);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
+  const refreshToastIdRef = useRef<string | null>(null);
   const MAX_RETRIES = 2;
   
   // Enhanced sync function with better error handling
@@ -38,6 +39,21 @@ export function useOfficerDashboardSync() {
       // Clear any previous timeout
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
+      }
+      
+      // Show toast if requested and not already showing
+      if (showToast && !refreshToastIdRef.current) {
+        // Clean up any existing toast first
+        if (refreshToastIdRef.current) {
+          toast.dismiss(refreshToastIdRef.current);
+        }
+        
+        const { id } = toast({
+          title: "Syncing Data",
+          description: "Syncing dashboard data with the latest updates...",
+          duration: 3000,
+        });
+        refreshToastIdRef.current = id;
       }
       
       // First sync the user data
@@ -102,16 +118,21 @@ export function useOfficerDashboardSync() {
         setSyncError(undefined);
       }
       
-      // Only show toast for manual sync operations
+      // Only show success toast for manual sync operations
       if (showToast && mountedRef.current) {
         toast({
           title: "Dashboard Updated",
           description: "Dashboard data has been refreshed successfully",
+          duration: 2000,
         });
       }
       
       logMessage(LogLevel.INFO, 'useOfficerDashboardSync', 'Dashboard data sync completed');
       retryCountRef.current = 0;
+      
+      // Clear the toast ID reference
+      refreshToastIdRef.current = null;
+      
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -125,10 +146,14 @@ export function useOfficerDashboardSync() {
           toast({
             title: "Sync Error",
             description: "There was an error syncing the dashboard data. Please try again.",
-            variant: "destructive"
+            variant: "destructive",
+            duration: 5000,
           });
         }
       }
+      
+      // Clear the toast ID reference
+      refreshToastIdRef.current = null;
       
       return false;
     } finally {
@@ -167,8 +192,13 @@ export function useOfficerDashboardSync() {
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
       }
+      
+      // Dismiss any remaining toast
+      if (refreshToastIdRef.current) {
+        toast.dismiss(refreshToastIdRef.current);
+      }
     };
-  }, [syncDashboardData]);
+  }, [syncDashboardData, toast]);
   
   return {
     syncDashboardData,
