@@ -12,19 +12,24 @@ import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingSt
 import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { SyncStatusIndicator } from "@/components/dashboard/SyncStatusIndicator";
+import { useDashboard } from "@/contexts/OfficerDashboardContext";
 
 export function NewOfficerDashboard() {
   const [activeTab, setActiveTab] = useState("pending-tournaments");
+  
+  // Use the dashboard context
   const { 
     pendingTournaments, 
     completedTournaments, 
     pendingPlayers,
     pendingOrganizers,
-    isLoading, 
-    hasError, 
-    errorMessage, 
-    refreshData 
-  } = useOfficerDashboardData();
+    isLoading,
+    refreshDashboard
+  } = useDashboard();
+  
+  // Failed load state will be managed within the dashboard context
+  const hasError = false;
+  const errorMessage = null;
   
   const { 
     isSyncing, 
@@ -33,7 +38,7 @@ export function NewOfficerDashboard() {
     syncError, 
     manualSync 
   } = useDataSync({
-    onSyncSuccess: refreshData
+    onSyncSuccess: refreshDashboard
   });
 
   // Handle tab change
@@ -58,13 +63,13 @@ export function NewOfficerDashboard() {
         title="Dashboard Data Error"
         description="There was a problem loading your dashboard data."
         errorDetails={errorMessage || undefined}
-        onRetry={refreshData}
+        onRetry={refreshDashboard}
       />
     );
   }
 
   return (
-    <DashboardErrorBoundary onReset={refreshData}>
+    <DashboardErrorBoundary onReset={refreshDashboard}>
       <div className="p-4">
         <div className="flex justify-between items-center mb-4 px-2">
           <h3 className="text-sm font-medium text-gray-500">Dashboard Controls</h3>
@@ -119,13 +124,13 @@ export function NewOfficerDashboard() {
 
           <TabsContent value="organizers" className="p-4 focus-visible:outline-none focus-visible:ring-0">
             <div className="space-y-8">
-              <OrganizerApprovals onApprovalUpdate={refreshData} />
+              <OrganizerApprovals onApprovalUpdate={refreshDashboard} />
               <ApprovedOrganizers />
             </div>
           </TabsContent>
           
           <TabsContent value="players" className="p-4 focus-visible:outline-none focus-visible:ring-0">
-            <PlayerManagement onPlayerApproval={refreshData} />
+            <PlayerManagement onPlayerApproval={refreshDashboard} />
           </TabsContent>
           
           <TabsContent value="pending-tournaments" className="p-4 focus-visible:outline-none focus-visible:ring-0">
@@ -136,7 +141,7 @@ export function NewOfficerDashboard() {
             ) : (
               <PendingTournamentApprovals 
                 tournaments={pendingTournaments}
-                onApprovalUpdate={refreshData} 
+                onApprovalUpdate={refreshDashboard} 
               />
             )}
           </TabsContent>
@@ -144,7 +149,7 @@ export function NewOfficerDashboard() {
           <TabsContent value="approved-tournaments" className="p-4 focus-visible:outline-none focus-visible:ring-0">
             <ApprovedTournaments 
               completedTournaments={completedTournaments}
-              onTournamentProcessed={refreshData} 
+              onTournamentProcessed={refreshDashboard} 
             />
           </TabsContent>
         </Tabs>

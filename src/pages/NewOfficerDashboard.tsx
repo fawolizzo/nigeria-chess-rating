@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import ResetSystemData from "@/components/ResetSystemData";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { OfficerDashboardProvider } from "@/contexts/OfficerDashboardContext";
 
 export default function OfficerDashboardPage() {
   const { currentUser, isLoading: isUserLoading, logout, forceSync } = useUser();
@@ -141,7 +142,9 @@ export default function OfficerDashboardPage() {
         {/* Dashboard Content */}
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
           <DashboardErrorBoundary>
-            <NewOfficerDashboard />
+            <OfficerDashboardProvider>
+              <NewOfficerDashboard />
+            </OfficerDashboardProvider>
           </DashboardErrorBoundary>
         </div>
         

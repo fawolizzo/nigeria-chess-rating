@@ -5,20 +5,24 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  resetKey?: any;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
 class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null
+    error: null,
+    errorInfo: null
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
@@ -29,6 +33,24 @@ class ErrorBoundary extends Component<Props, State> {
       stack: error.stack,
       componentStack: errorInfo.componentStack
     });
+
+    // Call onError callback if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+
+    this.setState({ errorInfo });
+  }
+
+  // Reset error state when resetKey changes
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null
+      });
+    }
   }
 
   public render() {
@@ -47,6 +69,14 @@ class ErrorBoundary extends Component<Props, State> {
               <pre className="text-sm text-gray-800 whitespace-pre-wrap">
                 {this.state.error?.message || 'Unknown error'}
               </pre>
+              {this.state.errorInfo && (
+                <details className="mt-2">
+                  <summary className="text-sm font-medium cursor-pointer text-blue-600">View component stack</summary>
+                  <pre className="mt-2 text-xs overflow-auto text-gray-700 max-h-60">
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                </details>
+              )}
             </div>
             <p className="mb-4">
               Try refreshing the page or contact support if the problem persists.
