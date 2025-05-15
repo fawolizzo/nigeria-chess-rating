@@ -19,7 +19,7 @@ export default function OfficerDashboardPage() {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
-  const refreshToastShown = useRef(false);
+  const refreshToastShownRef = useRef(false);
   
   // Check authentication and role
   useEffect(() => {
@@ -55,13 +55,13 @@ export default function OfficerDashboardPage() {
     try {
       setIsRefreshing(true);
       
-      if (!refreshToastShown.current) {
+      if (!refreshToastShownRef.current) {
         toast({
           title: "Refreshing Data",
           description: "The dashboard data is being refreshed...",
           duration: 3000,
         });
-        refreshToastShown.current = true;
+        refreshToastShownRef.current = true;
       }
       
       await forceSync();
@@ -71,7 +71,11 @@ export default function OfficerDashboardPage() {
         description: "The dashboard data has been refreshed successfully.",
         duration: 3000,
       });
-      refreshToastShown.current = false;
+      
+      // Add a small delay before allowing new toasts
+      setTimeout(() => {
+        refreshToastShownRef.current = false;
+      }, 500);
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
@@ -80,7 +84,7 @@ export default function OfficerDashboardPage() {
         variant: "destructive",
         duration: 5000,
       });
-      refreshToastShown.current = false;
+      refreshToastShownRef.current = false;
     } finally {
       setIsRefreshing(false);
     }

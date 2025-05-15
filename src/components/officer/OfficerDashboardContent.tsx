@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { useOfficerDashboardLoading } from "@/hooks/useOfficerDashboardLoading";
@@ -19,6 +19,7 @@ const OfficerDashboardContent: React.FC = () => {
   } = useOfficerDashboardLoading();
   
   const { toast } = useToast();
+  const refreshToastShownRef = useRef(false);
   
   // Add debugging logs for loading state
   useEffect(() => {
@@ -34,22 +35,19 @@ const OfficerDashboardContent: React.FC = () => {
     }
   }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing, errorDetails]);
 
-  // Show toast only once for dashboard refresh
+  // Show toast only once for dashboard refresh and prevent multiple notifications
   useEffect(() => {
-    let toastShown = false;
-    
-    if (isLoadingSyncing && !toastShown) {
+    if (isLoadingSyncing && !refreshToastShownRef.current) {
+      refreshToastShownRef.current = true;
       toast({
         title: "Refreshing dashboard...",
         description: "The dashboard is being refreshed with the latest data.",
         duration: 3000
       });
-      toastShown = true;
+    } else if (!isLoadingSyncing && refreshToastShownRef.current) {
+      // Reset the flag only when syncing is complete
+      refreshToastShownRef.current = false;
     }
-    
-    return () => {
-      toastShown = false;
-    };
   }, [isLoadingSyncing, toast]);
 
   // While not complete and still loading, show the loading component

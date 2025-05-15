@@ -17,7 +17,7 @@ const OfficerDashboard: React.FC = () => {
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
-  const refreshToastShown = useRef(false);
+  const refreshToastShownRef = useRef(false);
   
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
@@ -70,13 +70,13 @@ const OfficerDashboard: React.FC = () => {
     try {
       setIsRefreshing(true);
       
-      if (!refreshToastShown.current) {
+      if (!refreshToastShownRef.current) {
         toast({
           title: "Refreshing Data",
           description: "The dashboard data is being refreshed...",
           duration: 3000,
         });
-        refreshToastShown.current = true;
+        refreshToastShownRef.current = true;
       }
       
       await forceSync();
@@ -86,7 +86,11 @@ const OfficerDashboard: React.FC = () => {
         description: "The dashboard data has been refreshed successfully.",
         duration: 3000,
       });
-      refreshToastShown.current = false;
+      
+      // Small delay before allowing new toast
+      setTimeout(() => {
+        refreshToastShownRef.current = false;
+      }, 500);
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
@@ -95,7 +99,7 @@ const OfficerDashboard: React.FC = () => {
         variant: "destructive",
         duration: 5000,
       });
-      refreshToastShown.current = false;
+      refreshToastShownRef.current = false;
     } finally {
       setIsRefreshing(false);
     }

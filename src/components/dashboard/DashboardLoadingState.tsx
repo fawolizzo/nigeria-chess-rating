@@ -34,7 +34,10 @@ export function DashboardLoadingState({
           <span>{message}</span>
           <span>{Math.round(progress)}%</span>
         </div>
-        <Progress value={progress} className="h-2" />
+        <Progress 
+          value={progress} 
+          className="h-2 transition-all duration-300" 
+        />
       </div>
       
       {onRetry && (
