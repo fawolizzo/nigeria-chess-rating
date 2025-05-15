@@ -24,7 +24,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       setLoadingFailed(false);
       setErrorDetails(undefined);
       resetProgress();
-      setLoadingProgress(15);
+      incrementProgress(15);
       
       // Immediate progress update to show activity
       setTimeout(() => incrementProgress(20), 100);
@@ -48,7 +48,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       
       // Set to almost complete
       if (mounted.current) {
-        setLoadingProgress(95);
+        incrementProgress(30);
         
         // Short delay before completing to show progress
         setTimeout(() => {
@@ -73,7 +73,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         setErrorDetails(`Loading error: ${errorMessage}`);
       }
     }
-  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, setLoadingProgress, resetAttemptCounter]);
+  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter]);
   
   const handleRetry = useCallback(() => {
     if (isLoadingSyncing) return;
