@@ -16,7 +16,7 @@ const OfficerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
   
   // Prevent access for non-rating officers and handle redirects
@@ -75,7 +75,7 @@ const OfficerDashboard: React.FC = () => {
       
       // Dismiss any existing refresh toast before showing a new one
       if (refreshToastIdRef.current) {
-        toast.dismiss(refreshToastIdRef.current);
+        dismiss(refreshToastIdRef.current);
       }
       
       // Show refresh toast and store its ID

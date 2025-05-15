@@ -7,7 +7,7 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 export function useOfficerDashboardSync() {
   const { forceSync } = useUser();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
@@ -45,7 +45,7 @@ export function useOfficerDashboardSync() {
       if (showToast && !refreshToastIdRef.current) {
         // Clean up any existing toast first
         if (refreshToastIdRef.current) {
-          toast.dismiss(refreshToastIdRef.current);
+          dismiss(refreshToastIdRef.current);
         }
         
         const { id } = toast({
@@ -164,7 +164,7 @@ export function useOfficerDashboardSync() {
         syncInProgressRef.current = false;
       }, 1000);
     }
-  }, [forceSync, toast]);
+  }, [forceSync, toast, dismiss]);
   
   // Set up initial sync on mount
   useEffect(() => {
@@ -195,10 +195,10 @@ export function useOfficerDashboardSync() {
       
       // Dismiss any remaining toast
       if (refreshToastIdRef.current) {
-        toast.dismiss(refreshToastIdRef.current);
+        dismiss(refreshToastIdRef.current);
       }
     };
-  }, [syncDashboardData, toast]);
+  }, [syncDashboardData, dismiss]);
   
   return {
     syncDashboardData,

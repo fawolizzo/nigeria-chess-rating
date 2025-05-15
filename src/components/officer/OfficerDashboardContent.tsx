@@ -18,7 +18,7 @@ const OfficerDashboardContent: React.FC = () => {
     errorDetails
   } = useOfficerDashboardLoading();
   
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
   
   // Add debugging logs for loading state
@@ -41,7 +41,7 @@ const OfficerDashboardContent: React.FC = () => {
     if (isLoadingSyncing && !refreshToastIdRef.current) {
       // Dismiss any existing toast first
       if (refreshToastIdRef.current) {
-        toast.dismiss(refreshToastIdRef.current);
+        dismiss(refreshToastIdRef.current);
       }
       
       // Create a new toast and store its ID
@@ -53,10 +53,10 @@ const OfficerDashboardContent: React.FC = () => {
       refreshToastIdRef.current = id;
     } else if (!isLoadingSyncing && refreshToastIdRef.current) {
       // When syncing completes, dismiss the toast and reset the ID
-      toast.dismiss(refreshToastIdRef.current);
+      dismiss(refreshToastIdRef.current);
       refreshToastIdRef.current = null;
     }
-  }, [isLoadingSyncing, toast]);
+  }, [isLoadingSyncing, toast, dismiss]);
 
   // While not complete and still loading, show the loading component
   if (!initialLoadComplete) {

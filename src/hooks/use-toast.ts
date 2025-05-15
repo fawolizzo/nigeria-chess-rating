@@ -141,9 +141,13 @@ function dispatch(action: Action) {
   });
 }
 
-export function toast({
-  ...props
-}: Omit<ToasterToast, "id">) {
+type Toast = {
+  id: string;
+  dismiss: () => void;
+  update: (props: ToasterToast) => void;
+};
+
+function toast(props: Omit<ToasterToast, "id">): Toast {
   const id = generateId();
 
   const update = (props: ToasterToast) =>
@@ -167,7 +171,7 @@ export function toast({
   });
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   };
@@ -186,9 +190,13 @@ export function useToast() {
     };
   }, [state]);
 
+  const dismissToast = useCallback((toastId?: string) => {
+    dispatch({ type: actionTypes.DISMISS_TOAST, toastId });
+  }, []);
+
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+    dismiss: dismissToast,
   };
 }
