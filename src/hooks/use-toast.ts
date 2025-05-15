@@ -147,7 +147,8 @@ type Toast = {
   update: (props: ToasterToast) => void;
 };
 
-function toast(props: Omit<ToasterToast, "id">): Toast {
+// Export the toast function as a named export
+export function toast(props: Omit<ToasterToast, "id">): Toast {
   const id = generateId();
 
   const update = (props: ToasterToast) =>
