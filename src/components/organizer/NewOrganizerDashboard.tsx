@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CreateTournamentForm } from "@/components/tournament/CreateTournamentForm";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
-import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { SyncStatusIndicator } from "@/components/dashboard/SyncStatusIndicator";
 import { TournamentFormData } from "@/types/tournamentTypes";
 
@@ -77,64 +76,62 @@ export function NewOrganizerDashboard({ userId, userName }: NewOrganizerDashboar
   }
   
   return (
-    <DashboardErrorBoundary onReset={loadTournaments}>
-      <div className="p-4">
-        {/* Header and sync status */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-2xl font-bold">Welcome, {userName}</h2>
-            <p className="text-muted-foreground">Manage your chess tournaments and players</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <SyncStatusIndicator
-              isSyncing={isSyncing}
-              syncStatus={syncStatus}
-              lastSyncTime={lastSyncTime}
-              syncError={syncError}
-              onSync={manualSync}
-            />
-            
-            <Button onClick={() => setIsCreateTournamentOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Tournament
-            </Button>
-          </div>
+    <div className="p-4">
+      {/* Header and sync status */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">Welcome, {userName}</h2>
+          <p className="text-muted-foreground">Manage your chess tournaments and players</p>
         </div>
         
-        {/* Stats overview */}
-        <OrganizerStatsGrid
-          tournaments={tournaments}
-          filterTournamentsByStatus={filterTournamentsByStatus}
-          nextTournament={nextTournament}
-          formatDisplayDate={formatDisplayDate}
-        />
-        
-        {/* Tournament tabs */}
-        <div className="mt-8">
-          <OrganizerTabs
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            getTournamentsByStatus={filterTournamentsByStatus}
-            onCreateTournament={() => setIsCreateTournamentOpen(true)}
-            onViewDetails={onViewDetails}
-            onManage={onManage}
+        <div className="flex items-center gap-4">
+          <SyncStatusIndicator
+            isSyncing={isSyncing}
+            syncStatus={syncStatus}
+            lastSyncTime={lastSyncTime}
+            syncError={syncError}
+            onSync={manualSync}
           />
+          
+          <Button onClick={() => setIsCreateTournamentOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Tournament
+          </Button>
         </div>
-        
-        {/* Create tournament dialog */}
-        <Dialog open={isCreateTournamentOpen} onOpenChange={setIsCreateTournamentOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Create New Tournament</DialogTitle>
-            </DialogHeader>
-            <CreateTournamentForm
-              onSubmit={handleCreateTournament}
-              onCancel={() => setIsCreateTournamentOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
-    </DashboardErrorBoundary>
+      
+      {/* Stats overview */}
+      <OrganizerStatsGrid
+        tournaments={tournaments}
+        filterTournamentsByStatus={filterTournamentsByStatus}
+        nextTournament={nextTournament}
+        formatDisplayDate={formatDisplayDate}
+      />
+      
+      {/* Tournament tabs */}
+      <div className="mt-8">
+        <OrganizerTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          getTournamentsByStatus={filterTournamentsByStatus}
+          onCreateTournament={() => setIsCreateTournamentOpen(true)}
+          onViewDetails={onViewDetails}
+          onManage={onManage}
+        />
+      </div>
+      
+      {/* Create tournament dialog */}
+      <Dialog open={isCreateTournamentOpen} onOpenChange={setIsCreateTournamentOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Tournament</DialogTitle>
+          </DialogHeader>
+          <CreateTournamentForm
+            onSubmit={handleCreateTournament}
+            onCancel={() => setIsCreateTournamentOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBou
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function OrganizerDashboardPage() {
   const { currentUser, isLoading: isUserLoading } = useUser();
@@ -81,12 +82,12 @@ export default function OrganizerDashboardPage() {
       <Navbar />
       <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-          <DashboardErrorBoundary>
+          <ErrorBoundary>
             <NewOrganizerDashboard 
               userId={currentUser.id} 
               userName={currentUser.fullName || currentUser.email.split('@')[0]}
             />
-          </DashboardErrorBoundary>
+          </ErrorBoundary>
         </div>
       </div>
     </div>

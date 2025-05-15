@@ -2,8 +2,11 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useUser } from "@/contexts/UserContext";
 
 const Home = () => {
+  const { currentUser } = useUser();
+
   return (
     <div className="container max-w-7xl mx-auto px-4 py-24 mt-16">
       <div className="flex flex-col items-center text-center">
@@ -14,7 +17,9 @@ const Home = () => {
           A centralized platform for tournament organizers to plan events, register players,
           calculate Elo ratings, and track player progression across Nigeria.
         </p>
-        <div className="flex flex-wrap gap-4 justify-center">
+        
+        {/* Main action buttons */}
+        <div className="flex flex-wrap gap-4 justify-center mb-8">
           <Link to="/tournaments">
             <Button className="bg-nigeria-green hover:bg-nigeria-green-dark text-white px-6">
               View Tournaments
@@ -26,6 +31,49 @@ const Home = () => {
             </Button>
           </Link>
         </div>
+        
+        {/* Dashboard buttons based on user role */}
+        {currentUser && (
+          <div className="flex flex-wrap gap-4 justify-center mb-8">
+            {currentUser.role === 'tournament_organizer' && currentUser.status === 'approved' && (
+              <Link to="/organizer-dashboard">
+                <Button variant="secondary">
+                  Tournament Organizer Dashboard
+                </Button>
+              </Link>
+            )}
+            {currentUser.role === 'rating_officer' && (
+              <Link to="/officer-dashboard">
+                <Button variant="secondary">
+                  Rating Officer Dashboard
+                </Button>
+              </Link>
+            )}
+            {currentUser.role === 'tournament_organizer' && currentUser.status !== 'approved' && (
+              <Link to="/pending-approval">
+                <Button variant="outline">
+                  Check Approval Status
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
+        
+        {/* Login/Register buttons for non-authenticated users */}
+        {!currentUser && (
+          <div className="flex flex-wrap gap-4 justify-center mb-8">
+            <Link to="/login">
+              <Button variant="secondary">
+                Login
+              </Button>
+            </Link>
+            <Link to="/register">
+              <Button variant="outline">
+                Register
+              </Button>
+            </Link>
+          </div>
+        )}
         
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           <div className="flex flex-col items-center p-6 border rounded-lg shadow-sm">
