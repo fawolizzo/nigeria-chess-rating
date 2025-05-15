@@ -1,7 +1,6 @@
 
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useOfficerDashboardData } from "@/hooks/useOfficerDashboardData";
 import { useDataSync } from "@/hooks/useDataSync";
 import OrganizerApprovals from "./OrganizerApprovals";
 import PlayerManagement from "./PlayerManagement";
@@ -12,7 +11,7 @@ import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingSt
 import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { SyncStatusIndicator } from "@/components/dashboard/SyncStatusIndicator";
-import { useDashboard } from "@/contexts/OfficerDashboardContext";
+import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";
 
 export function NewOfficerDashboard() {
   const [activeTab, setActiveTab] = useState("pending-tournaments");

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -12,7 +11,7 @@ import { Link } from "react-router-dom";
 import ResetSystemData from "@/components/ResetSystemData";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { OfficerDashboardProvider } from "@/contexts/OfficerDashboardContext";
+import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
 
 export default function OfficerDashboardPage() {
   const { currentUser, isLoading: isUserLoading, logout, forceSync } = useUser();

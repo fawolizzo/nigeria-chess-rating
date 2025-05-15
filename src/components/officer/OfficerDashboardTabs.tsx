@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrganizerApprovals from "./OrganizerApprovals";
@@ -5,7 +6,7 @@ import PlayerManagement from "./PlayerManagement";
 import PendingTournamentApprovals from "./PendingTournamentApprovals";
 import ApprovedTournaments from "./ApprovedTournaments";
 import ApprovedOrganizers from "./ApprovedOrganizers";
-import { useDashboard } from "@/contexts/OfficerDashboardContext";
+import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
