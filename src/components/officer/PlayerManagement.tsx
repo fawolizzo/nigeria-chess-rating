@@ -23,6 +23,7 @@ import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { generateUniquePlayerID } from "@/lib/playerDataUtils";
 
 interface PlayerManagementProps {
   onPlayerApproval?: () => void;
@@ -76,7 +77,8 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   };
   
   const handleCreatePlayer = (playerData: any) => {
-    const ncrId = generateNcrId();
+    // Generate unique NCR ID
+    const ncrId = generateUniquePlayerID();
     
     const newPlayer: Player = {
       id: ncrId,
@@ -99,7 +101,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     setRefreshKey(prev => prev + 1);
     toast({
       title: "Player Created",
-      description: `${playerData.fullName} has been created successfully.`,
+      description: `${playerData.fullName} has been created successfully with ID: ${ncrId}`,
     });
   };
   
@@ -150,7 +152,8 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     setUploadSuccess(true);
     
     const createdPlayers = players.map(player => {
-      const ncrId = player.id || generateNcrId();
+      // Generate unique NCR ID for each imported player
+      const ncrId = player.id || generateUniquePlayerID();
       
       const newPlayer: Player = {
         id: ncrId,

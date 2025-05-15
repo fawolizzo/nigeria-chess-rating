@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { getAllPlayers, Player } from "@/lib/mockData";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAllStates } from "@/lib/nigerianStates";
+import PlayerLink from "@/components/player/PlayerLinkFix";
 
 const Players = () => {
   const [searchQuery, setSearchQuery] = useState("");

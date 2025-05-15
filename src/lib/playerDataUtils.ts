@@ -2,6 +2,23 @@
 import { Player } from "@/lib/mockData";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
+// Function to generate a unique NCR ID for players
+export const generateUniquePlayerID = () => {
+  // Get existing IDs from localStorage to check uniqueness
+  const existingPlayers = localStorage.getItem('ncr_players');
+  const players = existingPlayers ? JSON.parse(existingPlayers) : [];
+  const existingIds = players.map((p: Player) => p.id);
+  
+  let newId;
+  do {
+    // Format: NCR + 5 random digits
+    const randomPart = Math.floor(10000 + Math.random() * 90000);
+    newId = `NCR${randomPart}`;
+  } while (existingIds.includes(newId));
+  
+  return newId;
+};
+
 // Debug function to log player data details
 export const debugPlayer = (player: any) => {
   console.log("Player data details:", {
