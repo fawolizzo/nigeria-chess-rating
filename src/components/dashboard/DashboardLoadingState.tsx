@@ -10,20 +10,24 @@ interface DashboardLoadingStateProps {
   message?: string;
   isRetrying?: boolean;
   onRetry?: () => void;
+  showSkeleton?: boolean;
 }
 
 export function DashboardLoadingState({ 
   progress = 0, 
   message = "Loading dashboard data...",
   isRetrying = false,
-  onRetry
+  onRetry,
+  showSkeleton = true
 }: DashboardLoadingStateProps) {
   return (
     <div className="p-6 space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-      </div>
+      {showSkeleton && (
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      )}
       
       <div className="space-y-2">
         <div className="flex justify-between items-center text-sm text-gray-500">
@@ -48,15 +52,17 @@ export function DashboardLoadingState({
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="border rounded-lg p-4 space-y-3">
-            <Skeleton className="h-6 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-4 w-full" />
-          </div>
-        ))}
-      </div>
+      {showSkeleton && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="border rounded-lg p-4 space-y-3">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

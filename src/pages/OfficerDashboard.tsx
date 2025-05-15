@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
@@ -17,6 +17,7 @@ const OfficerDashboard: React.FC = () => {
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
+  const refreshToastShown = useRef(false);
   
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
@@ -68,18 +69,33 @@ const OfficerDashboard: React.FC = () => {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
+      
+      if (!refreshToastShown.current) {
+        toast({
+          title: "Refreshing Data",
+          description: "The dashboard data is being refreshed...",
+          duration: 3000,
+        });
+        refreshToastShown.current = true;
+      }
+      
       await forceSync();
+      
       toast({
         title: "Data Refreshed",
         description: "The dashboard data has been refreshed successfully.",
+        duration: 3000,
       });
+      refreshToastShown.current = false;
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
         title: "Refresh Failed",
         description: "There was an error refreshing the data. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
+      refreshToastShown.current = false;
     } finally {
       setIsRefreshing(false);
     }

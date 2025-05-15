@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
@@ -5,6 +6,7 @@ import { useOfficerDashboardLoading } from "@/hooks/useOfficerDashboardLoading";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
 import { OfficerDashboardError } from "./dashboard/OfficerDashboardError";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useToast } from "@/hooks/use-toast";
 
 const OfficerDashboardContent: React.FC = () => {
   const {
@@ -15,6 +17,8 @@ const OfficerDashboardContent: React.FC = () => {
     handleRetry,
     errorDetails
   } = useOfficerDashboardLoading();
+  
+  const { toast } = useToast();
   
   // Add debugging logs for loading state
   useEffect(() => {
@@ -29,6 +33,24 @@ const OfficerDashboardContent: React.FC = () => {
       logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Dashboard loading failed:', errorDetails);
     }
   }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing, errorDetails]);
+
+  // Show toast only once for dashboard refresh
+  useEffect(() => {
+    let toastShown = false;
+    
+    if (isLoadingSyncing && !toastShown) {
+      toast({
+        title: "Refreshing dashboard...",
+        description: "The dashboard is being refreshed with the latest data.",
+        duration: 3000
+      });
+      toastShown = true;
+    }
+    
+    return () => {
+      toastShown = false;
+    };
+  }, [isLoadingSyncing, toast]);
 
   // While not complete and still loading, show the loading component
   if (!initialLoadComplete) {
