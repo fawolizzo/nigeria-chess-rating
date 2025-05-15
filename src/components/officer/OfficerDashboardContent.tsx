@@ -1,6 +1,5 @@
-
 import React, { useEffect } from "react";
-import { OfficerDashboardProvider } from "@/contexts/OfficerDashboardContext";
+import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { useOfficerDashboardLoading } from "@/hooks/useOfficerDashboardLoading";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
