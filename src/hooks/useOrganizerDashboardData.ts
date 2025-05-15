@@ -82,7 +82,7 @@ export function useOrganizerDashboardData(userId: string | undefined) {
         organizer_id: userId,
         name: data.name,
         description: data.description || '',
-        location: data.venue,
+        location: data.location, // Fixed: using location instead of venue
         city: data.city,
         state: data.state,
         start_date: data.startDate,

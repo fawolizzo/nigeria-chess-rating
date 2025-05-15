@@ -1,8 +1,9 @@
+
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { SupabaseAuthProvider } from "@/services/auth";
+import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import { UserProvider } from "@/contexts/user";
 
 import Home from "@/pages/Home";
