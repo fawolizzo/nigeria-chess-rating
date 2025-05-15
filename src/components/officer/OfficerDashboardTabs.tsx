@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrganizerApprovals from "./OrganizerApprovals";
@@ -24,7 +23,7 @@ const OfficerDashboardTabs: React.FC = () => {
     isLoading
   } = useDashboard();
   
-  const { syncDashboardData, isSyncing, syncSuccess, lastSyncTime } = useOfficerDashboardSync();
+  const { syncDashboardData, isSyncing, syncSuccess, lastSyncTime, syncError } = useOfficerDashboardSync();
 
   // Use an effect to set mounted state to ensure consistent rendering
   useEffect(() => {
@@ -98,6 +97,7 @@ const OfficerDashboardTabs: React.FC = () => {
           syncSuccess={syncSuccess}
           lastSyncTime={lastSyncTime}
           onSyncClick={handleManualSync}
+          syncError={syncError}
         />
       </div>
       

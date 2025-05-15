@@ -2,7 +2,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useUser } from "@/contexts/UserContext";
-import { withTimeout } from "@/utils/monitorSync";
 
 export function useOfficerDashboardLoading() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -14,13 +13,11 @@ export function useOfficerDashboardLoading() {
   const mounted = useRef(true);
   const loadAttempts = useRef(0);
   
-  // Function to safely increment progress when component is still mounted
   const incrementProgress = useCallback((amount = 10) => {
     if (mounted.current) {
       setLoadingProgress(prev => {
-        // Ensure progress doesn't jump too much at once and stays under 100
-        const increment = Math.min(amount, 25); // Prevent huge jumps
-        return Math.min(prev + increment, 99);
+        const increment = Math.min(amount, 20);
+        return Math.min(prev + increment, 99); 
       });
     }
   }, []);
@@ -34,62 +31,65 @@ export function useOfficerDashboardLoading() {
       setIsLoadingSyncing(true);
       setLoadingFailed(false);
       setErrorDetails(undefined);
-      setLoadingProgress(15); // Start with immediate visual feedback
+      setLoadingProgress(15);
       
-      // Track loading attempts for exponential backoff
+      // Track loading attempts
       loadAttempts.current += 1;
-      const backoffDelay = Math.min(loadAttempts.current * 500, 2000);
       
       // Small delay if this is a retry to prevent hammering
       if (loadAttempts.current > 1) {
-        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // Fast progress bump to show activity
+      // Immediate progress update to show activity
       setTimeout(() => incrementProgress(20), 100);
       
-      // Improved sync operation with better timeout handling
       try {
-        const syncResult = await withTimeout(
-          forceSync,
-          'Dashboard Data Sync',
-          5000,
-          () => {
-            logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync operation timed out');
-            if (mounted.current) incrementProgress(20); // Still increment some progress even on timeout
-            return false;
-          }
-        );
+        // Set a timeout for the sync operation
+        const syncPromise = forceSync();
+        const timeoutPromise = new Promise<boolean>((_, reject) => {
+          setTimeout(() => reject(new Error('Sync operation timed out')), 10000);
+        });
         
-        if (syncResult) {
-          if (mounted.current) incrementProgress(40);
+        // Race the sync operation against the timeout
+        const syncResult = await Promise.race([syncPromise, timeoutPromise]);
+        
+        if (syncResult === true) {
+          incrementProgress(30);
         } else {
-          logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync returned false, continuing with partial data');
-          if (mounted.current) incrementProgress(25);
+          logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync returned false');
+          incrementProgress(20);
         }
       } catch (syncError) {
         const errorMessage = syncError instanceof Error ? syncError.message : String(syncError);
-        logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync error, continuing with available data', {
-          error: errorMessage
-        });
+        logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync error', { error: errorMessage });
         
-        setErrorDetails(`Sync error: ${errorMessage}`);
+        // Don't fail completely, try to continue with partial data
+        incrementProgress(15);
         
-        if (mounted.current) incrementProgress(20);
+        if (loadAttempts.current <= 1) {
+          // If this is the first attempt, try one more time
+          logMessage(LogLevel.INFO, 'useOfficerDashboardLoading', 'Retrying sync automatically');
+          setTimeout(() => loadDashboardData(), 1000);
+          return;
+        } else {
+          setErrorDetails(`Data sync issue: ${errorMessage}. Some dashboard features may be limited.`);
+        }
       }
       
-      // Set to 100% to trigger UI update
+      // Set to almost complete
       if (mounted.current) {
-        setLoadingProgress(100);
+        setLoadingProgress(95);
         
-        // Better completion timing
+        // Short delay before completing to show progress
         setTimeout(() => {
           if (mounted.current) {
+            setLoadingProgress(100);
             setInitialLoadComplete(true);
             setIsLoadingSyncing(false);
-            loadAttempts.current = 0; // Reset attempts counter on success
+            loadAttempts.current = 0;
           }
-        }, 300);
+        }, 500);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -107,9 +107,10 @@ export function useOfficerDashboardLoading() {
   }, [forceSync, incrementProgress]);
   
   const handleRetry = useCallback(() => {
-    if (isLoadingSyncing) return; // Prevent multiple retries while already loading
+    if (isLoadingSyncing) return;
     
     setLoadingProgress(0);
+    loadAttempts.current = 0;
     loadDashboardData();
   }, [loadDashboardData, isLoadingSyncing]);
   
@@ -117,9 +118,10 @@ export function useOfficerDashboardLoading() {
   useEffect(() => {
     mounted.current = true;
     
+    // Start loading immediately
     loadDashboardData();
     
-    // Improved: More visible progress even if data loading is slow
+    // Set up fallback progress updates to ensure visual feedback
     const progressIntervals = [
       setTimeout(() => { if (mounted.current && loadingProgress < 40) incrementProgress(5); }, 2000),
       setTimeout(() => { if (mounted.current && loadingProgress < 60) incrementProgress(5); }, 4000),
@@ -129,19 +131,25 @@ export function useOfficerDashboardLoading() {
     // Failsafe: Force completion after reasonable timeout
     const maxTimeoutId = setTimeout(() => {
       if (mounted.current && !initialLoadComplete) {
-        logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Forcing dashboard load completion after maximum timeout');
+        logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Forcing dashboard load completion after timeout');
+        
+        // If we're still loading after too long, show as completed but with a warning
         setLoadingProgress(100);
         setInitialLoadComplete(true);
         setIsLoadingSyncing(false);
+        
+        if (!errorDetails) {
+          setErrorDetails('Dashboard loaded with limited data due to timeout.');
+        }
       }
-    }, 8000); // 8 seconds max loading time
+    }, 15000);
     
     return () => {
       mounted.current = false;
       clearTimeout(maxTimeoutId);
       progressIntervals.forEach(clearTimeout);
     };
-  }, [loadDashboardData, initialLoadComplete, incrementProgress, loadingProgress]);
+  }, [loadDashboardData, initialLoadComplete, incrementProgress, loadingProgress, errorDetails]);
   
   return {
     initialLoadComplete,

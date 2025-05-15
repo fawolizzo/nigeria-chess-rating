@@ -6,7 +6,6 @@ import { useOfficerDashboardLoading } from "@/hooks/useOfficerDashboardLoading";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
 import { OfficerDashboardError } from "./dashboard/OfficerDashboardError";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
 
 const OfficerDashboardContent: React.FC = () => {
   const {
@@ -18,10 +17,7 @@ const OfficerDashboardContent: React.FC = () => {
     errorDetails
   } = useOfficerDashboardLoading();
   
-  // Initialize background sync
-  const { syncDashboardData } = useOfficerDashboardSync();
-  
-  // Add a debug log to track loading state
+  // Add debugging logs for loading state
   useEffect(() => {
     logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard loading state:', {
       initialLoadComplete,
@@ -30,23 +26,21 @@ const OfficerDashboardContent: React.FC = () => {
       isLoadingSyncing
     });
     
-    // Attempt background sync if load completed but we had issues before
-    if (initialLoadComplete && !loadingFailed && loadingProgress === 100) {
-      // Use small delay to let UI render first
-      const timer = setTimeout(() => {
-        syncDashboardData(false);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
+    if (loadingFailed) {
+      logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Dashboard loading failed:', errorDetails);
     }
-  }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing, syncDashboardData]);
+  }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing, errorDetails]);
 
   // While not complete and still loading, show the loading component
   if (!initialLoadComplete) {
-    return <OfficerDashboardLoading loadingProgress={loadingProgress} />;
+    return <OfficerDashboardLoading 
+      loadingProgress={loadingProgress} 
+      errorMessage={loadingFailed ? errorDetails : undefined}
+      onRetry={loadingFailed ? handleRetry : undefined}
+    />;
   }
   
-  // Show error component if loading failed
+  // Show error component only if loading completed but failed
   if (loadingFailed) {
     return <OfficerDashboardError 
       onRetry={handleRetry} 

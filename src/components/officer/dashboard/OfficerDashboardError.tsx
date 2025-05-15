@@ -32,13 +32,13 @@ export const OfficerDashboardError: React.FC<OfficerDashboardErrorProps> = ({
         </p>
 
         {errorDetails && (
-          <div className="mt-2 mb-4 p-2 bg-red-100 dark:bg-red-900/30 rounded text-sm text-red-700 
-                        dark:text-red-300 flex items-center justify-center gap-2 max-w-md mx-auto">
-            <span className="text-left">{errorDetails}</span>
+          <div className="mt-2 mb-4 p-3 bg-red-100 dark:bg-red-900/30 rounded text-sm text-red-700 
+                        dark:text-red-300 flex items-start justify-center gap-2 max-w-md mx-auto">
+            <span className="text-left flex-grow">{errorDetails}</span>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span><HelpCircle className="h-4 w-4 text-red-500" /></span>
+                  <span><HelpCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" /></span>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="w-64 text-xs">This error helps developers identify what went wrong. Try refreshing or clearing your browser cache if this persists.</p>
