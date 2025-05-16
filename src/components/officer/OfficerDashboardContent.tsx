@@ -18,7 +18,7 @@ const OfficerDashboardContent: React.FC = () => {
     errorDetails
   } = useOfficerDashboardLoading();
   
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
   
   // Add debugging logs for loading state
@@ -37,26 +37,20 @@ const OfficerDashboardContent: React.FC = () => {
 
   // Show toast only once for dashboard refresh and prevent multiple notifications
   useEffect(() => {
-    // Show refresh toast only when syncing starts
+    // Show refresh toast only when syncing starts and no toast is currently shown
     if (isLoadingSyncing && !refreshToastIdRef.current) {
-      // Dismiss any existing toast first
-      if (refreshToastIdRef.current) {
-        dismiss(refreshToastIdRef.current);
-      }
-      
       // Create a new toast and store its ID
-      const { id } = toast({
+      const toastInstance = toast({
         title: "Refreshing dashboard...",
         description: "The dashboard is being refreshed with the latest data.",
         duration: 3000
       });
-      refreshToastIdRef.current = id;
+      refreshToastIdRef.current = toastInstance.id;
     } else if (!isLoadingSyncing && refreshToastIdRef.current) {
-      // When syncing completes, dismiss the toast and reset the ID
-      dismiss(refreshToastIdRef.current);
+      // When syncing completes, reset the ID
       refreshToastIdRef.current = null;
     }
-  }, [isLoadingSyncing, toast, dismiss]);
+  }, [isLoadingSyncing, toast]);
 
   // While not complete and still loading, show the loading component
   if (!initialLoadComplete) {

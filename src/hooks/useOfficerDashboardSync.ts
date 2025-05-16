@@ -7,7 +7,7 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 export function useOfficerDashboardSync() {
   const { forceSync } = useUser();
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
@@ -43,17 +43,12 @@ export function useOfficerDashboardSync() {
       
       // Show toast if requested and not already showing
       if (showToast && !refreshToastIdRef.current) {
-        // Clean up any existing toast first
-        if (refreshToastIdRef.current) {
-          dismiss(refreshToastIdRef.current);
-        }
-        
-        const { id } = toast({
+        const toastInstance = toast({
           title: "Syncing Data",
           description: "Syncing dashboard data with the latest updates...",
           duration: 3000,
         });
-        refreshToastIdRef.current = id;
+        refreshToastIdRef.current = toastInstance.id;
       }
       
       // First sync the user data
@@ -164,7 +159,7 @@ export function useOfficerDashboardSync() {
         syncInProgressRef.current = false;
       }, 1000);
     }
-  }, [forceSync, toast, dismiss]);
+  }, [forceSync, toast]);
   
   // Set up initial sync on mount
   useEffect(() => {
@@ -193,12 +188,10 @@ export function useOfficerDashboardSync() {
         clearTimeout(syncTimeoutRef.current);
       }
       
-      // Dismiss any remaining toast
-      if (refreshToastIdRef.current) {
-        dismiss(refreshToastIdRef.current);
-      }
+      // Reset toast ID reference on unmount
+      refreshToastIdRef.current = null;
     };
-  }, [syncDashboardData, dismiss]);
+  }, [syncDashboardData]);
   
   return {
     syncDashboardData,

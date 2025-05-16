@@ -18,7 +18,7 @@ export default function OfficerDashboardPage() {
   const { currentUser, isLoading: isUserLoading, logout, forceSync } = useUser();
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
   
   // Check authentication and role
@@ -58,18 +58,16 @@ export default function OfficerDashboardPage() {
       
       setIsRefreshing(true);
       
-      // Dismiss any existing refresh toast before showing a new one
-      if (refreshToastIdRef.current) {
-        dismiss(refreshToastIdRef.current);
+      // Only show toast if none is currently shown
+      if (!refreshToastIdRef.current) {
+        // Show toast with a unique ID and store the reference
+        const toastInstance = toast({
+          title: "Refreshing Data",
+          description: "The dashboard data is being refreshed...",
+          duration: 3000,
+        });
+        refreshToastIdRef.current = toastInstance.id;
       }
-      
-      // Show toast with a unique ID and store the reference
-      const { id } = toast({
-        title: "Refreshing Data",
-        description: "The dashboard data is being refreshed...",
-        duration: 3000,
-      });
-      refreshToastIdRef.current = id;
       
       await forceSync();
       

@@ -191,6 +191,7 @@ export function useToast() {
     };
   }, [state]);
 
+  // Export the dismiss function directly in useToast hook
   const dismissToast = useCallback((toastId?: string) => {
     dispatch({ type: actionTypes.DISMISS_TOAST, toastId });
   }, []);
@@ -198,6 +199,6 @@ export function useToast() {
   return {
     ...state,
     toast,
-    dismiss: dismissToast,
+    dismiss: dismissToast, // Make sure dismiss is exported here
   };
 }

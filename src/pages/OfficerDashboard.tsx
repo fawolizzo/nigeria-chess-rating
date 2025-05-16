@@ -16,7 +16,7 @@ const OfficerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [isContentLoading, setIsContentLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
   
   // Prevent access for non-rating officers and handle redirects
@@ -73,18 +73,16 @@ const OfficerDashboard: React.FC = () => {
       
       setIsRefreshing(true);
       
-      // Dismiss any existing refresh toast before showing a new one
-      if (refreshToastIdRef.current) {
-        dismiss(refreshToastIdRef.current);
+      // Only show toast if there's no toast currently shown
+      if (!refreshToastIdRef.current) {
+        // Show refresh toast and store its ID
+        const toastInstance = toast({
+          title: "Refreshing Data",
+          description: "The dashboard data is being refreshed...",
+          duration: 3000,
+        });
+        refreshToastIdRef.current = toastInstance.id;
       }
-      
-      // Show refresh toast and store its ID
-      const { id } = toast({
-        title: "Refreshing Data",
-        description: "The dashboard data is being refreshed...",
-        duration: 3000,
-      });
-      refreshToastIdRef.current = id;
       
       await forceSync();
       
