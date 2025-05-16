@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { useOfficerDashboardData } from "./useOfficerDashboardData";
+import { useOfficerDashboardData } from "@/hooks/dashboard/useOfficerDashboardData";
 import { DashboardContextType } from "./types";
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
