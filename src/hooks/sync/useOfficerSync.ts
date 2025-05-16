@@ -27,9 +27,8 @@ export function useOfficerSync() {
   const { syncStorage } = useSyncStorage();
   const { refreshToastIdRef, manageToastDisplay } = useToastManager();
   const { retryCountRef, maxRetries, scheduleRetry } = useSyncRetry();
-  const { setupSyncLifecycle } = useSyncLifecycle(syncDashboardData);
   
-  // Enhanced sync function with better error handling
+  // Enhanced sync function with better error handling - defined here before using in setupSyncLifecycle
   const syncDashboardData = useCallback(async (showToast = false) => {
     // Prevent multiple concurrent syncs
     if (syncInProgressRef.current || !mountedRef.current) {
@@ -140,6 +139,9 @@ export function useOfficerSync() {
       }, 1000);
     }
   }, [forceSync, toast, syncStorage, manageToastDisplay, scheduleRetry, maxRetries]);
+  
+  // Use the lifecycle hook with the now-defined syncDashboardData function
+  const { setupSyncLifecycle } = useSyncLifecycle(syncDashboardData);
   
   // Set up lifecycle management
   setupSyncLifecycle();
