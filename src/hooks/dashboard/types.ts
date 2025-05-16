@@ -17,4 +17,10 @@ export interface DashboardActions {
   refreshData: () => void;
 }
 
-export type DashboardResult = DashboardState & DashboardActions;
+export interface DashboardRefreshControls {
+  refreshKey: number;
+  dataTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  loadAllData: () => Promise<void>;
+}
+
+export type DashboardResult = DashboardState & DashboardActions & DashboardRefreshControls;

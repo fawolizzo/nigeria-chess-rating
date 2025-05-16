@@ -13,7 +13,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     pendingPlayers, 
     pendingOrganizers,
     isLoading,
-    refreshDashboard,
+    refreshData: refreshDashboard,
     loadAllData,
     refreshKey,
     dataTimeoutRef

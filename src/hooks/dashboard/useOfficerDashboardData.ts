@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
@@ -27,6 +27,8 @@ export function useOfficerDashboardData(): DashboardResult {
   const { toast } = useToast();
   const { forceSync } = useUser();
   const [state, setState] = useState<DashboardState>(initialState);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const dataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Import sub-hooks
   const { 
@@ -45,7 +47,7 @@ export function useOfficerDashboardData(): DashboardResult {
   /**
    * Function to fetch all dashboard data
    */
-  const fetchDashboardData = useCallback(async () => {
+  const loadAllData = useCallback(async () => {
     logMessage(LogLevel.INFO, 'useOfficerDashboardData', 'Starting data load');
     
     // Update loading state
@@ -113,17 +115,33 @@ export function useOfficerDashboardData(): DashboardResult {
   }, [toast, forceSync, syncDashboardStorage, loadTournaments, loadPlayers, loadOrganizers, 
        processTournaments, processPendingPlayers, processPendingOrganizers]);
   
+  // Manual refresh function that updates refreshKey to trigger a reload
+  const refreshData = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    logMessage(LogLevel.INFO, 'useOfficerDashboardData', 'Manual refresh triggered');
+  }, []);
+  
   // Set up refresh scheduling
-  const { setupRefreshInterval } = useRefreshScheduling(fetchDashboardData);
+  const { setupRefreshInterval } = useRefreshScheduling(loadAllData);
   
   // Load data on mount and setup refresh interval
   useEffect(() => {
-    fetchDashboardData();
+    loadAllData();
     setupRefreshInterval(5); // Refresh every 5 minutes
-  }, [fetchDashboardData, setupRefreshInterval]);
+    
+    // Clean up timeout on unmount
+    return () => {
+      if (dataTimeoutRef.current) {
+        clearTimeout(dataTimeoutRef.current);
+      }
+    };
+  }, [loadAllData, setupRefreshInterval, refreshKey]);
   
   return {
     ...state,
-    refreshData: fetchDashboardData
+    refreshData,
+    loadAllData,
+    refreshKey,
+    dataTimeoutRef
   };
 }
