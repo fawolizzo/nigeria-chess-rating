@@ -1,32 +1,30 @@
 
-import { DashboardData } from "./types";
+import { useCallback } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { Tournament } from "@/lib/mockData";
 
 /**
  * Hook for processing dashboard data
  */
 export function useDataProcessing() {
   /**
-   * Process tournaments into pending and completed categories
+   * Process and filter tournaments by status
    */
-  const processTournaments = (allTournaments: any[]): Pick<DashboardData, 'pendingTournaments' | 'completedTournaments'> => {
+  const processTournaments = useCallback((allTournaments: Tournament[]) => {
     try {
-      if (!Array.isArray(allTournaments)) {
-        logMessage(LogLevel.WARNING, 'useDataProcessing', 'Tournaments data is not an array');
-        return { 
-          pendingTournaments: [], 
-          completedTournaments: [] 
-        };
-      }
-
-      const pendingTournaments = allTournaments.filter(t => t && t.status === "pending") || [];
-      const completedTournaments = allTournaments.filter(t => t && t.status === "completed") || [];
+      const pending = Array.isArray(allTournaments) 
+        ? allTournaments.filter(t => t && t.status === "pending") 
+        : [];
       
-      logMessage(LogLevel.INFO, 'useDataProcessing', `Processed ${pendingTournaments.length} pending and ${completedTournaments.length} completed tournaments`);
+      const completed = Array.isArray(allTournaments) 
+        ? allTournaments.filter(t => t && t.status === "completed") 
+        : [];
       
-      return {
-        pendingTournaments,
-        completedTournaments
+      logMessage(LogLevel.INFO, 'useDataProcessing', `Processed tournaments: ${pending.length} pending, ${completed.length} completed`);
+      
+      return { 
+        pendingTournaments: pending, 
+        completedTournaments: completed 
       };
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useDataProcessing', 'Error processing tournaments:', error);
@@ -35,44 +33,39 @@ export function useDataProcessing() {
         completedTournaments: [] 
       };
     }
-  };
+  }, []);
 
   /**
-   * Process players to filter pending ones
+   * Process and filter pending players
    */
-  const processPendingPlayers = (allPlayers: any[]): Pick<DashboardData, 'pendingPlayers'> => {
+  const processPendingPlayers = useCallback((allPlayers: any[]) => {
     try {
-      if (!Array.isArray(allPlayers)) {
-        return { pendingPlayers: [] };
-      }
+      const pendingPlayers = Array.isArray(allPlayers) 
+        ? allPlayers.filter(p => p && p.status === "pending") 
+        : [];
       
-      const pendingPlayers = allPlayers.filter(p => p && p.status === "pending") || [];
       return { pendingPlayers };
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useDataProcessing', 'Error processing players:', error);
       return { pendingPlayers: [] };
     }
-  };
+  }, []);
 
   /**
-   * Process organizers to filter pending ones
+   * Process and filter pending organizers
    */
-  const processPendingOrganizers = (allUsers: any[]): Pick<DashboardData, 'pendingOrganizers'> => {
+  const processPendingOrganizers = useCallback((allUsers: any[]) => {
     try {
-      if (!Array.isArray(allUsers)) {
-        return { pendingOrganizers: [] };
-      }
-      
-      const pendingOrganizers = allUsers.filter(
-        user => user && user.role === "tournament_organizer" && user.status === "pending"
-      ) || [];
+      const pendingOrganizers = Array.isArray(allUsers) 
+        ? allUsers.filter(user => user && user.role === "tournament_organizer" && user.status === "pending")
+        : [];
       
       return { pendingOrganizers };
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useDataProcessing', 'Error processing organizers:', error);
       return { pendingOrganizers: [] };
     }
-  };
+  }, []);
 
   return {
     processTournaments,

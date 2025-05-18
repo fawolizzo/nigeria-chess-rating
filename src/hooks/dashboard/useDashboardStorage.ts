@@ -1,79 +1,87 @@
 
+import { useCallback } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { getAllTournaments, getAllPlayers } from "@/lib/mockData";
+import { getAllTournaments, getAllPlayers, Tournament } from "@/lib/mockData";
 import { getAllUsersFromStorage } from "@/utils/userUtils";
 import { syncStorage } from "@/utils/storageUtils";
 
 /**
- * Hook for handling dashboard data storage operations
+ * Hook for loading and syncing dashboard data from storage
  */
 export function useDashboardStorage() {
   /**
-   * Synchronizes dashboard-related storage data
+   * Sync dashboard-related data in local storage
    */
-  const syncDashboardStorage = async () => {
+  const syncDashboardStorage = useCallback(async () => {
+    logMessage(LogLevel.INFO, 'useDashboardStorage', 'Syncing dashboard storage');
+    
     try {
-      await Promise.allSettled([
-        syncStorage(['ncr_tournaments']),
+      await Promise.all([
+        syncStorage(['ncr_users']),
         syncStorage(['ncr_players']),
-        syncStorage(['ncr_users'])
+        syncStorage(['ncr_tournaments'])
       ]);
-      logMessage(LogLevel.INFO, 'useDashboardStorage', 'Dashboard storage synced successfully');
-    } catch (syncError) {
-      logMessage(LogLevel.WARNING, 'useDashboardStorage', 'Storage sync issue, proceeding with local data', syncError);
+      
+      logMessage(LogLevel.INFO, 'useDashboardStorage', 'Storage sync complete');
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error syncing storage', error);
+      throw error;
     }
-  };
+  }, []);
 
   /**
-   * Loads tournaments from storage or mock data
+   * Load tournaments from storage or fallback
    */
-  const loadTournaments = () => {
+  const loadTournaments = useCallback((): Tournament[] => {
     try {
       const storedTournamentsJSON = localStorage.getItem('ncr_tournaments');
+      let allTournaments: Tournament[] = [];
       
       if (storedTournamentsJSON) {
         try {
-          const allTournaments = JSON.parse(storedTournamentsJSON);
-          logMessage(LogLevel.INFO, 'useDashboardStorage', `Loaded ${allTournaments.length} tournaments from storage`);
-          return allTournaments;
+          allTournaments = JSON.parse(storedTournamentsJSON);
+          logMessage(LogLevel.INFO, 'useDashboardStorage', `Loaded ${allTournaments.length} tournaments from localStorage`);
         } catch (parseError) {
-          logMessage(LogLevel.WARNING, 'useDashboardStorage', 'Error parsing tournaments from storage, falling back to mock data', parseError);
-          return getAllTournaments();
+          // Fallback to the getAllTournaments function
+          allTournaments = getAllTournaments();
+          logMessage(LogLevel.WARNING, 'useDashboardStorage', 'Error parsing tournaments from localStorage, using fallback data');
         }
       } else {
-        logMessage(LogLevel.INFO, 'useDashboardStorage', 'No tournaments in storage, using mock data');
-        return getAllTournaments();
+        // Fallback to getAllTournaments function if no localStorage data
+        allTournaments = getAllTournaments();
+        logMessage(LogLevel.INFO, 'useDashboardStorage', 'No tournaments in localStorage, using fallback data');
       }
+      
+      return Array.isArray(allTournaments) ? allTournaments : [];
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error loading tournaments:', error);
       return [];
     }
-  };
+  }, []);
 
   /**
-   * Loads players data
+   * Load players from storage or fallback
    */
-  const loadPlayers = () => {
+  const loadPlayers = useCallback(() => {
     try {
       return getAllPlayers();
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error loading players:', error);
       return [];
     }
-  };
+  }, []);
 
   /**
-   * Loads organizer data from users storage
+   * Load organizers from storage
    */
-  const loadOrganizers = () => {
+  const loadOrganizers = useCallback(() => {
     try {
-      const allUsers = getAllUsersFromStorage();
-      return allUsers;
+      return getAllUsersFromStorage();
     } catch (error) {
       logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error loading organizers:', error);
       return [];
     }
-  };
+  }, []);
 
   return {
     syncDashboardStorage,

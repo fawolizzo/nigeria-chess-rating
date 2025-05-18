@@ -1,49 +1,41 @@
 
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 /**
- * Hook for managing automatic dashboard refresh scheduling
+ * Hook to manage refresh scheduling for dashboard data
  */
-export function useRefreshScheduling(refreshFunction: () => Promise<void>) {
-  // Ref to store the interval ID
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Ref to prevent memory leaks on unmount
-  const mountedRef = useRef(true);
+export function useRefreshScheduling(loadData: () => Promise<void> | void) {
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  /**
-   * Set up automatic refresh on a schedule
-   */
-  const setupRefreshInterval = useCallback((intervalMinutes: number = 5) => {
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+  const setupRefreshInterval = useCallback((minutes: number = 5) => {
+    // Clear any existing refresh interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
     }
-    
-    // Set up new refresh interval
-    intervalRef.current = setInterval(() => {
-      if (mountedRef.current) {
-        logMessage(LogLevel.INFO, 'useRefreshScheduling', 'Automatic refresh triggered');
-        refreshFunction();
-      }
-    }, intervalMinutes * 60 * 1000); // Convert minutes to milliseconds
-    
-    logMessage(LogLevel.INFO, 'useRefreshScheduling', `Refresh interval set for every ${intervalMinutes} minutes`);
-  }, [refreshFunction]);
 
-  // Clean up on unmount
+    // Set up a new refresh interval if minutes > 0
+    if (minutes > 0) {
+      const ms = minutes * 60 * 1000; // Convert minutes to milliseconds
+      logMessage(LogLevel.INFO, 'useRefreshScheduling', `Setting up refresh interval: ${minutes} minutes`);
+      
+      refreshIntervalRef.current = setInterval(() => {
+        logMessage(LogLevel.INFO, 'useRefreshScheduling', 'Automatic refresh triggered');
+        loadData();
+      }, ms);
+    }
+  }, [loadData]);
+
+  // Clean up interval on unmount
   useEffect(() => {
     return () => {
-      mountedRef.current = false;
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
       }
     };
   }, []);
 
-  return {
-    setupRefreshInterval,
-    mountedRef
-  };
+  return { setupRefreshInterval };
 }

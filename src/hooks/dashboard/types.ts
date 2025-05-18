@@ -1,26 +1,20 @@
 
-export interface DashboardData {
-  pendingTournaments: any[];
-  completedTournaments: any[];
+import { Tournament } from "@/lib/mockData";
+
+export interface DashboardState {
+  pendingTournaments: Tournament[];
+  completedTournaments: Tournament[];
   pendingPlayers: any[];
   pendingOrganizers: any[];
-}
-
-export interface DashboardState extends DashboardData {
   isLoading: boolean;
   hasError: boolean;
   errorMessage: string | null;
   lastLoadTime: Date | null;
 }
 
-export interface DashboardActions {
+export interface DashboardResult extends DashboardState {
   refreshData: () => void;
-}
-
-export interface DashboardRefreshControls {
+  loadAllData: () => Promise<void>;
   refreshKey: number;
   dataTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
-  loadAllData: () => Promise<void>;
 }
-
-export type DashboardResult = DashboardState & DashboardActions & DashboardRefreshControls;
