@@ -1,7 +1,6 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDataSync } from "@/hooks/useDataSync";
 import OrganizerApprovals from "./OrganizerApprovals";
 import PlayerManagement from "./PlayerManagement";
 import PendingTournamentApprovals from "./PendingTournamentApprovals";
@@ -10,11 +9,14 @@ import ApprovedOrganizers from "./ApprovedOrganizers";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
-import { SyncStatusIndicator } from "@/components/dashboard/SyncStatusIndicator";
 import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";
+import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 export function NewOfficerDashboard() {
   const [activeTab, setActiveTab] = useState("pending-tournaments");
+  const mountedRef = useRef(true);
+  const initializedRef = useRef(false);
   
   // Use the dashboard context
   const { 
@@ -23,27 +25,36 @@ export function NewOfficerDashboard() {
     pendingPlayers,
     pendingOrganizers,
     isLoading,
-    refreshDashboard
+    refreshDashboard,
+    hasError,
+    errorMessage
   } = useDashboard();
   
-  // Failed load state will be managed within the dashboard context
-  const hasError = false;
-  const errorMessage = null;
-  
+  // Use dashboard sync hook
   const { 
-    isSyncing, 
-    syncStatus, 
-    lastSyncTime, 
-    syncError, 
-    manualSync 
-  } = useDataSync({
-    onSyncSuccess: refreshDashboard
-  });
+    syncDashboardData,
+    isSyncing,
+    syncSuccess,
+    lastSyncTime,
+    syncError
+  } = useOfficerDashboardSync();
 
   // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
   };
+
+  // Initialize the dashboard once on mount
+  useEffect(() => {
+    if (!initializedRef.current && mountedRef.current) {
+      initializedRef.current = true;
+      logMessage(LogLevel.INFO, 'NewOfficerDashboard', 'Initializing dashboard');
+    }
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Show loading state when data is loading
   if (isLoading) {
@@ -70,15 +81,8 @@ export function NewOfficerDashboard() {
   return (
     <DashboardErrorBoundary onReset={refreshDashboard}>
       <div className="p-4">
-        <div className="flex justify-between items-center mb-4 px-2">
+        <div className="mb-4 px-2">
           <h3 className="text-sm font-medium text-gray-500">Dashboard Controls</h3>
-          <SyncStatusIndicator 
-            isSyncing={isSyncing}
-            syncStatus={syncStatus}
-            lastSyncTime={lastSyncTime}
-            syncError={syncError}
-            onSync={manualSync}
-          />
         </div>
         
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

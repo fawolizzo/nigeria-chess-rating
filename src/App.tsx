@@ -21,7 +21,7 @@ import CreateTournament from "@/pages/CreateTournament";
 import Players from "@/pages/Players";
 import PlayerProfile from "@/pages/PlayerProfile";
 
-// Import new dashboard components
+// Import dashboard components
 import NewOfficerDashboard from "@/pages/NewOfficerDashboard";
 import NewOrganizerDashboard from "@/pages/NewOrganizerDashboard";
 
@@ -44,7 +44,7 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               
-              {/* Dashboard routes */}
+              {/* Dashboard routes - use only the new ones */}
               <Route path="/officer-dashboard" element={<NewOfficerDashboard />} />
               <Route path="/organizer-dashboard" element={<NewOrganizerDashboard />} />
               

@@ -10,16 +10,21 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
   const [loadingFailed, setLoadingFailed] = useState(false);
   const [isLoadingSyncing, setIsLoadingSyncing] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | undefined>(undefined);
-  const { loadingProgress, incrementProgress, resetProgress, completeProgress } = useProgressManager();
+  const { loadingProgress, incrementProgress, resetProgress, completeProgress, cleanup } = useProgressManager();
   const { syncDashboardData, resetAttemptCounter } = useDashboardSync();
   const mounted = useRef(true);
   const syncInProgressRef = useRef(false);
   const attemptsRef = useRef(0);
+  const progressIntervalsRef = useRef<NodeJS.Timeout[]>([]);
+  const maxTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const initialLoadRef = useRef(false);
   
   const loadDashboardData = useCallback(async () => {
-    if (!mounted.current || syncInProgressRef.current) return;
+    // Prevent duplicate loading operations and only load once on mount
+    if (!mounted.current || syncInProgressRef.current || initialLoadRef.current) return;
     
     try {
+      initialLoadRef.current = true;
       attemptsRef.current += 1;
       logMessage(LogLevel.INFO, 'useOfficerDashboardLoading', `Starting dashboard data loading (attempt ${attemptsRef.current})`);
       
@@ -88,6 +93,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         // For the first attempt, don't show error, just retry once automatically
         if (attemptsRef.current === 1) {
           syncInProgressRef.current = false;
+          initialLoadRef.current = false;
           setTimeout(() => {
             if (mounted.current) {
               loadDashboardData();
@@ -107,6 +113,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
   const handleRetry = useCallback(() => {
     if (isLoadingSyncing || syncInProgressRef.current) return;
     
+    initialLoadRef.current = false;
     resetProgress();
     resetAttemptCounter();
     attemptsRef.current = 0;
@@ -122,14 +129,14 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
     loadDashboardData();
     
     // Set up fallback progress updates to ensure visual feedback
-    const progressIntervals = [
+    progressIntervalsRef.current = [
       setTimeout(() => { if (mounted.current && loadingProgress < 40) incrementProgress(5); }, 2000),
       setTimeout(() => { if (mounted.current && loadingProgress < 60) incrementProgress(5); }, 4000),
       setTimeout(() => { if (mounted.current && loadingProgress < 80) incrementProgress(5); }, 6000)
     ];
     
     // Failsafe: Force completion after reasonable timeout
-    const maxTimeoutId = setTimeout(() => {
+    maxTimeoutIdRef.current = setTimeout(() => {
       if (mounted.current && !initialLoadComplete) {
         logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Forcing dashboard load completion after timeout');
         
@@ -148,10 +155,13 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
     return () => {
       mounted.current = false;
       syncInProgressRef.current = false;
-      clearTimeout(maxTimeoutId);
-      progressIntervals.forEach(clearTimeout);
+      
+      // Clear all timers
+      cleanup();
+      if (maxTimeoutIdRef.current) clearTimeout(maxTimeoutIdRef.current);
+      progressIntervalsRef.current.forEach(clearTimeout);
     };
-  }, [loadDashboardData, initialLoadComplete, incrementProgress, loadingProgress, errorDetails, completeProgress]);
+  }, [loadDashboardData, initialLoadComplete, incrementProgress, loadingProgress, errorDetails, completeProgress, cleanup]);
   
   return {
     initialLoadComplete,

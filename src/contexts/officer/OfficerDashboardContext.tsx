@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useRef } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useOfficerDashboardData } from "@/hooks/dashboard/useOfficerDashboardData";
 import { DashboardContextType } from "./types";
@@ -21,6 +21,9 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     errorMessage
   } = useOfficerDashboardData();
   
+  // Use a ref to track if we've logged already to prevent excess logging on rerenders
+  const hasLoggedRef = useRef<boolean>(false);
+  
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -30,18 +33,22 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, [dataTimeoutRef]);
   
-  // Log dashboard data loading state changes
+  // Log dashboard data loading state changes - but only on actual changes
   useEffect(() => {
-    logMessage(
-      LogLevel.INFO, // Always use INFO level for consistency
-      'OfficerDashboardContext', 
-      `Dashboard state: ${isLoading ? 'loading' : 'ready'}`
-    );
+    // Only log if the state actually changed or on first render
+    if (!hasLoggedRef.current || hasLoggedRef.current !== isLoading) {
+      logMessage(
+        LogLevel.INFO, // Use INFO level for consistency
+        'OfficerDashboardContext', 
+        `Dashboard state: ${isLoading ? 'loading' : 'ready'}`
+      );
+      hasLoggedRef.current = isLoading;
+    }
   }, [isLoading]);
   
-  // Log errors if they occur
+  // Log errors if they occur - but only once
   useEffect(() => {
-    if (hasError) {
+    if (hasError && errorMessage) {
       logMessage(
         LogLevel.ERROR,
         'OfficerDashboardContext',
@@ -51,19 +58,29 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     }
   }, [hasError, errorMessage]);
   
+  // Create a memoized context value to prevent unnecessary re-renders
+  const contextValue = React.useMemo(() => ({
+    pendingTournaments,
+    completedTournaments,
+    pendingPlayers,
+    pendingOrganizers,
+    refreshDashboard,
+    isLoading,
+    hasError,
+    errorMessage
+  }), [
+    pendingTournaments,
+    completedTournaments,
+    pendingPlayers,
+    pendingOrganizers,
+    refreshDashboard,
+    isLoading,
+    hasError,
+    errorMessage
+  ]);
+  
   return (
-    <DashboardContext.Provider 
-      value={{
-        pendingTournaments,
-        completedTournaments,
-        pendingPlayers,
-        pendingOrganizers,
-        refreshDashboard,
-        isLoading,
-        hasError,
-        errorMessage
-      }}
-    >
+    <DashboardContext.Provider value={contextValue}>
       {children}
     </DashboardContext.Provider>
   );

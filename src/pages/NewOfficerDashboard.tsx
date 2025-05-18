@@ -20,10 +20,15 @@ export default function OfficerDashboardPage() {
   const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
   const loginAttemptedRef = useRef(false);
+  const initialized = useRef(false);
   
-  // Check authentication and role
+  // Check authentication and role once
   useEffect(() => {
+    if (initialized.current) return;
+    
     if (!isUserLoading) {
+      initialized.current = true;
+      
       if (!currentUser) {
         if (!loginAttemptedRef.current) {
           loginAttemptedRef.current = true;
@@ -168,7 +173,7 @@ export default function OfficerDashboardPage() {
         
         {/* Dashboard Content */}
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <DashboardErrorBoundary>
+          <DashboardErrorBoundary onReset={() => forceSync()}>
             <OfficerDashboardProvider>
               <NewOfficerDashboard />
             </OfficerDashboardProvider>
