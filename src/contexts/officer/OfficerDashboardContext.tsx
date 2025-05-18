@@ -16,7 +16,9 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     refreshData: refreshDashboard,
     loadAllData,
     refreshKey,
-    dataTimeoutRef
+    dataTimeoutRef,
+    hasError,
+    errorMessage
   } = useOfficerDashboardData();
   
   // Clean up on unmount
@@ -28,29 +30,26 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, [dataTimeoutRef]);
   
-  // Load data on mount and when refreshKey changes (manual refresh)
+  // Log dashboard data loading state changes
   useEffect(() => {
-    // Clear any existing timeout
-    if (dataTimeoutRef.current) {
-      clearTimeout(dataTimeoutRef.current);
+    logMessage(
+      isLoading ? LogLevel.INFO : LogLevel.DEBUG, 
+      'OfficerDashboardContext', 
+      `Dashboard state: ${isLoading ? 'loading' : 'ready'}`
+    );
+  }, [isLoading]);
+  
+  // Log errors if they occur
+  useEffect(() => {
+    if (hasError) {
+      logMessage(
+        LogLevel.ERROR,
+        'OfficerDashboardContext',
+        'Dashboard error:',
+        errorMessage
+      );
     }
-    
-    // Load data immediately
-    loadAllData();
-    
-    // Set a safety timeout to ensure loading state is cleared eventually
-    dataTimeoutRef.current = setTimeout(() => {
-      if (isLoading) {
-        logMessage(LogLevel.WARNING, 'OfficerDashboardContext', 'Loading dashboard data timed out, forcing completion');
-      }
-    }, 8000); // 8 seconds max loading time
-    
-    return () => {
-      if (dataTimeoutRef.current) {
-        clearTimeout(dataTimeoutRef.current);
-      }
-    };
-  }, [refreshKey, loadAllData, isLoading, dataTimeoutRef]);
+  }, [hasError, errorMessage]);
   
   return (
     <DashboardContext.Provider 
@@ -60,7 +59,9 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
         pendingPlayers,
         pendingOrganizers,
         refreshDashboard,
-        isLoading
+        isLoading,
+        hasError,
+        errorMessage
       }}
     >
       {children}

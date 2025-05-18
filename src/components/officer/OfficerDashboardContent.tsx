@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from "react";
+
+import React, { useEffect } from "react";
 import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
-import { useOfficerDashboardLoading } from "@/hooks/useOfficerDashboardLoading";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
 import { OfficerDashboardError } from "./dashboard/OfficerDashboardError";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useOfficerDashboardLoading } from "@/hooks/officer-dashboard/useOfficerDashboardLoading";
 import { useToast } from "@/hooks/use-toast";
 
 const OfficerDashboardContent: React.FC = () => {
@@ -18,7 +19,6 @@ const OfficerDashboardContent: React.FC = () => {
   } = useOfficerDashboardLoading();
   
   const { toast } = useToast();
-  const refreshToastIdRef = useRef<string | null>(null);
   
   // Add debugging logs for loading state
   useEffect(() => {
@@ -34,22 +34,17 @@ const OfficerDashboardContent: React.FC = () => {
     }
   }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing, errorDetails]);
 
-  // Show toast only once for dashboard refresh and prevent multiple notifications
+  // Show notification when syncing completes successfully
   useEffect(() => {
-    // Show refresh toast only when syncing starts and no toast is currently shown
-    if (isLoadingSyncing && !refreshToastIdRef.current) {
-      // Create a new toast and store its ID
-      const toastInstance = toast({
-        title: "Refreshing dashboard...",
-        description: "The dashboard is being refreshed with the latest data.",
-        duration: 3000
+    if (initialLoadComplete && !loadingFailed && !isLoadingSyncing) {
+      // Only show toast when loading has completed successfully
+      toast({
+        title: "Dashboard Ready",
+        description: "The dashboard has loaded successfully.",
+        duration: 2000
       });
-      refreshToastIdRef.current = toastInstance.id;
-    } else if (!isLoadingSyncing && refreshToastIdRef.current) {
-      // When syncing completes, reset the ID
-      refreshToastIdRef.current = null;
     }
-  }, [isLoadingSyncing, toast]);
+  }, [initialLoadComplete, loadingFailed, isLoadingSyncing, toast]);
 
   // While not complete and still loading, show the loading component
   if (!initialLoadComplete) {

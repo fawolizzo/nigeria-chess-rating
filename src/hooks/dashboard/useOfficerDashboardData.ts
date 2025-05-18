@@ -29,6 +29,7 @@ export function useOfficerDashboardData(): DashboardResult {
   const [state, setState] = useState<DashboardState>(initialState);
   const [refreshKey, setRefreshKey] = useState(0);
   const dataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadingInProgressRef = useRef(false);
   
   // Import sub-hooks
   const { 
@@ -48,10 +49,34 @@ export function useOfficerDashboardData(): DashboardResult {
    * Function to fetch all dashboard data
    */
   const loadAllData = useCallback(async () => {
+    // Prevent multiple concurrent loads
+    if (loadingInProgressRef.current) {
+      logMessage(LogLevel.INFO, 'useOfficerDashboardData', 'Data loading already in progress, skipping');
+      return;
+    }
+    
+    loadingInProgressRef.current = true;
     logMessage(LogLevel.INFO, 'useOfficerDashboardData', 'Starting data load');
     
     // Update loading state
     setState(prev => ({ ...prev, isLoading: true, hasError: false, errorMessage: null }));
+
+    // Clear any existing timeout
+    if (dataTimeoutRef.current) {
+      clearTimeout(dataTimeoutRef.current);
+    }
+    
+    // Set a safety timeout to ensure loading state is cleared eventually
+    dataTimeoutRef.current = setTimeout(() => {
+      setState(prev => {
+        if (prev.isLoading) {
+          logMessage(LogLevel.WARNING, 'useOfficerDashboardData', 'Loading timed out, forcing completion');
+          return { ...prev, isLoading: false };
+        }
+        return prev;
+      });
+      loadingInProgressRef.current = false;
+    }, 10000); // 10 seconds max loading time
 
     try {
       // First try to sync user data
@@ -61,8 +86,17 @@ export function useOfficerDashboardData(): DashboardResult {
         logMessage(LogLevel.WARNING, 'useOfficerDashboardData', 'Error syncing user data, continuing', userSyncError);
       }
       
-      // Sync storage data
-      await syncDashboardStorage();
+      // Sync storage data with timeout protection
+      try {
+        const syncPromise = syncDashboardStorage();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Storage sync timed out")), 5000);
+        });
+        
+        await Promise.race([syncPromise, timeoutPromise]);
+      } catch (syncError) {
+        logMessage(LogLevel.WARNING, 'useOfficerDashboardData', 'Storage sync timed out or failed, using local data');
+      }
 
       // Load and process tournaments
       const allTournaments = loadTournaments();
@@ -111,6 +145,17 @@ export function useOfficerDashboardData(): DashboardResult {
         description: "Failed to load dashboard data. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      // Clear the timeout as we finished loading (success or error)
+      if (dataTimeoutRef.current) {
+        clearTimeout(dataTimeoutRef.current);
+        dataTimeoutRef.current = null;
+      }
+      
+      // Release the loading lock with a small delay to prevent immediate retries
+      setTimeout(() => {
+        loadingInProgressRef.current = false;
+      }, 500);
     }
   }, [toast, forceSync, syncDashboardStorage, loadTournaments, loadPlayers, loadOrganizers, 
        processTournaments, processPendingPlayers, processPendingOrganizers]);
@@ -124,12 +169,14 @@ export function useOfficerDashboardData(): DashboardResult {
   // Set up refresh scheduling
   const { setupRefreshInterval } = useRefreshScheduling(loadAllData);
   
-  // Load data on mount and setup refresh interval
+  // Load data on mount and when refreshKey changes (manual refresh)
   useEffect(() => {
+    // Load data immediately
     loadAllData();
+    
+    // Setup refresh interval
     setupRefreshInterval(5); // Refresh every 5 minutes
     
-    // Clean up timeout on unmount
     return () => {
       if (dataTimeoutRef.current) {
         clearTimeout(dataTimeoutRef.current);

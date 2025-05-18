@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface OfficerDashboardLoadingProps {
   loadingProgress: number;
@@ -20,19 +21,19 @@ export const OfficerDashboardLoading: React.FC<OfficerDashboardLoadingProps> = (
   // Smooth animation for progress bar with more stability
   useEffect(() => {
     // Use RAF for smoother animation
-    const rafId = requestAnimationFrame(() => {
+    const timer = setTimeout(() => {
       setAnimatedProgress(prev => {
         // Ensure progress never decreases and moves smoothly
         if (loadingProgress > prev) {
-          // Move 75% of the way to the target value
-          return prev + Math.min((loadingProgress - prev) * 0.75, 10);
+          // Move closer to the target value
+          return prev + Math.min((loadingProgress - prev) * 0.5, 5);
         }
         return prev;
       });
-    });
+    }, 50);
     
-    return () => cancelAnimationFrame(rafId);
-  }, [loadingProgress]);
+    return () => clearTimeout(timer);
+  }, [loadingProgress, animatedProgress]);
   
   const renderLoadingMessage = () => {
     if (loadingProgress < 30) return "Connecting to data service...";
@@ -57,13 +58,15 @@ export const OfficerDashboardLoading: React.FC<OfficerDashboardLoadingProps> = (
           </p>
           
           {onRetry && (
-            <button
+            <Button
               onClick={onRetry}
-              className="px-4 py-2 bg-white text-red-600 border border-red-300 rounded-md 
-                        hover:bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-700"
+              variant="outline"
+              className="bg-white text-red-600 border-red-300 hover:bg-red-50 
+                        dark:bg-gray-800 dark:text-red-400 dark:border-red-700"
             >
+              <RefreshCw className="mr-2 h-4 w-4" />
               Retry Loading
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -82,7 +85,10 @@ export const OfficerDashboardLoading: React.FC<OfficerDashboardLoadingProps> = (
           <span>Loading dashboard data...</span>
           <span>{Math.round(animatedProgress)}%</span>
         </div>
-        <Progress value={animatedProgress} className="h-2" />
+        <Progress 
+          value={animatedProgress} 
+          className="h-2 transition-all duration-300" 
+        />
       </div>
       
       <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">

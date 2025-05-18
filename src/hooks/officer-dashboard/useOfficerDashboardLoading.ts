@@ -14,12 +14,14 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
   const { syncDashboardData, resetAttemptCounter } = useDashboardSync();
   const mounted = useRef(true);
   const syncInProgressRef = useRef(false);
+  const attemptsRef = useRef(0);
   
   const loadDashboardData = useCallback(async () => {
     if (!mounted.current || syncInProgressRef.current) return;
     
     try {
-      logMessage(LogLevel.INFO, 'useOfficerDashboardLoading', 'Starting dashboard data loading');
+      attemptsRef.current += 1;
+      logMessage(LogLevel.INFO, 'useOfficerDashboardLoading', `Starting dashboard data loading (attempt ${attemptsRef.current})`);
       
       syncInProgressRef.current = true;
       setIsLoadingSyncing(true);
@@ -34,8 +36,13 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       }, 100);
       
       try {
-        // Attempt to sync data
-        const syncSuccessful = await syncDashboardData();
+        // Attempt to sync data with a timeout
+        const syncPromise = syncDashboardData();
+        const timeoutPromise = new Promise<boolean>((_, reject) => {
+          setTimeout(() => reject(new Error('Sync operation timed out')), 10000);
+        });
+        
+        const syncSuccessful = await Promise.race([syncPromise, timeoutPromise]);
         
         if (syncSuccessful) {
           incrementProgress(30);
@@ -47,7 +54,11 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync error', { error: errorMessage });
         
         incrementProgress(15);
-        setErrorDetails(`Data sync issue: ${errorMessage}. Some dashboard features may be limited.`);
+        
+        // Only show error if this is not the first attempt
+        if (attemptsRef.current > 1) {
+          setErrorDetails(`Data sync issue: ${errorMessage}. Some dashboard features may be limited.`);
+        }
       }
       
       // Set to almost complete
@@ -62,6 +73,11 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
             setIsLoadingSyncing(false);
             resetAttemptCounter();
             syncInProgressRef.current = false;
+            
+            // If we've tried multiple times and still have issues, warn but allow the user to continue
+            if (attemptsRef.current >= 3 && !errorDetails) {
+              logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Multiple loading attempts required');
+            }
           }
         }, 500);
       }
@@ -69,29 +85,43 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       const errorMessage = error instanceof Error ? error.message : String(error);
       
       logMessage(LogLevel.ERROR, 'useOfficerDashboardLoading', 'Failed to load dashboard', {
-        error: errorMessage
+        error: errorMessage,
+        attempt: attemptsRef.current
       });
       
       if (mounted.current) {
+        // For the first attempt, don't show error, just retry once automatically
+        if (attemptsRef.current === 1) {
+          syncInProgressRef.current = false;
+          setTimeout(() => {
+            if (mounted.current) {
+              loadDashboardData();
+            }
+          }, 1000);
+          return;
+        }
+        
         setLoadingFailed(true);
         setIsLoadingSyncing(false);
         setErrorDetails(`Loading error: ${errorMessage}`);
         syncInProgressRef.current = false;
       }
     }
-  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter]);
+  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter, errorDetails]);
   
   const handleRetry = useCallback(() => {
     if (isLoadingSyncing || syncInProgressRef.current) return;
     
     resetProgress();
     resetAttemptCounter();
+    attemptsRef.current = 0;
     loadDashboardData();
   }, [loadDashboardData, isLoadingSyncing, resetProgress, resetAttemptCounter]);
   
   // On mount, start loading and set a maximum timeout
   useEffect(() => {
     mounted.current = true;
+    attemptsRef.current = 0;
     
     // Start loading immediately
     loadDashboardData();

@@ -5,7 +5,6 @@ import Navbar from "@/components/Navbar";
 import { useUser } from "@/contexts/UserContext";
 import { NewOfficerDashboard } from "@/components/officer/NewOfficerDashboard";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
-import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Beaker } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -20,13 +19,17 @@ export default function OfficerDashboardPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
+  const loginAttemptedRef = useRef(false);
   
   // Check authentication and role
   useEffect(() => {
     if (!isUserLoading) {
       if (!currentUser) {
-        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
-        navigate("/login");
+        if (!loginAttemptedRef.current) {
+          loginAttemptedRef.current = true;
+          logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
+          navigate("/login");
+        }
         return;
       }
       

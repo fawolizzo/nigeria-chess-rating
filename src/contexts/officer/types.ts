@@ -7,6 +7,8 @@ export interface OfficerDashboardState {
   pendingPlayers: any[];
   pendingOrganizers: any[];
   isLoading: boolean;
+  hasError?: boolean;
+  errorMessage?: string | null;
 }
 
 export interface DashboardContextType extends OfficerDashboardState {
