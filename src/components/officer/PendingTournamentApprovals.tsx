@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, Calendar, AlertCircle } from "lucide-react";
 import { updateTournament } from "@/lib/mockData";
 import { useToast } from "@/hooks/use-toast";
 import { format, isValid, parseISO } from "date-fns";
-import { useDashboard } from "@/contexts/OfficerDashboardContext";
+import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";  // Updated import path
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
 interface PendingTournamentApprovalsProps {
