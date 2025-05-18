@@ -1,42 +1,29 @@
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from 'react';
 
-export function useProgressManager() {
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const mounted = useRef(true);
+export function useProgressManager(initialValue = 0) {
+  const [progress, setProgress] = useState(initialValue);
   
-  // Reset hook state on unmount
-  useEffect(() => {
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  
-  const incrementProgress = useCallback((amount = 10) => {
-    if (mounted.current) {
-      setLoadingProgress(prev => {
-        const increment = Math.min(amount, 20);
-        return Math.min(prev + increment, 99); 
-      });
-    }
+  const incrementProgress = useCallback((amount: number) => {
+    setProgress(prev => {
+      // Cap at 100
+      return Math.min(prev + amount, 100);
+    });
   }, []);
   
   const resetProgress = useCallback(() => {
-    if (mounted.current) {
-      setLoadingProgress(0);
-    }
+    setProgress(0);
   }, []);
   
   const completeProgress = useCallback(() => {
-    if (mounted.current) {
-      setLoadingProgress(100);
-    }
+    setProgress(100);
   }, []);
   
   return {
-    loadingProgress,
+    loadingProgress: progress,
     incrementProgress,
     resetProgress,
-    completeProgress
+    completeProgress,
+    setProgress
   };
 }

@@ -1,6 +1,6 @@
 
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
@@ -12,8 +12,6 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import About from "@/pages/About";
 import PendingApproval from "@/pages/PendingApproval";
-import OfficerDashboard from "@/pages/OfficerDashboard";
-import OrganizerDashboard from "@/pages/OrganizerDashboard";
 import SystemTesting from "@/pages/SystemTesting";
 import CrossPlatformTesting from "@/pages/CrossPlatformTesting";
 import Tournaments from "@/pages/Tournaments";
@@ -46,13 +44,13 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               
-              {/* Updated dashboard routes */}
+              {/* Dashboard routes */}
               <Route path="/officer-dashboard" element={<NewOfficerDashboard />} />
               <Route path="/organizer-dashboard" element={<NewOrganizerDashboard />} />
               
-              {/* Legacy dashboard routes (accessible via /old- prefix) */}
-              <Route path="/old-officer-dashboard" element={<OfficerDashboard />} />
-              <Route path="/old-organizer-dashboard" element={<OrganizerDashboard />} />
+              {/* Redirect legacy dashboard routes to new ones */}
+              <Route path="/old-officer-dashboard" element={<Navigate to="/officer-dashboard" replace />} />
+              <Route path="/old-organizer-dashboard" element={<Navigate to="/organizer-dashboard" replace />} />
               
               <Route path="/system-testing" element={<SystemTesting />} />
               <Route path="/cross-platform" element={<CrossPlatformTesting />} />

@@ -33,7 +33,7 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
   // Log dashboard data loading state changes
   useEffect(() => {
     logMessage(
-      isLoading ? LogLevel.INFO : LogLevel.INFO, // Changed from DEBUG to INFO since DEBUG doesn't exist
+      LogLevel.INFO, // Always use INFO level for consistency
       'OfficerDashboardContext', 
       `Dashboard state: ${isLoading ? 'loading' : 'ready'}`
     );

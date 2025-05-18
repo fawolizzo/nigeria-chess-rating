@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,15 +68,20 @@ export const useLoginForm = () => {
       setLoginStage("validating_input");
       
       if (data.role === "rating_officer") {
-        // For rating officer, use simplified direct login
+        // For rating officer, use predefined credentials
         setLoginStage("authenticating_rating_officer");
         
         try {
-          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Rating Officer login');
+          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Rating Officer login with email:', data.email);
           
-          // Try to login with 10 second timeout
+          if (data.email === "" || data.email.toLowerCase() === "ncro@ncr.com") {
+            // Use default rating officer email if empty or matches default
+            data.email = "ncro@ncr.com";
+          }
+          
+          // Try to login with 5 second timeout
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Login timed out")), 10000);
+            setTimeout(() => reject(new Error("Login timed out")), 5000);
           });
           
           // Use Promise.race to implement timeout
@@ -95,8 +99,6 @@ export const useLoginForm = () => {
             });
             
             logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful');
-            
-            // Important: Keep isLoading true so that the Login component handles the redirection
           } else {
             throw new Error("Invalid access code for Rating Officer account");
           }
@@ -117,11 +119,16 @@ export const useLoginForm = () => {
         setLoginStage("authenticating_tournament_organizer");
         
         try {
-          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Tournament Organizer login');
+          logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Tournament Organizer login with email:', data.email);
+          
+          if (data.email === "" || data.email.toLowerCase() === "org@ncr.com") {
+            // Use default tournament organizer email if empty or matches default
+            data.email = "org@ncr.com";
+          }
           
           // Simple login with timeout
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Login timed out")), 10000);
+            setTimeout(() => reject(new Error("Login timed out")), 5000);
           });
           
           const success = await Promise.race([
@@ -167,6 +174,11 @@ export const useLoginForm = () => {
       
       setIsLoading(false);
       setLoginStage("error");
+    } finally {
+      // For success, keep isLoading true to show spinner during redirection
+      if (loginStage !== "success") {
+        setIsLoading(false);
+      }
     }
   };
 

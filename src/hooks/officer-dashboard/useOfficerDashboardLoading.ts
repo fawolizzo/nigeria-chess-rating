@@ -73,11 +73,6 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
             setIsLoadingSyncing(false);
             resetAttemptCounter();
             syncInProgressRef.current = false;
-            
-            // If we've tried multiple times and still have issues, warn but allow the user to continue
-            if (attemptsRef.current >= 3 && !errorDetails) {
-              logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Multiple loading attempts required');
-            }
           }
         }, 500);
       }
@@ -107,7 +102,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         syncInProgressRef.current = false;
       }
     }
-  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter, errorDetails]);
+  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter]);
   
   const handleRetry = useCallback(() => {
     if (isLoadingSyncing || syncInProgressRef.current) return;

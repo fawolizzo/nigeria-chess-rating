@@ -15,9 +15,7 @@ const Login = () => {
   const { currentUser, isLoading, refreshUserData } = useUser();
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [showTimeout, setShowTimeout] = useState(false);
-  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
   const [redirecting, setRedirecting] = useState(false);
-  const [redirectAttempts, setRedirectAttempts] = useState(0);
   
   // Debug logging for login page rendering
   useEffect(() => {
@@ -25,9 +23,8 @@ const Login = () => {
       isLoading,
       currentUserExists: !!currentUser,
       redirectingStatus: redirecting,
-      redirectAttempts
     });
-  }, [isLoading, currentUser, redirecting, redirectAttempts]);
+  }, [isLoading, currentUser, redirecting]);
 
   // Handle redirect after successful login with improved reliability
   useEffect(() => {
@@ -43,30 +40,10 @@ const Login = () => {
       const redirectPath = getRedirectPath(currentUser);
       logMessage(LogLevel.INFO, 'Login', `Redirecting to: ${redirectPath}`);
       
-      // Use immediate navigation with a backup timeout
-      try {
-        navigate(redirectPath, { replace: true });
-        
-        // Add a backup redirect with a small delay
-        setTimeout(() => {
-          setRedirectAttempts(prev => prev + 1);
-          if (window.location.pathname === '/login') {
-            logMessage(LogLevel.WARNING, 'Login', 'Delayed redirect triggered', {
-              attempt: redirectAttempts + 1,
-              currentPath: window.location.pathname
-            });
-            navigate(redirectPath, { replace: true });
-          }
-        }, 500); // Reduced delay for faster response
-      } catch (error) {
-        logMessage(LogLevel.ERROR, 'Login', 'Navigation error', { error });
-        // Even if navigation fails, we'll try again
-        setTimeout(() => {
-          navigate(redirectPath, { replace: true });
-        }, 1000);
-      }
+      // Use immediate navigation
+      navigate(redirectPath, { replace: true });
     }
-  }, [currentUser, isLoading, navigate, redirecting, redirectAttempts]);
+  }, [currentUser, isLoading, navigate, redirecting]);
   
   // Handle loading states and timeouts
   useEffect(() => {
@@ -74,7 +51,6 @@ const Login = () => {
     
     if (isLoading) {
       const startTime = Date.now();
-      setLoadingStartTime(startTime);
       
       timer = window.setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -88,7 +64,6 @@ const Login = () => {
         }
       }, 1000);
     } else {
-      setLoadingStartTime(null);
       setLoadingDuration(0);
       setShowTimeout(false);
     }
