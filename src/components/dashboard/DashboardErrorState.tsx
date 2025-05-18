@@ -70,3 +70,5 @@ export function DashboardErrorState({
     </div>
   );
 }
+
+export default DashboardErrorState;

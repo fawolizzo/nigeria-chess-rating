@@ -1,7 +1,7 @@
-
 import React from "react";
 import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
+import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
 import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { useOfficerDashboardSync } from "@/hooks/useOfficerDashboardSync";
