@@ -1,4 +1,3 @@
-
 import { User, SyncEventType } from '@/types/userTypes';
 import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
 import { sendSyncEvent } from '@/utils/storageSync';
@@ -54,10 +53,18 @@ export const loginUser = async (
       // Get the latest users from storage
       const latestUsers = getFromStorage<User[]>(STORAGE_KEYS.USERS, []);
       console.log("Retrieved users from storage:", latestUsers);
-      setUsers(latestUsers || []); // Ensure we always have an array
+      
+      // Clean up duplicate users before proceeding
+      const cleanedUsers = cleanupDuplicateUsers(latestUsers);
+      if (cleanedUsers.length !== latestUsers.length) {
+        console.log(`Cleaned up ${latestUsers.length - cleanedUsers.length} duplicate users`);
+        saveToStorage(STORAGE_KEYS.USERS, cleanedUsers);
+      }
+      
+      setUsers(cleanedUsers || []); // Ensure we always have an array
       
       // Try to find the user
-      let user = Array.isArray(latestUsers) ? latestUsers.find((u) => 
+      let user = Array.isArray(cleanedUsers) ? cleanedUsers.find((u) => 
         u && u.email && u.email.toLowerCase() === normalizedEmail && u.role === role
       ) : null;
       
@@ -142,8 +149,25 @@ export const loginUser = async (
         console.log('Saving temporary user to persistent storage');
         user.id = crypto.randomUUID(); // Generate a proper UUID
         
-        // Add user to the users array
-        const updatedUsers = Array.isArray(latestUsers) ? [...latestUsers, user] : [user];
+        // Add user to the users array - make sure we don't add duplicates
+        const existingUserIndex = cleanedUsers.findIndex(u => 
+          u.email.toLowerCase() === user.email.toLowerCase() && u.role === user.role
+        );
+        
+        let updatedUsers;
+        if (existingUserIndex >= 0) {
+          // Update existing user
+          updatedUsers = [...cleanedUsers];
+          updatedUsers[existingUserIndex] = {
+            ...updatedUsers[existingUserIndex],
+            ...user,
+            lastModified: Date.now()
+          };
+        } else {
+          // Add new user
+          updatedUsers = [...cleanedUsers, user];
+        }
+        
         setUsers(updatedUsers);
         saveToStorage(STORAGE_KEYS.USERS, updatedUsers);
       }
@@ -167,4 +191,31 @@ export const loginUser = async (
       setIsLoading(false);
     }
   });
+};
+
+/**
+ * Clean up duplicate users from storage
+ * This ensures we don't have multiple entries for the same email+role combination
+ */
+const cleanupDuplicateUsers = (users: User[]): User[] => {
+  if (!Array.isArray(users)) return [];
+  
+  // Create a map to store the latest user by email+role
+  const userMap: Record<string, User> = {};
+  
+  // Process each user
+  users.forEach(user => {
+    if (!user || !user.email) return;
+    
+    const key = `${user.email.toLowerCase()}_${user.role}`;
+    
+    // Keep only the latest version of each user (by lastModified)
+    if (!userMap[key] || (user.lastModified && userMap[key].lastModified && 
+        user.lastModified > userMap[key].lastModified)) {
+      userMap[key] = user;
+    }
+  });
+  
+  // Convert the map back to an array
+  return Object.values(userMap);
 };

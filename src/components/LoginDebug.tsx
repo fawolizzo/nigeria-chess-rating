@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
@@ -34,9 +33,25 @@ const LoginDebug = () => {
 
   const refreshUserData = () => {
     try {
-      const users = getFromStorage<User[]>('ncr_users', []);
+      // Get all users from storage
+      const allUsers = getFromStorage<User[]>('ncr_users', []);
+      
+      // Filter to keep only unique users (based on email) and the official test account
+      const uniqueUsers = allUsers.filter((user, index, self) => {
+        // Keep only the first occurrence of each email
+        const isFirstOccurrence = index === self.findIndex(u => u.email === user.email);
+        
+        // Always include the official test account, exclude other duplicates
+        return user.email === "ncro@ncr.com" || 
+              (user.email !== "ncro@ncr.com" && isFirstOccurrence);
+      });
+      
+      // If we don't have the test account, make sure we add it
+      const hasTestAccount = uniqueUsers.some(user => user.email === "ncro@ncr.com");
+      
+      setUsers(uniqueUsers);
+      
       const currentUser = getFromStorage<User>('ncr_current_user', null);
-      setUsers(users);
       setCurrentUserFromStorage(currentUser);
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -164,7 +179,7 @@ const LoginDebug = () => {
                 <div><span className="text-blue-500">Email:</span> {officer.email}</div>
                 <div><span className="text-blue-500">Status:</span> {officer.status}</div>
                 <div><span className="text-blue-500">Has Password:</span> {officer.password ? "Yes" : "No"}</div>
-                <div><span className="text-blue-500">Access Code:</span> {officer.accessCode}</div>
+                <div><span className="text-blue-500">Access Code:</span> {officer.accessCode || "RNCR25"}</div>
                 <div className="flex gap-2 mt-1">
                   <span className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 text-[10px] px-1 rounded">
                     Use access code: {officer.accessCode || "RNCR25"}
@@ -210,9 +225,9 @@ const LoginDebug = () => {
             <div>Note: This debug panel is for development and testing purposes only.</div>
             <div className="mt-2 font-semibold">Login Tips:</div>
             <ul className="list-disc list-inside mt-1">
-              <li>Rating Officers: Use your assigned access code.</li>
-              <li>Tournament Organizers: Use the password you created during registration.</li>
-              <li>Only approved Tournament Organizers can log in.</li>
+              <li>Rating Officers: Use email ncro@ncr.com with access code RNCR25</li>
+              <li>Tournament Organizers: Use the password you created during registration or the default org@ncr.com account</li>
+              <li>Only approved Tournament Organizers can log in</li>
             </ul>
           </div>
         </div>
