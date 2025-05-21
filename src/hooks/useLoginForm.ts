@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,7 +45,14 @@ export const useLoginForm = () => {
     });
     
     form.setValue("role", role);
-    form.setValue("email", ""); // Clear email when role changes
+    
+    // For Rating Officer, pre-fill with default email
+    if (role === "rating_officer") {
+      form.setValue("email", "ncro@ncr.com");
+    } else {
+      form.setValue("email", "");
+    }
+    
     setError("");
   };
 
@@ -74,10 +82,8 @@ export const useLoginForm = () => {
         try {
           logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Rating Officer login with email:', data.email);
           
-          if (data.email === "" || data.email.toLowerCase() === "ncro@ncr.com") {
-            // Use default rating officer email if empty or matches default
-            data.email = "ncro@ncr.com";
-          }
+          // Always use default rating officer email
+          data.email = "ncro@ncr.com";
           
           // Try to login with 5 second timeout
           const timeoutPromise = new Promise((_, reject) => {

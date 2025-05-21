@@ -15,7 +15,12 @@ import { z } from "zod";
 
 // Schema for login form
 export const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  email: z.string()
+    .email("Please enter a valid email address")
+    .or(z.literal("").transform(() => {
+      // For empty email, return the appropriate default based on role
+      return "ncro@ncr.com"; // Rating Officer will be handled in the form submission
+    })),
   password: z.string().min(1, "Password or access code is required"),
   role: z.enum(["tournament_organizer", "rating_officer"])
 });
@@ -41,8 +46,14 @@ const LoginFormInputs = ({
     : "Password";
 
   const passwordPlaceholder = selectedRole === "rating_officer"
-    ? "Enter your access code"
+    ? "Enter access code (RNCR25)"
     : "Enter your password";
+
+  const emailPlaceholder = selectedRole === "rating_officer"
+    ? "ncro@ncr.com"
+    : "Enter your email address";
+
+  const emailReadOnly = selectedRole === "rating_officer";
 
   return (
     <>
@@ -56,13 +67,21 @@ const LoginFormInputs = ({
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input 
-                  placeholder="Enter your email address" 
-                  className="pl-10" 
+                  placeholder={emailPlaceholder}
+                  className={`pl-10 ${emailReadOnly ? 'bg-gray-100' : ''}`}
                   type="email"
-                  {...field}
+                  readOnly={emailReadOnly}
+                  value={emailReadOnly ? "ncro@ncr.com" : field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
                 />
               </div>
             </FormControl>
+            {selectedRole === "rating_officer" && (
+              <FormDescription>
+                Fixed email for Rating Officer login
+              </FormDescription>
+            )}
             <FormMessage />
           </FormItem>
         )}
@@ -98,6 +117,11 @@ const LoginFormInputs = ({
                 </Button>
               </div>
             </FormControl>
+            {selectedRole === "rating_officer" && (
+              <FormDescription>
+                Use RNCR25 as the access code
+              </FormDescription>
+            )}
             <FormMessage />
           </FormItem>
         )}

@@ -1,63 +1,53 @@
 
 import { logMessage, LogLevel } from '@/utils/debugLogger';
-import { withTimeout } from '../timeoutUtils';
-import { sendSyncEvent } from '@/utils/storageSync';
-import { SyncEventType } from '@/types/userTypes';
 
-const LOCAL_LOGIN_TIMEOUT = 10000; // 10 seconds for better reliability
+export interface AuthResult {
+  success: boolean;
+  error?: string;
+  user?: any;
+}
 
+/**
+ * Authenticate locally with email and password
+ */
 export const authenticateLocally = async (
-  email: string, 
-  password: string,
+  email: string,
+  authString: string,
   role: string,
   localLogin: (email: string, password: string, role: string) => Promise<boolean>
-) => {
+): Promise<AuthResult> => {
   try {
-    logMessage(LogLevel.INFO, 'localAuth', 'Attempting local authentication', {
-      email,
+    logMessage(LogLevel.INFO, 'localAuth', 'Attempting local authentication', { 
+      email, 
       role,
-      timestamp: Date.now()
+      hasAuthString: !!authString 
     });
-    
-    const success = await withTimeout(
-      () => localLogin(email, password, role),
-      LOCAL_LOGIN_TIMEOUT,
-      'Local Login'
-    );
-    
+
+    // Use the localLogin function from context
+    const success = await localLogin(email, authString, role);
+
     if (success) {
-      logMessage(LogLevel.INFO, 'localAuth', 'Local authentication successful', {
-        email,
-        role
-      });
-      
-      sendSyncEvent(SyncEventType.LOGIN, 'user', {
-        email,
-        role,
-        timestamp: Date.now()
-      });
-      
+      logMessage(LogLevel.INFO, 'localAuth', 'Local authentication successful');
       return { success: true };
+    } else {
+      const errorMessage = role === 'rating_officer' 
+        ? 'Invalid access code for Rating Officer' 
+        : 'Invalid email or password';
+      
+      logMessage(LogLevel.WARNING, 'localAuth', 'Local authentication failed', { 
+        reason: errorMessage 
+      });
+      
+      return { success: false, error: errorMessage };
     }
-    
-    logMessage(LogLevel.WARNING, 'localAuth', 'Local authentication failed with credentials', {
-      email,
-      role
+  } catch (error: any) {
+    logMessage(LogLevel.ERROR, 'localAuth', 'Local authentication error', { 
+      error: error.message 
     });
     
-    return {
-      success: false,
-      error: 'Local authentication failed'
-    };
-  } catch (error) {
-    logMessage(LogLevel.ERROR, 'localAuth', 'Local authentication failed with error', {
-      error: error instanceof Error ? error.message : String(error),
-      email,
-      role
-    });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Authentication failed'
+    return { 
+      success: false, 
+      error: error.message || 'Authentication failed' 
     };
   }
 };

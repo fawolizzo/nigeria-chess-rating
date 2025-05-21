@@ -6,7 +6,7 @@ import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { STORAGE_KEYS } from '../userContextTypes';
 import { monitorSync } from '@/utils/monitorSync';
 
-// Default rating officer constants - updated for testing phase
+// Default rating officer constants - for testing phase
 const DEFAULT_RATING_OFFICER_EMAIL = "ncro@ncr.com";
 const DEFAULT_ACCESS_CODE = "RNCR25";
 
@@ -38,6 +38,7 @@ export const loginUser = async (
       // For rating officers, always use the default email address
       let loginEmail = email;
       if (role === 'rating_officer') {
+        // For rating officers, we only support the single test account
         loginEmail = DEFAULT_RATING_OFFICER_EMAIL;
       } 
       // For tournament organizers, check if it's the default email
@@ -108,7 +109,7 @@ export const loginUser = async (
       let credentialsValid = false;
       
       if (role === 'rating_officer') {
-        // For rating officers, verify access code directly
+        // For rating officer, only accept the single test access code
         credentialsValid = authValue === DEFAULT_ACCESS_CODE;
         console.log(`Rating officer access code valid: ${credentialsValid}`);
       } else {
