@@ -12,7 +12,7 @@ const OfficerDashboardContent: React.FC = () => {
   const { 
     isLoading: isDataActuallyLoading, 
     errorMessage: actualDataError,
-    refreshDashboard: loadAllData, // Renamed to match expected prop
+    refreshDashboard: loadAllData,
     hasError 
   } = useDashboard();
 

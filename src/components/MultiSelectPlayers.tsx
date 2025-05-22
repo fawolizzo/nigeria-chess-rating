@@ -19,6 +19,7 @@ interface MultiSelectPlayersProps {
   onPlayersSelected: (players: Player[]) => void;
   excludeIds?: string[];
   includePendingPlayers?: boolean;
+  hideDialog?: boolean;
 }
 
 const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
@@ -27,6 +28,7 @@ const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
   onPlayersSelected,
   excludeIds = [],
   includePendingPlayers = false,
+  hideDialog = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [players, setPlayers] = useState<Player[]>([]);
@@ -96,8 +98,94 @@ const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
   
   // Check if a player is selected
   const isPlayerSelected = (playerId: string) => {
-    return selectedPlayers.some(player => player.id === playerId);
+    return selectedPlayers.some(player => player.id === player.id);
   };
+
+  // If we're hiding the dialog (when used inside another dialog)
+  if (hideDialog) {
+    return (
+      <div>
+        <div className="relative mt-2">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <Input
+            type="search"
+            placeholder="Search players..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        
+        <div className="max-h-[400px] overflow-y-auto mt-2">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredPlayers.length > 0 ? (
+            <div className="space-y-1">
+              {filteredPlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => togglePlayerSelection(player)}
+                  className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-colors ${
+                    isPlayerSelected(player.id)
+                      ? "bg-primary/10 dark:bg-primary/20"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      {player.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-medium flex items-center gap-1">
+                        {player.title && (
+                          <span className="text-amber-500 text-sm">{player.title}</span>
+                        )}
+                        {player.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Rating: {player.rating}
+                        {player.status === 'pending' && (
+                          <span className="ml-2 text-amber-500">(Pending approval)</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {isPlayerSelected(player.id) && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-gray-500 dark:text-gray-400">
+              {searchQuery ? (
+                <p>No players match your search.</p>
+              ) : (
+                <p>No available players found.</p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 mt-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {selectedPlayers.length} players selected
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleConfirm} 
+              disabled={selectedPlayers.length === 0}
+            >
+              Add Selected
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

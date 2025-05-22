@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Clock, Users } from "lucide-react";
 import { format, isValid } from "date-fns";
+import { formatDate } from "@/utils/dateUtils";
 
 interface TournamentDashboardCardProps {
   tournament: any;
@@ -19,30 +20,6 @@ export function TournamentDashboardCard({
 }: TournamentDashboardCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   
-  // Format date helper function with proper timezone handling
-  const formatDate = (dateInput: string) => {
-    try {
-      // For YYYY-MM-DD format - create the date in local timezone without UTC conversion
-      // This ensures we get the same date that was entered by the user
-      const dateParts = dateInput.split('-');
-      if (dateParts.length === 3) {
-        const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS
-        const day = parseInt(dateParts[2], 10);
-        
-        const date = new Date(year, month, day);
-        return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
-      }
-      
-      // Fallback for other date formats
-      const date = new Date(dateInput);
-      return isValid(date) ? format(date, "MMM dd, yyyy") : "Invalid date";
-    } catch (error) {
-      console.error("Error formatting date:", error, { dateInput });
-      return "Invalid date";
-    }
-  };
-
   // Use the correct date field based on API response format
   const startDate = tournament.start_date || tournament.startDate;
   const endDate = tournament.end_date || tournament.endDate;
@@ -94,7 +71,7 @@ export function TournamentDashboardCard({
           </div>
           <div className="flex items-center">
             <Clock className="h-4 w-4 mr-2 text-gray-500" />
-            <span>{tournament.time_control}</span>
+            <span>{tournament.time_control || tournament.timeControl}</span>
           </div>
           <div className="flex items-center">
             <Users className="h-4 w-4 mr-2 text-gray-500" />

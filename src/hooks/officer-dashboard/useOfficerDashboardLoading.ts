@@ -12,7 +12,7 @@ interface UseOfficerDashboardLoadingResult {
   loadingProgress: number;
   loadingFailed: boolean;
   isLoadingSyncing: boolean;
-  handleRetry: () => Promise<void>; // Modified to return Promise<void>
+  handleRetry: () => Promise<void>;
   errorDetails: string | null;
   forceComplete: () => void;
 }

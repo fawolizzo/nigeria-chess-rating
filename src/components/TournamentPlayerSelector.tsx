@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, UserPlus, X, Users, AlertTriangle } from "lucide-react";
-import { Player, addPlayer, getAllPlayers } from "@/lib/mockData";
-import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
+import { Player } from "@/lib/mockData";
+import MultiSelectPlayers from "@/components/MultiSelectPlayers";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   Dialog, 
@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useUser } from "@/contexts/UserContext";
+import { getAllPlayersFromSupabase } from "@/services/playerService";
 
 interface TournamentPlayerSelectorProps {
   tournamentId: string;
@@ -52,16 +53,21 @@ const TournamentPlayerSelector = ({
     setIsDialogOpen(false);
   };
   
-  const handleDialogClose = (open: boolean) => {
+  const handleDialogClose = async (open: boolean) => {
     if (!open) {
       setIsDialogOpen(open);
     } else {
       // Check for pending players when opening dialog
-      const allPlayers = getAllPlayers();
-      console.log("All players in system:", allPlayers);
-      const hasPendingPlayers = allPlayers.some(player => player.status === 'pending');
-      setPendingPlayersExist(hasPendingPlayers);
-      setIsDialogOpen(open);
+      try {
+        const allPlayers = await getAllPlayersFromSupabase({});
+        console.log("All players in system:", allPlayers);
+        const hasPendingPlayers = allPlayers.some(player => player.status === 'pending');
+        setPendingPlayersExist(hasPendingPlayers);
+        setIsDialogOpen(open);
+      } catch (error) {
+        console.error("Error checking for pending players:", error);
+        setIsDialogOpen(open);
+      }
     }
   };
   
