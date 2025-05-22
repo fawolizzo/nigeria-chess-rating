@@ -20,13 +20,15 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   className, 
   size = "md" 
 }) => {
+  // Important: Using more specific tailwind classes to prevent being overridden
   return (
     <div 
       className={cn(
-        "rounded-full border-t-transparent border-green-600 dark:border-green-500 animate-spin",
+        "rounded-full border border-solid border-t-transparent animate-spin",
         sizeClasses[size],
-        className
+        className || "border-green-600", // Default to green if no class provided
       )}
+      aria-label="Loading"
     />
   );
 };

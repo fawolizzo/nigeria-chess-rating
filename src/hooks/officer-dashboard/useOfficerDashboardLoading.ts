@@ -46,28 +46,28 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       setLoadingFailed(false);
       setErrorDetails(undefined);
       resetProgress();
-      incrementProgress(20); // Start with more progress to avoid perceived slow loading
+      incrementProgress(30); // Start with more progress to avoid perceived slow loading
       
-      // More aggressive progress updates to show activity
+      // Even more aggressive progress updates to show activity
       setTimeout(() => {
-        if (mounted.current) incrementProgress(30);
-      }, 100);
+        if (mounted.current) incrementProgress(40);
+      }, 50);
       
       try {
         // Attempt to sync data with a shorter timeout
         const syncPromise = syncDashboardData();
         const timeoutPromise = new Promise<boolean>((_, reject) => {
-          setTimeout(() => reject(new Error('Sync operation timed out')), 4000);
+          setTimeout(() => reject(new Error('Sync operation timed out')), 2000); // Shorter timeout
         });
         
         let syncSuccessful;
         
         try {
           syncSuccessful = await Promise.race([syncPromise, timeoutPromise]);
-          incrementProgress(30);
+          incrementProgress(20);
         } catch (syncError) {
           // If sync times out, just continue with loading
-          incrementProgress(30);
+          incrementProgress(20);
           syncSuccessful = false;
           
           const errorMessage = syncError instanceof Error ? syncError.message : String(syncError);
@@ -99,20 +99,8 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       });
       
       if (mounted.current) {
-        // For the first attempt, don't show error, just retry once automatically
-        if (attemptsRef.current === 1) {
-          syncInProgressRef.current = false;
-          initialLoadRef.current = false;
-          setTimeout(() => {
-            if (mounted.current) {
-              loadDashboardData();
-            }
-          }, 500); // Faster retry
-          return;
-        }
-        
-        // After max attempts, force complete instead of showing error
-        if (attemptsRef.current >= 2) { // Fewer max attempts
+        // After even a single attempt, force complete instead of showing error
+        if (attemptsRef.current >= 1) { 
           forceComplete();
           return;
         }
@@ -145,17 +133,17 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
     
     // Set up fallback progress updates to ensure visual feedback
     progressIntervalsRef.current = [
-      setTimeout(() => { if (mounted.current && loadingProgress < 50) incrementProgress(20); }, 1000),
-      setTimeout(() => { if (mounted.current && loadingProgress < 80) incrementProgress(20); }, 2000),
-      setTimeout(() => { if (mounted.current && loadingProgress < 95) incrementProgress(15); }, 3000)
+      setTimeout(() => { if (mounted.current && loadingProgress < 50) incrementProgress(30); }, 300),
+      setTimeout(() => { if (mounted.current && loadingProgress < 80) incrementProgress(20); }, 600),
+      setTimeout(() => { if (mounted.current && loadingProgress < 95) incrementProgress(15); }, 900)
     ];
     
-    // Failsafe: Force completion after reasonable timeout
+    // Failsafe: Force completion after reasonable timeout - even shorter timeout
     maxTimeoutIdRef.current = setTimeout(() => {
       if (mounted.current && !initialLoadComplete) {
         forceComplete();
       }
-    }, 5000); // Shortened timeout
+    }, 2000); // Shortened failsafe timeout to 2 seconds
     
     return () => {
       mounted.current = false;

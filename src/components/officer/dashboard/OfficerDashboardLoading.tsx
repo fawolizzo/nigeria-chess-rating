@@ -18,19 +18,20 @@ export const OfficerDashboardLoading: React.FC<OfficerDashboardLoadingProps> = (
 }) => {
   const [animatedProgress, setAnimatedProgress] = useState(0);
   
-  // Smooth animation for progress bar with more stability
+  // Smooth animation for progress bar with more stability and faster animation
   useEffect(() => {
-    // Use RAF for smoother animation
+    // Use RAF for smoother animation with faster increment
     const timer = setTimeout(() => {
       setAnimatedProgress(prev => {
-        // Ensure progress never decreases and moves smoothly
+        // Ensure progress never decreases and moves smoothly but quickly
         if (loadingProgress > prev) {
-          // Move closer to the target value
-          return prev + Math.min((loadingProgress - prev) * 0.5, 5);
+          // Move closer to the target value with larger increments
+          return prev + Math.min((loadingProgress - prev) * 0.7, 10); // Faster increment
         }
-        return prev;
+        // Always make some progress even if loadingProgress is not increasing
+        return Math.min(prev + 5, 99); // Ensure it doesn't reach 100 on its own
       });
-    }, 50);
+    }, 30); // Faster updates for smoother animation
     
     return () => clearTimeout(timer);
   }, [loadingProgress, animatedProgress]);
@@ -87,7 +88,7 @@ export const OfficerDashboardLoading: React.FC<OfficerDashboardLoadingProps> = (
         </div>
         <Progress 
           value={animatedProgress} 
-          className="h-2 transition-all duration-300" 
+          className="h-2 transition-all duration-200" 
         />
       </div>
       
