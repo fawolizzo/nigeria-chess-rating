@@ -263,12 +263,14 @@ const SystemTesting = () => {
           <CardDescription>
             <div className="flex items-center gap-2 flex-wrap">
               <span>Diagnostic information from the application</span>
-              <TabsList>
-                <TabsTrigger value="all" onClick={() => setLogFilter('all')}>All</TabsTrigger>
-                <TabsTrigger value="auth" onClick={() => setLogFilter('auth')}>Auth</TabsTrigger>
-                <TabsTrigger value="diagnostics" onClick={() => setLogFilter('diagnostics')}>Diagnostics</TabsTrigger>
-                <TabsTrigger value="error" onClick={() => setLogFilter('error')}>Errors</TabsTrigger>
-              </TabsList>
+              <Tabs defaultValue="all">
+                <TabsList>
+                  <TabsTrigger value="all" onClick={() => setLogFilter('all')}>All</TabsTrigger>
+                  <TabsTrigger value="auth" onClick={() => setLogFilter('auth')}>Auth</TabsTrigger>
+                  <TabsTrigger value="diagnostics" onClick={() => setLogFilter('diagnostics')}>Diagnostics</TabsTrigger>
+                  <TabsTrigger value="error" onClick={() => setLogFilter('error')}>Errors</TabsTrigger>
+                </TabsList>
+              </Tabs>
               <span className="text-sm text-gray-500">Showing {filteredLogs.length} of {logs.length} logs</span>
             </div>
           </CardDescription>
