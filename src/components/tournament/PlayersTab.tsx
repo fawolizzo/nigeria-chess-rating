@@ -11,7 +11,7 @@ export interface PlayersTabProps {
   tournamentId: string;
   tournamentStatus: "upcoming" | "ongoing" | "completed" | "processed" | "pending" | "rejected" | "approved";
   registeredPlayers: Player[];
-  allPlayers: Player[]; // Add this field to match the expected prop
+  allPlayers?: Player[]; // Made optional to handle backward compatibility
   searchQuery: string;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
   onAddPlayers: (players: Player[]) => Promise<void>;
@@ -25,7 +25,7 @@ const PlayersTab = ({
   tournamentId,
   tournamentStatus,
   registeredPlayers,
-  allPlayers, // Add this to fix the TS error
+  allPlayers = [], // Default to empty array if not provided
   searchQuery,
   setSearchQuery,
   onAddPlayers,

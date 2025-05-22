@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, CalendarClock, CheckCircle, UserPlus } from "lucide-react";
+import { CalendarCheck, CalendarClock, CheckCircle, UserPlus, Loader2 } from "lucide-react";
 import { Tournament } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 
@@ -11,7 +11,7 @@ interface TournamentHeaderProps {
   onStartTournament: () => Promise<void>;
   onCompleteTournament: () => Promise<void>;
   canStartTournament: boolean;
-  isProcessing: boolean; // Add this field to match the expected prop
+  isProcessing: boolean;
 }
 
 const TournamentHeader = ({
@@ -42,7 +42,11 @@ const TournamentHeader = ({
                 disabled={isProcessing}
                 className="flex items-center gap-2"
               >
-                <UserPlus size={16} />
+                {isProcessing ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <UserPlus size={16} />
+                )}
                 {tournament.registrationOpen ? "Close Registration" : "Open Registration"}
               </Button>
               
@@ -52,7 +56,11 @@ const TournamentHeader = ({
                 disabled={!canStartTournament || isProcessing}
                 className="flex items-center gap-2"
               >
-                <CalendarClock size={16} />
+                {isProcessing ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <CalendarClock size={16} />
+                )}
                 Start Tournament
               </Button>
             </>
@@ -65,7 +73,11 @@ const TournamentHeader = ({
               disabled={isProcessing}
               className="flex items-center gap-2"
             >
-              <CalendarCheck size={16} />
+              {isProcessing ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <CalendarCheck size={16} />
+              )}
               Complete Tournament
             </Button>
           )}

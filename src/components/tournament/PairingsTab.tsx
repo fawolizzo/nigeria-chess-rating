@@ -27,7 +27,7 @@ export interface PairingsTabProps {
   onSelectRound: (round: number) => void;
   onGeneratePairings: () => Promise<void>;
   onSaveResults: (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => Promise<void>;
-  isProcessing: boolean; // Add this field to match the expected prop
+  isProcessing: boolean;
 }
 
 const PairingsTab = ({

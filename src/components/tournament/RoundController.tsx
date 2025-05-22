@@ -8,7 +8,7 @@ interface RoundControllerProps {
   totalRounds: number;
   onAdvanceRound: () => Promise<void>;
   canAdvanceRound: boolean;
-  isProcessing: boolean; // Add this field to match the expected prop
+  isProcessing: boolean;
 }
 
 const RoundController = ({

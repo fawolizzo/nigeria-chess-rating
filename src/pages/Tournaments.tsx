@@ -1,220 +1,158 @@
-
-import React, { useState, useEffect } from "react"; // Added useEffect
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-// import { getAllTournaments, Tournament } from "@/lib/mockData"; // Removed getAllTournaments
-import { Tournament } from "@/lib/mockData"; // Tournament type import
-import { getAllTournamentsFromSupabase } from "@/services/tournamentService"; // Added
-import TournamentCard from "@/components/TournamentCard";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, CalendarRange, Loader2, AlertCircle } from "lucide-react"; // Added AlertCircle
-import { useUser } from "@/contexts/UserContext";
-import StateSelector from "@/components/selectors/StateSelector";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
-import SearchBar from "@/components/SearchBar";
+import { Input } from "@/components/ui/input";
+import { Plus, Search } from "lucide-react";
+import TournamentCard from "@/components/TournamentCard";
+import { Tournament } from "@/lib/mockData";
+import { addTournamentToSupabase, getAllTournamentsFromSupabase } from "@/services/tournamentService";
+import { useToast } from "@/components/ui/use-toast";
+import { categorizeTournaments } from "@/utils/tournamentUtils";
 
-const Tournaments: React.FC = () => {
+const Tournaments = () => {
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newTournamentName, setNewTournamentName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { currentUser } = useUser();
-  const [selectedState, setSelectedState] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [tournaments, setTournaments] = useState<Tournament[]>([]); // Added
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Added
-  const [fetchError, setFetchError] = useState<string | null>(null); // Added
-  
+  const { toast } = useToast();
+
   useEffect(() => {
-    const fetchTournamentsData = async () => {
+    const fetchTournaments = async () => {
       setIsLoading(true);
-      setFetchError(null);
       try {
-        const fetchedTournaments = await getAllTournamentsFromSupabase({
-          searchQuery: searchQuery || undefined,
-          state: selectedState === '' ? undefined : selectedState,
+        const tournaments = await getAllTournamentsFromSupabase({});
+        setTournaments(tournaments);
+      } catch (error) {
+        console.error("Error fetching tournaments:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load tournaments. Please try again.",
+          variant: "destructive"
         });
-        setTournaments(fetchedTournaments);
-      } catch (err) {
-        console.error("Error fetching tournaments:", err);
-        setFetchError("Failed to load tournaments. Please check your connection or try again later.");
-        setTournaments([]); // Clear tournaments on error
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTournamentsData();
-  }, [searchQuery, selectedState]);
-  
-  // Client-side filtering removed as Supabase handles it.
-  // const filteredTournaments = ...
+    fetchTournaments();
+  }, [toast]);
 
-  // Function to determine if a tournament is upcoming, ongoing, or completed
-  const categorizeTournaments = (tournaments: Tournament[]) => {
-    const upcoming: Tournament[] = [];
-    const ongoing: Tournament[] = [];
-    const completed: Tournament[] = [];
-    
-    // Ensure tournamentsToCategorize is an array before calling forEach
-    if (Array.isArray(tournamentsToCategorize)) {
-      tournamentsToCategorize.forEach((tournament) => {
-        const startDate = new Date(tournament.startDate);
-        const endDate = new Date(tournament.endDate);
-        const today = new Date();
-        
-        if (endDate < today || tournament.status === "completed" || tournament.status === "processed") {
-          completed.push(tournament);
-        } else if (startDate <= today) {
-          ongoing.push(tournament);
-        } else {
-          upcoming.push(tournament);
-        }
+  const handleCreateTournament = async () => {
+    if (!newTournamentName.trim()) {
+      toast({
+        title: "Error",
+        description: "Tournament name cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const newTournament = {
+        name: newTournamentName,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0],
+        location: "Online",
+        organizerId: "user-1", // Replace with actual organizer ID
+        status: "upcoming",
+        rounds: 5,
+        currentRound: 1,
+        category: "classical",
+        timeControl: "60+30",
+        participants: 0,
+        registrationOpen: true
+      };
+
+      const createdTournament = await addTournamentToSupabase(newTournament);
+
+      if (createdTournament) {
+        setTournaments(prevTournaments => [...prevTournaments, createdTournament]);
+        setNewTournamentName("");
+        setIsCreateOpen(false);
+        toast({
+          title: "Success",
+          description: "Tournament created successfully.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create tournament.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating tournament:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create tournament. Please try again.",
+        variant: "destructive",
       });
     }
-    
-    return { upcoming, ongoing, completed };
-  };
-  
-  const { upcoming, ongoing, completed } = categorizeTournaments(tournaments); // Use 'tournaments' state
-  
-  const handleCreateTournament = () => {
-    navigate("/tournament-management/new");
   };
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-  };
-  
+  const filteredTournaments = tournaments.filter(tournament =>
+    tournament.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const { upcoming, ongoing, completed, processed } = categorizeTournaments(tournaments);
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar />
-      
-      <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Tournaments</h1>
-            <p className="text-muted-foreground mt-1">View all chess tournaments in Nigeria</p>
-          </div>
-          
-          {currentUser && currentUser.role === "tournament_organizer" && (
-            <Button onClick={handleCreateTournament}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Create Tournament
-            </Button>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <SearchBar 
-            placeholder="Search tournaments..." 
+    <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+        <div className="relative w-full md:w-auto">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <Input
+            type="search"
+            placeholder="Search tournaments..."
             value={searchQuery}
-            onChange={handleSearchChange}
-            onSearch={(query) => setSearchQuery(query)}
-          />
-          <StateSelector
-            value={selectedState}
-            onChange={setSelectedState}
-            placeholder="All States"
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-full md:w-[300px]"
           />
         </div>
-
-        {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-nigeria-green mb-4" />
-            <h2 className="text-xl font-medium">Loading Tournaments...</h2>
-            <p className="text-muted-foreground">Please wait while we fetch tournament data.</p>
-          </div>
-        )}
-
-        {!isLoading && fetchError && (
-          <Alert variant="destructive" className="my-8">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error Loading Tournaments</AlertTitle>
-            <AlertDescription>
-              {fetchError}
-              {/* Optionally, add a retry button here */}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {!isLoading && !fetchError && tournaments.length === 0 && (
-          <div className="text-center py-12">
-            <CalendarRange className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No tournaments found</h3>
-            <p className="text-muted-foreground mb-8">
-              {selectedState || searchQuery 
-                ? "Try adjusting your search or filters, or check back later."
-                : "There are no tournaments in the system yet. Be the first to create one!"}
-            </p>
-            {currentUser && currentUser.role === "tournament_organizer" && (
-              <Button onClick={handleCreateTournament}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create Your First Tournament
-              </Button>
-            )}
-          </div>
-        )}
-        
-        {!isLoading && !fetchError && tournaments.length > 0 && (
-          <div className="space-y-10">
-            {/* Ongoing Tournaments */}
-            {ongoing.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                  Ongoing Tournaments
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {ongoing.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Upcoming Tournaments */}
-            {upcoming.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
-                  Upcoming Tournaments
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {upcoming.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Completed Tournaments */}
-            {/* Only show this section if there are completed tournaments AND no active filters that might hide them */}
-            {completed.length > 0 && (
-              <div>
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-gray-500 mr-2"></div>
-                  Completed Tournaments
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {completed.map((tournament) => (
-                    <TournamentCard key={tournament.id} tournament={tournament} />
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* If all categories are empty but tournaments array is not (e.g. due to categorization logic or future status types) */}
-            { ongoing.length === 0 && upcoming.length === 0 && completed.length === 0 && tournaments.length > 0 && (
-                 <div className="text-center py-12">
-                    <CalendarRange className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Tournaments Available</h3>
-                    <p className="text-muted-foreground">
-                        Tournaments are available but might not fit current categories (Ongoing, Upcoming, Completed) or filters.
-                    </p>
-                 </div>
-            )}
-
-          </div>
-        )}
+        <Button onClick={() => setIsCreateOpen(true)} className="mt-4 md:mt-0 flex items-center gap-2">
+          <Plus size={16} />
+          Create Tournament
+        </Button>
       </div>
+
+      {isCreateOpen && (
+        <div className="mb-6 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+          <h3 className="text-lg font-medium mb-2">Create New Tournament</h3>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <Input
+              type="text"
+              placeholder="Tournament Name"
+              value={newTournamentName}
+              onChange={(e) => setNewTournamentName(e.target.value)}
+              className="w-full md:w-auto"
+            />
+            <Button onClick={handleCreateTournament}>Create</Button>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : filteredTournaments.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTournaments.map(tournament => (
+            <TournamentCard
+              key={tournament.id}
+              tournament={tournament}
+              onClick={() => navigate(`/tournament/${tournament.id}`)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="py-6 text-center text-gray-500 dark:text-gray-400">
+          No tournaments found.
+        </div>
+      )}
     </div>
   );
 };

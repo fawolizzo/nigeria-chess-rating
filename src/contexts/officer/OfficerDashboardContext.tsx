@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { useOfficerDashboardData } from "@/hooks/dashboard/useOfficerDashboardData";
 import { DashboardContextType } from "./types";
@@ -14,8 +14,6 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
     pendingOrganizers,
     isLoading,
     refreshData: refreshDashboard,
-    loadAllData,
-    refreshKey,
     dataTimeoutRef,
     hasError,
     errorMessage

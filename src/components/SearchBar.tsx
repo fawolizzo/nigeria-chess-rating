@@ -2,22 +2,35 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, X } from "lucide-react";
-import { players } from "@/lib/mockData";
+import { Player } from "@/lib/mockData"; // Import only the type
+import { getAllPlayersFromSupabase } from "@/services/playerService";
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
   value?: string;
   onChange?: (value: string) => void;
-  placeholder?: string; // Add placeholder prop
+  placeholder?: string; 
 }
 
 const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(value || "");
-  const [searchResults, setSearchResults] = useState<typeof players>([]);
+  const [searchResults, setSearchResults] = useState<Player[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   
+  // Fetch all players when the search bar is opened
+  useEffect(() => {
+    if (isOpen) {
+      const fetchPlayers = async () => {
+        const players = await getAllPlayersFromSupabase({});
+        setAllPlayers(players);
+      };
+      fetchPlayers();
+    }
+  }, [isOpen]);
+
   // Update internal state when value prop changes
   useEffect(() => {
     if (value !== undefined) {
@@ -32,9 +45,9 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
   }, [isOpen]);
 
   useEffect(() => {
-    if (searchQuery.length >= 2) {
+    if (searchQuery.length >= 2 && allPlayers.length > 0) {
       const query = searchQuery.toLowerCase();
-      const results = players.filter(
+      const results = allPlayers.filter(
         player =>
           player.name.toLowerCase().includes(query) ||
           (player.title?.toLowerCase().includes(query) || false)
@@ -52,7 +65,7 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
     if (onChange && value !== searchQuery) {
       onChange(searchQuery);
     }
-  }, [searchQuery, onSearch, onChange, value]);
+  }, [searchQuery, onSearch, onChange, value, allPlayers]);
 
   const handleSearchClick = () => {
     setIsOpen(true);
