@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import TournamentCard from "@/components/TournamentCard";
 import { Tournament } from "@/lib/mockData";
-import { addTournamentToSupabase, getAllTournamentsFromSupabase } from "@/services/tournamentService";
+import { getAllTournamentsFromSupabase, addTournamentToSupabase } from "@/services/tournamentService";
 import { useToast } from "@/components/ui/use-toast";
 import { categorizeTournaments } from "@/utils/tournamentUtils";
 
@@ -96,7 +97,7 @@ const Tournaments = () => {
     tournament.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const { upcoming, ongoing, completed, processed } = categorizeTournaments(tournaments);
+  const { upcoming, ongoing, completed, processed } = categorizeTournaments(filteredTournaments);
 
   return (
     <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
@@ -144,7 +145,7 @@ const Tournaments = () => {
             <TournamentCard
               key={tournament.id}
               tournament={tournament}
-              onClick={() => navigate(`/tournament/${tournament.id}`)}
+              onClickView={() => navigate(`/tournament/${tournament.id}`)}
             />
           ))}
         </div>

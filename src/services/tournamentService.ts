@@ -125,6 +125,18 @@ export const getTournamentByIdFromSupabase = async (id: string): Promise<Tournam
  * @param tournamentData - The data for the new tournament (excluding id).
  * @returns A promise that resolves to the created Tournament object or null if an error occurs.
  */
+export const addTournamentToSupabase = async (
+  tournamentData: Omit<Tournament, 'id'>
+): Promise<Tournament | null> => {
+  // This is just an alias for the createTournamentInSupabase function for backward compatibility
+  return createTournamentInSupabase(tournamentData);
+};
+
+/**
+ * Creates a new tournament in Supabase.
+ * @param tournamentData - The data for the new tournament (excluding id).
+ * @returns A promise that resolves to the created Tournament object or null if an error occurs.
+ */
 export const createTournamentInSupabase = async (
   tournamentData: Omit<Tournament, 'id'>
 ): Promise<Tournament | null> => {
