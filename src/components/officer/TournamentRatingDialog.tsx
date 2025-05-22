@@ -112,9 +112,9 @@ const TournamentRatingDialog = ({
               participantIds[match.whiteId] = true;
               participantIds[match.blackId] = true;
               
-                // Use allFetchedPlayers (from Supabase) instead of allPlayers (from mock)
-                let whitePlayer = allFetchedPlayers.find(p => p.id === match.whiteId);
-                let blackPlayer = allFetchedPlayers.find(p => p.id === match.blackId);
+              // Use allFetchedPlayers (from Supabase) instead of allPlayers (from mock)
+              let whitePlayer = allFetchedPlayers.find(p => p.id === match.whiteId);
+              let blackPlayer = allFetchedPlayers.find(p => p.id === match.blackId);
               
               if (!whitePlayer || !blackPlayer) {
                   console.error(`Player not found in fetched data: ${match.whiteId} or ${match.blackId}`);
@@ -200,8 +200,9 @@ const TournamentRatingDialog = ({
           });
         });
         
-        Object.entries(playerUpdates).forEach(([playerId, update]) => {
-          const player = allPlayers.find(p => p.id === playerId);
+        // Use async/await with Promise.all for parallel processing
+        await Promise.all(Object.entries(playerUpdates).map(async ([playerId, update]) => {
+          const player = allFetchedPlayers.find(p => p.id === playerId);
           if (player) {
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
@@ -274,7 +275,7 @@ const TournamentRatingDialog = ({
             // Use await for Supabase update
             await updatePlayerInSupabase(player.id, updatedPlayerFields);
           }
-        });
+        }));
         
         const updatedTournamentFields: Partial<Tournament> = {
           status: 'processed' as Tournament['status'],
