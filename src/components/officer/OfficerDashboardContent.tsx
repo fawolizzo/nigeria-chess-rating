@@ -22,14 +22,14 @@ const OfficerDashboardContent: React.FC = () => {
   const { toast } = useToast();
   const [hasShownLoading, setHasShownLoading] = useState(false);
   
-  // If loading takes too long, force complete it with a shorter timeout
+  // Force loading completion after a short timeout (2.5 seconds)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!initialLoadComplete && !loadingFailed) {
         logMessage(LogLevel.WARNING, 'OfficerDashboardContent', 'Forcing dashboard load completion after timeout');
         forceComplete();
       }
-    }, 3000); // Even shorter timeout to prevent UI getting stuck
+    }, 2500);
     
     return () => clearTimeout(timer);
   }, [initialLoadComplete, loadingFailed, forceComplete]);
@@ -41,35 +41,7 @@ const OfficerDashboardContent: React.FC = () => {
     }
   }, [initialLoadComplete, hasShownLoading]);
 
-  // Only show loading state briefly to avoid stuck UI
-  useEffect(() => {
-    if (hasShownLoading && !initialLoadComplete) {
-      // Force complete after a short delay if still loading
-      const forceTimer = setTimeout(() => {
-        forceComplete();
-        logMessage(LogLevel.WARNING, 'OfficerDashboardContent', 'Force completing dashboard load to prevent UI being stuck');
-      }, 4000);
-      
-      return () => clearTimeout(forceTimer);
-    }
-  }, [hasShownLoading, initialLoadComplete, forceComplete]);
-
-  // Add debugging logs for loading state
-  useEffect(() => {
-    logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard loading state:', {
-      initialLoadComplete,
-      loadingProgress,
-      loadingFailed,
-      isLoadingSyncing,
-      hasShownLoading
-    });
-    
-    if (loadingFailed) {
-      logMessage(LogLevel.ERROR, 'OfficerDashboardContent', 'Dashboard loading failed:', errorDetails);
-    }
-  }, [initialLoadComplete, loadingProgress, loadingFailed, isLoadingSyncing, errorDetails, hasShownLoading]);
-
-  // Show notification when syncing completes successfully
+  // Show notification when loading completes successfully
   useEffect(() => {
     if (initialLoadComplete && !loadingFailed && !isLoadingSyncing) {
       // Only show toast when loading has completed successfully
@@ -80,6 +52,17 @@ const OfficerDashboardContent: React.FC = () => {
       });
     }
   }, [initialLoadComplete, loadingFailed, isLoadingSyncing, toast]);
+  
+  // If we've already tried to load for more than 3 seconds, skip loading UI
+  useEffect(() => {
+    if (hasShownLoading && loadingProgress < 100) {
+      const forceTimer = setTimeout(() => {
+        forceComplete();
+      }, 3000);
+      
+      return () => clearTimeout(forceTimer);
+    }
+  }, [hasShownLoading, loadingProgress, forceComplete]);
 
   // While not complete and still loading, show the loading component
   // But limit the time we show the loading state to prevent it getting stuck
