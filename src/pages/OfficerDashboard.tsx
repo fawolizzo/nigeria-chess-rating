@@ -20,10 +20,14 @@ const OfficerDashboard: React.FC = () => {
   const refreshToastIdRef = useRef<string | null>(null);
   // Add a loading timeout reference
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const authCheckCompleted = useRef(false);
   
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
     if (!isUserLoading) {
+      // Mark auth check as completed to prevent stuck loading state
+      authCheckCompleted.current = true;
+      
       if (!currentUser) {
         logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
         navigate("/login");
@@ -53,25 +57,35 @@ const OfficerDashboard: React.FC = () => {
       
       logMessage(LogLevel.INFO, 'OfficerDashboard', `Rating officer logged in: ${currentUser.email}`);
       
-      // Use a very short delay to prevent flash of loading state
-      const timer = setTimeout(() => {
-        setIsContentLoading(false);
-      }, 10);
+      // Use an immediate state update to prevent flash of loading state
+      setIsContentLoading(false);
       
       // Add a failsafe timeout to force content to appear if loading takes too long
       loadingTimeoutRef.current = setTimeout(() => {
         setIsContentLoading(false);
         logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Forcing content to appear after timeout');
-      }, 3000);
+      }, 1500); // Shorter timeout
       
       return () => {
-        clearTimeout(timer);
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current);
         }
       };
     }
   }, [currentUser, isUserLoading, navigate, toast]);
+  
+  // Additional failsafe to prevent stuck loading state
+  useEffect(() => {
+    const maxLoadingTime = setTimeout(() => {
+      if (isUserLoading && !authCheckCompleted.current) {
+        // Force loading state to finish after a maximum time
+        authCheckCompleted.current = true;
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Forcing auth check completion after maximum timeout');
+      }
+    }, 3000); // 3 seconds max for auth check
+    
+    return () => clearTimeout(maxLoadingTime);
+  }, [isUserLoading]);
   
   const handleSystemReset = () => {
     // Log out the current user after reset
@@ -123,11 +137,12 @@ const OfficerDashboard: React.FC = () => {
   };
   
   // Show minimal loading state for user authentication check only
-  if (isUserLoading) {
+  // But enforce a timeout to prevent it getting stuck
+  if (isUserLoading && !authCheckCompleted.current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="flex flex-col items-center">
-          <LoadingSpinner size="lg" />
+          <LoadingSpinner size="lg" className="text-nigeria-green" />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Checking credentials...</p>
         </div>
       </div>

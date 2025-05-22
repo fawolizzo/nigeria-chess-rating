@@ -27,7 +27,6 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         sizeClasses[size],
         className
       )}
-      style={{ animation: "spin 1s linear infinite" }} 
     />
   );
 };
