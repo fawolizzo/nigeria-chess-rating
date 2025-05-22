@@ -3,8 +3,10 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle } from "lucide-react";
-import { getPlayerById, Player } from "@/lib/mockData";
+import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react"; // Added Loader2
+// import { getPlayerById, Player } from "@/lib/mockData"; // Removed getPlayerById
+import { Player } from "@/lib/mockData"; // Player type
+import { getPlayerByIdFromSupabase } from "@/services/playerService"; // Added
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import NewPlayerProfileHeader from "@/components/player/NewPlayerProfileHeader";
@@ -15,62 +17,80 @@ const PlayerProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [player, setPlayer] = useState<Player | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Added
+  const [fetchError, setFetchError] = useState<string | null>(null); // Renamed from error to fetchError
   
-  // Directly load the player data on component mount
   useEffect(() => {
-    console.log("[PlayerProfile] Loading player data for ID:", id);
-    
-    if (!id) {
-      setError("No player ID provided");
-      toast({
-        title: "Missing Information",
-        description: "No player ID was provided.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      // Direct approach to fetch player data
-      const playerData = getPlayerById(id);
-      
-      if (playerData) {
-        console.log("[PlayerProfile] Player data loaded successfully:", playerData.id);
-        setPlayer(playerData);
-        
-        // Cache the player data for future reference
-        try {
-          localStorage.setItem(`player_${id}`, JSON.stringify(playerData));
-        } catch (cacheError) {
-          console.warn("[PlayerProfile] Could not cache player data:", cacheError);
-        }
-      } else {
-        console.error("[PlayerProfile] Player not found with ID:", id);
-        setError("Player not found. Please check the ID and try again.");
+    const fetchPlayerData = async () => {
+      if (!id) {
+        setFetchError("No player ID provided.");
+        setIsLoading(false);
         toast({
-          title: "Player Not Found",
-          description: "The requested player could not be found.",
+          title: "Missing Information",
+          description: "No player ID was provided in the URL.",
           variant: "destructive",
         });
+        return;
       }
-    } catch (error: any) {
-      console.error("[PlayerProfile] Error loading player:", error);
-      setError(`Error loading player data: ${error.message || "Unknown error"}`);
-      toast({
-        title: "Error",
-        description: "There was a problem loading the player data.",
-        variant: "destructive",
-      });
-    }
+
+      setIsLoading(true);
+      setFetchError(null);
+      console.log("[PlayerProfile] Fetching player data for ID:", id);
+
+      try {
+        const playerData = await getPlayerByIdFromSupabase(id);
+        
+        if (playerData) {
+          console.log("[PlayerProfile] Player data fetched successfully:", playerData.id);
+          setPlayer(playerData);
+          // Caching can be re-evaluated; Supabase might have its own caching, or use React Query/SWR for better cache management
+        } else {
+          console.warn("[PlayerProfile] Player not found with ID via Supabase:", id);
+          setFetchError("Player not found. The profile may not exist or the ID is incorrect.");
+          setPlayer(null);
+          toast({
+            title: "Player Not Found",
+            description: "The requested player could not be found.",
+            variant: "default", // Changed to default as it's a "not found" rather than system error
+          });
+        }
+      } catch (err: any) {
+        console.error("[PlayerProfile] Error fetching player from Supabase:", err);
+        setFetchError(`Failed to load player profile: ${err.message || "An unexpected error occurred."}`);
+        setPlayer(null);
+        toast({
+          title: "Error Loading Profile",
+          description: "There was a problem fetching the player data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPlayerData();
   }, [id, toast]);
   
   const handleBackToPlayers = () => {
     navigate("/players");
   };
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <Navbar />
+        <div className="pt-24 pb-20 px-4 sm:px-6 md:px-8 max-w-7xl mx-auto flex flex-col items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-nigeria-green mb-4" />
+          <h2 className="text-xl font-medium">Loading Player Profile...</h2>
+          <p className="text-muted-foreground">Please wait while we fetch the details.</p>
+        </div>
+      </div>
+    );
+  }
   
-  // If there's an error, show an error message
-  if (error) {
+  // If there's a fetchError, show an error message
+  if (fetchError) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Navbar />
@@ -87,8 +107,8 @@ const PlayerProfile = () => {
           <Card className="border-red-200 dark:border-red-800">
             <CardContent className="p-8 flex flex-col items-center justify-center text-center">
               <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-              <h2 className="text-2xl font-bold mb-2">Error Loading Player</h2>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
+              <h2 className="text-2xl font-bold mb-2">Error Loading Profile</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">{fetchError}</p>
               <Button onClick={handleBackToPlayers}>
                 Return to Players List
               </Button>
@@ -99,7 +119,7 @@ const PlayerProfile = () => {
     );
   }
   
-  // If there's no player data yet, show a very minimal loading indicator
+  // If not loading, no error, but player is still null (e.g. player not found but not treated as fetchError by above)
   if (!player) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -114,20 +134,24 @@ const PlayerProfile = () => {
             Back to Players
           </Button>
           
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-nigeria-green/20 shadow-card p-8">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-1/3"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-1/4"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-6 w-1/5"></div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            </div>
-          </div>
+          <Card className="border-yellow-400 dark:border-yellow-700"> {/* Changed border for "Not Found" */}
+            <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+              <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2">Player Not Found</h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                The player profile you are looking for does not exist or could not be loaded.
+              </p>
+              <Button onClick={handleBackToPlayers}>
+                Return to Players List
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
   
-  // If we have the player data, render the profile
+  // If we have the player data (!isLoading, !fetchError, player is not null), render the profile
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />

@@ -99,15 +99,16 @@ export function useOfficerDashboardData(): DashboardResult {
       }
 
       // Load and process tournaments
-      const allTournaments = loadTournaments();
+      // Note: loadTournaments, loadPlayers, loadOrganizers are now async
+      const allTournaments = await loadTournaments();
       const tournamentData = processTournaments(allTournaments);
       
       // Load and process players
-      const allPlayers = loadPlayers();
+      const allPlayers = await loadPlayers();
       const playerData = processPendingPlayers(allPlayers);
       
       // Load and process organizers
-      const allUsers = loadOrganizers();
+      const allUsers = await loadOrganizers();
       const organizerData = processPendingOrganizers(allUsers);
 
       // Update state with all processed data
