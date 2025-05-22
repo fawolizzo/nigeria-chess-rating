@@ -18,6 +18,8 @@ const OfficerDashboard: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
+  // Add a loading timeout reference
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
@@ -56,7 +58,18 @@ const OfficerDashboard: React.FC = () => {
         setIsContentLoading(false);
       }, 10);
       
-      return () => clearTimeout(timer);
+      // Add a failsafe timeout to force content to appear if loading takes too long
+      loadingTimeoutRef.current = setTimeout(() => {
+        setIsContentLoading(false);
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Forcing content to appear after timeout');
+      }, 3000);
+      
+      return () => {
+        clearTimeout(timer);
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+        }
+      };
     }
   }, [currentUser, isUserLoading, navigate, toast]);
   

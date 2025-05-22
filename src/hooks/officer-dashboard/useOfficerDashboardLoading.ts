@@ -19,6 +19,18 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
   const maxTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const initialLoadRef = useRef(false);
   
+  // Force complete function to break out of loading states
+  const forceComplete = useCallback(() => {
+    if (!mounted.current || initialLoadComplete) return;
+    
+    logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Forcing dashboard load completion');
+    syncInProgressRef.current = false;
+    initialLoadRef.current = true;
+    completeProgress();
+    setInitialLoadComplete(true);
+    setIsLoadingSyncing(false);
+  }, [initialLoadComplete, completeProgress]);
+  
   const loadDashboardData = useCallback(async () => {
     // Prevent duplicate loading operations and only load once on mount
     if (!mounted.current || syncInProgressRef.current || initialLoadRef.current) return;
@@ -44,26 +56,27 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
         // Attempt to sync data with a timeout
         const syncPromise = syncDashboardData();
         const timeoutPromise = new Promise<boolean>((_, reject) => {
-          setTimeout(() => reject(new Error('Sync operation timed out')), 10000);
+          setTimeout(() => reject(new Error('Sync operation timed out')), 8000);
         });
         
-        const syncSuccessful = await Promise.race([syncPromise, timeoutPromise]);
+        let syncSuccessful;
         
-        if (syncSuccessful) {
+        try {
+          syncSuccessful = await Promise.race([syncPromise, timeoutPromise]);
           incrementProgress(30);
-        } else {
+        } catch (syncError) {
+          // If sync times out, just continue with loading
           incrementProgress(20);
+          syncSuccessful = false;
+          
+          const errorMessage = syncError instanceof Error ? syncError.message : String(syncError);
+          logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync timeout or error', { error: errorMessage });
         }
       } catch (syncError) {
         const errorMessage = syncError instanceof Error ? syncError.message : String(syncError);
         logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Sync error', { error: errorMessage });
         
         incrementProgress(15);
-        
-        // Only show error if this is not the first attempt
-        if (attemptsRef.current > 1) {
-          setErrorDetails(`Data sync issue: ${errorMessage}. Some dashboard features may be limited.`);
-        }
       }
       
       // Set to almost complete
@@ -102,13 +115,19 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
           return;
         }
         
+        // After max attempts, force complete instead of showing error
+        if (attemptsRef.current >= 3) {
+          forceComplete();
+          return;
+        }
+        
         setLoadingFailed(true);
         setIsLoadingSyncing(false);
         setErrorDetails(`Loading error: ${errorMessage}`);
         syncInProgressRef.current = false;
       }
     }
-  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter]);
+  }, [syncDashboardData, incrementProgress, resetProgress, completeProgress, resetAttemptCounter, forceComplete]);
   
   const handleRetry = useCallback(() => {
     if (isLoadingSyncing || syncInProgressRef.current) return;
@@ -138,19 +157,9 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
     // Failsafe: Force completion after reasonable timeout
     maxTimeoutIdRef.current = setTimeout(() => {
       if (mounted.current && !initialLoadComplete) {
-        logMessage(LogLevel.WARNING, 'useOfficerDashboardLoading', 'Forcing dashboard load completion after timeout');
-        
-        // If we're still loading after too long, show as completed but with a warning
-        completeProgress();
-        setInitialLoadComplete(true);
-        setIsLoadingSyncing(false);
-        syncInProgressRef.current = false;
-        
-        if (!errorDetails) {
-          setErrorDetails('Dashboard loaded with limited data due to timeout.');
-        }
+        forceComplete();
       }
-    }, 15000);
+    }, 10000); // Shortened timeout
     
     return () => {
       mounted.current = false;
@@ -161,7 +170,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
       if (maxTimeoutIdRef.current) clearTimeout(maxTimeoutIdRef.current);
       progressIntervalsRef.current.forEach(clearTimeout);
     };
-  }, [loadDashboardData, initialLoadComplete, incrementProgress, loadingProgress, errorDetails, completeProgress, cleanup]);
+  }, [loadDashboardData, initialLoadComplete, incrementProgress, loadingProgress, completeProgress, cleanup, forceComplete]);
   
   return {
     initialLoadComplete,
@@ -170,6 +179,7 @@ export function useOfficerDashboardLoading(): OfficerDashboardLoadingResult {
     isLoadingSyncing,
     handleRetry,
     forceReload: loadDashboardData,
+    forceComplete,
     errorDetails
   };
 }

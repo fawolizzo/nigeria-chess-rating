@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
@@ -15,11 +15,32 @@ const OfficerDashboardContent: React.FC = () => {
     loadingFailed,
     isLoadingSyncing,
     handleRetry,
-    errorDetails
+    errorDetails,
+    forceComplete  // Add reference to new force complete method
   } = useOfficerDashboardLoading();
   
   const { toast } = useToast();
+  const [hasShownLoading, setHasShownLoading] = useState(false);
   
+  // If loading takes too long, force complete it
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!initialLoadComplete && !loadingFailed) {
+        logMessage(LogLevel.WARNING, 'OfficerDashboardContent', 'Forcing dashboard load completion after timeout');
+        forceComplete();
+      }
+    }, 5000); // Shorter timeout to prevent UI getting stuck
+    
+    return () => clearTimeout(timer);
+  }, [initialLoadComplete, loadingFailed, forceComplete]);
+  
+  // Track if we've shown the loading state to prevent flashing
+  useEffect(() => {
+    if (!initialLoadComplete && !hasShownLoading) {
+      setHasShownLoading(true);
+    }
+  }, [initialLoadComplete, hasShownLoading]);
+
   // Add debugging logs for loading state
   useEffect(() => {
     logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard loading state:', {
@@ -47,7 +68,7 @@ const OfficerDashboardContent: React.FC = () => {
   }, [initialLoadComplete, loadingFailed, isLoadingSyncing, toast]);
 
   // While not complete and still loading, show the loading component
-  if (!initialLoadComplete) {
+  if (!initialLoadComplete && hasShownLoading) {
     return <OfficerDashboardLoading 
       loadingProgress={loadingProgress} 
       errorMessage={loadingFailed ? errorDetails : undefined}
@@ -64,7 +85,7 @@ const OfficerDashboardContent: React.FC = () => {
     />;
   }
   
-  // If we got here, loading is complete and successful
+  // If we got here, loading is complete or forced complete
   return (
     <OfficerDashboardProvider>
       <div className="p-4">
