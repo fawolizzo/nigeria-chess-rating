@@ -3,6 +3,8 @@ import { useCallback } from "react";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { Tournament } from "@/lib/mockData";
 
+import { Player, User } from "@/lib/mockData"; // Import Player and User types
+
 /**
  * Hook for processing dashboard data
  */
@@ -38,7 +40,7 @@ export function useDataProcessing() {
   /**
    * Process and filter pending players
    */
-  const processPendingPlayers = useCallback((allPlayers: any[]) => {
+  const processPendingPlayers = useCallback((allPlayers: Player[]) => { // Changed any[] to Player[]
     try {
       const pendingPlayers = Array.isArray(allPlayers) 
         ? allPlayers.filter(p => p && p.status === "pending") 
@@ -54,7 +56,7 @@ export function useDataProcessing() {
   /**
    * Process and filter pending organizers
    */
-  const processPendingOrganizers = useCallback((allUsers: any[]) => {
+  const processPendingOrganizers = useCallback((allUsers: User[]) => { // Changed any[] to User[]
     try {
       const pendingOrganizers = Array.isArray(allUsers) 
         ? allUsers.filter(user => user && user.role === "tournament_organizer" && user.status === "pending")

@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { Users, Trophy, Award, AlertTriangle } from "lucide-react";
+import { Users, Trophy, Award, AlertTriangle, Loader2 } from "lucide-react"; // Added Loader2
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Player, addPlayer, getAllPlayers, updatePlayer, Tournament, updateTournament, getTournamentById } from "@/lib/mockData";
+// import { Player, addPlayer, getAllPlayers, updatePlayer, Tournament, updateTournament, getTournamentById } from "@/lib/mockData"; // Removed mock
+import { Player, Tournament } from "@/lib/mockData"; // Kept types
+import { getTournamentByIdFromSupabase, updateTournamentInSupabase } from "@/services/tournamentService"; // Added tournament services
+import { getAllPlayersFromSupabase, createPlayerInSupabase } from "@/services/playerService"; // Added player services
 import StandingsTable from "@/components/StandingsTable";
 
 // Import our components
@@ -30,8 +33,9 @@ const TournamentManagement = () => {
   const { currentUser } = useUser();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false); // For granular loading states
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]); // All players in the system
   const [registeredPlayers, setRegisteredPlayers] = useState<Player[]>([]);
   const [activeTab, setActiveTab] = useState("players");
   const [selectedRound, setSelectedRound] = useState(1);
@@ -55,51 +59,54 @@ const TournamentManagement = () => {
   };
 
   useEffect(() => {
-    const loadTournament = () => {
+    const loadInitialData = async () => {
+      if (!id || !currentUser || currentUser.role !== 'tournament_organizer') {
+        toast({ title: "Access Denied", description: "Invalid tournament ID or insufficient permissions.", variant: "destructive" });
+        navigate("/tournaments");
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const foundTournament = getTournamentById(id as string);
+        const [fetchedTournament, systemPlayers] = await Promise.all([
+          getTournamentByIdFromSupabase(id),
+          getAllPlayersFromSupabase({}) // Fetch all players for selection
+        ]);
 
-        // Check if tournament exists and the current user is the organizer
-        if (foundTournament && 
-            currentUser?.role === 'tournament_organizer' && 
-            foundTournament.organizerId === currentUser.id) {
-          setTournament(foundTournament);
+        setAllPlayers(systemPlayers); // Store all players available in the system
+
+        if (fetchedTournament && fetchedTournament.organizerId === currentUser.id) {
+          setTournament(fetchedTournament);
           
-          if (foundTournament.players && foundTournament.players.length > 0) {
-            const players = getAllPlayers().filter(player => foundTournament.players?.includes(player.id));
-            setRegisteredPlayers(players);
-            setHasPendingPlayers(players.some(player => player.status === 'pending'));
+          // Derive registeredPlayers from allPlayers based on IDs in fetchedTournament.players
+          if (fetchedTournament.players && fetchedTournament.players.length > 0) {
+            const currentRegisteredPlayers = systemPlayers.filter(player => 
+              fetchedTournament.players?.includes(player.id)
+            );
+            setRegisteredPlayers(currentRegisteredPlayers);
+            setHasPendingPlayers(currentRegisteredPlayers.some(player => player.status === 'pending'));
           } else {
             setRegisteredPlayers([]);
+            setHasPendingPlayers(false);
           }
         } else {
           toast({
-            title: "Access Denied",
-            description: "You don't have permission to view this tournament or it doesn't exist.",
+            title: "Access Denied / Not Found",
+            description: "Tournament not found or you don't have permission to manage it.",
             variant: "destructive"
           });
           navigate("/tournaments");
         }
       } catch (error) {
-        console.error("Error loading tournament:", error);
+        console.error("Error loading tournament data:", error);
+        toast({ title: "Error", description: "Failed to load tournament data.", variant: "destructive" });
         navigate("/tournaments");
       } finally {
         setIsLoading(false);
       }
     };
 
-    const loadAllPlayers = () => {
-      const players = getAllPlayers();
-      setAllPlayers(players);
-    };
-
-    if (id && currentUser?.role === 'tournament_organizer') {
-      loadTournament();
-      loadAllPlayers();
-    } else {
-      navigate("/tournaments");
-    }
+    loadInitialData();
   }, [id, navigate, currentUser]);
 
   useEffect(() => {
@@ -153,25 +160,34 @@ const TournamentManagement = () => {
     // Check for pending players
     if (registeredPlayers.length > 0) {
       setHasPendingPlayers(registeredPlayers.some(player => player.status === 'pending'));
+    } else {
+      setHasPendingPlayers(false);
     }
   }, [registeredPlayers]);
 
-  const toggleRegistrationStatus = () => {
+  const toggleRegistrationStatus = async () => {
     if (!tournament) return;
-
-    const updatedTournament = {
-      ...tournament,
-      registrationOpen: !tournament.registrationOpen,
-    };
-
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
+    setIsProcessing(true);
+    try {
+      const newRegStatus = !tournament.registrationOpen;
+      const updated = await updateTournamentInSupabase(tournament.id, { registrationOpen: newRegStatus });
+      if (updated) {
+        setTournament(updated);
+        toast({ title: "Success", description: `Registration is now ${newRegStatus ? 'Open' : 'Closed'}.` });
+      } else {
+        throw new Error("Failed to update registration status.");
+      }
+    } catch (error) {
+      console.error("Error toggling registration:", error);
+      toast({ title: "Error", description: "Could not update registration status.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const startTournament = () => {
+  const startTournament = async () => {
     if (!tournament) return;
-    
-    // Check for pending players
+     // Check for pending players
     const pendingPlayers = registeredPlayers.filter(p => p.status === 'pending');
     if (pendingPlayers.length > 0) {
       toast({
@@ -193,324 +209,276 @@ const TournamentManagement = () => {
       return;
     }
 
-    const updatedTournament = {
-      ...tournament,
-      status: "ongoing" as const,
-      currentRound: 1,
-      pairings: [],
-    };
-
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setActiveTab("pairings");
-    
-    toast({
-      title: "Tournament Started",
-      description: "The tournament has been started successfully with all approved players.",
-    });
-  };
-
-  const completeTournament = () => {
-    if (!tournament) return;
-
-    const updatedTournament = {
-      ...tournament,
-      status: "completed" as const,
-    };
-
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setActiveTab("standings");
-    
-    toast({
-      title: "Tournament Completed",
-      description: "The tournament has been marked as completed and will be reviewed by the Rating Officer.",
-    });
-  };
-
-  const handleAddPlayers = (selectedPlayers: Player[]) => {
-    if (!tournament || selectedPlayers.length === 0) return;
-
-    // Check for duplicate players
-    const duplicatePlayers = selectedPlayers.filter(player => 
-      tournament.players?.includes(player.id)
-    );
-    
-    if (duplicatePlayers.length > 0) {
-      const duplicateNames = duplicatePlayers.map(p => p.name).join(", ");
-      toast({
-        title: "Duplicate Players",
-        description: `${duplicatePlayers.length === 1 ? 'This player is' : 'These players are'} already in the tournament: ${duplicateNames}`,
-        variant: "destructive"
-      });
-      
-      // Filter out duplicates and only add new players
-      const newPlayers = selectedPlayers.filter(player => 
-        !tournament.players?.includes(player.id)
-      );
-      
-      if (newPlayers.length === 0) return;
-      
-      // Proceed with only the new players
-      const playerIds = newPlayers.map(player => player.id);
-      
-      const updatedTournament = {
-        ...tournament,
-        players: [...(tournament.players || []), ...playerIds],
+    setIsProcessing(true);
+    try {
+      const updatedTournamentData = {
+        status: "ongoing" as const,
+        currentRound: 1,
+        pairings: [], // Reset pairings on start
       };
-
-      updateTournament(updatedTournament);
-      setTournament(updatedTournament);
-      setRegisteredPlayers(prev => [...prev, ...newPlayers]);
-      
-      // Check if any of the added players are pending
-      const pendingAddedPlayers = newPlayers.filter(p => p.status === 'pending');
-      if (pendingAddedPlayers.length > 0) {
-        setHasPendingPlayers(true);
-        toast({
-          title: "Players Added with Pending Status",
-          description: `${pendingAddedPlayers.length} player(s) require Rating Officer approval before they can participate.`,
-          variant: "warning"
-        });
+      const updated = await updateTournamentInSupabase(tournament.id, updatedTournamentData);
+      if (updated) {
+        setTournament(updated);
+        setActiveTab("pairings");
+        toast({ title: "Tournament Started", description: "The tournament has begun!" });
       } else {
-        toast({
-          title: "Players added",
-          description: `Successfully added ${newPlayers.length} player${newPlayers.length !== 1 ? 's' : ''} to the tournament.`,
-        });
+        throw new Error("Failed to start tournament.");
       }
-    } else {
-      // No duplicates, proceed normally
-      const playerIds = selectedPlayers.map(player => player.id);
-      
-      const updatedTournament = {
-        ...tournament,
-        players: [...(tournament.players || []), ...playerIds],
-      };
+    } catch (error) {
+      console.error("Error starting tournament:", error);
+      toast({ title: "Error", description: "Could not start the tournament.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-      updateTournament(updatedTournament);
-      setTournament(updatedTournament);
-      setRegisteredPlayers(prev => [...prev, ...selectedPlayers]);
-      
-      // Check if any of the added players are pending
-      const pendingAddedPlayers = selectedPlayers.filter(p => p.status === 'pending');
-      if (pendingAddedPlayers.length > 0) {
-        setHasPendingPlayers(true);
-        toast({
-          title: "Players Added with Pending Status",
-          description: `${pendingAddedPlayers.length} player(s) require Rating Officer approval before they can participate.`,
-          variant: "warning"
-        });
+  const completeTournament = async () => {
+    if (!tournament) return;
+    setIsProcessing(true);
+    try {
+      const updated = await updateTournamentInSupabase(tournament.id, { status: "completed" as const });
+      if (updated) {
+        setTournament(updated);
+        setActiveTab("standings");
+        toast({ title: "Tournament Completed", description: "The tournament is now finished." });
       } else {
+        throw new Error("Failed to complete tournament.");
+      }
+    } catch (error) {
+      console.error("Error completing tournament:", error);
+      toast({ title: "Error", description: "Could not complete the tournament.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAddPlayers = async (selectedNewPlayers: Player[]) => {
+    if (!tournament || selectedNewPlayers.length === 0) return;
+
+    const newPlayerIds = selectedNewPlayers.map(p => p.id);
+    const existingPlayerIds = tournament.players || [];
+    
+    // Filter out players already in the tournament to avoid duplicates in the update
+    const playersToAddIds = newPlayerIds.filter(id => !existingPlayerIds.includes(id));
+    if (playersToAddIds.length === 0) {
+        const duplicateNames = selectedNewPlayers.map(p => p.name).join(", ");
         toast({
-          title: "Players added",
-          description: `Successfully added ${selectedPlayers.length} player${selectedPlayers.length !== 1 ? 's' : ''} to the tournament.`,
-        });
-      }
-    }
-  };
-
-  const handleRemovePlayer = (playerId: string) => {
-    if (!tournament) return;
-
-    const updatedTournament = {
-      ...tournament,
-      players: tournament.players?.filter(id => id !== playerId),
-    };
-
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setRegisteredPlayers(prev => prev.filter(player => player.id !== playerId));
-    
-    // Check if we still have pending players after removal
-    const stillHasPendingPlayers = registeredPlayers.filter(
-      p => p.id !== playerId && p.status === 'pending'
-    ).length > 0;
-    
-    setHasPendingPlayers(stillHasPendingPlayers);
-  };
-
-  const handleCreatePlayer = (newPlayer: Player) => {
-    if (!currentUser || !tournament) return;
-    
-    addPlayer(newPlayer);
-    setAllPlayers(prev => [...prev, newPlayer]);
-    
-    // Automatically add the new player to the tournament
-    const updatedTournament = {
-      ...tournament,
-      players: [...(tournament.players || []), newPlayer.id],
-    };
-    
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setRegisteredPlayers(prev => [...prev, newPlayer]);
-    
-    setIsCreatePlayerOpen(false);
-    
-    if (newPlayer.status === 'pending') {
-      setHasPendingPlayers(true);
-      toast({
-        title: "Player Created with Pending Status",
-        description: "The player has been created and will require Rating Officer approval before they can participate in the tournament.",
-        variant: "warning"
-      });
-    } else {
-      toast({
-        title: "Player created",
-        description: "The player has been created and added to the tournament.",
-      });
-    }
-  };
-
-  const generatePairings = () => {
-    if (!tournament) return;
-
-    // Only include approved players in pairings
-    const approvedPlayers = registeredPlayers.filter(p => p.status === 'approved');
-    if (approvedPlayers.length < 2) {
-      toast({
-        title: "Not Enough Approved Players",
-        description: "You need at least 2 approved players to generate pairings.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Format previous rounds data for our algorithm
-    const previousRounds = tournament.pairings || [];
-    const currentRound = tournament.currentRound || 1;
-    
-    // Generate pairings using our improved algorithm
-    const newMatches = generateSwissPairings(
-      approvedPlayers,
-      previousRounds,
-      currentRound
-    );
-    
-    const newPairings = {
-      roundNumber: currentRound,
-      matches: newMatches
-    };
-    
-    const updatedTournament = {
-      ...tournament,
-      pairings: [...(tournament.pairings || []), newPairings],
-    };
-    
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setPairingsGenerated(true);
-    
-    toast({
-      title: "Pairings Generated",
-      description: `Successfully generated pairings for Round ${currentRound} using Swiss system.`,
-    });
-    
-    // Immediately calculate standings after generating pairings
-    setTimeout(() => calculateStandings(), 100);
-  };
-
-  const saveResults = (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {
-    if (!tournament) return;
-    
-    const roundNumber = selectedRound;
-  
-    const updatedPairings = tournament.pairings?.map(pairing => {
-      if (pairing.roundNumber === roundNumber) {
-        return {
-          ...pairing,
-          matches: pairing.matches.map(match => {
-            const result = results.find(r => r.whiteId === match.whiteId && r.blackId === match.blackId)?.result;
-            return result ? { ...match, result } : match;
-          })
-        };
-      }
-      return pairing;
-    });
-  
-    const updatedTournament = {
-      ...tournament,
-      pairings: updatedPairings
-    };
-  
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    
-    // Check if all matches in the current round have results
-    if (roundNumber === tournament.currentRound) {
-      const currentRoundPairings = updatedPairings?.find(p => p.roundNumber === roundNumber);
-      
-      if (currentRoundPairings) {
-        const allMatchesHaveResults = currentRoundPairings.matches.every(match => 
-          match.result && match.result !== "*"
-        );
-        
-        setCanAdvanceRound(allMatchesHaveResults);
-      }
-    }
-    
-    // Immediately calculate standings after saving results
-    calculateStandings();
-    
-    // Single consolidated toast message for results being saved
-    toast({
-      title: "Results Saved",
-      description: `Round ${roundNumber} results have been saved and standings have been updated.`,
-    });
-  };
-
-  const advanceToNextRound = () => {
-    if (!tournament || !tournament.currentRound) return;
-    
-    // Verify that all matches in the current round have results
-    const currentRoundPairings = tournament.pairings?.find(p => p.roundNumber === tournament.currentRound);
-    
-    if (currentRoundPairings) {
-      const allMatchesHaveResults = currentRoundPairings.matches.every(match => 
-        match.result && match.result !== "*"
-      );
-      
-      if (!allMatchesHaveResults) {
-        toast({
-          title: "Cannot Advance Round",
-          description: "All matches in the current round must have results before advancing to the next round.",
-          variant: "destructive"
+            title: "Players Already Added",
+            description: `${selectedNewPlayers.length === 1 ? 'This player is' : 'These players are'} already in the tournament: ${duplicateNames}. No new players were added.`,
+            variant: "warning"
         });
         return;
-      }
     }
-
-    // Move to the next round
-    const nextRound = tournament.currentRound + 1;
     
-    // Check if we're trying to exceed total rounds
-    if (nextRound > tournament.rounds) {
-      toast({
-        title: "Tournament Complete",
-        description: "This is the final round. You can complete the tournament now.",
-        variant: "warning"
-      });
+    const updatedPlayerIdsArray = [...existingPlayerIds, ...playersToAddIds];
+
+    setIsProcessing(true);
+    try {
+      const updated = await updateTournamentInSupabase(tournament.id, { players: updatedPlayerIdsArray });
+      if (updated) {
+        setTournament(updated);
+        // Update registeredPlayers state based on the new list of IDs from `allPlayers`
+        const newRegisteredPlayers = allPlayers.filter(p => updated.players?.includes(p.id));
+        setRegisteredPlayers(newRegisteredPlayers);
+        
+        const pendingAddedPlayers = selectedNewPlayers.filter(p => playersToAddIds.includes(p.id) && p.status === 'pending');
+        if (pendingAddedPlayers.length > 0) {
+            setHasPendingPlayers(true); // This will be re-evaluated by useEffect on registeredPlayers change
+            toast({
+                title: "Players Added with Pending Status",
+                description: `${pendingAddedPlayers.length} player(s) require Rating Officer approval.`,
+                variant: "warning"
+            });
+        } else {
+            toast({
+                title: "Players Added",
+                description: `Successfully added ${playersToAddIds.length} player(s) to the tournament.`
+            });
+        }
+      } else {
+        throw new Error("Failed to add players.");
+      }
+    } catch (error) {
+      console.error("Error adding players:", error);
+      toast({ title: "Error", description: "Could not add players to the tournament.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRemovePlayer = async (playerIdToRemove: string) => {
+    if (!tournament || !tournament.players) return;
+
+    const updatedPlayerIdsArray = tournament.players.filter(id => id !== playerIdToRemove);
+    setIsProcessing(true);
+    try {
+      const updated = await updateTournamentInSupabase(tournament.id, { players: updatedPlayerIdsArray });
+      if (updated) {
+        setTournament(updated);
+        setRegisteredPlayers(prev => prev.filter(player => player.id !== playerIdToRemove));
+        // hasPendingPlayers will be updated by useEffect
+        toast({ title: "Player Removed", description: "Player has been removed from the tournament." });
+      } else {
+        throw new Error("Failed to remove player.");
+      }
+    } catch (error) {
+      console.error("Error removing player:", error);
+      toast({ title: "Error", description: "Could not remove player.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreatePlayer = async (newPlayerData: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults' | 'rating' | 'rapidRating' | 'blitzRating' | 'gamesPlayed' | 'rapidGamesPlayed' | 'blitzGamesPlayed' | 'ratingStatus' | 'rapidRatingStatus' | 'blitzRatingStatus'>) => {
+    if (!currentUser || !tournament) return;
+    
+    setIsProcessing(true);
+    try {
+      const createdPlayer = await createPlayerInSupabase(newPlayerData);
+      if (!createdPlayer) throw new Error("Player creation failed.");
+
+      setAllPlayers(prev => [...prev, createdPlayer]); // Add to global list of players
+
+      // Automatically add the new player to the current tournament
+      const updatedPlayerIdsArray = [...(tournament.players || []), createdPlayer.id];
+      const updatedTournament = await updateTournamentInSupabase(tournament.id, { players: updatedPlayerIdsArray });
+      
+      if (!updatedTournament) throw new Error("Failed to add created player to tournament.");
+
+      setTournament(updatedTournament);
+      setRegisteredPlayers(prev => [...prev, createdPlayer]); // Add to local registered list
+      setIsCreatePlayerOpen(false);
+
+      if (createdPlayer.status === 'pending') {
+        // setHasPendingPlayers(true); // useEffect will handle this
+        toast({
+          title: "Player Created & Added (Pending)",
+          description: "Player created and added to tournament. Requires Rating Officer approval.",
+          variant: "warning"
+        });
+      } else {
+        toast({ title: "Player Created & Added", description: "Player created and added to the tournament." });
+      }
+    } catch (error) {
+      console.error("Error creating or adding player:", error);
+      toast({ title: "Error", description: (error as Error).message || "Could not create or add player.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const generatePairings = async () => {
+    if (!tournament) return;
+    
+    const approvedPlayers = registeredPlayers.filter(p => p.status === 'approved');
+    if (approvedPlayers.length < 2) {
+      toast({ title: "Not Enough Approved Players", description: "Need at least 2 approved players.", variant: "destructive" });
       return;
     }
 
-    const updatedTournament = {
-      ...tournament,
-      currentRound: nextRound,
-    };
+    setIsProcessing(true);
+    try {
+      const previousRounds = tournament.pairings || [];
+      const currentRoundNumber = tournament.currentRound || 1;
+      const newMatches = generateSwissPairings(approvedPlayers, previousRounds, currentRoundNumber);
+      const newPairingRound = { roundNumber: currentRoundNumber, matches: newMatches };
+      const newTournamentPairings = [...previousRounds, newPairingRound];
 
-    updateTournament(updatedTournament);
-    setTournament(updatedTournament);
-    setSelectedRound(nextRound);
-    setPairingsGenerated(false);
-    setCanAdvanceRound(false);
-    
-    toast({
-      title: "Round Advanced",
-      description: `Tournament has advanced to Round ${nextRound}. You can now generate pairings for the new round.`,
-    });
+      const updated = await updateTournamentInSupabase(tournament.id, { pairings: newTournamentPairings });
+      if (updated) {
+        setTournament(updated);
+        setPairingsGenerated(true);
+        toast({ title: "Pairings Generated", description: `Pairings for Round ${currentRoundNumber} generated.` });
+        setTimeout(() => calculateStandings(), 100);
+      } else {
+        throw new Error("Failed to save generated pairings.");
+      }
+    } catch (error) {
+      console.error("Error generating pairings:", error);
+      toast({ title: "Error", description: "Could not generate pairings.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const calculateStandings = () => {
+  const saveResults = async (resultsToSave: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => {
+    if (!tournament || !tournament.pairings) return;
+    
+    setIsProcessing(true);
+    try {
+      const roundNumberOfResults = selectedRound; // Assuming selectedRound is the round whose results are being saved
+      const updatedPairingsData = tournament.pairings.map(pr => {
+        if (pr.roundNumber === roundNumberOfResults) {
+          return {
+            ...pr,
+            matches: pr.matches.map(match => {
+              const foundResult = resultsToSave.find(r => r.whiteId === match.whiteId && r.blackId === match.blackId);
+              return foundResult ? { ...match, result: foundResult.result } : match;
+            })
+          };
+        }
+        return pr;
+      });
+
+      const updated = await updateTournamentInSupabase(tournament.id, { pairings: updatedPairingsData });
+      if (updated) {
+        setTournament(updated);
+        // Check canAdvanceRound based on updated data
+        if (roundNumberOfResults === updated.currentRound) {
+            const currentRndPairings = updated.pairings?.find(p => p.roundNumber === roundNumberOfResults);
+            if (currentRndPairings) {
+                setCanAdvanceRound(currentRndPairings.matches.every(m => m.result && m.result !== "*"));
+            }
+        }
+        calculateStandings();
+        toast({ title: "Results Saved", description: `Round ${roundNumberOfResults} results saved.` });
+      } else {
+        throw new Error("Failed to save results.");
+      }
+    } catch (error) {
+      console.error("Error saving results:", error);
+      toast({ title: "Error", description: "Could not save results.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const advanceToNextRound = async () => {
+    if (!tournament || !tournament.currentRound) return;
+
+    const currentRndPairings = tournament.pairings?.find(p => p.roundNumber === tournament.currentRound);
+    if (currentRndPairings && !currentRndPairings.matches.every(m => m.result && m.result !== "*")) {
+        toast({ title: "Cannot Advance", description: "All matches in current round must have results.", variant: "destructive" });
+        return;
+    }
+
+    const nextRoundNumber = tournament.currentRound + 1;
+    if (nextRoundNumber > tournament.rounds) {
+        toast({ title: "Tournament Complete", description: "This is the final round.", variant: "info" });
+        return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const updated = await updateTournamentInSupabase(tournament.id, { currentRound: nextRoundNumber });
+      if (updated) {
+        setTournament(updated);
+        setSelectedRound(nextRoundNumber);
+        setPairingsGenerated(false); // Pairings for new round are not yet generated
+        setCanAdvanceRound(false); // Results for new round are not yet entered
+        toast({ title: "Round Advanced", description: `Now in Round ${nextRoundNumber}.` });
+      } else {
+        throw new Error("Failed to advance round.");
+      }
+    } catch (error) {
+      console.error("Error advancing round:", error);
+      toast({ title: "Error", description: "Could not advance to next round.", variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const calculateStandings = () => { // No async changes needed here as it's based on local state
     if (!tournament) return;
   
     const initialStandings: { [playerId: string]: PlayerWithScore } = {};
@@ -584,16 +552,22 @@ const TournamentManagement = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-24 bg-gray-200 dark:bg-gray-800 rounded"></div>
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 animate-spin text-nigeria-green mb-4" />
+          <p className="text-muted-foreground">Loading Tournament Data...</p>
         </div>
       </div>
     );
   }
 
   if (!tournament) {
-    return null;
+    // This case should ideally be handled by the useEffect redirecting if tournament is not found
+    // or user is not authorized, but as a fallback:
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <p className="text-muted-foreground">Tournament not available or access denied.</p>
+        </div>
+    );
   }
   
   return (
@@ -608,17 +582,20 @@ const TournamentManagement = () => {
           onStartTournament={startTournament}
           onCompleteTournament={completeTournament}
           canStartTournament={tournament?.players !== undefined && 
-            registeredPlayers.filter(p => p.status === 'approved').length >= 2}
+            registeredPlayers.filter(p => p.status === 'approved').length >= 2 &&
+            !hasPendingPlayers // Also ensure no pending players
+          }
+          isProcessing={isProcessing} // Pass isProcessing to header for disabling buttons
         />
         
         {/* Show pending players alert */}
         {hasPendingPlayers && tournament?.status === "upcoming" && (
           <Alert variant="warning" className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-            <AlertTitle className="text-yellow-800 dark:text-yellow-300">Pending Players</AlertTitle>
+            <AlertTitle className="text-yellow-800 dark:text-yellow-300">Pending Player Approvals</AlertTitle>
             <AlertDescription className="text-yellow-700 dark:text-yellow-400">
-              Some players require Rating Officer approval before they can participate in the tournament.
-              Visit the Players tab to see which players are pending.
+              There are players awaiting Rating Officer approval. These players must be approved before the tournament can start.
+              Check the Players tab for details.
             </AlertDescription>
           </Alert>
         )}
@@ -631,12 +608,13 @@ const TournamentManagement = () => {
               totalRounds={tournament.rounds}
               onAdvanceRound={advanceToNextRound}
               canAdvanceRound={canAdvanceRound}
+              isProcessing={isProcessing} // Pass isProcessing
             />
           )}
           
-          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-6">
-              <TabsTrigger value="players" className="flex gap-1 items-center">
+              <TabsTrigger value="players" className="flex gap-1 items-center" disabled={isProcessing}>
                 <Users size={16} /> 
                 Players
                 {hasPendingPlayers && <span className="ml-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-100 text-yellow-600 text-xs">!</span>}
@@ -644,12 +622,12 @@ const TournamentManagement = () => {
               
               {(tournament?.status === "ongoing" || tournament?.status === "completed") && (
                 <>
-                  <TabsTrigger value="pairings" className="flex gap-1 items-center">
+                  <TabsTrigger value="pairings" className="flex gap-1 items-center" disabled={isProcessing}>
                     <Trophy size={16} /> 
                     Pairings
                   </TabsTrigger>
                   
-                  <TabsTrigger value="standings" className="flex gap-1 items-center">
+                  <TabsTrigger value="standings" className="flex gap-1 items-center" disabled={isProcessing}>
                     <Award size={16} /> 
                     Standings
                   </TabsTrigger>
@@ -662,10 +640,14 @@ const TournamentManagement = () => {
                 tournamentId={tournament?.id || ""}
                 tournamentStatus={tournament?.status || "upcoming"}
                 registeredPlayers={registeredPlayers}
+                allPlayers={allPlayers} // Pass all system players for the "Add Players" modal
                 playerIds={tournament?.players || []}
                 onCreatePlayer={() => setIsCreatePlayerOpen(true)}
                 onAddPlayers={handleAddPlayers}
                 onRemovePlayer={handleRemovePlayer}
+                isProcessing={isProcessing} // Pass isProcessing
+                searchQuery={searchQuery} // Pass searchQuery for AddPlayerModal
+                setSearchQuery={setSearchQuery} // Pass setSearchQuery for AddPlayerModal
               />
             </TabsContent>
             
@@ -678,20 +660,21 @@ const TournamentManagement = () => {
                     totalRounds={tournament?.rounds || 1}
                     selectedRound={selectedRound}
                     pairings={tournament?.pairings}
-                    players={registeredPlayers.filter(p => p.status === 'approved')} // Only include approved players
+                    players={registeredPlayers.filter(p => p.status === 'approved')} 
                     pairingsGenerated={pairingsGenerated}
                     onRoundSelect={setSelectedRound}
                     onGeneratePairings={generatePairings}
                     onSaveResults={saveResults}
                     canAdvanceRound={canAdvanceRound}
                     tournamentType={getTournamentType()}
+                    isProcessing={isProcessing} // Pass isProcessing
                   />
                 </TabsContent>
                 
                 <TabsContent value="standings">
                   <StandingsTable 
                     standings={standings} 
-                    players={registeredPlayers.filter(p => p.status === 'approved')} // Only include approved players
+                    players={registeredPlayers.filter(p => p.status === 'approved')}
                   />
                 </TabsContent>
               </>
@@ -700,7 +683,7 @@ const TournamentManagement = () => {
         </div>
       </div>
       
-      {/* Player Form Modal */}
+      {/* Player Form Modal (no isProcessing needed here as it has its own internal loading) */}
       {currentUser && (
         <PlayerFormModal 
           isOpen={isCreatePlayerOpen}

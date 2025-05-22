@@ -1,6 +1,6 @@
 
-import React, { useEffect, useState, useRef } from "react";
-import { OfficerDashboardProvider } from "@/contexts/officer/OfficerDashboardContext";
+import React, { useEffect, useState } from "react";
+import { OfficerDashboardProvider, useDashboard } from "@/contexts/officer/OfficerDashboardContext"; // Added useDashboard
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
 import { OfficerDashboardError } from "./dashboard/OfficerDashboardError";
@@ -9,94 +9,86 @@ import { useOfficerDashboardLoading } from "@/hooks/officer-dashboard/useOfficer
 import { useToast } from "@/hooks/use-toast";
 
 const OfficerDashboardContent: React.FC = () => {
+  const { 
+    isLoading: isDataActuallyLoading, 
+    errorMessage: actualDataError, 
+    loadAllData, // For retry
+    hasError // Directly reflects if an error occurred during data loading
+  } = useDashboard();
+
   const {
-    initialLoadComplete,
+    initialLoadComplete, // This will be true when isDataActuallyLoading is false and no error
     loadingProgress,
-    loadingFailed,
-    isLoadingSyncing,
-    handleRetry,
-    errorDetails,
-    forceComplete
-  } = useOfficerDashboardLoading();
+    // loadingFailed, // Now derived from `hasError` or `actualDataError`
+    isLoadingSyncing, // This reflects the prop passed to useOfficerDashboardLoading
+    // handleRetry: handleLoadingRetry, // Renamed to avoid conflict
+    // errorDetails, // Now `actualDataError`
+    // forceComplete // Simplified, may not be needed as context drives completion
+  } = useOfficerDashboardLoading({ // Pass props here
+    isDataLoading: isDataActuallyLoading, 
+    dataError: actualDataError 
+  });
   
   const { toast } = useToast();
-  const [hasShownLoading, setHasShownLoading] = useState(false);
-  const forcedLoadingRef = useRef(false);
-  
-  // Force loading completion after a very short timeout (1.5 seconds - even shorter)
+  const [hasShownLoadingOnce, setHasShownLoadingOnce] = useState(false);
+
+  // Track if we've shown the initial loading state to prevent flashing on quick reloads/renders
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!initialLoadComplete && !loadingFailed && !forcedLoadingRef.current) {
-        logMessage(LogLevel.WARNING, 'OfficerDashboardContent', 'Forcing dashboard load completion after short timeout');
-        forcedLoadingRef.current = true;
-        forceComplete();
-      }
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, [initialLoadComplete, loadingFailed, forceComplete]);
-  
-  // Track if we've shown the loading state to prevent flashing
-  useEffect(() => {
-    if (!initialLoadComplete && !hasShownLoading) {
-      setHasShownLoading(true);
+    if (isDataActuallyLoading && !hasShownLoadingOnce) {
+      setHasShownLoadingOnce(true);
     }
-  }, [initialLoadComplete, hasShownLoading]);
+  }, [isDataActuallyLoading, hasShownLoadingOnce]);
 
   // Show notification when loading completes successfully
   useEffect(() => {
-    if (initialLoadComplete && !loadingFailed && !isLoadingSyncing) {
-      // Only show toast when loading has completed successfully
+    // Trigger toast when loading completes (isDataActuallyLoading becomes false) 
+    // AND there's no error, AND it was previously loading (or initialLoadComplete becomes true)
+    if (!isDataActuallyLoading && !actualDataError && initialLoadComplete && hasShownLoadingOnce) {
+      logMessage(LogLevel.INFO, 'OfficerDashboardContent', 'Dashboard data loaded successfully.');
       toast({
         title: "Dashboard Ready",
-        description: "The dashboard has loaded successfully.",
+        description: "The dashboard data has loaded successfully.",
         duration: 2000
       });
+      setHasShownLoadingOnce(false); // Reset for next potential full reload
     }
-  }, [initialLoadComplete, loadingFailed, isLoadingSyncing, toast]);
+  }, [initialLoadComplete, isDataActuallyLoading, actualDataError, toast, hasShownLoadingOnce]);
   
-  // Absolute fallback: If we've shown loading for more than 2 seconds, force completion
-  useEffect(() => {
-    if (hasShownLoading && loadingProgress < 100) {
-      const forceTimer = setTimeout(() => {
-        if (!forcedLoadingRef.current) {
-          logMessage(LogLevel.WARNING, 'OfficerDashboardContent', 'Forcing completion via fallback timeout');
-          forcedLoadingRef.current = true;
-          forceComplete();
-        }
-      }, 2000); // 2 second maximum loading time
-      
-      return () => clearTimeout(forceTimer);
-    }
-  }, [hasShownLoading, loadingProgress, forceComplete]);
+  // The complex timeout-based forceComplete logic is removed as the loading state
+  // is now directly driven by `isDataActuallyLoading` from the context.
 
-  // While not complete and still loading, show the loading component
-  // But limit the time we show the loading state to prevent it getting stuck
-  if (!initialLoadComplete && hasShownLoading && loadingProgress < 100 && !forcedLoadingRef.current) {
+  // Display loading indicator if data is actually loading OR 
+  // if it's the very first render and initialLoadComplete is not yet true (to show loader briefly)
+  if (isDataActuallyLoading || (!initialLoadComplete && !actualDataError)) {
     return <OfficerDashboardLoading 
       loadingProgress={loadingProgress} 
-      errorMessage={loadingFailed ? errorDetails : undefined}
-      onRetry={loadingFailed ? handleRetry : undefined}
+      // errorMessage={actualDataError} // Error is handled by the next block
+      // onRetry={loadAllData} // Retry is on the error component
     />;
   }
   
-  // Show error component only if loading completed but failed
-  if (loadingFailed) {
+  // If data loading is finished and there's an error
+  if (hasError || actualDataError) {
     return <OfficerDashboardError 
-      onRetry={handleRetry} 
-      isRetrying={isLoadingSyncing} 
-      errorDetails={errorDetails}
+      onRetry={loadAllData} // Use loadAllData from context for retry
+      isRetrying={isDataActuallyLoading} // Reflects if a retry attempt is loading
+      errorDetails={actualDataError || "An unknown error occurred."}
     />;
   }
   
-  // If we got here, loading is complete or forced complete
-  return (
-    <OfficerDashboardProvider>
-      <div className="p-4">
-        <OfficerDashboardTabs />
-      </div>
-    </OfficerDashboardProvider>
-  );
+  // If loading is complete and no errors
+  if (initialLoadComplete && !hasError && !actualDataError) {
+    return (
+      <OfficerDashboardProvider> {/* This Provider might be redundant if useDashboard is already from a higher Provider */}
+        <div className="p-4">
+          <OfficerDashboardTabs />
+        </div>
+      </OfficerDashboardProvider>
+    );
+  }
+
+  // Fallback or initial render before any state is properly set (should be brief)
+  return <OfficerDashboardLoading loadingProgress={0} />;
 };
 
 export default OfficerDashboardContent;

@@ -4,7 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle, AlertCircle, BadgeCheck } from "lucide-react";
-import { Player, Tournament, updatePlayer, updateTournament, getAllPlayers } from "@/lib/mockData";
+// import { Player, Tournament, updatePlayer, updateTournament, getAllPlayers } from "@/lib/mockData"; // Removed mock functions
+import { Player, Tournament } from "@/lib/mockData"; // Keep types
+import { getAllPlayersFromSupabase, updatePlayerInSupabase } from "@/services/playerService"; // Added Supabase player services
+import { updateTournamentInSupabase } from "@/services/tournamentService"; // Added Supabase tournament service
 import { calculatePostRoundRatings, FLOOR_RATING } from "@/lib/ratingCalculation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -22,41 +25,68 @@ const TournamentRatingDialog = ({
   onProcessed
 }: TournamentRatingDialogProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
+  const [allFetchedPlayers, setAllFetchedPlayers] = useState<Player[]>([]);
+
+  // Effect to fetch all players once and then determine tournament players
+  // This is a simplified approach. Ideally, fetch only relevant players by IDs.
+  useState(() => {
+    if (tournament) {
+      const fetchAndSetPlayers = async () => {
+        setIsProcessing(true); // Use isProcessing to indicate loading of initial player data
+        try {
+          const fetchedPlayers = await getAllPlayersFromSupabase({}); // Fetch all players
+          setAllFetchedPlayers(fetchedPlayers);
+
+          let currentTournamentPlayers: Player[] = [];
+          if (tournament.players && tournament.players.length > 0) {
+            currentTournamentPlayers = tournament.players.map(playerId => {
+              return fetchedPlayers.find(p => p.id === playerId);
+            }).filter((player): player is Player => player !== undefined);
+          }
+          
+          if (currentTournamentPlayers.length === 0 && tournament.pairings && tournament.pairings.length > 0) {
+            const playerIds = new Set<string>();
+            tournament.pairings.forEach(round => {
+              round.matches.forEach(match => {
+                playerIds.add(match.whiteId);
+                playerIds.add(match.blackId);
+              });
+            });
+            currentTournamentPlayers = Array.from(playerIds).map(id => {
+              return fetchedPlayers.find(p => p.id === id);
+            }).filter((player): player is Player => player !== undefined);
+          }
+          
+          if (currentTournamentPlayers.length === 0) {
+             // Fallback: Check tournamentResults - this might be slow if many players
+            currentTournamentPlayers = fetchedPlayers.filter(player => 
+              player.tournamentResults && player.tournamentResults.some(result => result.tournamentId === tournament.id)
+            );
+          }
+          setTournamentPlayers(currentTournamentPlayers);
+
+        } catch (error) {
+          console.error("Failed to fetch players for dialog:", error);
+          toast({
+            title: "Error Loading Player Data",
+            description: "Could not load necessary player data. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+      fetchAndSetPlayers();
+    }
+  }, [tournament]);
+
 
   if (!tournament) return null;
+  
+  // Note: allPlayers is now allFetchedPlayers, fetched via Supabase
+  // tournamentPlayers is derived from allFetchedPlayers
 
-  const allPlayers = getAllPlayers();
-  
-  let tournamentPlayers: Player[] = [];
-  if (tournament.players && tournament.players.length > 0) {
-    tournamentPlayers = tournament.players.map(playerId => {
-      const player = allPlayers.find(p => p.id === playerId);
-      return player;
-    }).filter((player): player is Player => player !== undefined);
-  }
-  
-  if (tournamentPlayers.length === 0 && tournament.pairings && tournament.pairings.length > 0) {
-    const playerIds = new Set<string>();
-    
-    tournament.pairings.forEach(round => {
-      round.matches.forEach(match => {
-        playerIds.add(match.whiteId);
-        playerIds.add(match.blackId);
-      });
-    });
-    
-    tournamentPlayers = Array.from(playerIds).map(id => {
-      const player = allPlayers.find(p => p.id === id);
-      return player;
-    }).filter((player): player is Player => player !== undefined);
-  }
-  
-  if (tournamentPlayers.length === 0) {
-    tournamentPlayers = allPlayers.filter(player => 
-      player.tournamentResults.some(result => result.tournamentId === tournament.id)
-    );
-  }
-  
   const hasNoPlayers = tournamentPlayers.length === 0;
   const isNotCompleted = tournament.status !== 'completed';
   const cannotProcess = hasNoPlayers || isNotCompleted;
@@ -82,12 +112,19 @@ const TournamentRatingDialog = ({
               participantIds[match.whiteId] = true;
               participantIds[match.blackId] = true;
               
-              let whitePlayer = allPlayers.find(p => p.id === match.whiteId);
-              let blackPlayer = allPlayers.find(p => p.id === match.blackId);
+                // Use allFetchedPlayers (from Supabase) instead of allPlayers (from mock)
+                let whitePlayer = allFetchedPlayers.find(p => p.id === match.whiteId);
+                let blackPlayer = allFetchedPlayers.find(p => p.id === match.blackId);
               
               if (!whitePlayer || !blackPlayer) {
-                console.error(`Player not found: ${match.whiteId} or ${match.blackId}`);
-                throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}. Please ensure all players exist in the system.`);
+                  console.error(`Player not found in fetched data: ${match.whiteId} or ${match.blackId}`);
+                  // Attempt to find in tournamentPlayers as a fallback, though ideally they should be in allFetchedPlayers
+                  if (!whitePlayer) whitePlayer = tournamentPlayers.find(p => p.id === match.whiteId);
+                  if (!blackPlayer) blackPlayer = tournamentPlayers.find(p => p.id === match.blackId);
+
+                  if (!whitePlayer || !blackPlayer) {
+                    throw new Error(`Player not found: ${match.whiteId} or ${match.blackId}. Please ensure all players exist in the system.`);
+                  }
               }
               
               const getPlayerRating = (player: Player) => {
@@ -168,137 +205,87 @@ const TournamentRatingDialog = ({
           if (player) {
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             
-            const updatePlayerBasedOnTournamentType = (player: Player) => {
-              if (tournament.category === 'rapid') {
-                const currentRapidRating = player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
-                const newRapidRating = currentRapidRating + update.ratingChange;
-                
-                const currentRapidGamesPlayed = player.rapidGamesPlayed ?? 0;
-                const newRapidGamesPlayed = currentRapidGamesPlayed + update.gamesPlayed;
-                
-                let newRapidRatingStatus = player.rapidRatingStatus || 'provisional';
-                if (newRapidRatingStatus === 'provisional' && newRapidGamesPlayed >= 30) {
-                  newRapidRatingStatus = 'established';
-                }
-                
-                return {
-                  ...player,
-                  rapidRating: newRapidRating,
-                  rapidGamesPlayed: newRapidGamesPlayed,
-                  rapidRatingStatus: newRapidRatingStatus,
-                  rapidRatingHistory: [
-                    ...(player.rapidRatingHistory || []),
-                    {
-                      date: new Date().toISOString().split('T')[0],
-                      rating: newRapidRating,
-                      reason: `Tournament: ${tournament.name}`
-                    }
-                  ],
-                  tournamentResults: [
-                    ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
-                    {
-                      tournamentId: tournament.id,
-                      tournamentName: tournament.name,
-                      format: 'rapid' as 'classical' | 'rapid' | 'blitz',
-                      date: new Date().toISOString().split('T')[0],
-                      position: finalPosition,
-                      ratingChange: update.ratingChange
-                    }
-                  ]
-                };
-              } else if (tournament.category === 'blitz') {
-                const currentBlitzRating = player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
-                const newBlitzRating = currentBlitzRating + update.ratingChange;
-                
-                const currentBlitzGamesPlayed = player.blitzGamesPlayed ?? 0;
-                const newBlitzGamesPlayed = currentBlitzGamesPlayed + update.gamesPlayed;
-                
-                let newBlitzRatingStatus = player.blitzRatingStatus || 'provisional';
-                if (newBlitzRatingStatus === 'provisional' && newBlitzGamesPlayed >= 30) {
-                  newBlitzRatingStatus = 'established';
-                }
-                
-                return {
-                  ...player,
-                  blitzRating: newBlitzRating,
-                  blitzGamesPlayed: newBlitzGamesPlayed,
-                  blitzRatingStatus: newBlitzRatingStatus,
-                  blitzRatingHistory: [
-                    ...(player.blitzRatingHistory || []),
-                    {
-                      date: new Date().toISOString().split('T')[0],
-                      rating: newBlitzRating,
-                      reason: `Tournament: ${tournament.name}`
-                    }
-                  ],
-                  tournamentResults: [
-                    ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
-                    {
-                      tournamentId: tournament.id,
-                      tournamentName: tournament.name,
-                      format: 'blitz' as 'classical' | 'rapid' | 'blitz',
-                      date: new Date().toISOString().split('T')[0],
-                      position: finalPosition,
-                      ratingChange: update.ratingChange
-                    }
-                  ]
-                };
-              } else {
-                const currentRating = player.rating;
-                const newRating = currentRating + update.ratingChange;
-                
-                const currentGamesPlayed = player.gamesPlayed || 0;
-                const newGamesPlayed = currentGamesPlayed + update.gamesPlayed;
-                
-                let newRatingStatus = player.ratingStatus || 'provisional';
-                if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
-                  newRatingStatus = 'established';
-                }
-                
-                return {
-                  ...player,
-                  rating: newRating,
-                  gamesPlayed: newGamesPlayed,
-                  ratingStatus: newRatingStatus,
-                  ratingHistory: [
-                    ...(player.ratingHistory || []),
-                    {
-                      date: new Date().toISOString().split('T')[0],
-                      rating: newRating,
-                      reason: `Tournament: ${tournament.name}`
-                    }
-                  ],
-                  tournamentResults: [
-                    ...player.tournamentResults.filter(tr => tr.tournamentId !== tournament.id),
-                    {
-                      tournamentId: tournament.id,
-                      tournamentName: tournament.name,
-                      format: 'classical' as 'classical' | 'rapid' | 'blitz',
-                      date: new Date().toISOString().split('T')[0],
-                      position: finalPosition,
-                      ratingChange: update.ratingChange
-                    }
-                  ]
-                };
+            const updatedPlayerFields: Partial<Player> = {};
+            const today = new Date().toISOString().split('T')[0];
+
+            if (tournament.category === 'rapid') {
+              const currentRapidRating = player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
+              const newRapidRating = currentRapidRating + update.ratingChange;
+              const currentRapidGamesPlayed = player.rapidGamesPlayed ?? 0;
+              const newRapidGamesPlayed = currentRapidGamesPlayed + update.gamesPlayed;
+              let newRapidRatingStatus = player.rapidRatingStatus || 'provisional';
+              if (newRapidRatingStatus === 'provisional' && newRapidGamesPlayed >= 30) {
+                newRapidRatingStatus = 'established';
               }
-            };
+              updatedPlayerFields.rapidRating = newRapidRating;
+              updatedPlayerFields.rapidGamesPlayed = newRapidGamesPlayed;
+              updatedPlayerFields.rapidRatingStatus = newRapidRatingStatus;
+              updatedPlayerFields.rapidRatingHistory = [
+                ...(player.rapidRatingHistory || []),
+                { date: today, rating: newRapidRating, reason: `Tournament: ${tournament.name}` }
+              ];
+              updatedPlayerFields.tournamentResults = [
+                ...(player.tournamentResults || []).filter(tr => tr.tournamentId !== tournament.id),
+                { tournamentId: tournament.id, tournamentName: tournament.name, format: 'rapid', date: today, position: finalPosition, ratingChange: update.ratingChange }
+              ];
+
+            } else if (tournament.category === 'blitz') {
+              const currentBlitzRating = player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
+              const newBlitzRating = currentBlitzRating + update.ratingChange;
+              const currentBlitzGamesPlayed = player.blitzGamesPlayed ?? 0;
+              const newBlitzGamesPlayed = currentBlitzGamesPlayed + update.gamesPlayed;
+              let newBlitzRatingStatus = player.blitzRatingStatus || 'provisional';
+              if (newBlitzRatingStatus === 'provisional' && newBlitzGamesPlayed >= 30) {
+                newBlitzRatingStatus = 'established';
+              }
+              updatedPlayerFields.blitzRating = newBlitzRating;
+              updatedPlayerFields.blitzGamesPlayed = newBlitzGamesPlayed;
+              updatedPlayerFields.blitzRatingStatus = newBlitzRatingStatus;
+              updatedPlayerFields.blitzRatingHistory = [
+                ...(player.blitzRatingHistory || []),
+                { date: today, rating: newBlitzRating, reason: `Tournament: ${tournament.name}` }
+              ];
+              updatedPlayerFields.tournamentResults = [
+                ...(player.tournamentResults || []).filter(tr => tr.tournamentId !== tournament.id),
+                { tournamentId: tournament.id, tournamentName: tournament.name, format: 'blitz', date: today, position: finalPosition, ratingChange: update.ratingChange }
+              ];
+            } else { // Classical
+              const currentRating = player.rating;
+              const newRating = currentRating + update.ratingChange;
+              const currentGamesPlayed = player.gamesPlayed || 0;
+              const newGamesPlayed = currentGamesPlayed + update.gamesPlayed;
+              let newRatingStatus = player.ratingStatus || 'provisional';
+              if (newRatingStatus === 'provisional' && newGamesPlayed >= 30) {
+                newRatingStatus = 'established';
+              }
+              updatedPlayerFields.rating = newRating;
+              updatedPlayerFields.gamesPlayed = newGamesPlayed;
+              updatedPlayerFields.ratingStatus = newRatingStatus;
+              updatedPlayerFields.ratingHistory = [
+                ...(player.ratingHistory || []),
+                { date: today, rating: newRating, reason: `Tournament: ${tournament.name}` }
+              ];
+              updatedPlayerFields.tournamentResults = [
+                ...(player.tournamentResults || []).filter(tr => tr.tournamentId !== tournament.id),
+                { tournamentId: tournament.id, tournamentName: tournament.name, format: 'classical', date: today, position: finalPosition, ratingChange: update.ratingChange }
+              ];
+            }
             
-            const updatedPlayer = updatePlayerBasedOnTournamentType(player);
-            
-            updatePlayer(updatedPlayer);
+            // Use await for Supabase update
+            await updatePlayerInSupabase(player.id, updatedPlayerFields);
           }
         });
         
-        const updatedTournament = {
-          ...tournament,
+        const updatedTournamentFields: Partial<Tournament> = {
           status: 'processed' as Tournament['status'],
           processingDate: new Date().toISOString(),
           processedPlayerIds: Object.keys(participantIds)
         };
-        updateTournament(updatedTournament);
+        // Use await for Supabase update
+        await updateTournamentInSupabase(tournament.id, updatedTournamentFields);
         
         toast({
-          title: "Ratings Processed",
+          title: "Ratings Processed Successfully",
           description: `All player ${tournament.category || 'classical'} ratings have been updated for ${tournament.name}`,
         });
         

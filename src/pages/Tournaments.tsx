@@ -1,13 +1,16 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Added useEffect
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { getAllTournaments, Tournament } from "@/lib/mockData";
+// import { getAllTournaments, Tournament } from "@/lib/mockData"; // Removed getAllTournaments
+import { Tournament } from "@/lib/mockData"; // Tournament type import
+import { getAllTournamentsFromSupabase } from "@/services/tournamentService"; // Added
 import TournamentCard from "@/components/TournamentCard";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, CalendarRange } from "lucide-react";
+import { PlusCircle, CalendarRange, Loader2, AlertCircle } from "lucide-react"; // Added AlertCircle
 import { useUser } from "@/contexts/UserContext";
 import StateSelector from "@/components/selectors/StateSelector";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
 import SearchBar from "@/components/SearchBar";
 
 const Tournaments: React.FC = () => {
@@ -15,45 +18,62 @@ const Tournaments: React.FC = () => {
   const { currentUser } = useUser();
   const [selectedState, setSelectedState] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [tournaments, setTournaments] = useState<Tournament[]>([]); // Added
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Added
+  const [fetchError, setFetchError] = useState<string | null>(null); // Added
   
-  // Get all tournaments from localStorage
-  const allTournaments = getAllTournaments();
+  useEffect(() => {
+    const fetchTournamentsData = async () => {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const fetchedTournaments = await getAllTournamentsFromSupabase({
+          searchQuery: searchQuery || undefined,
+          state: selectedState === '' ? undefined : selectedState,
+        });
+        setTournaments(fetchedTournaments);
+      } catch (err) {
+        console.error("Error fetching tournaments:", err);
+        setFetchError("Failed to load tournaments. Please check your connection or try again later.");
+        setTournaments([]); // Clear tournaments on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTournamentsData();
+  }, [searchQuery, selectedState]);
   
-  // Filter tournaments based on selected state and search query
-  const filteredTournaments = allTournaments.filter((tournament) => {
-    const matchesState = selectedState === "" || tournament.state === selectedState;
-    const matchesSearch = 
-      searchQuery === "" || 
-      tournament.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tournament.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tournament.city.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesState && matchesSearch;
-  });
-  
+  // Client-side filtering removed as Supabase handles it.
+  // const filteredTournaments = ...
+
   // Function to determine if a tournament is upcoming, ongoing, or completed
   const categorizeTournaments = (tournaments: Tournament[]) => {
     const upcoming: Tournament[] = [];
     const ongoing: Tournament[] = [];
     const completed: Tournament[] = [];
     
-    tournaments.forEach((tournament) => {
-      const startDate = new Date(tournament.startDate);
-      const endDate = new Date(tournament.endDate);
-      const today = new Date();
-      
-      if (endDate < today || tournament.status === "completed" || tournament.status === "processed") {
-        completed.push(tournament);
-      } else if (startDate <= today) {
-        ongoing.push(tournament);
-      } else {
-        upcoming.push(tournament);
-      }
-    });
+    // Ensure tournamentsToCategorize is an array before calling forEach
+    if (Array.isArray(tournamentsToCategorize)) {
+      tournamentsToCategorize.forEach((tournament) => {
+        const startDate = new Date(tournament.startDate);
+        const endDate = new Date(tournament.endDate);
+        const today = new Date();
+        
+        if (endDate < today || tournament.status === "completed" || tournament.status === "processed") {
+          completed.push(tournament);
+        } else if (startDate <= today) {
+          ongoing.push(tournament);
+        } else {
+          upcoming.push(tournament);
+        }
+      });
+    }
     
     return { upcoming, ongoing, completed };
   };
   
-  const { upcoming, ongoing, completed } = categorizeTournaments(filteredTournaments);
+  const { upcoming, ongoing, completed } = categorizeTournaments(tournaments); // Use 'tournaments' state
   
   const handleCreateTournament = () => {
     navigate("/tournament-management/new");
@@ -95,15 +115,34 @@ const Tournaments: React.FC = () => {
             placeholder="All States"
           />
         </div>
+
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-10 w-10 animate-spin text-nigeria-green mb-4" />
+            <h2 className="text-xl font-medium">Loading Tournaments...</h2>
+            <p className="text-muted-foreground">Please wait while we fetch tournament data.</p>
+          </div>
+        )}
+
+        {!isLoading && fetchError && (
+          <Alert variant="destructive" className="my-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Tournaments</AlertTitle>
+            <AlertDescription>
+              {fetchError}
+              {/* Optionally, add a retry button here */}
+            </AlertDescription>
+          </Alert>
+        )}
         
-        {filteredTournaments.length === 0 ? (
+        {!isLoading && !fetchError && tournaments.length === 0 && (
           <div className="text-center py-12">
             <CalendarRange className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">No tournaments found</h3>
             <p className="text-muted-foreground mb-8">
               {selectedState || searchQuery 
-                ? "Try adjusting your search or filters"
-                : "There are no tournaments in the system yet"}
+                ? "Try adjusting your search or filters, or check back later."
+                : "There are no tournaments in the system yet. Be the first to create one!"}
             </p>
             {currentUser && currentUser.role === "tournament_organizer" && (
               <Button onClick={handleCreateTournament}>
@@ -112,7 +151,9 @@ const Tournaments: React.FC = () => {
               </Button>
             )}
           </div>
-        ) : (
+        )}
+        
+        {!isLoading && !fetchError && tournaments.length > 0 && (
           <div className="space-y-10">
             {/* Ongoing Tournaments */}
             {ongoing.length > 0 && (
@@ -145,6 +186,7 @@ const Tournaments: React.FC = () => {
             )}
             
             {/* Completed Tournaments */}
+            {/* Only show this section if there are completed tournaments AND no active filters that might hide them */}
             {completed.length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -158,6 +200,18 @@ const Tournaments: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {/* If all categories are empty but tournaments array is not (e.g. due to categorization logic or future status types) */}
+            { ongoing.length === 0 && upcoming.length === 0 && completed.length === 0 && tournaments.length > 0 && (
+                 <div className="text-center py-12">
+                    <CalendarRange className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Tournaments Available</h3>
+                    <p className="text-muted-foreground">
+                        Tournaments are available but might not fit current categories (Ongoing, Upcoming, Completed) or filters.
+                    </p>
+                 </div>
+            )}
+
           </div>
         )}
       </div>
