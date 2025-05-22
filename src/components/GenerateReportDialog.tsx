@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Dialog, 
@@ -9,17 +8,12 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { 
-  updatePlayer, 
-  updateTournament, 
-  getPlayersByTournamentId, 
-  getAllPlayers, 
-  Player,
-  Tournament
-} from "@/lib/mockData";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import { Player, Tournament } from "@/lib/mockData"; // Only import types
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
+import { getAllPlayersFromSupabase, updatePlayerInSupabase } from "@/services/playerService";
+import { updateTournamentInSupabase } from "@/services/tournamentService";
 
 interface GenerateReportDialogProps {
   tournament: Tournament | null;
@@ -35,126 +29,139 @@ const GenerateReportDialog = ({
   onReportGenerated
 }: GenerateReportDialogProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [tournamentPlayers, setTournamentPlayers] = useState<Player[]>([]);
 
   if (!tournament) return null;
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     setIsGenerating(true);
     
-    // Get players that participated in this tournament
-    const tournamentPlayers = getPlayersByTournamentId(tournament.id);
-    const allPlayers = getAllPlayers();
-    
-    // For each player, update their rating based on tournament results
-    tournamentPlayers.forEach(player => {
-      const tournamentResult = player.tournamentResults.find(
-        result => result.tournamentId === tournament.id
+    try {
+      // Get players that participated in this tournament from Supabase
+      const allPlayers = await getAllPlayersFromSupabase({});
+      
+      // Filter players for this tournament
+      const tournamentParticipantIds = tournament.players || [];
+      const tournamentPlayers = allPlayers.filter(player => 
+        tournamentParticipantIds.includes(player.id)
       );
       
-      if (tournamentResult) {
-        const ratingChange = tournamentResult.ratingChange;
+      // Process each player in parallel
+      await Promise.all(tournamentPlayers.map(async (player) => {
+        const tournamentResult = player.tournamentResults?.find(
+          result => result.tournamentId === tournament.id
+        );
         
-        // Get the appropriate rating based on tournament category
-        const getCurrentRating = () => {
+        if (tournamentResult) {
+          const ratingChange = tournamentResult.ratingChange;
+          
+          // Get the appropriate rating based on tournament category
+          const getCurrentRating = () => {
+            if (tournament.category === 'rapid') {
+              return player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
+            } else if (tournament.category === 'blitz') {
+              return player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
+            }
+            return player.rating;
+          };
+          
+          const currentRating = getCurrentRating();
+          const newRating = currentRating + ratingChange;
+          
+          // Update player's appropriate rating type
+          let updatedPlayerFields: Partial<Player> = {};
+          const today = new Date().toISOString().split('T')[0];
+          
           if (tournament.category === 'rapid') {
-            // If player has no rapid rating, use floor rating without any bonus
-            return player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
+            updatedPlayerFields = {
+              rapidRating: newRating,
+              rapidGamesPlayed: (player.rapidGamesPlayed ?? 0) + 1,
+              rapidRatingHistory: [
+                ...(player.rapidRatingHistory || []),
+                {
+                  date: today,
+                  rating: newRating,
+                  reason: `Tournament: ${tournament.name}`
+                }
+              ]
+            };
+            
+            // Update rating status if needed
+            if ((player.rapidGamesPlayed ?? 0) + 1 >= 30 && (!player.rapidRatingStatus || player.rapidRatingStatus === 'provisional')) {
+              updatedPlayerFields.rapidRatingStatus = 'established';
+            }
           } else if (tournament.category === 'blitz') {
-            // If player has no blitz rating, use floor rating without any bonus
-            return player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
+            updatedPlayerFields = {
+              blitzRating: newRating,
+              blitzGamesPlayed: (player.blitzGamesPlayed ?? 0) + 1,
+              blitzRatingHistory: [
+                ...(player.blitzRatingHistory || []),
+                {
+                  date: today,
+                  rating: newRating,
+                  reason: `Tournament: ${tournament.name}`
+                }
+              ]
+            };
+            
+            // Update rating status if needed
+            if ((player.blitzGamesPlayed ?? 0) + 1 >= 30 && (!player.blitzRatingStatus || player.blitzRatingStatus === 'provisional')) {
+              updatedPlayerFields.blitzRatingStatus = 'established';
+            }
+          } else {
+            // Default to classical
+            updatedPlayerFields = {
+              rating: newRating,
+              gamesPlayed: (player.gamesPlayed || 0) + 1,
+              ratingHistory: [
+                ...(player.ratingHistory || []),
+                {
+                  date: today,
+                  rating: newRating,
+                  reason: `Tournament: ${tournament.name}`
+                }
+              ]
+            };
+            
+            // Update rating status if needed
+            if ((player.gamesPlayed || 0) + 1 >= 30 && (!player.ratingStatus || player.ratingStatus === 'provisional')) {
+              updatedPlayerFields.ratingStatus = 'established';
+            }
           }
-          return player.rating;
-        };
-        
-        const currentRating = getCurrentRating();
-        const newRating = currentRating + ratingChange;
-        
-        // Update player's appropriate rating type
-        let updatedPlayer: Player;
-        
-        if (tournament.category === 'rapid') {
-          updatedPlayer = {
-            ...player,
-            rapidRating: newRating,
-            rapidGamesPlayed: (player.rapidGamesPlayed ?? 0) + 1,
-            rapidRatingHistory: [
-              ...(player.rapidRatingHistory || []),
-              {
-                date: new Date().toISOString().split('T')[0],
-                rating: newRating,
-                reason: `Tournament: ${tournament.name}`
-              }
-            ]
-          };
           
-          // Update rating status if needed
-          if (updatedPlayer.rapidGamesPlayed >= 30 && (!updatedPlayer.rapidRatingStatus || updatedPlayer.rapidRatingStatus === 'provisional')) {
-            updatedPlayer.rapidRatingStatus = 'established';
-          }
-        } else if (tournament.category === 'blitz') {
-          updatedPlayer = {
-            ...player,
-            blitzRating: newRating,
-            blitzGamesPlayed: (player.blitzGamesPlayed ?? 0) + 1,
-            blitzRatingHistory: [
-              ...(player.blitzRatingHistory || []),
-              {
-                date: new Date().toISOString().split('T')[0],
-                rating: newRating,
-                reason: `Tournament: ${tournament.name}`
-              }
-            ]
-          };
-          
-          // Update rating status if needed
-          if (updatedPlayer.blitzGamesPlayed >= 30 && (!updatedPlayer.blitzRatingStatus || updatedPlayer.blitzRatingStatus === 'provisional')) {
-            updatedPlayer.blitzRatingStatus = 'established';
-          }
-        } else {
-          // Default to classical
-          updatedPlayer = {
-            ...player,
-            rating: newRating,
-            gamesPlayed: (player.gamesPlayed || 0) + 1,
-            ratingHistory: [
-              ...player.ratingHistory,
-              {
-                date: new Date().toISOString().split('T')[0],
-                rating: newRating,
-                reason: `Tournament: ${tournament.name}`
-              }
-            ]
-          };
-          
-          // Update rating status if needed
-          if (updatedPlayer.gamesPlayed >= 30 && (!updatedPlayer.ratingStatus || updatedPlayer.ratingStatus === 'provisional')) {
-            updatedPlayer.ratingStatus = 'established';
-          }
+          // Update player in Supabase
+          await updatePlayerInSupabase(player.id, updatedPlayerFields);
         }
-        
-        updatePlayer(updatedPlayer);
-      }
-    });
-    
-    // Mark tournament as processed
-    const updatedTournament = {
-      ...tournament,
-      status: 'processed' as 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed'
-    };
-    updateTournament(updatedTournament);
-    
-    // Complete the generation process
-    setTimeout(() => {
-      setIsGenerating(false);
-      onOpenChange(false);
-      onReportGenerated();
+      }));
       
+      // Mark tournament as processed
+      await updateTournamentInSupabase(tournament.id, {
+        status: 'processed' as Tournament['status'],
+        processingDate: new Date().toISOString()
+      });
+      
+      // Complete the generation process
+      setTimeout(() => {
+        setIsGenerating(false);
+        onOpenChange(false);
+        onReportGenerated();
+        
+        toast({
+          title: "Report Generated",
+          description: `${tournament.category || 'Classical'} ratings have been updated for all players in ${tournament.name}`,
+          duration: 5000,
+        });
+      }, 1500);
+    } catch (error) {
+      console.error("Error generating report:", error);
       toast({
-        title: "Report Generated",
-        description: `${tournament.category || 'Classical'} ratings have been updated for all players in ${tournament.name}`,
+        title: "Error Processing Tournament",
+        description: "Failed to process tournament results. Please try again.",
+        variant: "destructive",
         duration: 5000,
       });
-    }, 1500);
+      setIsGenerating(false);
+    }
   };
 
   return (

@@ -9,8 +9,9 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getAllPlayers, Player } from "@/lib/mockData";
+import { Player } from "@/lib/mockData"; // Import only the type
 import { useToast } from "@/components/ui/use-toast";
+import { getAllPlayersFromSupabase } from "@/services/playerService";
 
 import PlayerSearchInput from "@/components/players/PlayerSearchInput";
 import SelectedPlayersList from "@/components/players/SelectedPlayersList";
@@ -38,48 +39,63 @@ export const MultiSelectPlayers = ({
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch all players, regardless of status
   useEffect(() => {
-    const fetchPlayers = () => {
-      // Force refresh player list every time the dialog opens
-      const allPlayers = getAllPlayers();
-      console.log("All players in system:", allPlayers.length);
+    const fetchPlayers = async () => {
+      if (!isOpen) return;
       
-      // Filter players based on includePendingPlayers flag
-      const statusFilteredPlayers = includePendingPlayers 
-        ? allPlayers 
-        : allPlayers.filter(player => player.status === 'approved');
-      
-      // Get players excluding those already in the tournament
-      const availablePlayers = statusFilteredPlayers.filter(player => {
-        return !excludeIds.includes(player.id);
-      });
-      
-      console.log("Available players for selection:", availablePlayers.length);
-      
-      if (availablePlayers.length === 0) {
-        if (allPlayers.length === 0) {
-          toast({
-            title: "No players available",
-            description: "There are no players in the system yet.",
-          });
-        } else if (statusFilteredPlayers.length === 0) {
-          toast({
-            title: "No approved players",
-            description: "There are no approved players in the system yet.",
-          });
-        } else {
-          toast({
-            title: "No available players",
-            description: "All players are already in this tournament.",
-            variant: "destructive"
-          });
+      setIsLoading(true);
+      try {
+        // Force refresh player list every time the dialog opens
+        const allPlayers = await getAllPlayersFromSupabase({});
+        console.log("All players in system:", allPlayers.length);
+        
+        // Filter players based on includePendingPlayers flag
+        const statusFilteredPlayers = includePendingPlayers 
+          ? allPlayers 
+          : allPlayers.filter(player => player.status === 'approved');
+        
+        // Get players excluding those already in the tournament
+        const availablePlayers = statusFilteredPlayers.filter(player => {
+          return !excludeIds.includes(player.id);
+        });
+        
+        console.log("Available players for selection:", availablePlayers.length);
+        
+        if (availablePlayers.length === 0) {
+          if (allPlayers.length === 0) {
+            toast({
+              title: "No players available",
+              description: "There are no players in the system yet.",
+            });
+          } else if (statusFilteredPlayers.length === 0) {
+            toast({
+              title: "No approved players",
+              description: "There are no approved players in the system yet.",
+            });
+          } else {
+            toast({
+              title: "No available players",
+              description: "All players are already in this tournament.",
+              variant: "destructive"
+            });
+          }
         }
+        
+        setPlayers(availablePlayers);
+        setFilteredPlayers(availablePlayers);
+      } catch (error) {
+        console.error("Error fetching players:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load players. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      setPlayers(availablePlayers);
-      setFilteredPlayers(availablePlayers);
     };
     
     if (isOpen) {
@@ -156,14 +172,20 @@ export const MultiSelectPlayers = ({
         
         {/* Player selection list */}
         <div className="mt-4 flex-grow">
-          <PlayerSelectionList 
-            filteredPlayers={filteredPlayers}
-            selectedPlayers={selectedPlayers}
-            onSelectPlayer={handleSelectPlayer}
-          />
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : (
+            <PlayerSelectionList 
+              filteredPlayers={filteredPlayers}
+              selectedPlayers={selectedPlayers}
+              onSelectPlayer={handleSelectPlayer}
+            />
+          )}
         </div>
         
-        {players.length === 0 && (
+        {players.length === 0 && !isLoading && (
           <div className="text-center py-6">
             <p className="text-gray-500 dark:text-gray-400">
               No available players found. Please import players or create new ones.
@@ -212,14 +234,20 @@ export const MultiSelectPlayers = ({
           </div>
           
           <div className="flex-grow overflow-hidden">
-            <PlayerSelectionList 
-              filteredPlayers={filteredPlayers}
-              selectedPlayers={selectedPlayers}
-              onSelectPlayer={handleSelectPlayer}
-            />
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+              </div>
+            ) : (
+              <PlayerSelectionList 
+                filteredPlayers={filteredPlayers}
+                selectedPlayers={selectedPlayers}
+                onSelectPlayer={handleSelectPlayer}
+              />
+            )}
           </div>
           
-          {players.length === 0 && (
+          {players.length === 0 && !isLoading && (
             <div className="text-center py-6">
               <p className="text-gray-500 dark:text-gray-400">
                 No available players found. Please import players or create new ones.

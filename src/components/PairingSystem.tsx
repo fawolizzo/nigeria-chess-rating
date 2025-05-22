@@ -1,316 +1,200 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { Loader2, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Player } from "@/lib/mockData";
-import { toast } from "@/components/ui/use-toast";
-import { generateSwissPairings } from "@/lib/swissPairingService";
-import { AlertTriangle, BadgeCheck } from "lucide-react";
 
 interface PairingSystemProps {
   players: Player[];
-  existingPairings?: Array<{ whiteId: string; blackId: string }>;
-  previousOpponents?: Record<string, string[]>;
-  playerScores?: Record<string, number>;
-  onGeneratePairings?: (pairings: Array<{ white: Player; black: Player }>) => void;
-  readOnly?: boolean;
-  pairings?: Array<{
+  pairings: Array<{
     whiteId: string;
     blackId: string;
     result?: "1-0" | "0-1" | "1/2-1/2" | "*";
-    whiteRatingChange?: number;
-    blackRatingChange?: number;
   }>;
-  roundNumber?: number;
-  readonly?: boolean;
-  tournamentType?: 'classical' | 'rapid' | 'blitz';
-}
-
-interface PairingDisplayData {
-  white: Player;
-  black: Player;
-  result?: "1-0" | "0-1" | "1/2-1/2" | "*";
-  whiteRatingChange?: number;
-  blackRatingChange?: number;
-  boardNumber: number;
-}
-
-interface Round {
   roundNumber: number;
-  matches: Array<{
-    whiteId: string;
-    blackId: string;
-    result?: "1-0" | "0-1" | "1/2-1/2" | "*";
-  }>;
+  readonly?: boolean;
+  onSaveResults?: (results: Array<{ whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }>) => Promise<void>;
+  isProcessing?: boolean; // Add the isProcessing prop
 }
 
-const PairingSystem = ({
+const ResultSelectOptions = [
+  { value: "1-0", label: "1-0 (White Wins)" },
+  { value: "0-1", label: "0-1 (Black Wins)" },
+  { value: "1/2-1/2", label: "½-½ (Draw)" },
+  { value: "*", label: "* (Not Played)" },
+];
+
+const PairingSystem: React.FC<PairingSystemProps> = ({
   players,
-  existingPairings = [],
-  previousOpponents = {},
-  playerScores = {},
-  onGeneratePairings,
-  readOnly = false,
-  pairings = [],
-  roundNumber = 1,
+  pairings,
+  roundNumber,
   readonly = false,
-  tournamentType = 'classical',
-}: PairingSystemProps) => {
-  const [localPairings, setLocalPairings] = useState<Array<{ white: Player; black: Player }>>(
-    existingPairings.map(pair => {
-      const white = players.find(p => p.id === pair.whiteId)!;
-      const black = players.find(p => p.id === pair.blackId)!;
-      return { white, black };
-    })
+  onSaveResults,
+  isProcessing = false // Default to false
+}) => {
+  const [localPairings, setLocalPairings] = useState<Array<{
+    whiteId: string;
+    blackId: string;
+    result: "1-0" | "0-1" | "1/2-1/2" | "*";
+  }>>(
+    pairings.map((pairing) => ({
+      ...pairing,
+      result: pairing.result || "*",
+    }))
   );
 
-  // Function to get the appropriate rating based on tournament type
-  const getPlayerRating = (player: Player) => {
-    if (tournamentType === 'rapid') {
-      return player.rapidRating || player.rating;
-    } else if (tournamentType === 'blitz') {
-      return player.blitzRating || player.rating;
-    }
-    return player.rating; // Default to classical rating
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Update local pairings when the pairings prop changes
+  useEffect(() => {
+    setLocalPairings(
+      pairings.map((pairing) => ({
+        ...pairing,
+        result: pairing.result || "*",
+      }))
+    );
+    setHasChanges(false);
+  }, [pairings]);
+
+  const getPlayerById = (id: string): Player | undefined => {
+    return players.find((player) => player.id === id);
   };
 
-  // Function to convert pairings to display format and sort by player rating
-  const getPairingsToDisplay = (): PairingDisplayData[] => {
-    if (pairings && pairings.length > 0) {
-      // Convert pairings to display format first
-      const displayPairings = pairings.map((pair, index) => {
-        const white = players.find(p => p.id === pair.whiteId);
-        const black = players.find(p => p.id === pair.blackId);
-        
-        if (white && black) {
-          return {
-            white,
-            black,
-            result: pair.result,
-            whiteRatingChange: pair.whiteRatingChange,
-            blackRatingChange: pair.blackRatingChange,
-            boardNumber: index + 1 // Default board number by array order
-          };
-        }
-        return null;
-      }).filter(Boolean) as PairingDisplayData[];
-      
-      // Sort pairings by the highest rated white player to ensure top player on board 1
-      return displayPairings.sort((a, b) => {
-        // Sort by white player rating (descendin) to make highest rated player on first board
-        const aRating = getPlayerRating(a.white);
-        const bRating = getPlayerRating(b.white);
-        return bRating - aRating;
-      }).map((pair, index) => ({
-        ...pair,
-        boardNumber: index + 1 // Reassign board numbers after sorting
-      }));
-    }
-    
-    // For local pairings, do the same conversion and sorting
-    return localPairings.map((pair, index) => ({
-      white: pair.white,
-      black: pair.black,
-      boardNumber: index + 1
-    })).sort((a, b) => 
-      getPlayerRating(b.white) - getPlayerRating(a.white)
-    ).map((pair, index) => ({
-      ...pair,
-      boardNumber: index + 1 // Reassign board numbers after sorting
-    }));
+  const handleResultChange = (index: number, result: "1-0" | "0-1" | "1/2-1/2" | "*") => {
+    const newPairings = [...localPairings];
+    newPairings[index].result = result;
+    setLocalPairings(newPairings);
+    setHasChanges(true);
   };
 
-  // Generate Swiss pairings using our improved algorithm
-  const generatePairings = () => {
-    // Check if we have enough players
-    if (players.length < 2) {
-      toast({
-        title: "Not Enough Players",
-        description: "At least 2 players are required to generate pairings.",
-        variant: "destructive",
-      });
-      return;
+  const handleSaveResults = async () => {
+    if (onSaveResults) {
+      await onSaveResults(localPairings);
+      setHasChanges(false);
     }
-
-    // Reconstruct previous rounds data
-    const previousRounds: Round[] = [];
-    
-    // Convert the opponents map to a structure we can use
-    Object.entries(previousOpponents).forEach(([playerId, opponentIds]) => {
-      opponentIds.forEach((opponentId, index) => {
-        // Create a round record if it doesn't exist yet
-        if (!previousRounds[index]) {
-          previousRounds[index] = {
-            roundNumber: index + 1,
-            matches: []
-          };
-        }
-        
-        // Only add each match once
-        const matchExists = previousRounds[index].matches.some(
-          m => (m.whiteId === playerId && m.blackId === opponentId) || 
-               (m.whiteId === opponentId && m.blackId === playerId)
-        );
-        
-        if (!matchExists) {
-          // Determine result if possible (simplified)
-          let result: "1-0" | "0-1" | "1/2-1/2" | "*" = "*";
-          
-          previousRounds[index].matches.push({
-            whiteId: playerId,
-            blackId: opponentId,
-            result
-          });
-        }
-      });
-    });
-    
-    // Use our improved Swiss pairing algorithm
-    const generatedPairings = generateSwissPairings(players, previousRounds, roundNumber);
-    
-    // Convert to the expected format
-    const formattedPairings = generatedPairings.map(pairing => {
-      const white = players.find(p => p.id === pairing.whiteId)!;
-      const black = players.find(p => p.id === pairing.blackId)!;
-      return { white, black };
-    });
-    
-    setLocalPairings(formattedPairings);
-    
-    if (onGeneratePairings) {
-      onGeneratePairings(formattedPairings);
-    }
-    
-    toast({
-      title: "Pairings Generated",
-      description: `Successfully generated ${formattedPairings.length} pairings using the Swiss system.`,
-    });
   };
 
-  const pairingsToDisplay = getPairingsToDisplay();
-  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-nigeria-green-dark">
-          {roundNumber ? `Round ${roundNumber} Pairings` : "Swiss Pairing System"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {pairingsToDisplay.length > 0 ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              {pairingsToDisplay.map((pair) => (
-                <div 
-                  key={`${pair.white.id}-${pair.black.id}`} 
-                  className="border border-nigeria-green/20 rounded-md p-4 hover:bg-nigeria-green/5 transition-colors"
-                >
-                  <div className="grid grid-cols-11 items-center">
-                    {/* Board Number */}
-                    <div className="col-span-1">
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 rounded-full bg-nigeria-green/10 flex items-center justify-center">
-                          <span className="font-bold text-nigeria-green-dark">{pair.boardNumber}</span>
-                        </div>
-                      </div>
-                    </div>
+    <div>
+      <h3 className="text-lg font-medium mb-4">Round {roundNumber} Pairings</h3>
+      <div className="space-y-4">
+        {localPairings.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b dark:border-gray-700">
+                    <th className="text-left py-2 font-medium">#</th>
+                    <th className="text-left py-2 font-medium">White</th>
+                    <th className="text-left py-2 font-medium">Black</th>
+                    <th className="text-left py-2 font-medium">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localPairings.map((pairing, index) => {
+                    const whitePlayer = getPlayerById(pairing.whiteId);
+                    const blackPlayer = getPlayerById(pairing.blackId);
 
-                    {/* White Player - 4 cols */}
-                    <div className="col-span-4">
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-center justify-end">
-                          {pair.white.title && (
-                            <span className="text-gold-dark dark:text-gold-light mr-1 font-semibold">
-                              {pair.white.title}
-                            </span>
+                    return (
+                      <tr key={index} className="border-b dark:border-gray-800">
+                        <td className="py-2">{index + 1}</td>
+                        <td className="py-2">
+                          <div className="flex items-center">
+                            <div className="font-medium">
+                              {whitePlayer?.name || `Unknown (${pairing.whiteId})`}
+                            </div>
+                            <div className="ml-2 text-gray-500">
+                              {whitePlayer ? `(${whitePlayer.rating})` : ""}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2">
+                          <div className="flex items-center">
+                            <div className="font-medium">
+                              {blackPlayer?.name || `Unknown (${pairing.blackId})`}
+                            </div>
+                            <div className="ml-2 text-gray-500">
+                              {blackPlayer ? `(${blackPlayer.rating})` : ""}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2">
+                          {readonly ? (
+                            <div
+                              className={`px-3 py-1 rounded-md inline-block 
+                                ${
+                                  pairing.result === "1-0"
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                    : pairing.result === "0-1"
+                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : pairing.result === "1/2-1/2"
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                                }`}
+                            >
+                              {pairing.result === "1/2-1/2" ? "½-½" : pairing.result}
+                            </div>
+                          ) : (
+                            <Select
+                              value={localPairings[index].result}
+                              onValueChange={(value) =>
+                                handleResultChange(
+                                  index,
+                                  value as "1-0" | "0-1" | "1/2-1/2" | "*"
+                                )
+                              }
+                              disabled={isProcessing}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select result..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ResultSelectOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
-                          <span className="font-bold text-right">{pair.white.name}</span>
-                        </div>
-                        <div className="flex items-center mt-1">
-                          <Badge variant="outline" className="bg-white dark:bg-gray-800 mr-2">
-                            White
-                          </Badge>
-                          <span className="text-gray-500">
-                            {getPlayerRating(pair.white)}
-                          </span>
-                          {pair.whiteRatingChange !== undefined && (
-                            <span className={`ml-1 ${pair.whiteRatingChange >= 0 ? "text-green-500" : "text-red-500"}`}>
-                              {pair.whiteRatingChange > 0 ? "+" : ""}{pair.whiteRatingChange}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* VS - 1 col */}
-                    <div className="col-span-1 flex justify-center">
-                      <div className="bg-nigeria-green/10 rounded-full w-8 h-8 flex items-center justify-center text-nigeria-green-dark font-medium text-sm">
-                        vs
-                      </div>
-                    </div>
-                    
-                    {/* Black Player - 4 cols */}
-                    <div className="col-span-4">
-                      <div className="flex flex-col items-start">
-                        <div className="flex items-center">
-                          {pair.black.title && (
-                            <span className="text-gold-dark dark:text-gold-light mr-1 font-semibold">
-                              {pair.black.title}
-                            </span>
-                          )}
-                          <span className="font-bold">{pair.black.name}</span>
-                        </div>
-                        <div className="flex items-center mt-1">
-                          <Badge variant="outline" className="bg-black text-white dark:bg-black mr-2">
-                            Black
-                          </Badge>
-                          <span className="text-gray-500">
-                            {getPlayerRating(pair.black)}
-                          </span>
-                          {pair.blackRatingChange !== undefined && (
-                            <span className={`ml-1 ${pair.blackRatingChange >= 0 ? "text-green-500" : "text-red-500"}`}>
-                              {pair.blackRatingChange > 0 ? "+" : ""}{pair.blackRatingChange}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Result - 1 col */}
-                    <div className="col-span-1">
-                      {pair.result && pair.result !== "*" && (
-                        <div className="flex justify-center">
-                          <Badge className="bg-nigeria-green/10 text-nigeria-green-dark border-nigeria-green/20">
-                            {pair.result === "1-0" ? "1-0" : 
-                             pair.result === "0-1" ? "0-1" : 
-                             "½-½"}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              No pairings have been generated yet.
-            </p>
-            {!readOnly && !readonly && onGeneratePairings && (
-              <Button 
-                onClick={generatePairings}
-                className="bg-nigeria-green hover:bg-nigeria-green-dark px-6"
-              >
-                Generate Pairings
-              </Button>
+
+            {!readonly && onSaveResults && (
+              <div className="flex justify-end mt-4">
+                <Button
+                  onClick={handleSaveResults}
+                  disabled={!hasChanges || isProcessing}
+                  className="flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save Results
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
+          </>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            No pairings have been generated for this round.
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

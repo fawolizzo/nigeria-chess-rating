@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { AlertTriangle, CheckCircle, AlertCircle, BadgeCheck } from "lucide-react";
-// import { Player, Tournament, updatePlayer, updateTournament, getAllPlayers } from "@/lib/mockData"; // Removed mock functions
 import { Player, Tournament } from "@/lib/mockData"; // Keep types
 import { getAllPlayersFromSupabase, updatePlayerInSupabase } from "@/services/playerService"; // Added Supabase player services
 import { updateTournamentInSupabase } from "@/services/tournamentService"; // Added Supabase tournament service
@@ -84,9 +83,6 @@ const TournamentRatingDialog = ({
 
   if (!tournament) return null;
   
-  // Note: allPlayers is now allFetchedPlayers, fetched via Supabase
-  // tournamentPlayers is derived from allFetchedPlayers
-
   const hasNoPlayers = tournamentPlayers.length === 0;
   const isNotCompleted = tournament.status !== 'completed';
   const cannotProcess = hasNoPlayers || isNotCompleted;
