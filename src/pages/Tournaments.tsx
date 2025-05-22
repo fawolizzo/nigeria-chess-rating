@@ -57,10 +57,10 @@ const Tournaments = () => {
         endDate: new Date().toISOString().split('T')[0],
         location: "Online",
         organizerId: "user-1", // Replace with actual organizer ID
-        status: "upcoming",
+        status: "upcoming" as const, // Explicit type casting to Tournament['status']
         rounds: 5,
         currentRound: 1,
-        category: "classical",
+        category: "classical" as const,
         timeControl: "60+30",
         participants: 0,
         registrationOpen: true

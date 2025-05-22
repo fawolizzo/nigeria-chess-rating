@@ -1,187 +1,139 @@
 
-import { Link } from "react-router-dom";
-import { Calendar, MapPin, Users, Clock, Award, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from "react";
+import { CalendarIcon, MapPin, Users, Trophy, Clock } from "lucide-react";
 import { Tournament } from "@/lib/mockData";
-import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { formatDate } from "@/utils/dateUtils";
 
-interface TournamentCardProps {
+export interface TournamentCardProps {
   tournament: Tournament;
-  onRegister?: (tournamentId: string) => void;
+  onClickView?: () => void;
+  onClickEdit?: () => void;
+  onClickDelete?: () => void;
 }
 
-const TournamentCard = ({ tournament, onRegister }: TournamentCardProps) => {
-  const isMobile = useIsMobile();
-  
-  const formatDate = (dateString: string) => {
-    try {
-      // For YYYY-MM-DD format - parse without timezone issues
-      const dateParts = dateString.split('-');
-      if (dateParts.length === 3) {
-        const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed in JS
-        const day = parseInt(dateParts[2], 10);
-        
-        const date = new Date(year, month, day);
-        const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-        return date.toLocaleDateString('en-US', options);
-      }
-      
-      // Fallback for other formats
-      return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch (error) {
-      console.error("Error formatting date in TournamentCard:", error, { dateString });
-      return "Invalid date";
-    }
-  };
-
-  const getStatusClass = (status: Tournament['status']) => {
+const TournamentCard: React.FC<TournamentCardProps> = ({
+  tournament,
+  onClickView,
+  onClickEdit,
+  onClickDelete,
+}) => {
+  // Get status color class
+  const getStatusColorClass = (status: string) => {
     switch (status) {
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30';
-      case 'ongoing':
-        return 'bg-nigeria-green/10 text-nigeria-green border-nigeria-green/20 dark:bg-nigeria-green/20 dark:text-nigeria-green-light dark:border-nigeria-green/30';
-      case 'completed':
-        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
-      case 'pending':
-        return 'bg-nigeria-yellow/10 text-nigeria-yellow-dark border-nigeria-yellow/20 dark:bg-nigeria-yellow/20 dark:text-nigeria-yellow dark:border-nigeria-yellow/30';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/30';
-      case 'processed':
-        return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800/30';
+      case "upcoming":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+      case "ongoing":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+      case "completed":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
+      case "processed":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
+      case "rejected":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
-  const getStatusLabel = (status: Tournament['status']) => {
+  const getStatus = (status: string) => {
     switch (status) {
-      case 'upcoming':
-        return 'Upcoming';
-      case 'ongoing':
-        return 'Ongoing';
-      case 'completed':
-        return 'Completed';
-      case 'pending':
-        return 'Pending Approval';
-      case 'rejected':
-        return 'Rejected';
-      case 'processed':
-        return 'Processed';
+      case "upcoming":
+        return "Upcoming";
+      case "ongoing":
+        return "Ongoing";
+      case "completed":
+        return "Completed";
+      case "processed":
+        return "Processed";
+      case "rejected":
+        return "Rejected";
+      case "pending":
+        return "Pending";
       default:
-        return 'Unknown Status';
-    }
-  };
-
-  const handleRegisterClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onRegister) {
-      onRegister(tournament.id);
+        return status;
     }
   };
 
   return (
-    <Link to={`/tournament/${tournament.id}`} className="block h-full">
-      <div className={cn(
-        "group h-full overflow-hidden rounded-xl transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800",
-        "hover:shadow-card-hover hover:border-nigeria-green/30 dark:hover:border-nigeria-green/40",
-        "transform hover:-translate-y-1"
-      )}>
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-3">
-            <Badge className={`${getStatusClass(tournament.status)} border animate-fade-in`}>
-              {getStatusLabel(tournament.status)}
-            </Badge>
-            {tournament.category && (
-              <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-full">
-                {tournament.category}
-              </span>
-            )}
-          </div>
-          
-          <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white group-hover:text-nigeria-green dark:group-hover:text-nigeria-green-light transition-colors">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {tournament.name}
           </h3>
-          
-          <div className="mb-4 space-y-2.5 text-sm text-gray-600 dark:text-gray-300">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2 text-nigeria-green/70 dark:text-nigeria-green-light/70" />
-              <span>{formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}</span>
-            </div>
-            <div className="flex items-center">
-              <MapPin className="h-4 w-4 mr-2 text-nigeria-accent/70 dark:text-nigeria-accent-light/70" />
-              <span className="truncate">
-                {tournament.location}
-                {tournament.city && `, ${tournament.city}`}
-                {tournament.state && `, ${tournament.state}`}
-              </span>
-            </div>
-            {tournament.participants !== undefined && (
-              <div className="flex items-center">
-                <Users className="h-4 w-4 mr-2 text-nigeria-yellow/70 dark:text-nigeria-yellow-light/70" />
-                <span>{tournament.participants} players</span>
-              </div>
+          <span
+            className={cn(
+              "px-2 py-1 text-xs font-medium rounded-full",
+              getStatusColorClass(tournament.status)
             )}
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-blue-500/70 dark:text-blue-400/70" />
-              <span>{tournament.timeControl}, {tournament.rounds} rounds</span>
-            </div>
-            {tournament.prize && (
-              <div className="flex items-center">
-                <Award className="h-4 w-4 mr-2 text-yellow-500/70 dark:text-yellow-400/70" />
-                <span>{tournament.prize}</span>
-              </div>
-            )}
+          >
+            {getStatus(tournament.status)}
+          </span>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            <span>
+              {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
+            </span>
           </div>
-          
-          {tournament.description && (
-            <p className="mb-4 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-              {tournament.description}
-            </p>
-          )}
-          
-          <div className={cn(
-            "flex mt-5",
-            isMobile ? "flex-col space-y-2" : "space-x-2"
-          )}>
-            <Button
-              variant="default"
-              size={isMobile ? "sm" : "default"}
-              className={cn(
-                "flex-1 bg-nigeria-green hover:bg-nigeria-green-dark text-white",
-                "dark:bg-nigeria-green-light dark:hover:bg-nigeria-green",
-                "flex items-center justify-center",
-                "transition-all duration-300 ease-in-out"
-              )}
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.href = `/tournament/${tournament.id}`;
-              }}
-            >
-              View Details
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-            
-            {tournament.status === 'upcoming' && tournament.registrationOpen && onRegister && (
-              <Button
-                variant="outline"
-                size={isMobile ? "sm" : "default"}
-                className={cn(
-                  "flex-1 border-nigeria-yellow text-nigeria-green",
-                  "hover:bg-nigeria-yellow/10 dark:border-nigeria-yellow dark:text-nigeria-green-light",
-                  "transition-all duration-300 ease-in-out"
-                )}
-                onClick={handleRegisterClick}
-              >
-                Register
-              </Button>
-            )}
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <MapPin className="h-4 w-4 mr-2" />
+            <span>{tournament.location}</span>
+          </div>
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <Users className="h-4 w-4 mr-2" />
+            <span>{tournament.participants || "0"} Participants</span>
+          </div>
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <Trophy className="h-4 w-4 mr-2" />
+            <span>{tournament.rounds} Rounds</span>
+          </div>
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <Clock className="h-4 w-4 mr-2" />
+            <span>{tournament.timeControl}</span>
           </div>
         </div>
+
+        <div className="flex space-x-2">
+          {onClickView && (
+            <Button 
+              variant="default" 
+              size="sm"
+              onClick={onClickView} 
+              className="w-full"
+            >
+              View
+            </Button>
+          )}
+          {onClickEdit && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onClickEdit} 
+              className="w-full"
+            >
+              Edit
+            </Button>
+          )}
+          {onClickDelete && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onClickDelete} 
+              className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+            >
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
-    </Link>
+    </div>
   );
 };
 

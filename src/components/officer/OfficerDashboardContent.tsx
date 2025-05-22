@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { OfficerDashboardProvider, useDashboard } from "@/contexts/officer/OfficerDashboardContext"; // Added useDashboard
+import { OfficerDashboardProvider, useDashboard } from "@/contexts/officer/OfficerDashboardContext";
 import OfficerDashboardTabs from "./OfficerDashboardTabs";
 import { OfficerDashboardLoading } from "./dashboard/OfficerDashboardLoading";
 import { OfficerDashboardError } from "./dashboard/OfficerDashboardError";
@@ -11,20 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 const OfficerDashboardContent: React.FC = () => {
   const { 
     isLoading: isDataActuallyLoading, 
-    errorMessage: actualDataError, 
-    loadAllData, // For retry
-    hasError // Directly reflects if an error occurred during data loading
+    errorMessage: actualDataError,
+    refreshDashboard: loadAllData, // Renamed to match expected prop
+    hasError 
   } = useDashboard();
 
   const {
-    initialLoadComplete, // This will be true when isDataActuallyLoading is false and no error
+    initialLoadComplete,
     loadingProgress,
-    // loadingFailed, // Now derived from `hasError` or `actualDataError`
-    isLoadingSyncing, // This reflects the prop passed to useOfficerDashboardLoading
-    // handleRetry: handleLoadingRetry, // Renamed to avoid conflict
-    // errorDetails, // Now `actualDataError`
-    // forceComplete // Simplified, may not be needed as context drives completion
-  } = useOfficerDashboardLoading({ // Pass props here
+    isLoadingSyncing,
+  } = useOfficerDashboardLoading({
     isDataLoading: isDataActuallyLoading, 
     dataError: actualDataError 
   });
@@ -53,17 +49,12 @@ const OfficerDashboardContent: React.FC = () => {
       setHasShownLoadingOnce(false); // Reset for next potential full reload
     }
   }, [initialLoadComplete, isDataActuallyLoading, actualDataError, toast, hasShownLoadingOnce]);
-  
-  // The complex timeout-based forceComplete logic is removed as the loading state
-  // is now directly driven by `isDataActuallyLoading` from the context.
 
   // Display loading indicator if data is actually loading OR 
   // if it's the very first render and initialLoadComplete is not yet true (to show loader briefly)
   if (isDataActuallyLoading || (!initialLoadComplete && !actualDataError)) {
     return <OfficerDashboardLoading 
       loadingProgress={loadingProgress} 
-      // errorMessage={actualDataError} // Error is handled by the next block
-      // onRetry={loadAllData} // Retry is on the error component
     />;
   }
   
@@ -79,11 +70,9 @@ const OfficerDashboardContent: React.FC = () => {
   // If loading is complete and no errors
   if (initialLoadComplete && !hasError && !actualDataError) {
     return (
-      <OfficerDashboardProvider> {/* This Provider might be redundant if useDashboard is already from a higher Provider */}
-        <div className="p-4">
-          <OfficerDashboardTabs />
-        </div>
-      </OfficerDashboardProvider>
+      <div className="p-4">
+        <OfficerDashboardTabs />
+      </div>
     );
   }
 

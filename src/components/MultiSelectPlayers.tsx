@@ -1,271 +1,191 @@
 
-import { useState, useEffect } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription,
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import React, { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Player } from "@/lib/mockData"; // Import only the type
-import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
+import { Search, Check } from "lucide-react";
+import { Player } from "@/lib/mockData";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
-
-import PlayerSearchInput from "@/components/players/PlayerSearchInput";
-import SelectedPlayersList from "@/components/players/SelectedPlayersList";
-import PlayerSelectionList from "@/components/players/PlayerSelectionList";
 
 interface MultiSelectPlayersProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onPlayersSelected: (players: Player[]) => void;
   excludeIds?: string[];
-  hideDialog?: boolean; 
   includePendingPlayers?: boolean;
 }
 
-export const MultiSelectPlayers = ({ 
-  isOpen, 
-  onOpenChange, 
+const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
+  isOpen,
+  onOpenChange,
   onPlayersSelected,
   excludeIds = [],
-  hideDialog = false,
-  includePendingPlayers = true
-}: MultiSelectPlayersProps) => {
-  const { toast } = useToast();
+  includePendingPlayers = false,
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [players, setPlayers] = useState<Player[]>([]);
-  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Fetch all players, regardless of status
+  
+  // Fetch players when the dialog opens
   useEffect(() => {
-    const fetchPlayers = async () => {
-      if (!isOpen) return;
-      
-      setIsLoading(true);
-      try {
-        // Force refresh player list every time the dialog opens
-        const allPlayers = await getAllPlayersFromSupabase({});
-        console.log("All players in system:", allPlayers.length);
-        
-        // Filter players based on includePendingPlayers flag
-        const statusFilteredPlayers = includePendingPlayers 
-          ? allPlayers 
-          : allPlayers.filter(player => player.status === 'approved');
-        
-        // Get players excluding those already in the tournament
-        const availablePlayers = statusFilteredPlayers.filter(player => {
-          return !excludeIds.includes(player.id);
-        });
-        
-        console.log("Available players for selection:", availablePlayers.length);
-        
-        if (availablePlayers.length === 0) {
-          if (allPlayers.length === 0) {
-            toast({
-              title: "No players available",
-              description: "There are no players in the system yet.",
-            });
-          } else if (statusFilteredPlayers.length === 0) {
-            toast({
-              title: "No approved players",
-              description: "There are no approved players in the system yet.",
-            });
-          } else {
-            toast({
-              title: "No available players",
-              description: "All players are already in this tournament.",
-              variant: "destructive"
-            });
-          }
-        }
-        
-        setPlayers(availablePlayers);
-        setFilteredPlayers(availablePlayers);
-      } catch (error) {
-        console.error("Error fetching players:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load players. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     if (isOpen) {
+      const fetchPlayers = async () => {
+        setIsLoading(true);
+        try {
+          // Use the Supabase service to get players
+          const fetchedPlayers = await getAllPlayersFromSupabase({
+            status: includePendingPlayers ? undefined : 'approved'
+          });
+          
+          // Filter out already selected players by ID
+          const filteredPlayers = fetchedPlayers.filter(
+            player => !excludeIds.includes(player.id)
+          );
+          
+          setPlayers(filteredPlayers);
+        } catch (error) {
+          console.error("Error fetching players:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
       fetchPlayers();
-    }
-  }, [excludeIds, isOpen, toast, includePendingPlayers]);
-
-  // Reset selections when dialog closes
-  useEffect(() => {
-    if (!isOpen) {
       setSelectedPlayers([]);
       setSearchQuery("");
     }
-  }, [isOpen]);
-
+  }, [isOpen, excludeIds, includePendingPlayers]);
+  
   // Filter players based on search query
-  useEffect(() => {
-    if (!searchQuery) {
-      setFilteredPlayers(players);
-      return;
-    }
+  const filteredPlayers = players.filter(player => {
+    if (!searchQuery) return true;
     
-    const lowerQuery = searchQuery.toLowerCase();
-    
-    const filtered = players.filter(player => 
-      player.name.toLowerCase().includes(lowerQuery) || 
-      (player.title && player.title.toLowerCase().includes(lowerQuery)) ||
-      (player.club && player.club.toLowerCase().includes(lowerQuery)) ||
-      (player.state && player.state.toLowerCase().includes(lowerQuery)) ||
-      player.rating.toString().includes(lowerQuery)
+    const query = searchQuery.toLowerCase();
+    return (
+      player.name.toLowerCase().includes(query) ||
+      (player.title && player.title.toLowerCase().includes(query)) ||
+      String(player.rating).includes(query)
     );
-    
-    setFilteredPlayers(filtered);
-  }, [searchQuery, players]);
-
-  const handleSelectPlayer = (player: Player) => {
+  });
+  
+  // Toggle player selection
+  const togglePlayerSelection = (player: Player) => {
     setSelectedPlayers(prev => {
-      if (prev.some(p => p.id === player.id)) {
-        // Remove player if already selected
+      const isSelected = prev.some(p => p.id === player.id);
+      
+      if (isSelected) {
         return prev.filter(p => p.id !== player.id);
       } else {
-        // Add player to selection
         return [...prev, player];
       }
     });
   };
-
-  const handleConfirmSelection = () => {
+  
+  // Handle confirmation
+  const handleConfirm = () => {
     onPlayersSelected(selectedPlayers);
     onOpenChange(false);
   };
-
-  const handleCancel = () => {
-    onOpenChange(false);
-  };
   
-  // If hideDialog is true, render without the Dialog wrapper
-  if (hideDialog) {
-    return (
-      <div className="flex flex-col h-full">
-        {/* Search input */}
-        <PlayerSearchInput 
-          searchQuery={searchQuery} 
-          setSearchQuery={setSearchQuery} 
-        />
-        
-        {/* Selected players */}
-        <div className="mt-4">
-          <SelectedPlayersList 
-            selectedPlayers={selectedPlayers}
-            onRemovePlayer={handleSelectPlayer}
-          />
-        </div>
-        
-        {/* Player selection list */}
-        <div className="mt-4 flex-grow">
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          ) : (
-            <PlayerSelectionList 
-              filteredPlayers={filteredPlayers}
-              selectedPlayers={selectedPlayers}
-              onSelectPlayer={handleSelectPlayer}
-            />
-          )}
-        </div>
-        
-        {players.length === 0 && !isLoading && (
-          <div className="text-center py-6">
-            <p className="text-gray-500 dark:text-gray-400">
-              No available players found. Please import players or create new ones.
-            </p>
-          </div>
-        )}
-        
-        {/* Fixed position footer for buttons */}
-        <div className="mt-6 pt-4 border-t sticky bottom-0 bg-white dark:bg-gray-900 flex justify-end gap-2">
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConfirmSelection} 
-            disabled={selectedPlayers.length === 0}
-          >
-            Add {selectedPlayers.length} Player{selectedPlayers.length !== 1 ? 's' : ''}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Check if a player is selected
+  const isPlayerSelected = (playerId: string) => {
+    return selectedPlayers.some(player => player.id === playerId);
+  };
 
-  // Default to using Dialog wrapper
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Select Players</DialogTitle>
-          <DialogDescription>
-            Select one or more players to add to your tournament.
-          </DialogDescription>
+          <DialogTitle>Add Players to Tournament</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 flex-grow overflow-hidden flex flex-col">
-          <PlayerSearchInput 
-            searchQuery={searchQuery} 
-            setSearchQuery={setSearchQuery} 
+        <div className="relative mt-2">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <Input
+            type="search"
+            placeholder="Search players..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
           />
-          
-          <div className="flex-shrink-0">
-            <SelectedPlayersList 
-              selectedPlayers={selectedPlayers}
-              onRemovePlayer={handleSelectPlayer}
-            />
-          </div>
-          
-          <div className="flex-grow overflow-hidden">
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-              </div>
-            ) : (
-              <PlayerSelectionList 
-                filteredPlayers={filteredPlayers}
-                selectedPlayers={selectedPlayers}
-                onSelectPlayer={handleSelectPlayer}
-              />
-            )}
-          </div>
-          
-          {players.length === 0 && !isLoading && (
-            <div className="text-center py-6">
-              <p className="text-gray-500 dark:text-gray-400">
-                No available players found. Please import players or create new ones.
-              </p>
+        </div>
+        
+        <div className="max-h-[400px] overflow-y-auto mt-2">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredPlayers.length > 0 ? (
+            <div className="space-y-1">
+              {filteredPlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => togglePlayerSelection(player)}
+                  className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-colors ${
+                    isPlayerSelected(player.id)
+                      ? "bg-primary/10 dark:bg-primary/20"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      {player.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-medium flex items-center gap-1">
+                        {player.title && (
+                          <span className="text-amber-500 text-sm">{player.title}</span>
+                        )}
+                        {player.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Rating: {player.rating}
+                        {player.status === 'pending' && (
+                          <span className="ml-2 text-amber-500">(Pending approval)</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {isPlayerSelected(player.id) && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-gray-500 dark:text-gray-400">
+              {searchQuery ? (
+                <p>No players match your search.</p>
+              ) : (
+                <p>No available players found.</p>
+              )}
             </div>
           )}
         </div>
         
-        <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-white dark:bg-gray-900">
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConfirmSelection} 
-            disabled={selectedPlayers.length === 0}
-          >
-            Add {selectedPlayers.length} Player{selectedPlayers.length !== 1 ? 's' : ''}
-          </Button>
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {selectedPlayers.length} players selected
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirm} 
+              disabled={selectedPlayers.length === 0}
+            >
+              Add Selected
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
