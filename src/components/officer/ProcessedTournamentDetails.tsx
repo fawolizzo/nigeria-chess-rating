@@ -1,200 +1,111 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Tournament, getAllPlayers, Player } from "@/lib/mockData";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { Tournament, Player } from "@/lib/mockData";
+import { getAllPlayers } from "@/services/mockServices";
 
 interface ProcessedTournamentDetailsProps {
-  tournament: Tournament | null;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  tournament: Tournament;
+  onClose: () => void;
 }
 
-const ProcessedTournamentDetails = ({ 
-  tournament, 
-  isOpen, 
-  onOpenChange 
-}: ProcessedTournamentDetailsProps) => {
+const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ tournament, onClose }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    if (tournament && isOpen) {
-      // Fetch all players
-      const allPlayers = getAllPlayers();
-      
-      // Filter players who participated in this tournament
-      const tournamentPlayerIds = tournament.processedPlayerIds || [];
-      const tournamentPlayers = allPlayers.filter(player => 
-        tournamentPlayerIds.includes(player.id)
-      );
-      
-      setPlayers(tournamentPlayers);
-      setLoading(false);
-    }
-  }, [tournament, isOpen]);
-  
-  if (!tournament) return null;
-  
-  // Find player rating change for this tournament
-  const getPlayerRatingChange = (playerId: string) => {
-    const player = players.find(p => p.id === playerId);
-    if (!player) return 0;
+    const loadPlayers = async () => {
+      try {
+        setLoading(true);
+        const allPlayers = await getAllPlayers();
+        
+        // Get participating players if tournament has playerIds
+        const participatingPlayers = tournament.playerIds
+          ? allPlayers.filter(player => tournament.playerIds?.includes(player.id))
+          : [];
+        
+        setPlayers(participatingPlayers);
+      } catch (error) {
+        console.error("Error loading players:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    const tournamentResult = player.tournamentResults.find(
-      result => result.tournamentId === tournament.id
-    );
-    
-    return tournamentResult?.ratingChange || 0;
-  };
-  
-  // Get player's position in tournament
-  const getPlayerPosition = (playerId: string) => {
-    const player = players.find(p => p.id === playerId);
-    if (!player) return "-";
-    
-    const tournamentResult = player.tournamentResults.find(
-      result => result.tournamentId === tournament.id
-    );
-    
-    return tournamentResult?.position || "-";
-  };
+    loadPlayers();
+  }, [tournament]);
   
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>{tournament.name} - Results</DialogTitle>
-        </DialogHeader>
-        
-        <Tabs defaultValue="standings" className="mt-4">
-          <TabsList>
-            <TabsTrigger value="standings">Final Standings</TabsTrigger>
-            <TabsTrigger value="details">Tournament Details</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="standings" className="space-y-4">
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Final Standings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Player</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Rating Change</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {players
-                        .sort((a, b) => {
-                          const posA = Number(getPlayerPosition(a.id)) || 999;
-                          const posB = Number(getPlayerPosition(b.id)) || 999;
-                          return posA - posB;
-                        })
-                        .map(player => {
-                          const ratingChange = getPlayerRatingChange(player.id);
-                          
-                          return (
-                            <TableRow key={player.id}>
-                              <TableCell>{getPlayerPosition(player.id)}</TableCell>
-                              <TableCell>
-                                <div className="font-medium">
-                                  {player.title && (
-                                    <span className="text-gold-dark dark:text-gold-light mr-1">
-                                      {player.title}
-                                    </span>
-                                  )}
-                                  {player.name}
-                                </div>
-                              </TableCell>
-                              <TableCell>{player.rating}</TableCell>
-                              <TableCell>
-                                {ratingChange !== 0 ? (
-                                  <Badge className={`flex items-center gap-1 ${
-                                    ratingChange > 0 
-                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                  }`}>
-                                    {ratingChange > 0 ? (
-                                      <ArrowUp className="h-3 w-3" />
-                                    ) : ratingChange < 0 ? (
-                                      <ArrowDown className="h-3 w-3" />
-                                    ) : (
-                                      <Minus className="h-3 w-3" />
-                                    )}
-                                    {Math.abs(ratingChange)}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400">
-                                    <Minus className="h-3 w-3 mr-1" />
-                                    0
-                                  </Badge>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="details">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tournament Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Dates</h3>
-                    <p>{new Date(tournament.startDate).toLocaleDateString()} - {new Date(tournament.endDate).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Location</h3>
-                    <p>{tournament.location}, {tournament.city}, {tournament.state}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Time Control</h3>
-                    <p>{tournament.timeControl}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Rounds</h3>
-                    <p>{tournament.rounds}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Processed On</h3>
-                    <p>{tournament.processingDate ? new Date(tournament.processingDate).toLocaleString() : "N/A"}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Participants</h3>
-                    <p>{players.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-        
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <div className="space-y-4">
+      <div className="border-b pb-4">
+        <h2 className="text-xl font-semibold">{tournament.name}</h2>
+        <p className="text-sm text-gray-500">
+          {new Date(tournament.startDate).toLocaleDateString()} to {new Date(tournament.endDate).toLocaleDateString()}
+        </p>
+      </div>
+      
+      <div className="space-y-2">
+        <h3 className="font-medium">Tournament Information</h3>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>Status: <span className="font-medium">{tournament.status}</span></div>
+          <div>Type: <span className="font-medium">{tournament.type || "Standard"}</span></div>
+          <div>Rounds: <span className="font-medium">{tournament.rounds}</span></div>
+          <div>Location: <span className="font-medium">{tournament.location}, {tournament.state}</span></div>
+        </div>
+      </div>
+      
+      {loading ? (
+        <div className="py-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-500">Loading player data...</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <h3 className="font-medium">Participating Players ({players.length})</h3>
+          {players.length === 0 ? (
+            <p className="text-sm text-gray-500">No players registered for this tournament.</p>
+          ) : (
+            <div className="border rounded-md overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Initial Rating</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Final Rating</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                  {players.map(player => {
+                    const playerResult = tournament.results?.find(r => r.playerId === player.id);
+                    const initialRating = playerResult?.initialRating || player.rating;
+                    const finalRating = playerResult?.finalRating || player.rating;
+                    const ratingChange = finalRating - initialRating;
+                    
+                    return (
+                      <tr key={player.id}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{player.name}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{initialRating}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{finalRating}</td>
+                        <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
+                          ratingChange > 0 ? 'text-green-600' : ratingChange < 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {ratingChange > 0 ? `+${ratingChange}` : ratingChange}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+      
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={onClose}>Close</Button>
+      </div>
+    </div>
   );
 };
 

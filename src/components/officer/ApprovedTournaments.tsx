@@ -1,173 +1,101 @@
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import React, { useState } from "react";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, AlertCircle, CheckCircle, Trophy } from "lucide-react";
+import { Trophy, ChevronRight, Calendar } from "lucide-react";
+import { Tournament } from "@/lib/mockData";
 import { useNavigate } from "react-router-dom";
-import { getAllTournaments, Tournament } from "@/lib/mockData";
-import TournamentRatingDialog from "./TournamentRatingDialog";
-import { useToast } from "@/components/ui/use-toast";
+import { formatDate } from "@/utils/dateUtils";
+import { getAllTournaments } from "@/services/mockServices";
 
 interface ApprovedTournamentsProps {
-  completedTournaments?: Tournament[];
-  onTournamentProcessed?: () => void;
+  completedTournaments: Tournament[];
+  onTournamentProcessed: () => void;
 }
 
 const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({ 
-  completedTournaments,
+  completedTournaments, 
   onTournamentProcessed 
 }) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
-  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [isViewAllVisible, setIsViewAllVisible] = useState(true);
   
-  useEffect(() => {
-    if (completedTournaments) {
-      setTournaments(completedTournaments);
-    } else {
-      // Load all tournaments and filter by status if no tournaments are provided
-      const allTournaments = getAllTournaments();
-      const approvedAndCompletedTournaments = allTournaments.filter(
-        t => t.status === "completed" || t.status === "processed" || t.status === "upcoming" || t.status === "ongoing"
-      );
-      setTournaments(approvedAndCompletedTournaments);
-    }
-  }, [completedTournaments]);
-  
-  const getStatusColorClass = (status: string) => {
-    switch (status) {
-      case "processed": return "bg-purple-500";
-      case "completed": return "bg-amber-500";
-      case "approved": return "bg-green-500";
-      case "ongoing": return "bg-blue-500";
-      case "upcoming": return "bg-teal-500";
-      default: return "bg-gray-500";
-    }
-  };
-  
-  const handleProcessRatings = (tournament: Tournament) => {
-    setSelectedTournament(tournament);
-    setIsRatingDialogOpen(true);
-  };
-  
-  const handleRatingProcessed = () => {
-    if (onTournamentProcessed) {
-      onTournamentProcessed();
-    }
-    
-    toast({
-      title: "Ratings Processed",
-      description: "The tournament ratings have been processed successfully.",
-    });
-  };
-  
-  const handleViewTournament = (tournamentId: string) => {
+  const handleNavigateToTournament = (tournamentId: string) => {
     navigate(`/tournament/${tournamentId}`);
   };
   
-  return (
-    <div className="space-y-6">
+  const viewAllTournaments = () => {
+    setIsViewAllVisible(false);
+    // You can implement viewing all tournaments in a more elaborate way
+  };
+  
+  const displayedTournaments = isViewAllVisible ? completedTournaments.slice(0, 3) : completedTournaments;
+  
+  if (completedTournaments.length === 0) {
+    return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Tournaments</CardTitle>
-          <CardDescription>
-            View and manage approved, completed, and processed tournaments
-          </CardDescription>
+          <CardTitle className="text-lg">Completed Tournaments</CardTitle>
+          <CardDescription>There are no completed tournaments to review</CardDescription>
         </CardHeader>
-        <CardContent>
-          {tournaments.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tournament</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tournaments.map(tournament => (
-                  <TableRow key={tournament.id}>
-                    <TableCell className="font-medium">{tournament.name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {tournament.startDate} - {tournament.endDate}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {tournament.location}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColorClass(tournament.status)}>
-                        {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleViewTournament(tournament.id)}
-                        >
-                          View
-                        </Button>
-                        
-                        {tournament.status === "completed" && (
-                          <Button 
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleProcessRatings(tournament)}
-                          >
-                            <Trophy className="h-4 w-4 mr-1" />
-                            Process Ratings
-                          </Button>
-                        )}
-                        
-                        {tournament.status === "processed" && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-purple-600 border-purple-200"
-                            disabled
-                          >
-                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                            Processed
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-10 flex flex-col items-center justify-center">
-              <AlertCircle className="h-8 w-8 text-gray-400 mb-2" />
-              <h3 className="text-lg font-medium text-gray-600">No Tournaments</h3>
-              <p className="text-gray-500 text-sm mt-1">
-                There are no tournaments that require your attention at this time.
-              </p>
-            </div>
-          )}
+        <CardContent className="text-center py-8 text-muted-foreground">
+          <p>Tournaments that have been completed will appear here</p>
         </CardContent>
       </Card>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Completed Tournaments</h2>
       
-      {selectedTournament && (
-        <TournamentRatingDialog
-          tournament={selectedTournament}
-          isOpen={isRatingDialogOpen}
-          onOpenChange={setIsRatingDialogOpen}
-          onProcessed={handleRatingProcessed}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {displayedTournaments.map((tournament) => (
+          <Card key={tournament.id} className="overflow-hidden">
+            <div className="bg-primary/10 px-4 py-2 flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">{tournament.type || "Standard"} Tournament</span>
+            </div>
+            
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{tournament.name}</CardTitle>
+              <CardDescription className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="pb-2">
+              <div className="text-sm">
+                <div>Location: {tournament.location}</div>
+                <div>Rounds: {tournament.rounds}</div>
+                <div>Status: <span className="font-medium text-amber-600">{tournament.status}</span></div>
+              </div>
+            </CardContent>
+            
+            <CardFooter className="pt-0">
+              <Button variant="outline" className="w-full" 
+                onClick={() => handleNavigateToTournament(tournament.id)}>
+                View Details <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      
+      {isViewAllVisible && completedTournaments.length > 3 && (
+        <div className="text-center">
+          <Button variant="link" onClick={viewAllTournaments}>
+            View all {completedTournaments.length} tournaments
+          </Button>
+        </div>
       )}
     </div>
   );

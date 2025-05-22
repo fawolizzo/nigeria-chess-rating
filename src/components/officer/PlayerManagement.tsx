@@ -10,20 +10,19 @@ import {
 } from "@/components/ui/dialog";
 import { PlusCircle, RefreshCcw, Upload, UserPlus, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  getAllPlayers, 
-  getAllUsers,
-  addPlayer, 
-  updatePlayer, 
-  Player,
-  User
-} from "@/lib/mockData";
+import { Player, User } from "@/lib/mockData";
 import FileUploadButton from "@/components/players/FileUploadButton";
 import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateUniquePlayerID } from "@/lib/playerDataUtils";
+import { 
+  getAllPlayers, 
+  getAllUsers, 
+  addPlayer, 
+  updatePlayer 
+} from "@/services/mockServices";
 
 interface PlayerManagementProps {
   onPlayerApproval?: () => void;
@@ -43,24 +42,30 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const isMobile = useIsMobile();
   
   useEffect(() => {
-    const fetchPlayers = () => {
-      const allPlayers = getAllPlayers();
-      setPlayers(allPlayers);
-      setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
-      setApprovedPlayers(allPlayers.filter(p => p.status === "approved"));
+    const fetchData = async () => {
+      try {
+        const allPlayers = await getAllPlayers();
+        setPlayers(allPlayers);
+        setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
+        setApprovedPlayers(allPlayers.filter(p => p.status === "approved"));
+        
+        const allUsers = await getAllUsers();
+        const pendingOrgUsers = allUsers.filter(
+          user => user.role === 'tournament_organizer' && user.status === 'pending'
+        );
+        setPendingOrganizers(pendingOrgUsers);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load player data.",
+          variant: "destructive"
+        });
+      }
     };
     
-    const fetchOrganizers = () => {
-      const allUsers = getAllUsers();
-      const pendingOrgUsers = allUsers.filter(
-        user => user.role === 'tournament_organizer' && user.status === 'pending'
-      );
-      setPendingOrganizers(pendingOrgUsers);
-    };
-    
-    fetchPlayers();
-    fetchOrganizers();
-  }, [refreshKey]);
+    fetchData();
+  }, [refreshKey, toast]);
   
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
@@ -70,148 +75,178 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     });
   };
   
-  const generateNcrId = () => {
-    const randomPart = Math.floor(10000 + Math.random() * 90000);
-    const timestamp = Date.now().toString().slice(-5);
-    return `NCR${randomPart}${timestamp}`;
-  };
-  
-  const handleCreatePlayer = (playerData: any) => {
-    // Generate unique NCR ID
-    const ncrId = generateUniquePlayerID();
-    
-    const newPlayer: Player = {
-      id: ncrId,
-      name: playerData.fullName,
-      rating: playerData.rating || 800,
-      gender: playerData.gender || 'M',
-      state: playerData.state || '',
-      city: playerData.city || '',
-      gamesPlayed: 0,
-      status: playerData.status || 'pending',
-      tournamentResults: [],
-      ratingHistory: [{
-        date: new Date().toISOString(),
-        rating: playerData.rating || 800,
-        reason: "Initial rating"
-      }]
-    };
-    
-    addPlayer(newPlayer);
-    setRefreshKey(prev => prev + 1);
-    toast({
-      title: "Player Created",
-      description: `${playerData.fullName} has been created successfully with ID: ${ncrId}`,
-    });
-  };
-  
-  const handleApprovePlayer = (playerId: string) => {
-    const playerToUpdate = players.find(p => p.id === playerId);
-    if (playerToUpdate) {
-      const updatedPlayer = {
-        ...playerToUpdate,
-        status: 'approved' as const
-      };
-      updatePlayer(updatedPlayer);
-      setRefreshKey(prev => prev + 1);
-      toast({
-        title: "Player Approved",
-        description: "Player has been approved successfully",
-        variant: "default",
-      });
-      
-      if (onPlayerApproval) {
-        onPlayerApproval();
-      }
-    }
-  };
-  
-  const handleRejectPlayer = (playerId: string) => {
-    const playerToUpdate = players.find(p => p.id === playerId);
-    if (playerToUpdate) {
-      const updatedPlayer = {
-        ...playerToUpdate,
-        status: 'rejected' as const
-      };
-      updatePlayer(updatedPlayer);
-      setRefreshKey(prev => prev + 1);
-      toast({
-        title: "Player Rejected",
-        description: "Player has been rejected",
-        variant: "destructive",
-      });
-      
-      if (onPlayerApproval) {
-        onPlayerApproval();
-      }
-    }
-  };
-  
-  const handleFileUpload = (players: any[]) => {
-    setUploadedPlayers(players);
-    setUploadSuccess(true);
-    
-    const createdPlayers = players.map(player => {
-      // Generate unique NCR ID for each imported player
-      const ncrId = player.id || generateUniquePlayerID();
+  const handleCreatePlayer = async (playerData: any) => {
+    try {
+      // Generate unique NCR ID
+      const ncrId = generateUniquePlayerID();
       
       const newPlayer: Player = {
         id: ncrId,
-        name: player.name,
-        rating: player.rating || 900,
-        gender: player.gender || 'M',
-        state: player.state || '',
-        city: player.city || '',
-        gamesPlayed: 30,
-        status: 'approved',
-        ratingStatus: 'established',
+        name: playerData.fullName,
+        rating: playerData.rating || 800,
+        gender: playerData.gender || 'M',
+        state: playerData.state || '',
+        city: playerData.city || '',
+        gamesPlayed: 0,
+        status: playerData.status || 'pending',
         tournamentResults: [],
         ratingHistory: [{
           date: new Date().toISOString(),
-          rating: player.rating || 900,
-          reason: "Initial rating with +100 bonus"
+          rating: playerData.rating || 800,
+          reason: "Initial rating"
         }]
       };
       
-      if (player.title) {
-        newPlayer.title = player.title;
+      await addPlayer(newPlayer);
+      setRefreshKey(prev => prev + 1);
+      toast({
+        title: "Player Created",
+        description: `${playerData.fullName} has been created successfully with ID: ${ncrId}`,
+      });
+    } catch (error) {
+      console.error("Error creating player:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create player.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleApprovePlayer = async (playerId: string) => {
+    try {
+      const playerToUpdate = players.find(p => p.id === playerId);
+      if (playerToUpdate) {
+        const updatedPlayer = {
+          ...playerToUpdate,
+          status: 'approved' as const
+        };
+        await updatePlayer(updatedPlayer);
+        setRefreshKey(prev => prev + 1);
+        toast({
+          title: "Player Approved",
+          description: "Player has been approved successfully",
+          variant: "default",
+        });
+        
+        if (onPlayerApproval) {
+          onPlayerApproval();
+        }
       }
-      
-      if (player.rapidRating) {
-        newPlayer.rapidRating = player.rapidRating;
-        newPlayer.rapidGamesPlayed = 30;
-        newPlayer.rapidRatingStatus = 'established';
-        newPlayer.rapidRatingHistory = [{
-          date: new Date().toISOString(),
-          rating: player.rapidRating,
-          reason: "Initial rating with +100 bonus"
-        }];
+    } catch (error) {
+      console.error("Error approving player:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve player.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleRejectPlayer = async (playerId: string) => {
+    try {
+      const playerToUpdate = players.find(p => p.id === playerId);
+      if (playerToUpdate) {
+        const updatedPlayer = {
+          ...playerToUpdate,
+          status: 'rejected' as const
+        };
+        await updatePlayer(updatedPlayer);
+        setRefreshKey(prev => prev + 1);
+        toast({
+          title: "Player Rejected",
+          description: "Player has been rejected",
+          variant: "destructive",
+        });
+        
+        if (onPlayerApproval) {
+          onPlayerApproval();
+        }
       }
+    } catch (error) {
+      console.error("Error rejecting player:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reject player.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleFileUpload = async (players: any[]) => {
+    try {
+      setUploadedPlayers(players);
+      setUploadSuccess(true);
       
-      if (player.blitzRating) {
-        newPlayer.blitzRating = player.blitzRating;
-        newPlayer.blitzGamesPlayed = 30;
-        newPlayer.blitzRatingStatus = 'established';
-        newPlayer.blitzRatingHistory = [{
-          date: new Date().toISOString(),
-          rating: player.blitzRating,
-          reason: "Initial rating with +100 bonus"
-        }];
-      }
+      const createdPlayers = await Promise.all(players.map(async player => {
+        // Generate unique NCR ID for each imported player
+        const ncrId = player.id || generateUniquePlayerID();
+        
+        const newPlayer: Player = {
+          id: ncrId,
+          name: player.name,
+          rating: player.rating || 900,
+          gender: player.gender || 'M',
+          state: player.state || '',
+          city: player.city || '',
+          gamesPlayed: 30,
+          status: 'approved',
+          ratingStatus: 'established',
+          tournamentResults: [],
+          ratingHistory: [{
+            date: new Date().toISOString(),
+            rating: player.rating || 900,
+            reason: "Initial rating with +100 bonus"
+          }]
+        };
+        
+        if (player.title) {
+          newPlayer.title = player.title;
+        }
+        
+        if (player.rapidRating) {
+          newPlayer.rapidRating = player.rapidRating;
+          newPlayer.rapidGamesPlayed = 30;
+          newPlayer.rapidRatingStatus = 'established';
+          newPlayer.rapidRatingHistory = [{
+            date: new Date().toISOString(),
+            rating: player.rapidRating,
+            reason: "Initial rating with +100 bonus"
+          }];
+        }
+        
+        if (player.blitzRating) {
+          newPlayer.blitzRating = player.blitzRating;
+          newPlayer.blitzGamesPlayed = 30;
+          newPlayer.blitzRatingStatus = 'established';
+          newPlayer.blitzRatingHistory = [{
+            date: new Date().toISOString(),
+            rating: player.blitzRating,
+            reason: "Initial rating with +100 bonus"
+          }];
+        }
+        
+        await addPlayer(newPlayer);
+        console.log("Created player:", newPlayer);
+        
+        return newPlayer;
+      }));
       
-      addPlayer(newPlayer);
-      console.log("Created player:", newPlayer);
+      setRefreshKey(prev => prev + 1);
       
-      return newPlayer;
-    });
-    
-    setRefreshKey(prev => prev + 1);
-    
-    toast({
-      title: "Upload Successful",
-      description: `${players.length} players have been uploaded and approved.`,
-      variant: "default",
-    });
+      toast({
+        title: "Upload Successful",
+        description: `${players.length} players have been uploaded and approved.`,
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error uploading players:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload players.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEditPlayer = (player: Player) => {

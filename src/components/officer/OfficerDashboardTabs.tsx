@@ -24,14 +24,13 @@ const OfficerDashboardTabs: React.FC = () => {
     isLoading
   } = useDashboard();
   
-  // This hook may not exist yet, but we'll use a placeholder to fix the build error
   const { 
-    syncDashboardData = () => {}, 
-    isSyncing = false, 
-    syncSuccess = false, 
-    lastSyncTime = new Date().toString(),
-    syncError = null
-  } = useOfficerDashboardSync ? useOfficerDashboardSync() : {};
+    syncDashboardData, 
+    isSyncing, 
+    syncSuccess, 
+    lastSyncTime, 
+    syncError 
+  } = useOfficerDashboardSync();
 
   // Use an effect to set mounted state to ensure consistent rendering
   useEffect(() => {
