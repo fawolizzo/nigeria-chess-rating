@@ -1,6 +1,6 @@
-
 import React from "react";
-import { Player, getTournamentById } from "@/lib/mockData";
+import { Player, TournamentResult } from "@/lib/mockData";
+import { getTournamentById } from "@/services/mockServices";
 import PerformanceChart from "@/components/PerformanceChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getKFactor } from "@/lib/ratingCalculation";

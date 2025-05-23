@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,28 +8,30 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface PlayersTabProps {
   tournamentId: string;
-  tournamentStatus: "upcoming" | "ongoing" | "completed" | "processed" | "pending" | "rejected" | "approved";
+  tournamentStatus: "pending" | "approved" | "rejected" | "upcoming" | "ongoing" | "completed" | "processed";
   registeredPlayers: Player[];
+  allPlayers: Player[]; // Add this line
+  playerIds: string[];
+  onCreatePlayer: () => void;
+  onAddPlayers: (selectedPlayers: Player[]) => void;
+  onRemovePlayer: (playerId: string) => void;
+  isProcessing: boolean;
   searchQuery: string;
   setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
-  onAddPlayers: (players: Player[]) => Promise<void>;
-  onRemovePlayer: (playerId: string) => Promise<void>;
-  onOpenCreatePlayer: () => void;
-  hasPendingPlayers: boolean;
-  isProcessing: boolean;
 }
 
 const PlayersTab = ({
   tournamentId,
   tournamentStatus,
   registeredPlayers,
-  searchQuery,
-  setSearchQuery,
+  allPlayers, // Add this line
+  playerIds,
+  onCreatePlayer,
   onAddPlayers,
   onRemovePlayer,
-  onOpenCreatePlayer,
-  hasPendingPlayers,
-  isProcessing
+  isProcessing,
+  searchQuery,
+  setSearchQuery
 }: PlayersTabProps) => {
   const [isSelectPlayersOpen, setIsSelectPlayersOpen] = React.useState(false);
   
@@ -73,7 +74,7 @@ const PlayersTab = ({
             <>
               <Button 
                 variant="outline" 
-                onClick={onOpenCreatePlayer} 
+                onClick={onCreatePlayer} 
                 disabled={isProcessing}
                 className="flex items-center gap-2"
               >

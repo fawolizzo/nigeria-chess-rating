@@ -60,7 +60,8 @@ export const addPlayer = async (player: Omit<Player, "id" | "ratingHistory" | "t
       city: player.city,
       status: player.status,
       gamesPlayed: player.gamesPlayed || 0,
-      phone: player.phone || "",
+      // Only include phone if it exists in the Player type
+      ...(player as any).phone ? { phone: (player as any).phone } : {},
     });
 
     if (supabasePlayer) {

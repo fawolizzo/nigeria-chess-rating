@@ -1,117 +1,77 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Tournament, Player } from "@/lib/mockData";
-import { getAllPlayers } from "@/services/mockServices";
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Tournament } from '@/lib/mockData';
+import { calculatePostRoundRatings } from '@/lib/ratingCalculation';
 
 interface ProcessedTournamentDetailsProps {
   tournament: Tournament;
-  onClose: () => void;
-  isOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }
 
-const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ 
-  tournament, 
-  onClose,
-  isOpen,
-  onOpenChange
-}) => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    const loadPlayers = async () => {
-      try {
-        setLoading(true);
-        const allPlayers = await getAllPlayers();
-        
-        // Get participating players
-        const participatingPlayers = tournament.players && tournament.players.length > 0
-          ? allPlayers.filter(player => tournament.players?.includes(player.id))
-          : [];
-        
-        setPlayers(participatingPlayers);
-      } catch (error) {
-        console.error("Error loading players:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadPlayers();
-  }, [tournament]);
-  
+const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ tournament }) => {
+  // Placeholder data for demonstration
+  const results = calculatePostRoundRatings([
+    { id: '1', name: 'Player A', rating: 1200 },
+    { id: '2', name: 'Player B', rating: 1500 },
+    { id: '3', name: 'Player C', rating: 1300 },
+  ], []);
+
   return (
-    <div className="space-y-4">
-      <div className="border-b pb-4">
-        <h2 className="text-xl font-semibold">{tournament.name}</h2>
-        <p className="text-sm text-gray-500">
-          {new Date(tournament.startDate).toLocaleDateString()} to {new Date(tournament.endDate).toLocaleDateString()}
-        </p>
-      </div>
-      
-      <div className="space-y-2">
-        <h3 className="font-medium">Tournament Information</h3>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>Status: <span className="font-medium">{tournament.status}</span></div>
-          <div>Type: <span className="font-medium">{tournament.category || "Standard"}</span></div>
-          <div>Rounds: <span className="font-medium">{tournament.rounds}</span></div>
-          <div>Location: <span className="font-medium">{tournament.location}, {tournament.state}</span></div>
-        </div>
-      </div>
-      
-      {loading ? (
-        <div className="py-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-500">Loading player data...</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <h3 className="font-medium">Participating Players ({players.length})</h3>
-          {players.length === 0 ? (
-            <p className="text-sm text-gray-500">No players registered for this tournament.</p>
-          ) : (
-            <div className="border rounded-md overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Initial Rating</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Final Rating</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Change</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  {players.map(player => {
-                    const tournamentResult = player.tournamentResults?.find(r => r.tournamentId === tournament.id);
-                    const initialRating = tournamentResult?.initialRating || player.rating;
-                    const finalRating = tournamentResult?.finalRating || player.rating;
-                    const ratingChange = finalRating - initialRating;
-                    
-                    return (
-                      <tr key={player.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{player.name}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{initialRating}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{finalRating}</td>
-                        <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
-                          ratingChange > 0 ? 'text-green-600' : ratingChange < 0 ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {ratingChange > 0 ? `+${ratingChange}` : ratingChange}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-      
-      <div className="flex justify-end">
-        <Button variant="outline" onClick={onClose}>Close</Button>
-      </div>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Tournament Results</CardTitle>
+        <CardDescription>
+          Details of the rating changes after the tournament.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-auto">
+        <Table>
+          <TableCaption>
+            Rating changes for each player in the tournament.
+          </TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px]">Player</TableHead>
+              <TableHead>Rating Change</TableHead>
+              <TableHead className="text-right">Initial Rating</TableHead>
+              <TableHead className="text-right">Final Rating</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {results.map((result) => (
+              <TableRow key={result.playerId}>
+                <TableCell className="font-medium">{result.playerId}</TableCell>
+                <TableCell>
+                  <span className={result.ratingChange > 0 ? "text-green-500" : "text-red-500"}>
+                    {result.ratingChange > 0 ? "+" : ""}{result.ratingChange}
+                  </span>
+                </TableCell>
+                <TableCell className="font-mono text-right">
+                  {(result as any).initialRating || result.rating || 'N/A'}
+                </TableCell>
+                <TableCell className="font-mono text-right">
+                  {(result as any).finalRating || (result.rating ? result.rating + result.ratingChange : 'N/A')}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 };
 

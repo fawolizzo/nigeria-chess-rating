@@ -49,3 +49,6 @@ export function calculateNewRatings(players: any[], matches: any[]): any[] {
     };
   });
 }
+
+// Add calculatePostRoundRatings function (alias for calculateNewRatings)
+export const calculatePostRoundRatings = calculateNewRatings;

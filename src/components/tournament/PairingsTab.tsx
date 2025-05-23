@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, CheckCircleIcon, RefreshCw } from "lucide-react";
@@ -11,23 +10,24 @@ export interface PairingsTabProps {
   currentRound: number;
   totalRounds: number;
   selectedRound: number;
-  pairings: Array<{
+  pairings?: {
     roundNumber: number;
-    matches: Array<{
+    matches: {
       whiteId: string;
       blackId: string;
       result?: "1-0" | "0-1" | "1/2-1/2" | "*";
       whiteRatingChange?: number;
       blackRatingChange?: number;
-    }>;
-  }>;
+    }[];
+  }[];
   players: Player[];
   pairingsGenerated: boolean;
-  canGeneratePairings: boolean;
-  onSelectRound: (round: number) => void;
-  onGeneratePairings: () => Promise<void>;
-  onSaveResults: (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => Promise<void>;
+  onGeneratePairings: () => void;
+  onSaveResults: (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => void;
+  canAdvanceRound: boolean;
+  tournamentType: 'classical' | 'rapid' | 'blitz';
   isProcessing: boolean;
+  onRoundSelect: (round: number) => void; // Add this line
 }
 
 const PairingsTab = ({
@@ -38,11 +38,12 @@ const PairingsTab = ({
   pairings,
   players,
   pairingsGenerated,
-  canGeneratePairings,
-  onSelectRound,
   onGeneratePairings,
   onSaveResults,
-  isProcessing
+  canAdvanceRound,
+  tournamentType,
+  isProcessing,
+  onRoundSelect
 }: PairingsTabProps) => {
   const isEditable = selectedRound === currentRound && tournamentStatus === "ongoing";
   const currentRoundPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
@@ -58,7 +59,7 @@ const PairingsTab = ({
               key={round}
               size="sm"
               variant={selectedRound === round ? "default" : "outline"}
-              onClick={() => onSelectRound(round)}
+              onClick={() => onRoundSelect(round)}
               disabled={isProcessing}
               className="min-w-[40px]"
             >

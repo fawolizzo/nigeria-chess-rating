@@ -334,7 +334,11 @@ const TournamentManagement = () => {
     
     setIsProcessing(true);
     try {
-      const createdPlayer = await createPlayerInSupabase(newPlayerData);
+      const createdPlayer = await createPlayerInSupabase({
+        ...newPlayerData,
+        rating: FLOOR_RATING,
+        gamesPlayed: 0,
+      });
       if (!createdPlayer) throw new Error("Player creation failed.");
 
       setAllPlayers(prev => [...prev, createdPlayer]); // Add to global list of players
