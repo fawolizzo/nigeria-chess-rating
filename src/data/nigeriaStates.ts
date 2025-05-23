@@ -1,8 +1,48 @@
 
-export const NIGERIA_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 
-  'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 
-  'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 
-  'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 
-  'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+export const nigerianStates = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT", "Gombe", "Imo", 
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", 
+  "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", 
+  "Yobe", "Zamfara"
 ];
+
+export const citiesByState: Record<string, string[]> = {
+  "Lagos": ["Ikeja", "Lagos Island", "Victoria Island", "Surulere", "Yaba", "Ikoyi"],
+  "FCT": ["Garki", "Wuse", "Maitama", "Asokoro", "Gwarinpa", "Kubwa"],
+  "Kano": ["Kano", "Wudil", "Gwarzo", "Rano", "Karaye"],
+  "Rivers": ["Port Harcourt", "Obio-Akpor", "Okrika", "Eleme", "Tai"],
+  "Oyo": ["Ibadan", "Ogbomoso", "Oyo", "Iseyin", "Saki"],
+  "Kaduna": ["Kaduna", "Zaria", "Kafanchan", "Sabon Gari", "Makarfi"],
+  "Abia": ["Umuahia", "Aba", "Arochukwu", "Ohafia", "Bende"],
+  "Adamawa": ["Yola", "Mubi", "Numan", "Jimeta", "Ganye"],
+  "Akwa Ibom": ["Uyo", "Ikot Ekpene", "Eket", "Abak", "Oron"],
+  "Anambra": ["Awka", "Onitsha", "Nnewi", "Ekwulobia", "Ihiala"],
+  "Bauchi": ["Bauchi", "Azare", "Misau", "Jama'are", "Katagum"],
+  "Bayelsa": ["Yenagoa", "Brass", "Sagbama", "Ogbia", "Nembe"],
+  "Benue": ["Makurdi", "Gboko", "Katsina-Ala", "Vandeikya", "Adikpo"],
+  "Borno": ["Maiduguri", "Biu", "Bama", "Dikwa", "Gubio"],
+  "Cross River": ["Calabar", "Ugep", "Ogoja", "Ikom", "Obudu"],
+  "Delta": ["Asaba", "Warri", "Sapele", "Ughelli", "Agbor"],
+  "Ebonyi": ["Abakaliki", "Afikpo", "Onueke", "Ezza", "Ikwo"],
+  "Edo": ["Benin City", "Auchi", "Ekpoma", "Uromi", "Irrua"],
+  "Ekiti": ["Ado-Ekiti", "Ikere", "Oye", "Efon", "Ijero"],
+  "Enugu": ["Enugu", "Nsukka", "Oji River", "Agbani", "Awgu"],
+  "Gombe": ["Gombe", "Kaltungo", "Billiri", "Dukku", "Nafada"],
+  "Imo": ["Owerri", "Orlu", "Okigwe", "Oguta", "Mbaise"],
+  "Jigawa": ["Dutse", "Hadejia", "Kazaure", "Gumel", "Ringim"],
+  "Kebbi": ["Birnin Kebbi", "Argungu", "Yauri", "Zuru", "Bagudo"],
+  "Kogi": ["Lokoja", "Okene", "Kabba", "Anyigba", "Idah"],
+  "Kwara": ["Ilorin", "Offa", "Omu-Aran", "Lafiagi", "Pategi"],
+  "Nasarawa": ["Lafia", "Keffi", "Akwanga", "Nasarawa", "Doma"],
+  "Niger": ["Minna", "Bida", "Kontagora", "Suleja", "New Bussa"],
+  "Ogun": ["Abeokuta", "Sagamu", "Ijebu Ode", "Ilaro", "Ota"],
+  "Ondo": ["Akure", "Ondo", "Owo", "Ikare", "Okitipupa"],
+  "Osun": ["Osogbo", "Ile-Ife", "Ilesha", "Ede", "Iwo"],
+  "Plateau": ["Jos", "Bukuru", "Pankshin", "Shendam", "Wase"],
+  "Sokoto": ["Sokoto", "Tambuwal", "Gwadabawa", "Bodinga", "Illela"],
+  "Taraba": ["Jalingo", "Wukari", "Bali", "Gembu", "Serti"],
+  "Yobe": ["Damaturu", "Potiskum", "Gashua", "Nguru", "Geidam"],
+  "Zamfara": ["Gusau", "Kaura Namoda", "Talata Mafara", "Anka", "Bukkuyum"],
+  "Katsina": ["Katsina", "Daura", "Funtua", "Malumfashi", "Dutsin-Ma"]
+};

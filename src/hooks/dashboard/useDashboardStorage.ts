@@ -1,77 +1,92 @@
 
-import { useCallback } from "react";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
-// import { getAllTournaments, getAllPlayers, Tournament } from "@/lib/mockData"; // Removed
-import { Tournament, Player, User } from "@/lib/mockData"; // Keep types
-// import { getAllUsersFromStorage } from "@/utils/userUtils"; // Removed
-// import { syncStorage } from "@/utils/storageUtils"; // Removed
+import { useState, useEffect, useRef } from "react";
+import { Tournament, Player, User } from "@/lib/mockData";
 
-import { getAllPlayersFromSupabase, getUsersFromSupabase } from "@/services/playerService";
-import { getAllTournamentsFromSupabase } from "@/services/tournamentService";
+interface DashboardData {
+  pendingTournaments: Tournament[];
+  completedTournaments: Tournament[];
+  pendingPlayers: Player[];
+  pendingOrganizers: User[];
+}
 
+export const useDashboardStorage = () => {
+  const [data, setData] = useState<DashboardData>({
+    pendingTournaments: [],
+    completedTournaments: [],
+    pendingPlayers: [],
+    pendingOrganizers: []
+  });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-/**
- * Hook for loading and syncing dashboard data from storage
- */
-export function useDashboardStorage() {
-  /**
-   * Sync dashboard-related data in local storage
-   */
-  const syncDashboardStorage = useCallback(async () => {
-    logMessage(LogLevel.INFO, 'useDashboardStorage', 'syncDashboardStorage called, no longer performs localStorage sync for core data.');
-    return Promise.resolve();
-  }, []);
-
-  /**
-   * Load tournaments from Supabase
-   */
-  const loadTournaments = useCallback(async (): Promise<Tournament[]> => {
-    logMessage(LogLevel.INFO, 'useDashboardStorage', 'Loading tournaments from Supabase...');
+  const loadDashboardData = async () => {
     try {
-      const tournaments = await getAllTournamentsFromSupabase({});
-      logMessage(LogLevel.INFO, 'useDashboardStorage', `Loaded ${tournaments.length} tournaments.`);
-      return tournaments;
+      setIsLoading(true);
+      setHasError(false);
+      setErrorMessage(null);
+
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Set a timeout to prevent infinite loading
+      timeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        setHasError(true);
+        setErrorMessage("Dashboard data loading timed out");
+      }, 10000);
+
+      // Simulate loading delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock data for now
+      const mockData: DashboardData = {
+        pendingTournaments: [],
+        completedTournaments: [],
+        pendingPlayers: [],
+        pendingOrganizers: []
+      };
+
+      setData(mockData);
+      
+      // Clear timeout on successful load
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error loading tournaments from Supabase:', error);
-      return []; // Service should also handle this, but as a fallback
+      console.error("Error loading dashboard data:", error);
+      setHasError(true);
+      setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
-  /**
-   * Load players from Supabase
-   */
-  const loadPlayers = useCallback(async (): Promise<Player[]> => {
-    logMessage(LogLevel.INFO, 'useDashboardStorage', 'Loading players from Supabase...');
-    try {
-      const players = await getAllPlayersFromSupabase({});
-      logMessage(LogLevel.INFO, 'useDashboardStorage', `Loaded ${players.length} players.`);
-      return players;
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error loading players from Supabase:', error);
-      return [];
-    }
-  }, []);
-
-  /**
-   * Load organizers from Supabase
-   */
-  const loadOrganizers = useCallback(async (): Promise<User[]> => {
-    logMessage(LogLevel.INFO, 'useDashboardStorage', 'Loading organizers from Supabase...');
-    try {
-      // Assuming getUsersFromSupabase can filter by role
-      const organizers = await getUsersFromSupabase({ role: 'tournament_organizer' });
-      logMessage(LogLevel.INFO, 'useDashboardStorage', `Loaded ${organizers.length} organizers.`);
-      return organizers;
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'useDashboardStorage', 'Error loading organizers from Supabase:', error);
-      return [];
-    }
-  }, []);
+  const refreshData = () => {
+    loadDashboardData();
+  };
 
   return {
-    syncDashboardStorage,
-    loadTournaments,
-    loadPlayers,
-    loadOrganizers
+    ...data,
+    isLoading,
+    hasError,
+    errorMessage,
+    refreshData,
+    dataTimeoutRef: timeoutRef
   };
-}
+};

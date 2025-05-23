@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import { Users, Trophy, Award, AlertTriangle, Loader2 } from "lucide-react"; // Added Loader2
+import { Users, Trophy, Award, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useUser } from "@/contexts/UserContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Player, addPlayer, getAllPlayers, updatePlayer, Tournament, updateTournament, getTournamentById } from "@/lib/mockData"; // Removed mock
-import { Player, Tournament } from "@/lib/mockData"; // Kept types
-import { getTournamentByIdFromSupabase, updateTournamentInSupabase } from "@/services/tournamentService"; // Added tournament services
-import { getAllPlayersFromSupabase, createPlayerInSupabase } from "@/services/playerService"; // Added player services
+import { Player, Tournament } from "@/lib/mockData";
+import { getTournamentByIdFromSupabase, updateTournamentInSupabase } from "@/services/tournamentService";
+import { getAllPlayersFromSupabase, createPlayerInSupabase } from "@/services/playerService";
+import { FLOOR_RATING } from "@/lib/ratingCalculation";
 import StandingsTable from "@/components/StandingsTable";
 
 // Import our components
@@ -33,9 +33,9 @@ const TournamentManagement = () => {
   const { currentUser } = useUser();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false); // For granular loading states
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]); // All players in the system
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [registeredPlayers, setRegisteredPlayers] = useState<Player[]>([]);
   const [activeTab, setActiveTab] = useState("players");
   const [selectedRound, setSelectedRound] = useState(1);
@@ -594,7 +594,7 @@ const TournamentManagement = () => {
         
         {/* Show pending players alert */}
         {hasPendingPlayers && tournament?.status === "upcoming" && (
-          <Alert variant="warning" className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <Alert variant="default" className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
             <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <AlertTitle className="text-yellow-800 dark:text-yellow-300">Pending Player Approvals</AlertTitle>
             <AlertDescription className="text-yellow-700 dark:text-yellow-400">
@@ -612,7 +612,7 @@ const TournamentManagement = () => {
               totalRounds={tournament.rounds}
               onAdvanceRound={advanceToNextRound}
               canAdvanceRound={canAdvanceRound}
-              isProcessing={isProcessing} // Pass isProcessing
+              isProcessing={isProcessing}
             />
           )}
           
@@ -644,14 +644,14 @@ const TournamentManagement = () => {
                 tournamentId={tournament?.id || ""}
                 tournamentStatus={tournament?.status || "upcoming"}
                 registeredPlayers={registeredPlayers}
-                allPlayers={allPlayers} // Pass all system players for the "Add Players" modal
+                allPlayers={allPlayers}
                 playerIds={tournament?.players || []}
                 onCreatePlayer={() => setIsCreatePlayerOpen(true)}
                 onAddPlayers={handleAddPlayers}
                 onRemovePlayer={handleRemovePlayer}
-                isProcessing={isProcessing} // Pass isProcessing
-                searchQuery={searchQuery} // Pass searchQuery for AddPlayerModal
-                setSearchQuery={setSearchQuery} // Pass setSearchQuery for AddPlayerModal
+                isProcessing={isProcessing}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
               />
             </TabsContent>
             
@@ -671,7 +671,7 @@ const TournamentManagement = () => {
                     onSaveResults={saveResults}
                     canAdvanceRound={canAdvanceRound}
                     tournamentType={getTournamentType()}
-                    isProcessing={isProcessing} // Pass isProcessing
+                    isProcessing={isProcessing}
                   />
                 </TabsContent>
                 
@@ -687,7 +687,7 @@ const TournamentManagement = () => {
         </div>
       </div>
       
-      {/* Player Form Modal (no isProcessing needed here as it has its own internal loading) */}
+      {/* Player Form Modal */}
       {currentUser && (
         <PlayerFormModal 
           isOpen={isCreatePlayerOpen}

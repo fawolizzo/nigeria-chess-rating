@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, CheckCircleIcon, RefreshCw } from "lucide-react";
@@ -23,11 +24,11 @@ export interface PairingsTabProps {
   players: Player[];
   pairingsGenerated: boolean;
   onGeneratePairings: () => void;
-  onSaveResults: (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => void;
+  onSaveResults: (results: { whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }[]) => Promise<void>;
   canAdvanceRound: boolean;
   tournamentType: 'classical' | 'rapid' | 'blitz';
   isProcessing: boolean;
-  onRoundSelect: (round: number) => void; // Add this line
+  onRoundSelect: (round: number) => void;
 }
 
 const PairingsTab = ({
@@ -47,6 +48,7 @@ const PairingsTab = ({
 }: PairingsTabProps) => {
   const isEditable = selectedRound === currentRound && tournamentStatus === "ongoing";
   const currentRoundPairings = pairings?.find(p => p.roundNumber === selectedRound)?.matches || [];
+  const canGeneratePairings = selectedRound === currentRound && tournamentStatus === "ongoing" && !pairingsGenerated;
 
   return (
     <div className="space-y-4">
@@ -70,11 +72,11 @@ const PairingsTab = ({
       </div>
       
       {/* Generate Pairings Button for Current Round */}
-      {selectedRound === currentRound && tournamentStatus === "ongoing" && !pairingsGenerated && (
+      {canGeneratePairings && (
         <div className="flex justify-center py-4">
           <Button
             onClick={onGeneratePairings}
-            disabled={!canGeneratePairings || isProcessing}
+            disabled={isProcessing}
             className="flex items-center gap-2"
           >
             {isProcessing ? (

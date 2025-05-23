@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ export interface PlayersTabProps {
   tournamentId: string;
   tournamentStatus: "pending" | "approved" | "rejected" | "upcoming" | "ongoing" | "completed" | "processed";
   registeredPlayers: Player[];
-  allPlayers: Player[]; // Add this line
+  allPlayers: Player[];
   playerIds: string[];
   onCreatePlayer: () => void;
   onAddPlayers: (selectedPlayers: Player[]) => void;
@@ -24,7 +25,7 @@ const PlayersTab = ({
   tournamentId,
   tournamentStatus,
   registeredPlayers,
-  allPlayers, // Add this line
+  allPlayers,
   playerIds,
   onCreatePlayer,
   onAddPlayers,
@@ -34,6 +35,9 @@ const PlayersTab = ({
   setSearchQuery
 }: PlayersTabProps) => {
   const [isSelectPlayersOpen, setIsSelectPlayersOpen] = React.useState(false);
+  
+  // Check if there are pending players
+  const hasPendingPlayers = registeredPlayers.some(player => player.status === 'pending');
   
   // Filter players based on search query
   const filteredPlayers = registeredPlayers.filter(player => {
@@ -184,13 +188,16 @@ const PlayersTab = ({
         </div>
       )}
       
-      <MultiSelectPlayers
-        isOpen={isSelectPlayersOpen}
-        onOpenChange={setIsSelectPlayersOpen}
-        onPlayersSelected={handlePlayersSelected}
-        excludeIds={registeredPlayers.map(p => p.id)}
-        includePendingPlayers={true}
-      />
+      {/* Multi-Select Players Modal */}
+      {canAddPlayers && (
+        <MultiSelectPlayers
+          isOpen={isSelectPlayersOpen}
+          onOpenChange={setIsSelectPlayersOpen}
+          onPlayersSelected={handlePlayersSelected}
+          excludePlayerIds={playerIds}
+          allPlayers={allPlayers}
+        />
+      )}
     </div>
   );
 };
