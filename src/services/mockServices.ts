@@ -1,4 +1,3 @@
-
 import { Player, Tournament, User } from "@/lib/mockData";
 import { getAllPlayersFromSupabase, getUsersFromSupabase, createPlayerInSupabase, updatePlayerInSupabase } from "./playerService";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -50,18 +49,18 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
-export const addPlayer = async (player: Player): Promise<Player> => {
+export const addPlayer = async (player: Omit<Player, "id" | "ratingHistory" | "tournamentResults">): Promise<Player> => {
   try {
     // Try to add to Supabase first
     const supabasePlayer = await createPlayerInSupabase({
       name: player.name,
-      email: player.email || "",
-      phone: player.phone,
       rating: player.rating || FLOOR_RATING,
       gender: player.gender,
       state: player.state,
       city: player.city,
-      status: player.status
+      status: player.status,
+      gamesPlayed: player.gamesPlayed || 0,
+      phone: player.phone || "",
     });
 
     if (supabasePlayer) {
@@ -69,13 +68,27 @@ export const addPlayer = async (player: Player): Promise<Player> => {
     }
 
     // Fallback to local storage
-    players.push(player);
-    return player;
+    const newPlayer = {
+      ...player,
+      id: generateUniquePlayerID(),
+      ratingHistory: [],
+      tournamentResults: []
+    } as Player;
+    
+    players.push(newPlayer);
+    return newPlayer;
   } catch (error) {
     console.error("Error adding player:", error);
     // Still add to local storage if Supabase fails
-    players.push(player);
-    return player;
+    const newPlayer = {
+      ...player,
+      id: generateUniquePlayerID(),
+      ratingHistory: [],
+      tournamentResults: []
+    } as Player;
+    
+    players.push(newPlayer);
+    return newPlayer;
   }
 };
 
@@ -114,10 +127,10 @@ export const getTournamentById = (id: string): Tournament | undefined => {
 
 export const getPlayersByTournamentId = (tournamentId: string): Player[] => {
   const tournament = tournaments.find(t => t.id === tournamentId);
-  if (!tournament || !tournament.playerIds) {
+  if (!tournament || !tournament.players) {
     return [];
   }
-  return players.filter(p => tournament.playerIds.includes(p.id));
+  return players.filter(p => tournament.players.includes(p.id));
 };
 
 export const updateTournament = (updatedTournament: Tournament): Tournament => {

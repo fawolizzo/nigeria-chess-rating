@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Card, 
@@ -61,7 +60,7 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
           <Card key={tournament.id} className="overflow-hidden">
             <div className="bg-primary/10 px-4 py-2 flex items-center gap-2">
               <Trophy className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">{tournament.type || "Standard"} Tournament</span>
+              <span className="text-sm font-medium">{tournament.category || "Standard"} Tournament</span>
             </div>
             
             <CardHeader className="pb-2">

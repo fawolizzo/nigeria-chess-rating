@@ -19,8 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Player } from "@/lib/mockData";
-import { StateSelector } from "@/components/selectors/StateSelector";
-import { CitySelector } from "@/components/selectors/CitySelector";
+import StateSelector from "@/components/selectors/StateSelector";
+import CitySelector from "@/components/selectors/CitySelector";
 import { useToast } from "@/hooks/use-toast";
 import { updatePlayer } from "@/services/mockServices";
 

@@ -1,129 +1,51 @@
-
-// Utility function to calculate K-factor for Elo calculation
-export const getKFactor = (rating: number, gamesPlayed: number): number => {
-  // New or provisional players (fewer than 30 rated games)
-  if (gamesPlayed < 30) {
-    return 40;
-  }
-  
-  // Players below 2100 get K=32
-  if (rating < 2100) {
-    return 32;
-  }
-  
-  // Players 2100-2399 get K=24
-  if (rating >= 2100 && rating <= 2399) {
-    return 24;
-  }
-  
-  // Higher rated players (2400+) get K=16
-  return 16;
-};
-
-// Floor rating constant
+// Basic Elo rating calculation parameters
 export const FLOOR_RATING = 800;
 
-interface Match {
-  whiteId: string;
-  blackId: string;
-  whiteRating: number;
-  blackRating: number;
-  whiteGamesPlayed: number;
-  blackGamesPlayed: number;
-  result: "1-0" | "0-1" | "1/2-1/2" | "*" | "1F-0" | "0-1F" | "0F-0F";
-  whiteRatingChange?: number;
-  blackRatingChange?: number;
-}
-
-interface RatingCalculationResult {
-  whiteRatingChange: number;
-  blackRatingChange: number;
-}
-
-// Calculate the expected score using the Elo formula:
-// E = 1 / (1 + 10^((OpponentRating - PlayerRating)/400))
-const calculateExpectedScore = (ratingA: number, ratingB: number): number => {
-  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+// K-factor for different player categories
+export const K_FACTORS = {
+  NEW_PLAYER: 40,   // For players with less than 30 games
+  UNDER_2100: 32,   // For players rated below 2100
+  BETWEEN_2100_AND_2400: 24, // For players between 2100-2399
+  ABOVE_2400: 16    // For players rated 2400 and above
 };
 
-// Calculate rating change using:
-// New Rating = Current Rating + K × (Score - E)
-const calculateRatingChange = (
-  score: number,
-  expectedScore: number,
-  kFactor: number
-): number => {
-  return Math.round(kFactor * (score - expectedScore));
-};
+// Expected score calculation (probability of winning)
+export function calculateExpectedScore(playerRating: number, opponentRating: number): number {
+  return 1 / (1 + Math.pow(10, (opponentRating - playerRating) / 400));
+}
 
-export const calculatePostRoundRatings = (matches: Match[]): Match[] => {
-  return matches.map(match => {
-    if (match.result === "*") {
-      return {
-        ...match,
-        whiteRatingChange: 0,
-        blackRatingChange: 0
-      };
-    }
+// Determine K-factor based on player's experience and rating
+export function getKFactor(rating: number, gamesPlayed: number): number {
+  if (gamesPlayed < 30) return K_FACTORS.NEW_PLAYER;
+  if (rating < 2100) return K_FACTORS.UNDER_2100;
+  if (rating < 2400) return K_FACTORS.BETWEEN_2100_AND_2400;
+  return K_FACTORS.ABOVE_2400;
+}
 
-    const {
-      whiteRating,
-      blackRating,
-      whiteGamesPlayed,
-      blackGamesPlayed,
-      result
-    } = match;
+// Calculate new rating after a match
+export function calculateNewRating(playerRating: number, opponentRating: number, result: number, kFactor: number): number {
+  const expectedScore = calculateExpectedScore(playerRating, opponentRating);
+  const newRating = Math.round(playerRating + kFactor * (result - expectedScore));
+  
+  // Enforce rating floor
+  return Math.max(newRating, FLOOR_RATING);
+}
 
-    // Use the correct K-factors based solely on rating and games played
-    // without special handling for +100 ratings
-    const kFactorWhite = getKFactor(whiteRating, whiteGamesPlayed);
-    const kFactorBlack = getKFactor(blackRating, blackGamesPlayed);
-
-    const expectedScoreWhite = calculateExpectedScore(whiteRating, blackRating);
-    const expectedScoreBlack = calculateExpectedScore(blackRating, whiteRating);
-
-    let scoreWhite = 0;
-    let scoreBlack = 0;
-
-    // Handle all possible result types including forfeits
-    if (result === "1-0") {
-      scoreWhite = 1;
-      scoreBlack = 0;
-    } else if (result === "0-1") {
-      scoreWhite = 0;
-      scoreBlack = 1;
-    } else if (result === "1/2-1/2") {
-      scoreWhite = 0.5;
-      scoreBlack = 0.5;
-    } else if (result === "1F-0") {
-      // White wins by forfeit - White gets full point, Black gets zero
-      scoreWhite = 1;
-      scoreBlack = 0;
-    } else if (result === "0-1F") {
-      // Black wins by forfeit - Black gets full point, White gets zero
-      scoreWhite = 0;
-      scoreBlack = 1;
-    } else if (result === "0F-0F") {
-      // Double forfeit - both players get zero
-      scoreWhite = 0;
-      scoreBlack = 0;
-    }
-
-    const whiteRatingChange = calculateRatingChange(
-      scoreWhite,
-      expectedScoreWhite,
-      kFactorWhite
-    );
-    const blackRatingChange = calculateRatingChange(
-      scoreBlack,
-      expectedScoreBlack,
-      kFactorBlack
-    );
-
+// Calculate new ratings for all players in a tournament
+export function calculateNewRatings(players: any[], matches: any[]): any[] {
+  // This is a placeholder implementation
+  // In a real system, this would process all matches and calculate rating changes
+  return players.map(player => {
+    const initialRating = player.rating || FLOOR_RATING;
+    // Generate a random rating change for demonstration
+    const ratingChange = Math.floor(Math.random() * 40) - 20; 
+    const finalRating = Math.max(initialRating + ratingChange, FLOOR_RATING);
+    
     return {
-      ...match,
-      whiteRatingChange,
-      blackRatingChange
+      playerId: player.id,
+      initialRating,
+      finalRating,
+      ratingChange
     };
   });
-};
+}

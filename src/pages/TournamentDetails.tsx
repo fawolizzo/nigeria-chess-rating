@@ -1,7 +1,7 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getTournamentById, getPlayersByTournamentId, Tournament, Player, getAllPlayers } from "@/lib/mockData";
+import { Tournament, Player } from "@/lib/mockData";
+import { getTournamentById, getPlayersByTournamentId, getAllPlayers } from "@/services/mockServices";
 import Navbar from "@/components/Navbar";
 import { Calendar, MapPin, Users, Info, Trophy, Award } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -172,10 +172,10 @@ const TournamentDetails = () => {
       if (updatedTournament) {
         setTournament(updatedTournament);
         
-        if (updatedTournament.status === 'processed' && updatedTournament.processedPlayerIds) {
+        if (updatedTournament.status === 'processed' && updatedTournament.players) {
           const allPlayers = getAllPlayers();
           const processedPlayers = allPlayers.filter(player => 
-            updatedTournament.processedPlayerIds?.includes(player.id) ||
+            updatedTournament.players?.includes(player.id) ||
             player.tournamentResults.some(result => result.tournamentId === id)
           );
           setPlayers(processedPlayers);
@@ -249,9 +249,10 @@ const TournamentDetails = () => {
         
         {tournament?.status === 'processed' && currentUser?.role === "rating_officer" && (
           <ProcessedTournamentDetails 
-            tournament={tournament} 
-            isOpen={isProcessedDetailsOpen} 
-            onOpenChange={setIsProcessedDetailsOpen} 
+            tournament={tournament}
+            onClose={() => setIsProcessedDetailsOpen(false)}
+            isOpen={isProcessedDetailsOpen}
+            onOpenChange={setIsProcessedDetailsOpen}
           />
         )}
         
@@ -275,7 +276,7 @@ const TournamentDetails = () => {
               )}
               
               <TabsTrigger value="players" className="flex gap-1 items-center">
-                <Users size={16} /> Players
+                <Users size={14} /> Players
               </TabsTrigger>
             </TabsList>
             

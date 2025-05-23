@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tournament, Player } from "@/lib/mockData";
@@ -7,9 +6,16 @@ import { getAllPlayers } from "@/services/mockServices";
 interface ProcessedTournamentDetailsProps {
   tournament: Tournament;
   onClose: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ tournament, onClose }) => {
+const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ 
+  tournament, 
+  onClose,
+  isOpen,
+  onOpenChange
+}) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -19,9 +25,9 @@ const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({
         setLoading(true);
         const allPlayers = await getAllPlayers();
         
-        // Get participating players if tournament has playerIds
-        const participatingPlayers = tournament.playerIds
-          ? allPlayers.filter(player => tournament.playerIds?.includes(player.id))
+        // Get participating players
+        const participatingPlayers = tournament.players && tournament.players.length > 0
+          ? allPlayers.filter(player => tournament.players?.includes(player.id))
           : [];
         
         setPlayers(participatingPlayers);
@@ -48,7 +54,7 @@ const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({
         <h3 className="font-medium">Tournament Information</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>Status: <span className="font-medium">{tournament.status}</span></div>
-          <div>Type: <span className="font-medium">{tournament.type || "Standard"}</span></div>
+          <div>Type: <span className="font-medium">{tournament.category || "Standard"}</span></div>
           <div>Rounds: <span className="font-medium">{tournament.rounds}</span></div>
           <div>Location: <span className="font-medium">{tournament.location}, {tournament.state}</span></div>
         </div>
@@ -77,9 +83,9 @@ const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {players.map(player => {
-                    const playerResult = tournament.results?.find(r => r.playerId === player.id);
-                    const initialRating = playerResult?.initialRating || player.rating;
-                    const finalRating = playerResult?.finalRating || player.rating;
+                    const tournamentResult = player.tournamentResults?.find(r => r.tournamentId === tournament.id);
+                    const initialRating = tournamentResult?.initialRating || player.rating;
+                    const finalRating = tournamentResult?.finalRating || player.rating;
                     const ratingChange = finalRating - initialRating;
                     
                     return (

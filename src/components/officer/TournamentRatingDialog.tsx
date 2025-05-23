@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -12,20 +11,19 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Player, Tournament } from '@/lib/mockData';
 import { AlertCircle } from 'lucide-react';
-import { calculateNewRatings } from '@/lib/ratingCalculation';
 
 interface TournamentRatingDialogProps {
   tournament: Tournament;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onProcessComplete: (processedTournament: Tournament) => void;
+  onProcessed: (processedTournament: Tournament) => void;
 }
 
 const TournamentRatingDialog: React.FC<TournamentRatingDialogProps> = ({
   tournament,
   isOpen,
   onOpenChange,
-  onProcessComplete
+  onProcessed
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [ratingResults, setRatingResults] = useState<any[]>([]);
@@ -43,7 +41,7 @@ const TournamentRatingDialog: React.FC<TournamentRatingDialogProps> = ({
           return;
         }
 
-        if (!tournament.matches || tournament.matches.length === 0) {
+        if (!tournament.pairings || tournament.pairings.length === 0) {
           setHasError(true);
           setErrorDetails('Tournament has no matches to process.');
           return;
@@ -51,7 +49,7 @@ const TournamentRatingDialog: React.FC<TournamentRatingDialogProps> = ({
 
         // We'd actually calculate the ratings here using tournament data
         // For demo, let's create some mock results
-        const mockResults = (tournament.playerIds || []).map(playerId => ({
+        const mockResults = (tournament.players || []).map(playerId => ({
           playerId,
           initialRating: 1200 + Math.floor(Math.random() * 400),
           finalRating: 1200 + Math.floor(Math.random() * 400),
@@ -76,14 +74,13 @@ const TournamentRatingDialog: React.FC<TournamentRatingDialogProps> = ({
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Create updated tournament with results
+      // Create updated tournament with status
       const processedTournament: Tournament = {
         ...tournament,
-        status: "processed", 
-        results: ratingResults
+        status: "processed" as Tournament["status"]
       };
 
-      onProcessComplete(processedTournament);
+      onProcessed(processedTournament);
       
       // Close the dialog after processing
       onOpenChange(false);

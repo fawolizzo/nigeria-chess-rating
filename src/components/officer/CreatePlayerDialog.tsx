@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
-import { StateSelector } from "@/components/selectors/StateSelector";
-import { CitySelector } from "@/components/selectors/CitySelector";
+import StateSelector from "@/components/selectors/StateSelector";
+import CitySelector from "@/components/selectors/CitySelector";
 
 interface CreatePlayerDialogProps {
   onPlayerCreated: (playerData: any) => void;

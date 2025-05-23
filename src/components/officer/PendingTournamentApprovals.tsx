@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
     try {
       const updatedTournament = {
         ...tournament,
-        status: "approved"
+        status: "approved" as Tournament["status"]
       };
       
       updateTournament(updatedTournament);
@@ -49,7 +48,7 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
     try {
       const updatedTournament = {
         ...tournament,
-        status: "rejected"
+        status: "rejected" as Tournament["status"]
       };
       
       updateTournament(updatedTournament);
