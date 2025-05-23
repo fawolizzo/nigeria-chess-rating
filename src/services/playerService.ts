@@ -10,7 +10,7 @@ interface PlayerFilter {
   status?: string;
 }
 
-export const getAllPlayersFromSupabase = async (filters: PlayerFilter): Promise<Player[]> => {
+export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Promise<Player[]> => {
   try {
     let query = supabase.from('players').select('*');
     
@@ -29,11 +29,12 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter): Promise<
       id: player.id,
       name: player.name,
       rating: player.rating || FLOOR_RATING,
-      gender: 'M', // Default since not in DB
-      state: '', // Default since not in DB
-      city: '', // Default since not in DB
-      status: 'approved', // Default since not in DB
-      gamesPlayed: 0, // Default since not in DB
+      gender: 'M' as const, // Default since not in DB
+      state: player.state || '',
+      city: player.city || '',
+      country: 'Nigeria',
+      status: (player.status as "pending" | "approved" | "rejected") || 'approved',
+      gamesPlayed: player.games_played || 0,
       phone: player.phone || '',
       email: player.email || '',
       ratingHistory: [], // Default since not in DB
@@ -42,9 +43,9 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter): Promise<
       blitzRating: FLOOR_RATING, // Default since not in DB
       rapidGamesPlayed: 0, // Default since not in DB
       blitzGamesPlayed: 0, // Default since not in DB
-      ratingStatus: 'provisional', // Default since not in DB
-      rapidRatingStatus: 'provisional', // Default since not in DB
-      blitzRatingStatus: 'provisional' // Default since not in DB
+      ratingStatus: 'provisional' as const, // Default since not in DB
+      rapidRatingStatus: 'provisional' as const, // Default since not in DB
+      blitzRatingStatus: 'provisional' as const // Default since not in DB
     }));
   } catch (error) {
     console.error("Error getting players from Supabase:", error);
@@ -67,11 +68,12 @@ export const getPlayerByIdFromSupabase = async (playerId: string): Promise<Playe
       id: data.id,
       name: data.name,
       rating: data.rating || FLOOR_RATING,
-      gender: 'M', // Default
-      state: '', // Default
-      city: '', // Default
-      status: 'approved', // Default
-      gamesPlayed: 0, // Default
+      gender: 'M' as const, // Default
+      state: data.state || '',
+      city: data.city || '',
+      country: 'Nigeria',
+      status: (data.status as "pending" | "approved" | "rejected") || 'approved',
+      gamesPlayed: data.games_played || 0,
       phone: data.phone || '',
       email: data.email || '',
       ratingHistory: [],
@@ -80,9 +82,9 @@ export const getPlayerByIdFromSupabase = async (playerId: string): Promise<Playe
       blitzRating: FLOOR_RATING,
       rapidGamesPlayed: 0,
       blitzGamesPlayed: 0,
-      ratingStatus: 'provisional',
-      rapidRatingStatus: 'provisional',
-      blitzRatingStatus: 'provisional'
+      ratingStatus: 'provisional' as const,
+      rapidRatingStatus: 'provisional' as const,
+      blitzRatingStatus: 'provisional' as const
     };
   } catch (error) {
     console.error(`Error getting player ${playerId} from Supabase:`, error);
@@ -90,7 +92,7 @@ export const getPlayerByIdFromSupabase = async (playerId: string): Promise<Playe
   }
 };
 
-export const getUsersFromSupabase = async (): Promise<any[]> => {
+export const getAllUsers = async (): Promise<any[]> => {
   try {
     const { data, error } = await supabase.from('organizers').select('*');
     if (error) throw error;
@@ -107,7 +109,11 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       name: playerData.name,
       rating: playerData.rating || FLOOR_RATING,
       phone: playerData.phone || '',
-      email: playerData.email || ''
+      email: playerData.email || '',
+      state: playerData.state || '',
+      city: playerData.city || '',
+      status: playerData.status || 'pending',
+      games_played: playerData.gamesPlayed || 0
     };
 
     const { data, error } = await supabase
@@ -123,10 +129,11 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       name: data.name,
       rating: data.rating || FLOOR_RATING,
       gender: playerData.gender || 'M',
-      state: playerData.state || '',
-      city: playerData.city || '',
-      status: playerData.status || 'pending',
-      gamesPlayed: playerData.gamesPlayed || 0,
+      state: data.state || '',
+      city: data.city || '',
+      country: 'Nigeria',
+      status: (data.status as "pending" | "approved" | "rejected") || 'pending',
+      gamesPlayed: data.games_played || 0,
       phone: data.phone || '',
       email: data.email || '',
       ratingHistory: [],
@@ -153,6 +160,10 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
     if (playerData.rating !== undefined) dbPlayerData.rating = playerData.rating;
     if (playerData.phone !== undefined) dbPlayerData.phone = playerData.phone;
     if (playerData.email !== undefined) dbPlayerData.email = playerData.email;
+    if (playerData.state !== undefined) dbPlayerData.state = playerData.state;
+    if (playerData.city !== undefined) dbPlayerData.city = playerData.city;
+    if (playerData.status !== undefined) dbPlayerData.status = playerData.status;
+    if (playerData.gamesPlayed !== undefined) dbPlayerData.games_played = playerData.gamesPlayed;
 
     const { data, error } = await supabase
       .from('players')
@@ -168,10 +179,11 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
       name: data.name,
       rating: data.rating || FLOOR_RATING,
       gender: playerData.gender || 'M',
-      state: playerData.state || '',
-      city: playerData.city || '',
-      status: playerData.status || 'approved',
-      gamesPlayed: playerData.gamesPlayed || 0,
+      state: data.state || '',
+      city: data.city || '',
+      country: 'Nigeria',
+      status: (data.status as "pending" | "approved" | "rejected") || 'approved',
+      gamesPlayed: data.games_played || 0,
       phone: data.phone || '',
       email: data.email || '',
       ratingHistory: playerData.ratingHistory || [],
