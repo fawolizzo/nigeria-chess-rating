@@ -14,129 +14,88 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 const OfficerDashboard: React.FC = () => {
   const { currentUser, isLoading: isUserLoading, logout, forceSync } = useUser();
   const navigate = useNavigate();
-  const [isContentLoading, setIsContentLoading] = useState(true);
+  // const [isContentLoading, setIsContentLoading] = useState(true); // Replaced by initialAuthCheckTimedOut logic
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   const refreshToastIdRef = useRef<string | null>(null);
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const maxLoadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const authCheckCompletedRef = useRef(false);
-  const forceAuthFinishedRef = useRef(false);
   
-  // Force-complete loading after a maximum time to absolutely prevent stuck loading state
+  const [initialAuthCheckTimedOut, setInitialAuthCheckTimedOut] = useState(false);
+  const initializedRef = useRef(false); // To ensure main auth logic runs once
+
+  // Safety timeout for initial authentication check
   useEffect(() => {
-    // Set an absolute maximum loading time - even shorter than before
-    maxLoadingTimeoutRef.current = setTimeout(() => {
-      if (!forceAuthFinishedRef.current) {
-        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Forcing auth check completion after absolute maximum timeout');
-        forceAuthFinishedRef.current = true;
-        authCheckCompletedRef.current = true;
-        setIsContentLoading(false);
-        
-        // If by this point we still don't have a user and we're on the officer dashboard page,
-        // force navigate to login
-        if (!currentUser) {
-          logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No user after maximum timeout, redirecting to login');
-          navigate("/login");
-        }
-      }
-    }, 2000); // Even shorter hard limit of 2 seconds
-    
-    return () => {
-      if (maxLoadingTimeoutRef.current) {
-        clearTimeout(maxLoadingTimeoutRef.current);
-      }
-    };
-  }, [navigate, currentUser]);
-  
+    // Only run this timeout if user loading is in progress and we haven't initialized yet
+    if (isUserLoading && !initializedRef.current) {
+      const timer = setTimeout(() => {
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Initial auth check has timed out.');
+        setInitialAuthCheckTimedOut(true);
+      }, 5000); // 5-second timeout
+
+      return () => clearTimeout(timer);
+    }
+  }, [isUserLoading]);
+
   // Prevent access for non-rating officers and handle redirects
   useEffect(() => {
-    // Clear loading state immediately if user is already loaded
-    if (!isUserLoading && currentUser) {
-      authCheckCompletedRef.current = true;
-      setIsContentLoading(false);
+    // If user loading is complete or the auth check has timed out, then proceed with checks.
+    if ((!isUserLoading || initialAuthCheckTimedOut) && !initializedRef.current) {
+      initializedRef.current = true; // Mark that we've run this logic block
+
+      if (!currentUser) {
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user after loading/timeout, redirecting to login.');
+        navigate("/login", { replace: true });
+        return;
+      }
       
       if (currentUser.role !== "rating_officer") {
-        logMessage(LogLevel.WARNING, 'OfficerDashboard', `User role is ${currentUser.role}, not rating_officer`);
+        logMessage(LogLevel.WARNING, 'OfficerDashboard', `User role is ${currentUser.role}, not rating_officer. Redirecting.`);
         toast({
           title: "Access Denied",
-          description: "This page is only accessible to Rating Officers",
+          description: "This page is only accessible to Rating Officers.",
           variant: "destructive",
         });
         
-        // Redirect based on user role
         if (currentUser.role === "tournament_organizer") {
           if (currentUser.status === "approved") {
-            navigate("/organizer-dashboard");
+            navigate("/organizer-dashboard", { replace: true });
           } else {
-            navigate("/pending-approval");
+            navigate("/pending-approval", { replace: true });
           }
         } else {
-          navigate("/");
+          navigate("/", { replace: true });
         }
+        return;
       }
+      // If user is a rating officer, no navigation needed from here.
+      // The component will proceed to render the dashboard.
     }
-    
-    // If auth check is still in progress, set an even shorter timeout (1.5 seconds)
-    if (isUserLoading && !authCheckCompletedRef.current) {
-      loadingTimeoutRef.current = setTimeout(() => {
-        authCheckCompletedRef.current = true;
-        setIsContentLoading(false);
-        
-        if (!currentUser) {
-          logMessage(LogLevel.WARNING, 'OfficerDashboard', 'Auth check timed out, redirecting to login');
-          navigate("/login");
-        }
-      }, 1500); // 1.5 second timeout for auth check - shorter than before
-    } else if (!isUserLoading && !currentUser) {
-      // If user is not loading but we have no user, redirect immediately
-      authCheckCompletedRef.current = true;
-      logMessage(LogLevel.WARNING, 'OfficerDashboard', 'No current user, redirecting to login');
-      navigate("/login");
-    }
-    
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-  }, [currentUser, isUserLoading, navigate, toast]);
+  }, [currentUser, isUserLoading, initialAuthCheckTimedOut, navigate, toast]);
   
   const handleSystemReset = () => {
-    // Log out the current user after reset
     logout();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
   
   const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    
+    if (!refreshToastIdRef.current) {
+      const toastInstance = toast({
+        title: "Refreshing Data",
+        description: "The dashboard data is being refreshed...",
+        duration: 3000, // Keep it open a bit longer initially
+      });
+      refreshToastIdRef.current = toastInstance.id;
+    }
+    
     try {
-      // If already refreshing, don't start another refresh operation
-      if (isRefreshing) return;
-      
-      setIsRefreshing(true);
-      
-      // Only show toast if there's no toast currently shown
-      if (!refreshToastIdRef.current) {
-        // Show refresh toast and store its ID
-        const toastInstance = toast({
-          title: "Refreshing Data",
-          description: "The dashboard data is being refreshed...",
-          duration: 3000,
-        });
-        refreshToastIdRef.current = toastInstance.id;
-      }
-      
       await forceSync();
-      
-      // Show success toast
       toast({
         title: "Data Refreshed",
         description: "The dashboard data has been refreshed successfully.",
         duration: 2000,
       });
-      
-      // Clear the toast ID after successful completion
-      refreshToastIdRef.current = null;
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
@@ -145,15 +104,14 @@ const OfficerDashboard: React.FC = () => {
         variant: "destructive",
         duration: 5000,
       });
-      refreshToastIdRef.current = null;
     } finally {
       setIsRefreshing(false);
+      refreshToastIdRef.current = null; // Clear ref after operation
     }
   };
   
-  // Show minimal loading state that auto-completes after a maximum time
-  if ((isUserLoading && !authCheckCompletedRef.current) || 
-      (!currentUser && !authCheckCompletedRef.current && !forceAuthFinishedRef.current)) {
+  // Show loading spinner only if user is loading AND the auth check hasn't timed out.
+  if (isUserLoading && !initialAuthCheckTimedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
         <div className="flex flex-col items-center">
@@ -164,12 +122,13 @@ const OfficerDashboard: React.FC = () => {
     );
   }
   
-  // User authentication check
+  // If user is not a rating_officer or no user (after loading/timeout), render null.
+  // The useEffect above will handle redirection.
   if (!currentUser || currentUser.role !== "rating_officer") {
-    // Will be redirected by useEffect
-    return null;
+    return null; // Redirection is handled by the useEffect
   }
   
+  // Render dashboard content if user is authenticated and authorized
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />

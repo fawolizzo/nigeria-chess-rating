@@ -9,8 +9,11 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getAllPlayers, Player } from "@/lib/mockData";
+// import { getAllPlayers, Player } from "@/lib/mockData"; // Removed getAllPlayers
+import { Player } from "@/lib/mockData"; // Kept Player
+import { getAllPlayersFromSupabase } from "@/services/playerService"; // Added Supabase service
 import { useToast } from "@/components/ui/use-toast";
+import { Loader2 } from "lucide-react"; // Added Loader2 for loading state
 
 import PlayerSearchInput from "@/components/players/PlayerSearchInput";
 import SelectedPlayersList from "@/components/players/SelectedPlayersList";
@@ -35,57 +38,60 @@ export const MultiSelectPlayers = ({
 }: MultiSelectPlayersProps) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]); // Stores available players for selection
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
+  const [isLoadingDialog, setIsLoadingDialog] = useState(false);
 
-  // Fetch all players, regardless of status
   useEffect(() => {
-    const fetchPlayers = () => {
-      // Force refresh player list every time the dialog opens
-      const allPlayers = getAllPlayers();
-      console.log("All players in system:", allPlayers.length);
-      
-      // Filter players based on includePendingPlayers flag
-      const statusFilteredPlayers = includePendingPlayers 
-        ? allPlayers 
-        : allPlayers.filter(player => player.status === 'approved');
-      
-      // Get players excluding those already in the tournament
-      const availablePlayers = statusFilteredPlayers.filter(player => {
-        return !excludeIds.includes(player.id);
-      });
-      
-      console.log("Available players for selection:", availablePlayers.length);
-      
-      if (availablePlayers.length === 0) {
-        if (allPlayers.length === 0) {
-          toast({
-            title: "No players available",
-            description: "There are no players in the system yet.",
-          });
-        } else if (statusFilteredPlayers.length === 0) {
-          toast({
-            title: "No approved players",
-            description: "There are no approved players in the system yet.",
-          });
-        } else {
-          toast({
-            title: "No available players",
-            description: "All players are already in this tournament.",
-            variant: "destructive"
-          });
+    const fetchPlayersData = async () => {
+      if (!isOpen) return;
+
+      setIsLoadingDialog(true);
+      try {
+        const filterOptions = includePendingPlayers ? {} : { status: 'approved' };
+        const fetchedPlayers = await getAllPlayersFromSupabase(filterOptions);
+        
+        console.log(`Fetched ${fetchedPlayers.length} players from Supabase. Include pending: ${includePendingPlayers}`);
+        
+        const availablePlayers = fetchedPlayers.filter(player => 
+          !excludeIds.includes(player.id)
+        );
+        
+        console.log("Available players for selection:", availablePlayers.length);
+        
+        if (availablePlayers.length === 0) {
+          if (fetchedPlayers.length === 0) {
+            toast({
+              title: "No Players Available",
+              description: includePendingPlayers 
+                ? "There are no players in the system." 
+                : "There are no approved players in the system.",
+              variant: "default"
+            });
+          } else {
+            toast({
+              title: "All Eligible Players Excluded",
+              description: "All eligible players are already in the list or excluded.",
+              variant: "default"
+            });
+          }
         }
+        
+        setPlayers(availablePlayers);
+        setFilteredPlayers(availablePlayers); // Initially show all available players
+      } catch (error) {
+        console.error("Failed to fetch players for MultiSelect:", error);
+        toast({ title: "Error", description: "Could not load players. Please try again.", variant: "destructive" });
+        setPlayers([]);
+        setFilteredPlayers([]);
+      } finally {
+        setIsLoadingDialog(false);
       }
-      
-      setPlayers(availablePlayers);
-      setFilteredPlayers(availablePlayers);
     };
     
-    if (isOpen) {
-      fetchPlayers();
-    }
-  }, [excludeIds, isOpen, toast, includePendingPlayers]);
+    fetchPlayersData();
+  }, [isOpen, includePendingPlayers, excludeIds, toast]); // excludeIds needs to be a dependency
 
   // Reset selections when dialog closes
   useEffect(() => {
@@ -204,37 +210,43 @@ export const MultiSelectPlayers = ({
             setSearchQuery={setSearchQuery} 
           />
           
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0"> {/* Ensures this part doesn't grow excessively */}
             <SelectedPlayersList 
               selectedPlayers={selectedPlayers}
               onRemovePlayer={handleSelectPlayer}
             />
           </div>
           
-          <div className="flex-grow overflow-hidden">
-            <PlayerSelectionList 
-              filteredPlayers={filteredPlayers}
-              selectedPlayers={selectedPlayers}
-              onSelectPlayer={handleSelectPlayer}
-            />
-          </div>
+          {isLoadingDialog ? (
+            <div className="flex-grow flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
+          ) : (
+            <div className="flex-grow overflow-hidden"> {/* Allows PlayerSelectionList to scroll */}
+              <PlayerSelectionList 
+                filteredPlayers={filteredPlayers}
+                selectedPlayers={selectedPlayers}
+                onSelectPlayer={handleSelectPlayer}
+              />
+            </div>
+          )}
           
-          {players.length === 0 && (
-            <div className="text-center py-6">
+          {!isLoadingDialog && players.length === 0 && (
+            <div className="text-center py-6 flex-grow flex items-center justify-center">
               <p className="text-gray-500 dark:text-gray-400">
-                No available players found. Please import players or create new ones.
+                No available players found.
               </p>
             </div>
           )}
         </div>
         
-        <DialogFooter className="mt-4 pt-4 border-t sticky bottom-0 bg-white dark:bg-gray-900">
-          <Button variant="outline" onClick={handleCancel}>
+        <DialogFooter className="mt-auto pt-4 border-t sticky bottom-0 bg-white dark:bg-gray-900"> {/* mt-auto pushes footer down */}
+          <Button variant="outline" onClick={handleCancel} disabled={isLoadingDialog}>
             Cancel
           </Button>
           <Button 
             onClick={handleConfirmSelection} 
-            disabled={selectedPlayers.length === 0}
+            disabled={selectedPlayers.length === 0 || isLoadingDialog}
           >
             Add {selectedPlayers.length} Player{selectedPlayers.length !== 1 ? 's' : ''}
           </Button>

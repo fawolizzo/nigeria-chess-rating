@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { addPlayer, Player } from "@/lib/mockData";
+// import { addPlayer, Player } from "@/lib/mockData"; // Removed addPlayer
+import { Player } from "@/lib/mockData"; // Kept Player type
+import { createPlayerInSupabase } from "@/services/playerService"; // Added Supabase service
 import { useToast } from "@/components/ui/use-toast";
 import PlayerFormFields from "@/components/player/PlayerFormFields";
 import FileUploadButton from "@/components/players/FileUploadButton";
@@ -78,6 +80,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
   const [importedPlayers, setImportedPlayers] = useState<ImportPlayerWithTempId[]>([]);
   const [selectedImportIds, setSelectedImportIds] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Added for loading state
   
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
@@ -111,10 +114,11 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
     return `NCR${randomPart}${timestamp}`;
   };
 
-  const onSubmit = (data: PlayerFormValues) => {
+  const onSubmit = async (data: PlayerFormValues) => {
+    setIsSubmitting(true);
     try {
-      const currentDate = new Date().toISOString();
-      const ncrId = generateNcrId();
+      // const currentDate = new Date().toISOString(); // Not needed for Supabase creation here
+      // const ncrId = generateNcrId(); // Supabase will generate ID
       
       let finalClassicalRating = data.rating;
       let finalRapidRating = data.rapidRating;
@@ -132,8 +136,7 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
       const blitzGamesPlayed = (data.blitzRatingStatus === 'established' && finalBlitzRating !== undefined) || 
                               (data.apply100Bonus && finalBlitzRating !== undefined) ? 30 : 0;
       
-      const newPlayer: Player = {
-        id: ncrId,
+      const playerDataToSave: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults'> = {
         name: data.name,
         title: data.title === "none" ? undefined : data.title,
         rating: finalClassicalRating,
@@ -145,68 +148,52 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
         ratingStatus: data.apply100Bonus ? 'established' : data.ratingStatus,
         rapidRatingStatus: finalRapidRating !== undefined ? 
                           (data.apply100Bonus ? 'established' : data.rapidRatingStatus) : 
-                          'provisional',
+                          'provisional', // Default to provisional if rating is not set
         blitzRatingStatus: finalBlitzRating !== undefined ? 
                           (data.apply100Bonus ? 'established' : data.blitzRatingStatus) : 
-                          'provisional',
+                          'provisional', // Default to provisional if rating is not set
         gamesPlayed: classicalGamesPlayed,
         rapidGamesPlayed: rapidGamesPlayed,
         blitzGamesPlayed: blitzGamesPlayed,
-        status: 'approved',
-        ratingHistory: [
-          {
-            date: currentDate,
-            rating: finalClassicalRating,
-            reason: data.apply100Bonus ? "Initial rating with +100 bonus" : "Initial rating"
-          }
-        ],
-        tournamentResults: [],
+        status: 'approved', // Officer creation implies approval
+        // achievements and other optional fields will be undefined if not in `data`
       };
       
-      if (finalRapidRating !== undefined) {
-        newPlayer.rapidRatingHistory = [
-          {
-            date: currentDate,
-            rating: finalRapidRating,
-            reason: data.apply100Bonus ? "Initial rating with +100 bonus" : "Initial rating"
-          }
-        ];
+      // Add optional fields like club if they exist in `data`
+      if (data.club) {
+        (playerDataToSave as Player).club = data.club; // Casting because club is optional on Omit type
       }
+
+      const createdPlayer = await createPlayerInSupabase(playerDataToSave);
       
-      if (finalBlitzRating !== undefined) {
-        newPlayer.blitzRatingHistory = [
-          {
-            date: currentDate,
-            rating: finalBlitzRating,
-            reason: data.apply100Bonus ? "Initial rating with +100 bonus" : "Initial rating"
-          }
-        ];
-      }
-      
-      addPlayer(newPlayer);
-      
-      toast({
-        title: "Player created successfully",
-        description: `${data.name} has been added to the system with ID: ${ncrId}.`,
-      });
-      
-      form.reset();
-      handleOpenChange(false);
-      
-      if (onPlayerCreated) {
-        onPlayerCreated(newPlayer);
-      }
-      
-      if (onSuccess) {
-        onSuccess();
+      if (createdPlayer) {
+        toast({
+          title: "Player created successfully",
+          description: `${createdPlayer.name} has been added with ID: ${createdPlayer.id}.`,
+        });
+        
+        form.reset();
+        handleOpenChange(false);
+        
+        if (onPlayerCreated) {
+          onPlayerCreated(createdPlayer); // Pass the player returned from Supabase
+        }
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        throw new Error("Player creation failed in Supabase service.");
       }
     } catch (error) {
       console.error("Error creating player:", error);
       toast({
-        title: "Error creating player",
-        description: "There was an error creating the player. Please try again.",
+        title: "Error Creating Player",
+        description: error instanceof Error ? error.message : "There was an error creating the player. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -230,56 +217,63 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
     }
   };
 
-  const submitImportedPlayers = () => {
+  const submitImportedPlayers = async () => { // Made async
+    setIsSubmitting(true); // Added for loading state
     try {
-      const playersToCreate = importedPlayers
+      const playersToCreatePromises = importedPlayers
         .filter(player => selectedImportIds.includes(player.tempId))
-        .map(player => {
-          const ncrId = player.id || generateNcrId();
+        .map(async (player) => { // map callback is async
+          // const ncrId = player.id || generateNcrId(); // Supabase handles ID
           const rating = player.rating || 800;
-          const currentDate = new Date().toISOString();
+          // const currentDate = new Date().toISOString(); // Not needed for Supabase
           
-          return {
-            id: ncrId,
+          const playerDataToSave: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults'> = {
             name: player.name || "Unknown Player",
             title: player.title,
             rating: rating,
             rapidRating: player.rapidRating,
             blitzRating: player.blitzRating,
-            country: "Nigeria",
+            country: "Nigeria", // Assuming default
             state: player.state?.replace(" NGR", "").trim() || undefined,
             city: player.city,
             gender: player.gender || "M",
             birthYear: player.birthYear,
-            ratingStatus: player.ratingStatus || 'established',
-            rapidRatingStatus: player.rapidRatingStatus,
-            blitzRatingStatus: player.blitzRatingStatus,
-            gamesPlayed: player.gamesPlayed || 30,
-            rapidGamesPlayed: player.rapidGamesPlayed,
-            blitzGamesPlayed: player.blitzGamesPlayed,
-            ratingHistory: [{ 
-              date: currentDate, 
-              rating: rating,
-              reason: "Initial import with +100 bonus"
-            }],
-            tournamentResults: [],
-            status: 'approved'
-          } as Player;
+            ratingStatus: player.ratingStatus || 'established', // Default for import
+            rapidRatingStatus: player.rapidRatingStatus || (player.rapidRating ? 'established' : undefined),
+            blitzRatingStatus: player.blitzRatingStatus || (player.blitzRating ? 'established' : undefined),
+            gamesPlayed: player.gamesPlayed || 30, // Default for import
+            rapidGamesPlayed: player.rapidGamesPlayed || (player.rapidRating ? 30 : undefined),
+            blitzGamesPlayed: player.blitzGamesPlayed || (player.blitzRating ? 30 : undefined),
+            status: 'approved' // Officer import implies approval
+          };
+          if (player.club) {
+            (playerDataToSave as Player).club = player.club;
+          }
+          return createPlayerInSupabase(playerDataToSave); // Return the promise
         });
       
-      playersToCreate.forEach(player => {
-        addPlayer(player);
-      });
-      
-      toast({
-        title: "Players created successfully",
-        description: `${playersToCreate.length} players have been imported and added to the system.`,
-      });
+      const createdImportedPlayers = await Promise.all(playersToCreatePromises);
+      const successfulCreations = createdImportedPlayers.filter(p => p !== null);
+
+      if (successfulCreations.length > 0) {
+        toast({
+          title: "Players Imported Successfully",
+          description: `${successfulCreations.length} players have been imported and added.`,
+        });
+      }
+
+      if (successfulCreations.length !== playersToCreatePromises.length) {
+         const failedCount = playersToCreatePromises.length - successfulCreations.length;
+        toast({
+          title: "Some Imports Failed",
+          description: `${failedCount} player(s) could not be imported. Please check logs.`,
+          variant: "warning"
+        });
+      }
       
       setImportedPlayers([]);
       setSelectedImportIds([]);
       setActiveTab("single");
-      
       handleOpenChange(false);
       
       if (onSuccess) {
@@ -288,10 +282,12 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
     } catch (error) {
       console.error("Error importing players:", error);
       toast({
-        title: "Error importing players",
-        description: "There was an error importing the players. Please try again.",
+        title: "Error Importing Players",
+        description: error instanceof Error ? error.message : "There was an error importing players.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false); // Reset loading state
     }
   };
   
@@ -482,8 +478,9 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                   <Button 
                     type="submit" 
                     className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                    disabled={isSubmitting}
                   >
-                    Create Player
+                    {isSubmitting ? "Creating..." : "Create Player"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -545,10 +542,10 @@ const CreatePlayerDialog: React.FC<Partial<CreatePlayerDialogProps>> = ({
                   </Button>
                   <Button 
                     onClick={submitImportedPlayers}
-                    disabled={selectedImportIds.length === 0}
+                    disabled={selectedImportIds.length === 0 || isSubmitting}
                     className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
                   >
-                    Import {selectedImportIds.length} Player{selectedImportIds.length !== 1 ? 's' : ''}
+                    {isSubmitting && activeTab === 'review' ? "Importing..." : `Import ${selectedImportIds.length} Player${selectedImportIds.length !== 1 ? 's' : ''}`}
                   </Button>
                 </DialogFooter>
               </>

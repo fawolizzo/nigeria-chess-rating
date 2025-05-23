@@ -201,7 +201,7 @@ const TournamentRatingDialog = ({
         });
         
         Object.entries(playerUpdates).forEach(([playerId, update]) => {
-          const player = allPlayers.find(p => p.id === playerId);
+          const player = allFetchedPlayers.find(p => p.id === playerId); // Corrected: allPlayers to allFetchedPlayers
           if (player) {
             const finalPosition = calculatePlayerPosition(playerId, processedRounds);
             

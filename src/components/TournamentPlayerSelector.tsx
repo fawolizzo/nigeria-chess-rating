@@ -1,8 +1,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, UserPlus, X, Users, AlertTriangle } from "lucide-react";
-import { Player, addPlayer, getAllPlayers } from "@/lib/mockData";
+import { Plus, AlertTriangle } from "lucide-react"; // Removed unused UserPlus, X, Users
+import { Player } from "@/lib/mockData"; // Removed addPlayer, getAllPlayers
 import { MultiSelectPlayers } from "@/components/MultiSelectPlayers";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -23,46 +23,45 @@ interface TournamentPlayerSelectorProps {
   tournamentId: string;
   existingPlayerIds: string[];
   onPlayersAdded: (players: Player[]) => void;
+  // allPlayers?: Player[]; // Removed: MultiSelectPlayers fetches its own data
+  disabled?: boolean; // Added to pass down isProcessing state
 }
 
 const TournamentPlayerSelector = ({ 
   tournamentId,
   existingPlayerIds,
-  onPlayersAdded 
+  onPlayersAdded,
+  disabled 
 }: TournamentPlayerSelectorProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [pendingPlayersExist, setPendingPlayersExist] = useState(false);
-  const { toast } = useToast();
-  const { currentUser } = useUser();
+  // const [pendingPlayersExist, setPendingPlayersExist] = useState(false); // Removed, alert is handled by parent or MultiSelect
+  const { toast } = useToast(); // Toast is used in handlePlayersSelected in the original code, but removed in my previous simplification. Re-evaluating.
+  // const { currentUser } = useUser(); // Not used
   
   const handlePlayersSelected = (players: Player[]) => {
-    // Check if any players are pending
-    const pendingPlayers = players.filter(player => player.status === 'pending');
-    
-    if (pendingPlayers.length > 0) {
+    // The parent component (PlayersTab -> TournamentManagement) will show toasts 
+    // related to pending players if necessary, upon receiving the players.
+    // However, the original code for TournamentPlayerSelector DID have a toast for pending players.
+    // Let's reinstate a generic one if any pending players are selected, as a direct feedback.
+    const pendingSelected = players.filter(p => p.status === 'pending');
+    if (pendingSelected.length > 0) {
       toast({
-        title: "Some players require approval",
-        description: `${pendingPlayers.length} selected player(s) require approval from a Rating Officer before they can be used in tournaments.`,
-        variant: "warning"
+        title: "Players Selected Include Pending",
+        description: `${pendingSelected.length} selected player(s) still require Rating Officer approval.`,
+        variant: "warning",
+        duration: 5000,
       });
     }
-    
-    // We'll add all players, but tournament logic will handle pending players appropriately
+
+    // The parent component (PlayersTab -> TournamentManagement) will show toasts 
+    // related to pending players if necessary, upon receiving the players.
     onPlayersAdded(players);
     setIsDialogOpen(false);
   };
   
-  const handleDialogClose = (open: boolean) => {
-    if (!open) {
-      setIsDialogOpen(open);
-    } else {
-      // Check for pending players when opening dialog
-      const allPlayers = getAllPlayers();
-      console.log("All players in system:", allPlayers);
-      const hasPendingPlayers = allPlayers.some(player => player.status === 'pending');
-      setPendingPlayersExist(hasPendingPlayers);
-      setIsDialogOpen(open);
-    }
+  // Simplified dialog open/close logic
+  const handleDialogVisibilityChange = (open: boolean) => {
+    setIsDialogOpen(open);
   };
   
   return (
@@ -71,40 +70,36 @@ const TournamentPlayerSelector = ({
         variant="outline" 
         size="sm"
         className="text-sm"
-        onClick={() => handleDialogClose(true)}
+        onClick={() => setIsDialogOpen(true)} // Directly open dialog
+        disabled={disabled} // Use disabled prop
       >
         <Plus className="h-4 w-4 mr-2" />
         Add Players
       </Button>
       
-      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-[600px]">
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogVisibilityChange}>
+        <DialogContent className="sm:max-w-[600px]"> {/* Consider responsive width like sm:max-w-lg or md:max-w-xl */}
           <DialogHeader>
             <DialogTitle>Add Players to Tournament</DialogTitle>
             <DialogDescription>
-              Select existing players for your tournament
+              Select existing players to add to this tournament.
             </DialogDescription>
           </DialogHeader>
           
-          {pendingPlayersExist && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2 text-sm">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-              <p className="text-yellow-700">
-                Some players need approval from a Rating Officer before they can participate in tournaments. 
-                You can include them in your selection, but the tournament cannot start until all players are approved.
-              </p>
-            </div>
-          )}
+          {/* 
+            The alert about pending players is better handled by PlayersTab or MultiSelectPlayers directly
+            if it needs to be shown based on the fetched list within MultiSelectPlayers.
+            Removing from here to simplify and avoid redundant checks.
+          */}
+          {/* {pendingPlayersExist && (...)} */}
           
           <MultiSelectPlayers
-            isOpen={isDialogOpen}
-            onOpenChange={(open) => {
-              if (!open) handleDialogClose(false);
-            }}
+            isOpen={isDialogOpen} // This prop might be redundant if MultiSelectPlayers is only rendered when Dialog is open
+            onOpenChange={handleDialogVisibilityChange} // Pass down to allow MultiSelect to close dialog
             onPlayersSelected={handlePlayersSelected}
             excludeIds={existingPlayerIds}
-            hideDialog={true}
-            includePendingPlayers={true}
+            hideDialog={true} // MultiSelectPlayers renders its own UI, not another dialog
+            includePendingPlayers={true} // Always include pending for selection, parent handles implications
           />
         </DialogContent>
       </Dialog>

@@ -12,20 +12,28 @@ interface PlayersTabProps {
   tournamentId: string;
   tournamentStatus: string;
   registeredPlayers: Player[];
+  allPlayers?: Player[]; // Added: list of all players in the system for selector
   playerIds: string[];
   onCreatePlayer: () => void;
   onAddPlayers: (players: Player[]) => void;
   onRemovePlayer: (playerId: string) => void;
+  isProcessing?: boolean; // Added
+  searchQuery?: string; // Added for TournamentPlayerSelector if it uses it via PlayersTab
+  setSearchQuery?: (query: string) => void; // Added for TournamentPlayerSelector
 }
 
 const PlayersTab = ({
   tournamentId,
   tournamentStatus,
   registeredPlayers,
+  allPlayers, // Destructure
   playerIds,
   onCreatePlayer,
   onAddPlayers,
-  onRemovePlayer
+  onRemovePlayer,
+  isProcessing, // Destructure
+  // searchQuery, // Not directly used by PlayersTab, but by TournamentPlayerSelector
+  // setSearchQuery // Not directly used by PlayersTab, but by TournamentPlayerSelector
 }: PlayersTabProps) => {
   const isUpcoming = tournamentStatus === "upcoming";
   const pendingPlayers = registeredPlayers.filter(player => player.status === "pending");
@@ -71,6 +79,7 @@ const PlayersTab = ({
                 size="sm"
                 onClick={onCreatePlayer}
                 className="flex items-center gap-1"
+                disabled={isProcessing} // Disable if parent is processing
               >
                 <UserPlus size={16} /> Create Player
               </Button>
@@ -79,6 +88,12 @@ const PlayersTab = ({
                 tournamentId={tournamentId}
                 existingPlayerIds={playerIds || []}
                 onPlayersAdded={handleAddPlayers}
+                allPlayers={allPlayers} // Pass allPlayers to the selector
+                // searchQuery and setSearchQuery could be passed here if TournamentPlayerSelector needs them
+                // and if PlayersTab receives them (currently commented out in destructuring)
+                // For now, assuming TournamentPlayerSelector fetches its own or doesn't need external search query management here.
+                // If it does, uncomment in props and destructuring and pass them down.
+                disabled={isProcessing} // Disable if parent is processing
               />
             </div>
           )}
@@ -140,6 +155,7 @@ const PlayersTab = ({
                           size="sm"
                           onClick={() => onRemovePlayer(player.id)}
                           className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                          disabled={isProcessing} // Disable if parent is processing
                         >
                           <X size={16} />
                         </Button>
@@ -181,6 +197,7 @@ const PlayersTab = ({
                           size="sm"
                           onClick={() => onRemovePlayer(player.id)}
                           className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                          disabled={isProcessing} // Disable if parent is processing
                         >
                           <X size={16} />
                         </Button>
@@ -209,6 +226,7 @@ const PlayersTab = ({
                   variant="outline"
                   onClick={onCreatePlayer}
                   className="flex items-center gap-1 justify-center"
+                  disabled={isProcessing}
                 >
                   <UserPlus size={16} /> Create Player
                 </Button>
@@ -217,6 +235,8 @@ const PlayersTab = ({
                   tournamentId={tournamentId}
                   existingPlayerIds={playerIds || []}
                   onPlayersAdded={handleAddPlayers}
+                  allPlayers={allPlayers} // Pass allPlayers here too
+                  disabled={isProcessing}
                 />
               </div>
             )}

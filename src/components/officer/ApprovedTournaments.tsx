@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, AlertCircle, CheckCircle, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getAllTournaments, Tournament } from "@/lib/mockData";
+// import { getAllTournaments, Tournament } from "@/lib/mockData"; // Removed mock import
+import { Tournament } from "@/lib/mockData"; // Kept type
+import { useDashboard } from "@/contexts/officer/OfficerDashboardContext"; // Added context import
 import TournamentRatingDialog from "./TournamentRatingDialog";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -21,22 +23,63 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
 }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const { 
+    completedTournaments: contextCompletedTournaments, 
+    // pendingTournaments, // Not typically shown here, but available from context
+    // We might want all non-pending tournaments for a broader view
+    // For now, let's assume this component primarily shows completed/processed
+    // and potentially ongoing/upcoming as per original logic.
+    // The prop `completedTournaments` might be a subset passed by OfficerDashboardTabs.
+    // Let's use the context data for a more comprehensive list unless a specific subset is intended by the prop.
+    loadAllData // To refresh if needed, though onTournamentProcessed should trigger it in parent
+  } = useDashboard(); 
+  
+  const [tournamentsToDisplay, setTournamentsToDisplay] = useState<Tournament[]>([]);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   
   useEffect(() => {
+    // If completedTournaments prop is explicitly passed, use it.
+    // Otherwise, derive from context, showing more than just 'completed'.
     if (completedTournaments) {
-      setTournaments(completedTournaments);
+      setTournamentsToDisplay(completedTournaments);
     } else {
-      // Load all tournaments and filter by status if no tournaments are provided
-      const allTournaments = getAllTournaments();
-      const approvedAndCompletedTournaments = allTournaments.filter(
-        t => t.status === "completed" || t.status === "processed" || t.status === "upcoming" || t.status === "ongoing"
-      );
-      setTournaments(approvedAndCompletedTournaments);
+      // This logic can be simplified if OfficerDashboardTabs passes specific lists to specific tab contents.
+      // For now, recreating a combined list from context if prop isn't specific.
+      // The original logic showed: "completed", "processed", "upcoming", "ongoing"
+      // This component is named "ApprovedTournaments" but also handles completed/processed.
+      // Let's fetch all from context and filter.
+      const allContextTournaments = [
+        ...(contextCompletedTournaments || []), 
+        // Assuming useDashboard also provides upcoming and ongoing if needed,
+        // or we fetch them if this component's scope is broader.
+        // For simplicity, if `completedTournaments` prop is not passed,
+        // we rely on the context to provide what this component should show.
+        // The original fallback was `getAllTournaments().filter(...)`.
+        // Let's use contextCompletedTournaments primarily, and consider if it should show more.
+        // The name "ApprovedTournaments" might imply it should show 'approved' (upcoming/ongoing) too.
+        // The filter in original useEffect was: "completed" || "processed" || "upcoming" || "ongoing"
+        // Let's get all tournaments from context and filter them here
+        // This requires useDashboard to expose ALL tournaments, or this component to fetch.
+        // Given the task, let's assume contextCompletedTournaments is the primary source.
+        // If it needs more, the context or parent should provide it.
+        // For now, simplifying to just use contextCompletedTournaments if prop is missing.
+      ];
+       // Filter from context if prop is not provided. This is slightly different from original.
+       // The original logic was to show completed, processed, upcoming, ongoing.
+       // Let's fetch all tournaments from context and filter.
+       // This implies useDashboard() should provide access to *all* tournaments
+       // or this component needs to fetch them.
+       // For this refactor, let's assume `useDashboard` provides a comprehensive list
+       // or this component should be simplified to only show what's passed via `completedTournaments`.
+       // Given the existing structure, `OfficerDashboardTabs` passes `completedTournaments` to this.
+       // So, the `else` block might only be relevant if this component is used elsewhere without the prop.
+       // For now, if `completedTournaments` (prop) is undefined, we might display nothing or what's in context.
+       // The original fallback to `getAllTournaments()` is what we are removing.
+       // Let's stick to the prop or context.completedTournaments for now.
+      setTournamentsToDisplay(contextCompletedTournaments || []);
     }
-  }, [completedTournaments]);
+  }, [completedTournaments, contextCompletedTournaments]);
   
   const getStatusColorClass = (status: string) => {
     switch (status) {
@@ -75,11 +118,12 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
         <CardHeader>
           <CardTitle className="text-xl">Tournaments</CardTitle>
           <CardDescription>
-            View and manage approved, completed, and processed tournaments
+            View and manage completed and processed tournaments. 
+            {/* Potentially also approved/upcoming/ongoing if data source changes */}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {tournaments.length > 0 ? (
+          {tournamentsToDisplay.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -91,7 +135,7 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tournaments.map(tournament => (
+                {tournamentsToDisplay.map(tournament => (
                   <TableRow key={tournament.id}>
                     <TableCell className="font-medium">{tournament.name}</TableCell>
                     <TableCell>

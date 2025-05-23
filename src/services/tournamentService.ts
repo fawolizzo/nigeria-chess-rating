@@ -7,9 +7,15 @@ import { Tournament } from '../lib/mockData';
  * @returns A promise that resolves to an array of Tournament objects.
  */
 export const getAllTournamentsFromSupabase = async (
-  filters: { searchQuery?: string; state?: string }
+  filters: { searchQuery?: string; state?: string; organizerId?: string } // Added organizerId to filters
 ): Promise<Tournament[]> => {
-  let query = supabase.from('tournaments').select('*');
+  const selectFields = `
+    id, name, location, state, city, status, players, rounds, category, pairings, standings, prize, description,
+    startDate:start_date, endDate:end_date, organizerId:organizer_id, currentRound:current_round,
+    timeControl:time_control, processingDate:processing_date, processedPlayerIds:processed_player_ids,
+    rejectionReason:rejection_reason, registrationOpen:registration_open
+  `;
+  let query = supabase.from('tournaments').select(selectFields);
 
   if (filters.state) {
     query = query.eq('state', filters.state);
@@ -17,6 +23,9 @@ export const getAllTournamentsFromSupabase = async (
   if (filters.searchQuery) {
     const searchQuery = `%${filters.searchQuery}%`;
     query = query.or(`name.ilike.${searchQuery},location.ilike.${searchQuery},city.ilike.${searchQuery}`);
+  }
+  if (filters.organizerId) { // Added filter for organizerId
+    query = query.eq('organizer_id', filters.organizerId);
   }
 
   try {
@@ -38,10 +47,16 @@ export const getAllTournamentsFromSupabase = async (
  * @returns A promise that resolves to a Tournament object or null if not found or an error occurs.
  */
 export const getTournamentByIdFromSupabase = async (id: string): Promise<Tournament | null> => {
+  const selectFields = `
+    id, name, location, state, city, status, players, rounds, category, pairings, standings, prize, description,
+    startDate:start_date, endDate:end_date, organizerId:organizer_id, currentRound:current_round,
+    timeControl:time_control, processingDate:processing_date, processedPlayerIds:processed_player_ids,
+    rejectionReason:rejection_reason, registrationOpen:registration_open
+  `;
   try {
     const { data, error } = await supabase
       .from('tournaments')
-      .select('*')
+      .select(selectFields)
       .eq('id', id)
       .single();
 
@@ -70,11 +85,19 @@ export const createTournamentInSupabase = async (
     // this initial function assumes they are either not set on creation
     // or are simple enough to be included directly if the table schema allows.
     // Typically, these might be handled in separate update steps or dedicated functions.
+    // For insert, Supabase client maps camelCase tournamentData to snake_case columns.
+    // The select() part needs to map back if DB columns are snake_case.
+    const selectFields = `
+      id, name, location, state, city, status, players, rounds, category, pairings, standings, prize, description,
+      startDate:start_date, endDate:end_date, organizerId:organizer_id, currentRound:current_round,
+      timeControl:time_control, processingDate:processing_date, processedPlayerIds:processed_player_ids,
+      rejectionReason:rejection_reason, registrationOpen:registration_open
+    `;
     const { data, error } = await supabase
       .from('tournaments')
       .insert([tournamentData]) // insert expects an array of objects
-      .select()
-      .single(); // Assuming insert returns the created record
+      .select(selectFields) // Apply mapping to the returned record
+      .single(); 
 
     if (error) {
       console.error('Error creating tournament in Supabase:', error);
@@ -102,11 +125,19 @@ export const updateTournamentInSupabase = async (
     // Updating complex JSONB fields like 'players', 'rounds', 'pairings', 'standings'
     // might require specific strategies (e.g., fetching then merging, or using Supabase JSON functions)
     // which are beyond the scope of this initial implementation.
+    // For update, Supabase client maps camelCase tournamentData to snake_case columns.
+    // The select() part needs to map back if DB columns are snake_case.
+    const selectFields = `
+      id, name, location, state, city, status, players, rounds, category, pairings, standings, prize, description,
+      startDate:start_date, endDate:end_date, organizerId:organizer_id, currentRound:current_round,
+      timeControl:time_control, processingDate:processing_date, processedPlayerIds:processed_player_ids,
+      rejectionReason:rejection_reason, registrationOpen:registration_open
+    `;
     const { data, error } = await supabase
       .from('tournaments')
       .update(tournamentData)
       .eq('id', tournamentId)
-      .select()
+      .select(selectFields) // Apply mapping to the returned record
       .single();
 
     if (error) {

@@ -12,6 +12,7 @@ import { useUser } from "@/contexts/UserContext";
 import StateSelector from "@/components/selectors/StateSelector";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Added Alert components
 import SearchBar from "@/components/SearchBar";
+import { categorizeTournaments } from "@/utils/tournamentUtils"; // Import categorizeTournaments
 
 const Tournaments: React.FC = () => {
   const navigate = useNavigate();
@@ -47,31 +48,7 @@ const Tournaments: React.FC = () => {
   // Client-side filtering removed as Supabase handles it.
   // const filteredTournaments = ...
 
-  // Function to determine if a tournament is upcoming, ongoing, or completed
-  const categorizeTournaments = (tournaments: Tournament[]) => {
-    const upcoming: Tournament[] = [];
-    const ongoing: Tournament[] = [];
-    const completed: Tournament[] = [];
-    
-    // Ensure tournamentsToCategorize is an array before calling forEach
-    if (Array.isArray(tournamentsToCategorize)) {
-      tournamentsToCategorize.forEach((tournament) => {
-        const startDate = new Date(tournament.startDate);
-        const endDate = new Date(tournament.endDate);
-        const today = new Date();
-        
-        if (endDate < today || tournament.status === "completed" || tournament.status === "processed") {
-          completed.push(tournament);
-        } else if (startDate <= today) {
-          ongoing.push(tournament);
-        } else {
-          upcoming.push(tournament);
-        }
-      });
-    }
-    
-    return { upcoming, ongoing, completed };
-  };
+  // categorizeTournaments function is now imported from tournamentUtils.ts
   
   const { upcoming, ongoing, completed } = categorizeTournaments(tournaments); // Use 'tournaments' state
   

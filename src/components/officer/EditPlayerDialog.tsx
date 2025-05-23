@@ -21,7 +21,9 @@ import {
   FormDescription
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { updatePlayer, Player } from "@/lib/mockData";
+// import { updatePlayer, Player } from "@/lib/mockData"; // Removed updatePlayer
+import { Player } from "@/lib/mockData"; // Kept Player type
+import { updatePlayerInSupabase } from "@/services/playerService"; // Added Supabase service
 import { useToast } from "@/components/ui/use-toast";
 import PlayerFormFields from "@/components/player/PlayerFormFields";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -64,10 +66,11 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   onSuccess
 }) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false); // Added for loading state
   
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
-    defaultValues: {
+    defaultValues: { // Ensure all fields in PlayerFormValues are initialized
       id: "",
       name: "",
       title: "none",
@@ -146,9 +149,8 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
       const adjustedRapidGamesPlayed = adjustGamesPlayed(data.rapidRating, data.rapidGamesPlayed, data.rapidRatingStatus);
       const adjustedBlitzGamesPlayed = adjustGamesPlayed(data.blitzRating, data.blitzGamesPlayed, data.blitzRatingStatus);
       
-      const updatedPlayer: Player = {
-        ...player,
-        id: playerId,
+      // Construct a Partial<Player> object with only the fields from the form
+      const playerDataToUpdate: Partial<Player> = {
         name: data.name,
         title: data.title === "none" ? undefined : data.title,
         rating: data.rating,
@@ -163,56 +165,55 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         ratingStatus: data.ratingStatus,
         rapidRatingStatus: data.rapidRatingStatus,
         blitzRatingStatus: data.blitzRatingStatus,
+        // id is not part of data to update, it's used in eq()
       };
-      
-      // Only add to history if rating changed
+
+      // Handle history updates: only include if rating actually changed
+      const todayISO = new Date().toISOString();
+      let historyUpdated = false;
+
       if (data.rating !== player.rating) {
-        updatedPlayer.ratingHistory = [
-          ...player.ratingHistory,
-          {
-            date: new Date().toISOString(),
-            rating: data.rating,
-            reason: "Manual adjustment"
-          }
+        playerDataToUpdate.ratingHistory = [
+          ...(player.ratingHistory || []),
+          { date: todayISO, rating: data.rating, reason: "Manual adjustment by officer" }
         ];
+        historyUpdated = true;
+      } else {
+        playerDataToUpdate.ratingHistory = player.ratingHistory; // Keep existing if no change
+      }
+
+      if (data.rapidRating !== undefined && data.rapidRating !== player.rapidRating) {
+        playerDataToUpdate.rapidRatingHistory = [
+          ...(player.rapidRatingHistory || []),
+          { date: todayISO, rating: data.rapidRating, reason: "Manual adjustment by officer" }
+        ];
+        historyUpdated = true;
+      } else {
+         playerDataToUpdate.rapidRatingHistory = player.rapidRatingHistory;
       }
       
-      // Add to rapid rating history if changed
-      if (data.rapidRating !== player.rapidRating && data.rapidRating !== undefined) {
-        if (!updatedPlayer.rapidRatingHistory) {
-          updatedPlayer.rapidRatingHistory = [];
-        }
-        
-        updatedPlayer.rapidRatingHistory = [
-          ...updatedPlayer.rapidRatingHistory,
-          {
-            date: new Date().toISOString(),
-            rating: data.rapidRating,
-            reason: "Manual adjustment"
-          }
+      if (data.blitzRating !== undefined && data.blitzRating !== player.blitzRating) {
+        playerDataToUpdate.blitzRatingHistory = [
+          ...(player.blitzRatingHistory || []),
+          { date: todayISO, rating: data.blitzRating, reason: "Manual adjustment by officer" }
         ];
+        historyUpdated = true;
+      } else {
+        playerDataToUpdate.blitzRatingHistory = player.blitzRatingHistory;
       }
       
-      // Add to blitz rating history if changed
-      if (data.blitzRating !== player.blitzRating && data.blitzRating !== undefined) {
-        if (!updatedPlayer.blitzRatingHistory) {
-          updatedPlayer.blitzRatingHistory = [];
-        }
-        
-        updatedPlayer.blitzRatingHistory = [
-          ...updatedPlayer.blitzRatingHistory,
-          {
-            date: new Date().toISOString(),
-            rating: data.blitzRating,
-            reason: "Manual adjustment"
-          }
-        ];
+      // If no actual data changed (other than potentially history if only reason changed),
+      // we might skip the update. But typically, a submit implies some change.
+      // The service `updatePlayerInSupabase` will send these fields.
+
+      const updatedPlayerResponse = await updatePlayerInSupabase(player.id, playerDataToUpdate);
+      
+      if (!updatedPlayerResponse) {
+        throw new Error("Failed to update player in Supabase.");
       }
-      
-      updatePlayer(updatedPlayer);
-      
+
       toast({
-        title: "Player updated successfully",
+        title: "Player Updated Successfully",
         description: `${data.name}'s information has been updated.`,
       });
       
@@ -228,10 +229,12 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
     } catch (error) {
       console.error("Error updating player:", error);
       toast({
-        title: "Error updating player",
-        description: "There was an error updating the player. Please try again.",
+        title: "Error Updating Player",
+        description: error instanceof Error ? error.message : "There was an error updating the player. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -374,8 +377,9 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
               <Button 
                 type="submit" 
                 className="bg-nigeria-green hover:bg-nigeria-green-dark text-white"
+                disabled={isSubmitting}
               >
-                Update Player
+                {isSubmitting ? "Updating..." : "Update Player"}
               </Button>
             </DialogFooter>
           </form>

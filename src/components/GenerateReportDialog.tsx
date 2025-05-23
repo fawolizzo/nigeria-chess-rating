@@ -9,16 +9,22 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+// import { 
+//   updatePlayer, 
+//   updateTournament, 
+//   getPlayersByTournamentId, 
+//   getAllPlayers, 
+//   Player,
+//   Tournament
+// } from "@/lib/mockData"; // Removed mockData imports
+import { Player, Tournament } from "@/lib/mockData"; // Kept types
 import { 
-  updatePlayer, 
-  updateTournament, 
-  getPlayersByTournamentId, 
-  getAllPlayers, 
-  Player,
-  Tournament
-} from "@/lib/mockData";
-import { toast } from "@/components/ui/use-toast";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+  getAllPlayersFromSupabase, 
+  updatePlayerInSupabase 
+} from "@/services/playerService"; // Added player services
+import { updateTournamentInSupabase } from "@/services/tournamentService"; // Added tournament service
+import { useToast } from "@/components/ui/use-toast";
+import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react"; // Added Loader2
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
 
 interface GenerateReportDialogProps {
@@ -38,123 +44,131 @@ const GenerateReportDialog = ({
 
   if (!tournament) return null;
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
+    if (!tournament || !tournament.players || tournament.players.length === 0) {
+      toast({
+        title: "No Players",
+        description: "This tournament has no players to process.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsGenerating(true);
     
-    // Get players that participated in this tournament
-    const tournamentPlayers = getPlayersByTournamentId(tournament.id);
-    const allPlayers = getAllPlayers();
-    
-    // For each player, update their rating based on tournament results
-    tournamentPlayers.forEach(player => {
-      const tournamentResult = player.tournamentResults.find(
-        result => result.tournamentId === tournament.id
-      );
-      
-      if (tournamentResult) {
-        const ratingChange = tournamentResult.ratingChange;
-        
-        // Get the appropriate rating based on tournament category
-        const getCurrentRating = () => {
-          if (tournament.category === 'rapid') {
-            // If player has no rapid rating, use floor rating without any bonus
-            return player.rapidRating !== undefined ? player.rapidRating : FLOOR_RATING;
-          } else if (tournament.category === 'blitz') {
-            // If player has no blitz rating, use floor rating without any bonus
-            return player.blitzRating !== undefined ? player.blitzRating : FLOOR_RATING;
+    try {
+      const allPlayers = await getAllPlayersFromSupabase({});
+      const tournamentPlayerIds = new Set(tournament.players);
+      const participatingPlayers = allPlayers.filter(p => tournamentPlayerIds.has(p.id));
+
+      if (participatingPlayers.length === 0) {
+          toast({ title: "No Matching Players", description: "Could not find details for participating players.", variant: "destructive" });
+          setIsGenerating(false);
+          return;
+      }
+
+      for (const player of participatingPlayers) {
+        const tournamentResult = player.tournamentResults?.find(
+          result => result.tournamentId === tournament.id
+        );
+
+        if (tournamentResult && typeof tournamentResult.ratingChange === 'number') {
+          const ratingChange = tournamentResult.ratingChange;
+          const updatedPlayerFields: Partial<Player> = {};
+          const today = new Date().toISOString().split('T')[0];
+          let currentRating: number;
+          let gamesPlayedField: keyof Player;
+          let ratingField: keyof Player;
+          let historyField: keyof Player;
+          let statusField: keyof Player;
+
+          switch (tournament.category) {
+            case 'rapid':
+              currentRating = player.rapidRating ?? FLOOR_RATING;
+              gamesPlayedField = 'rapidGamesPlayed';
+              ratingField = 'rapidRating';
+              historyField = 'rapidRatingHistory';
+              statusField = 'rapidRatingStatus';
+              break;
+            case 'blitz':
+              currentRating = player.blitzRating ?? FLOOR_RATING;
+              gamesPlayedField = 'blitzGamesPlayed';
+              ratingField = 'blitzRating';
+              historyField = 'blitzRatingHistory';
+              statusField = 'blitzRatingStatus';
+              break;
+            default: // classical
+              currentRating = player.rating;
+              gamesPlayedField = 'gamesPlayed';
+              ratingField = 'rating';
+              historyField = 'ratingHistory';
+              statusField = 'ratingStatus';
+              break;
           }
-          return player.rating;
-        };
-        
-        const currentRating = getCurrentRating();
-        const newRating = currentRating + ratingChange;
-        
-        // Update player's appropriate rating type
-        let updatedPlayer: Player;
-        
-        if (tournament.category === 'rapid') {
-          updatedPlayer = {
-            ...player,
-            rapidRating: newRating,
-            rapidGamesPlayed: (player.rapidGamesPlayed ?? 0) + 1,
-            rapidRatingHistory: [
-              ...(player.rapidRatingHistory || []),
-              {
-                date: new Date().toISOString().split('T')[0],
-                rating: newRating,
-                reason: `Tournament: ${tournament.name}`
-              }
-            ]
-          };
+
+          const newRating = currentRating + ratingChange;
+          updatedPlayerFields[ratingField] = newRating;
           
-          // Update rating status if needed
-          if (updatedPlayer.rapidGamesPlayed >= 30 && (!updatedPlayer.rapidRatingStatus || updatedPlayer.rapidRatingStatus === 'provisional')) {
-            updatedPlayer.rapidRatingStatus = 'established';
+          const currentGamesPlayed = (player[gamesPlayedField] as number | undefined) ?? 0;
+          updatedPlayerFields[gamesPlayedField] = currentGamesPlayed + (tournamentResult.gamesPlayed ?? 1); // Assume 1 game if not specified
+
+          const newGamesPlayedTotal = updatedPlayerFields[gamesPlayedField] as number;
+          if (newGamesPlayedTotal >= 30 && (player[statusField] === 'provisional' || !player[statusField])) {
+            updatedPlayerFields[statusField] = 'established';
           }
-        } else if (tournament.category === 'blitz') {
-          updatedPlayer = {
-            ...player,
-            blitzRating: newRating,
-            blitzGamesPlayed: (player.blitzGamesPlayed ?? 0) + 1,
-            blitzRatingHistory: [
-              ...(player.blitzRatingHistory || []),
-              {
-                date: new Date().toISOString().split('T')[0],
-                rating: newRating,
-                reason: `Tournament: ${tournament.name}`
-              }
-            ]
-          };
           
-          // Update rating status if needed
-          if (updatedPlayer.blitzGamesPlayed >= 30 && (!updatedPlayer.blitzRatingStatus || updatedPlayer.blitzRatingStatus === 'provisional')) {
-            updatedPlayer.blitzRatingStatus = 'established';
+          const currentHistory = (player[historyField] as Player['ratingHistory'] | undefined) ?? [];
+          updatedPlayerFields[historyField] = [
+            ...currentHistory,
+            { date: today, rating: newRating, reason: `Tournament: ${tournament.name}` }
+          ];
+          
+          // Add tournament result if not already present (idempotency)
+          const existingTr = player.tournamentResults?.find(tr => tr.tournamentId === tournament.id);
+          if(existingTr) { // Update existing one if needed, or ensure it's correct
+            existingTr.ratingChange = ratingChange; // Ensure ratingChange is up-to-date
+            // other fields like position, score could be updated here if available from tournamentResult
+          } else {
+             updatedPlayerFields.tournamentResults = [
+                ...(player.tournamentResults || []),
+                {
+                    tournamentId: tournament.id,
+                    tournamentName: tournament.name,
+                    format: tournament.category || 'classical',
+                    date: today,
+                    position: tournamentResult.position, // Assuming position is on tournamentResult
+                    ratingChange: ratingChange,
+                    score: tournamentResult.score,
+                    gamesPlayed: tournamentResult.gamesPlayed
+                }
+             ];
           }
-        } else {
-          // Default to classical
-          updatedPlayer = {
-            ...player,
-            rating: newRating,
-            gamesPlayed: (player.gamesPlayed || 0) + 1,
-            ratingHistory: [
-              ...player.ratingHistory,
-              {
-                date: new Date().toISOString().split('T')[0],
-                rating: newRating,
-                reason: `Tournament: ${tournament.name}`
-              }
-            ]
-          };
-          
-          // Update rating status if needed
-          if (updatedPlayer.gamesPlayed >= 30 && (!updatedPlayer.ratingStatus || updatedPlayer.ratingStatus === 'provisional')) {
-            updatedPlayer.ratingStatus = 'established';
+
+
+          if (Object.keys(updatedPlayerFields).length > 0) {
+            await updatePlayerInSupabase(player.id, updatedPlayerFields);
           }
         }
-        
-        updatePlayer(updatedPlayer);
       }
-    });
-    
-    // Mark tournament as processed
-    const updatedTournament = {
-      ...tournament,
-      status: 'processed' as 'upcoming' | 'ongoing' | 'completed' | 'pending' | 'rejected' | 'processed'
-    };
-    updateTournament(updatedTournament);
-    
-    // Complete the generation process
-    setTimeout(() => {
-      setIsGenerating(false);
-      onOpenChange(false);
-      onReportGenerated();
       
+      await updateTournamentInSupabase(tournament.id, { status: 'processed' });
+
       toast({
-        title: "Report Generated",
-        description: `${tournament.category || 'Classical'} ratings have been updated for all players in ${tournament.name}`,
-        duration: 5000,
+        title: "Report Generated Successfully",
+        description: `${tournament.category || 'Classical'} ratings updated for ${tournament.name}.`,
       });
-    }, 1500);
+      onReportGenerated();
+      onOpenChange(false);
+
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error Generating Report",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -164,6 +178,7 @@ const GenerateReportDialog = ({
           <DialogTitle>Generate Tournament Report</DialogTitle>
           <DialogDescription>
             This will process the results of {tournament.name} and update all participating players' {tournament.category || 'classical'} ratings accordingly.
+            This dialog is a placeholder. Actual rating processing is done via "Process Ratings" dialog by Rating Officer.
           </DialogDescription>
         </DialogHeader>
         
@@ -182,10 +197,10 @@ const GenerateReportDialog = ({
             <div className="flex flex-col gap-2">
               <div className="font-medium">The following changes will occur:</div>
               <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                <li>Player {tournament.category || 'classical'} ratings will be updated based on their results</li>
-                <li>{tournament.category || 'Classical'} rating history will be updated with new entries</li>
-                <li>Tournament status will change to "Processed"</li>
-                <li>New players without {tournament.category || 'classical'} ratings will start at {FLOOR_RATING}</li>
+                <li>Player {tournament.category || 'classical'} ratings will be updated based on their results.</li>
+                <li>{tournament.category || 'Classical'} rating history will be updated with new entries.</li>
+                <li>Tournament status will change to "Processed".</li>
+                <li>New players without {tournament.category || 'classical'} ratings will start at {FLOOR_RATING}.</li>
               </ul>
             </div>
           </div>
@@ -197,23 +212,15 @@ const GenerateReportDialog = ({
           </Button>
           <Button 
             onClick={handleGenerateReport} 
-            disabled={isGenerating}
-            className="relative"
+            disabled={isGenerating || tournament.status === 'processed'} // Disable if already processed
+            className="relative bg-blue-600 hover:bg-blue-700" // Changed color for differentiation
           >
             {isGenerating ? (
-              <>
-                <span className="opacity-0">Generate Report</span>
-                <span className="absolute inset-0 flex items-center justify-center">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                </span>
-              </>
+              <Loader2 className="animate-spin h-5 w-5 text-white" />
             ) : (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Generate Report
+                Generate & Finalize Report
               </>
             )}
           </Button>
