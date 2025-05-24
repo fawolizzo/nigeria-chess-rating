@@ -79,11 +79,11 @@ const OfficerDashboardContent: React.FC = () => {
   // If loading is complete and no errors
   if (initialLoadComplete && !hasError && !actualDataError) {
     return (
-      <OfficerDashboardProvider> {/* This Provider might be redundant if useDashboard is already from a higher Provider */}
-        <div className="p-4">
-          <OfficerDashboardTabs />
-        </div>
-      </OfficerDashboardProvider>
+      // <OfficerDashboardProvider> {/* Removed redundant provider */}
+      <div className="p-4">
+        <OfficerDashboardTabs />
+      </div>
+      // </OfficerDashboardProvider>
     );
   }
 

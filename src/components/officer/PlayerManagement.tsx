@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,22 +8,21 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
-import { PlusCircle, RefreshCcw, Upload, UserPlus, CheckCircle, XCircle } from "lucide-react";
+import { PlusCircle, RefreshCcw, Upload, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Player, User } from "@/lib/mockData"; // Kept types
 import { 
-  getAllPlayers, 
-  getAllUsers,
-  addPlayer, 
-  updatePlayer, 
-  Player,
-  User
-} from "@/lib/mockData";
+  getAllPlayersFromSupabase, 
+  getUsersFromSupabase, 
+  createPlayerInSupabase, 
+  updatePlayerInSupabase,
+  updateUserInSupabase 
+} from "@/services/playerService"; 
 import FileUploadButton from "@/components/players/FileUploadButton";
 import CreatePlayerDialog from "./CreatePlayerDialog";
 import EditPlayerDialog from "./EditPlayerDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { generateUniquePlayerID } from "@/lib/playerDataUtils";
 
 interface PlayerManagementProps {
   onPlayerApproval?: () => void;
@@ -35,183 +34,186 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const [approvedPlayers, setApprovedPlayers] = useState<Player[]>([]);
   const [pendingOrganizers, setPendingOrganizers] = useState<User[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [uploadedPlayers, setUploadedPlayers] = useState<any[]>([]);
+  const [uploadedPlayers, setUploadedPlayers] = useState<Player[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
   
-  useEffect(() => {
-    const fetchPlayers = () => {
-      const allPlayers = getAllPlayers();
-      setPlayers(allPlayers);
-      setPendingPlayers(allPlayers.filter(p => p.status === "pending"));
-      setApprovedPlayers(allPlayers.filter(p => p.status === "approved"));
-    };
-    
-    const fetchOrganizers = () => {
-      const allUsers = getAllUsers();
-      const pendingOrgUsers = allUsers.filter(
-        user => user.role === 'tournament_organizer' && user.status === 'pending'
-      );
+  const fetchData = useCallback(async () => {
+    setIsLoadingData(true);
+    try {
+      const [allPlayersData, pendingOrgUsers] = await Promise.all([
+        getAllPlayersFromSupabase({}),
+        getUsersFromSupabase({ role: 'tournament_organizer', status: 'pending' })
+      ]);
+      setPlayers(allPlayersData);
+      setPendingPlayers(allPlayersData.filter(p => p.status === "pending"));
+      setApprovedPlayers(allPlayersData.filter(p => p.status === "approved"));
       setPendingOrganizers(pendingOrgUsers);
-    };
-    
-    fetchPlayers();
-    fetchOrganizers();
-  }, [refreshKey]);
+    } catch (error) {
+      console.error("Error fetching data for PlayerManagement:", error);
+      toast({ title: "Error", description: "Failed to load player or organizer data.", variant: "destructive" });
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [refreshKey, fetchData]);
   
   const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey(prev => prev + 1); 
     toast({
-      title: "Refreshed",
-      description: "Data has been refreshed",
+      title: "Refreshing Data",
+      description: "Player and organizer data is being refreshed.",
     });
   };
   
-  const generateNcrId = () => {
-    const randomPart = Math.floor(10000 + Math.random() * 90000);
-    const timestamp = Date.now().toString().slice(-5);
-    return `NCR${randomPart}${timestamp}`;
-  };
-  
-  const handleCreatePlayer = (playerData: any) => {
-    // Generate unique NCR ID
-    const ncrId = generateUniquePlayerID();
-    
-    const newPlayer: Player = {
-      id: ncrId,
-      name: playerData.fullName,
-      rating: playerData.rating || 800,
-      gender: playerData.gender || 'M',
-      state: playerData.state || '',
-      city: playerData.city || '',
-      gamesPlayed: 0,
-      status: playerData.status || 'pending',
-      tournamentResults: [],
-      ratingHistory: [{
-        date: new Date().toISOString(),
-        rating: playerData.rating || 800,
-        reason: "Initial rating"
-      }]
-    };
-    
-    addPlayer(newPlayer);
+  const handlePlayerCreatedOrEdited = () => {
     setRefreshKey(prev => prev + 1);
-    toast({
-      title: "Player Created",
-      description: `${playerData.fullName} has been created successfully with ID: ${ncrId}`,
-    });
   };
   
-  const handleApprovePlayer = (playerId: string) => {
-    const playerToUpdate = players.find(p => p.id === playerId);
-    if (playerToUpdate) {
-      const updatedPlayer = {
-        ...playerToUpdate,
-        status: 'approved' as const
-      };
-      updatePlayer(updatedPlayer);
-      setRefreshKey(prev => prev + 1);
-      toast({
-        title: "Player Approved",
-        description: "Player has been approved successfully",
-        variant: "default",
-      });
-      
-      if (onPlayerApproval) {
-        onPlayerApproval();
+  const handleApprovePlayer = async (playerId: string) => {
+    setIsProcessingAction(true);
+    try {
+      const updatedPlayer = await updatePlayerInSupabase(playerId, { status: 'approved' });
+      if (updatedPlayer) {
+        setRefreshKey(prev => prev + 1);
+        toast({
+          title: "Player Approved",
+          description: `${updatedPlayer.name} has been approved.`,
+        });
+        if (onPlayerApproval) onPlayerApproval();
+      } else {
+        throw new Error("Approval failed at Supabase service level.");
       }
+    } catch (error) {
+      console.error("Error approving player:", error);
+      toast({ title: "Error Approving Player", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsProcessingAction(false);
     }
   };
   
-  const handleRejectPlayer = (playerId: string) => {
-    const playerToUpdate = players.find(p => p.id === playerId);
-    if (playerToUpdate) {
-      const updatedPlayer = {
-        ...playerToUpdate,
-        status: 'rejected' as const
-      };
-      updatePlayer(updatedPlayer);
-      setRefreshKey(prev => prev + 1);
-      toast({
-        title: "Player Rejected",
-        description: "Player has been rejected",
-        variant: "destructive",
-      });
-      
-      if (onPlayerApproval) {
-        onPlayerApproval();
+  const handleRejectPlayer = async (playerId: string) => {
+    setIsProcessingAction(true);
+    try {
+      const playerToUpdate = players.find(p => p.id === playerId);
+      const updatedPlayer = await updatePlayerInSupabase(playerId, { status: 'rejected' });
+      if (updatedPlayer) {
+        setRefreshKey(prev => prev + 1);
+        toast({
+          title: "Player Rejected",
+          description: `${playerToUpdate?.name || 'Player'} has been rejected.`,
+          variant: "destructive", 
+        });
+        if (onPlayerApproval) onPlayerApproval();
+      } else {
+        throw new Error("Rejection failed at Supabase service level.");
       }
+    } catch (error) {
+      console.error("Error rejecting player:", error);
+      toast({ title: "Error Rejecting Player", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleApproveOrganizer = async (organizerId: string) => {
+    setIsProcessingAction(true);
+    try {
+      const updatedUser = await updateUserInSupabase(organizerId, { status: 'approved' });
+      if (updatedUser) {
+        setRefreshKey(prev => prev + 1);
+        toast({ title: "Organizer Approved", description: `${updatedUser.fullName} has been approved.` });
+      } else {
+        throw new Error("Organizer approval failed.");
+      }
+    } catch (error) {
+      toast({ title: "Error Approving Organizer", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  const handleRejectOrganizer = async (organizerId: string) => {
+    setIsProcessingAction(true);
+    try {
+      const userToUpdate = pendingOrganizers.find(u => u.id === organizerId);
+      const updatedUser = await updateUserInSupabase(organizerId, { status: 'rejected' });
+      if (updatedUser) {
+        setRefreshKey(prev => prev + 1);
+        toast({ title: "Organizer Rejected", description: `${userToUpdate?.fullName || 'Organizer'} has been rejected.`, variant: "destructive" });
+      } else {
+        throw new Error("Organizer rejection failed.");
+      }
+    } catch (error) {
+      toast({ title: "Error Rejecting Organizer", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setIsProcessingAction(false);
     }
   };
   
-  const handleFileUpload = (players: any[]) => {
-    setUploadedPlayers(players);
-    setUploadSuccess(true);
+  const handleFileUpload = async (importedFilePlayers: any[]) => {
+    setIsProcessingAction(true);
+    setUploadedPlayers([]);
     
-    const createdPlayers = players.map(player => {
-      // Generate unique NCR ID for each imported player
-      const ncrId = player.id || generateUniquePlayerID();
-      
-      const newPlayer: Player = {
-        id: ncrId,
-        name: player.name,
-        rating: player.rating || 900,
+    const playersToCreateData: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults'>[] = importedFilePlayers.map(player => {
+      const rating = parseInt(player.rating || player.Std, 10) || 800;
+      const rapidRating = parseInt(player.rapidRating || player.Rpd, 10) || undefined;
+      const blitzRating = parseInt(player.blitzRating || player.Blz, 10) || undefined;
+
+      return {
+        name: player.name || player.Players || "Unknown Player",
+        title: player.title || player.Title,
+        rating: rating,
+        rapidRating: rapidRating,
+        blitzRating: blitzRating,
         gender: player.gender || 'M',
-        state: player.state || '',
-        city: player.city || '',
+        state: player.state || player.Fed?.replace(" NGR", "").trim(),
+        birthYear: parseInt(player.birthYear || player['B-Year'], 10) || undefined,
         gamesPlayed: 30,
         status: 'approved',
         ratingStatus: 'established',
-        tournamentResults: [],
-        ratingHistory: [{
-          date: new Date().toISOString(),
-          rating: player.rating || 900,
-          reason: "Initial rating with +100 bonus"
-        }]
       };
-      
-      if (player.title) {
-        newPlayer.title = player.title;
-      }
-      
-      if (player.rapidRating) {
-        newPlayer.rapidRating = player.rapidRating;
-        newPlayer.rapidGamesPlayed = 30;
-        newPlayer.rapidRatingStatus = 'established';
-        newPlayer.rapidRatingHistory = [{
-          date: new Date().toISOString(),
-          rating: player.rapidRating,
-          reason: "Initial rating with +100 bonus"
-        }];
-      }
-      
-      if (player.blitzRating) {
-        newPlayer.blitzRating = player.blitzRating;
-        newPlayer.blitzGamesPlayed = 30;
-        newPlayer.blitzRatingStatus = 'established';
-        newPlayer.blitzRatingHistory = [{
-          date: new Date().toISOString(),
-          rating: player.blitzRating,
-          reason: "Initial rating with +100 bonus"
-        }];
-      }
-      
-      addPlayer(newPlayer);
-      console.log("Created player:", newPlayer);
-      
-      return newPlayer;
     });
+
+    let successfulUploads = 0;
+    const createdPlayersList: Player[] = [];
+
+    for (const playerData of playersToCreateData) {
+      try {
+        const createdPlayer = await createPlayerInSupabase(playerData);
+        if (createdPlayer) {
+          successfulUploads++;
+          createdPlayersList.push(createdPlayer);
+        }
+      } catch (error) {
+        console.error("Error creating player during import:", playerData.name, error);
+      }
+    }
     
+    setUploadedPlayers(createdPlayersList);
     setRefreshKey(prev => prev + 1);
     
-    toast({
-      title: "Upload Successful",
-      description: `${players.length} players have been uploaded and approved.`,
-      variant: "default",
-    });
+    if (successfulUploads > 0) {
+      toast({
+        title: "Upload Processed",
+        description: `${successfulUploads} of ${playersToCreateData.length} players successfully imported and approved.`,
+        variant: successfulUploads === playersToCreateData.length ? "default" : "warning",
+      });
+    } else {
+      toast({
+        title: "Upload Failed",
+        description: "No players could be imported. Please check file format and data.",
+        variant: "destructive",
+      });
+    }
+    setIsProcessingAction(false);
   };
 
   const handleEditPlayer = (player: Player) => {
@@ -230,15 +232,15 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         </div>
         
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoadingData || isProcessingAction}>
             <RefreshCcw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
           
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Upload className="h-4 w-4 mr-2" />
+              <Button size="sm" disabled={isProcessingAction || isLoadingData}>
+                {isProcessingAction && uploadedPlayers.length === 0 ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                 Import Players
               </Button>
             </DialogTrigger>
@@ -249,54 +251,51 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
               <div className="py-4">
                 <FileUploadButton onFileUpload={handleFileUpload} />
                 
-                {uploadSuccess && (
-                  <div className="mt-4">
-                    <div className="flex items-center text-green-600 mb-2">
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      <span>Upload Successful! {uploadedPlayers.length} players imported.</span>
-                    </div>
-                    
-                    <div className="max-h-60 overflow-y-auto mt-4 border rounded-md">
-                      {uploadedPlayers.length > 0 && (
-                        <div className="w-full overflow-x-auto">
+                    {uploadedPlayers.length > 0 && (
+                    <div className="mt-4">
+                      <div className="flex items-center text-green-600 mb-2">
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        <span>Upload Processed! {uploadedPlayers.length} players were created.</span>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto mt-4 border rounded-md">
                           <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Rating</TableHead>
-                                <TableHead>State</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {uploadedPlayers.map((player, index) => (
-                                <TableRow key={index}>
-                                  <TableCell className="w-1/5">{player.id || "Auto-generated"}</TableCell>
-                                  <TableCell className="w-2/5">{player.name}</TableCell>
-                                  <TableCell className="w-1/5">{player.rating || "Unrated"}</TableCell>
-                                  <TableCell className="w-1/5">{player.state}</TableCell>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>ID</TableHead>
+                                  <TableHead>Name</TableHead>
+                                  <TableHead>Rating</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
+                              </TableHeader>
+                              <TableBody>
+                                {uploadedPlayers.map((player) => (
+                                  <TableRow key={player.id}>
+                                    <TableCell className="truncate max-w-[100px]">{player.id}</TableCell>
+                                    <TableCell>{player.name}</TableCell>
+                                    <TableCell>{player.rating}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
                           </Table>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
               </div>
             </DialogContent>
           </Dialog>
           
-          <CreatePlayerDialog onPlayerCreated={handleCreatePlayer} />
+          <CreatePlayerDialog onSuccess={handlePlayerCreatedOrEdited} /> 
         </div>
       </div>
       
+      {isLoadingData ? (
+        <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-gray-500" /> <span className="ml-2 text-muted-foreground">Loading player data...</span></div>
+      ) : (
+      <>
       {pendingOrganizers.length > 0 && (
         <div className="border rounded-md">
-          <div className="p-4 border-b bg-yellow-50">
-            <h3 className="text-lg font-medium text-yellow-800">Pending Organizers ({pendingOrganizers.length})</h3>
-            <p className="text-sm text-yellow-700">
+          <div className="p-4 border-b bg-yellow-50 dark:bg-yellow-950">
+            <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-300">Pending Organizers ({pendingOrganizers.length})</h3>
+            <p className="text-sm text-yellow-700 dark:text-yellow-400">
               The following tournament organizers are waiting for approval
             </p>
           </div>
@@ -309,14 +308,16 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                     <div className="font-medium">{organizer.fullName}</div>
                     <div className="text-sm text-muted-foreground">{organizer.email}</div>
                     <div className="mt-2 flex space-x-2">
-                      <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve
-                      </Button>
-                      <Button size="sm" variant="outline" className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100">
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Reject
-                      </Button>
+                        <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100" 
+                          onClick={() => handleApproveOrganizer(organizer.id)} disabled={isProcessingAction}>
+                          {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <CheckCircle className="h-4 w-4 mr-2" />}
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100" 
+                          onClick={() => handleRejectOrganizer(organizer.id)} disabled={isProcessingAction}>
+                           {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <XCircle className="h-4 w-4 mr-2" />}
+                          Reject
+                        </Button>
                     </div>
                   </div>
                 ))}
@@ -341,14 +342,16 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                       </TableCell>
                       <TableCell className="w-1/4">
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="outline" className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100">
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Reject
-                          </Button>
+                        <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100" 
+                          onClick={() => handleApproveOrganizer(organizer.id)} disabled={isProcessingAction}>
+                          {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <CheckCircle className="h-4 w-4 mr-2" />}
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100" 
+                          onClick={() => handleRejectOrganizer(organizer.id)} disabled={isProcessingAction}>
+                           {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <XCircle className="h-4 w-4 mr-2" />}
+                          Reject
+                        </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -376,21 +379,21 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                 <div key={player.id} className="border rounded-md p-3">
                   <div className="flex justify-between mb-2">
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">ID: {player.id}</div>
+                    <div className="text-sm text-muted-foreground">ID: {player.id.substring(0,8)}...</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                    <div>State: {player.state}</div>
+                    <div>State: {player.state || 'N/A'}</div>
                     <div>Rating: {player.rating || "Unrated"}</div>
                   </div>
                   <div className="flex space-x-2 mt-2">
                     <Button size="sm" variant="outline" 
-                      onClick={() => handleApprovePlayer(player.id)}>
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                      onClick={() => handleApprovePlayer(player.id)} disabled={isProcessingAction}>
+                      {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <CheckCircle className="h-4 w-4 mr-2" />}
                       Approve
                     </Button>
                     <Button size="sm" variant="destructive" 
-                      onClick={() => handleRejectPlayer(player.id)}>
-                      <XCircle className="h-4 w-4 mr-2" />
+                      onClick={() => handleRejectPlayer(player.id)} disabled={isProcessingAction}>
+                      {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <XCircle className="h-4 w-4 mr-2" />}
                       Reject
                     </Button>
                   </div>
@@ -402,18 +405,18 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/5">Name</TableHead>
-                    <TableHead className="w-1/5">State</TableHead>
-                    <TableHead className="w-1/5">Rating</TableHead>
-                    <TableHead className="w-1/5">Status</TableHead>
-                    <TableHead className="w-1/5">Actions</TableHead>
+                    <TableHead className="w-2/6">Name</TableHead>
+                    <TableHead className="w-1/6">State</TableHead>
+                    <TableHead className="w-1/6">Rating</TableHead>
+                    <TableHead className="w-1/6">Status</TableHead>
+                    <TableHead className="w-1/6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pendingPlayers.map(player => (
                     <TableRow key={player.id}>
                       <TableCell>{player.name}</TableCell>
-                      <TableCell>{player.state}</TableCell>
+                      <TableCell>{player.state || 'N/A'}</TableCell>
                       <TableCell>{player.rating || "Unrated"}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -423,13 +426,13 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button size="sm" variant="outline" 
-                            onClick={() => handleApprovePlayer(player.id)}>
-                            <CheckCircle className="h-4 w-4 mr-2" />
+                            onClick={() => handleApprovePlayer(player.id)} disabled={isProcessingAction}>
+                            {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <CheckCircle className="h-4 w-4 mr-2" />}
                             Approve
                           </Button>
                           <Button size="sm" variant="destructive" 
-                            onClick={() => handleRejectPlayer(player.id)}>
-                            <XCircle className="h-4 w-4 mr-2" />
+                            onClick={() => handleRejectPlayer(player.id)} disabled={isProcessingAction}>
+                            {isProcessingAction ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <XCircle className="h-4 w-4 mr-2" />}
                             Reject
                           </Button>
                         </div>
@@ -449,17 +452,17 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
             <p className="text-muted-foreground text-sm py-4">No approved players yet.</p>
           ) : isMobile ? (
             <div className="space-y-4">
-              {approvedPlayers.slice(0, 5).map(player => (
+              {approvedPlayers.slice(0, 5).map(player => ( // Show only first 5 on mobile for brevity
                 <div key={player.id} className="border rounded-md p-3">
                   <div className="flex justify-between mb-2">
                     <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">ID: {player.id}</div>
+                    <div className="text-sm text-muted-foreground">ID: {player.id.substring(0,8)}...</div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>State: {player.state}</div>
+                    <div>State: {player.state || 'N/A'}</div>
                     <div>Rating: {player.rating || "Unrated"}</div>
                   </div>
-                  <Button size="sm" variant="outline" className="mt-2" onClick={() => handleEditPlayer(player)}>
+                  <Button size="sm" variant="outline" className="mt-2" onClick={() => handleEditPlayer(player)} disabled={isProcessingAction}>
                     Edit Player
                   </Button>
                 </div>
@@ -475,18 +478,18 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/5">Name</TableHead>
-                    <TableHead className="w-1/5">State</TableHead>
-                    <TableHead className="w-1/5">Rating</TableHead>
-                    <TableHead className="w-1/5">Status</TableHead>
-                    <TableHead className="w-1/5">Actions</TableHead>
+                    <TableHead className="w-2/6">Name</TableHead>
+                    <TableHead className="w-1/6">State</TableHead>
+                    <TableHead className="w-1/6">Rating</TableHead>
+                    <TableHead className="w-1/6">Status</TableHead>
+                    <TableHead className="w-1/6">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {approvedPlayers.slice(0, 5).map(player => (
+                  {approvedPlayers.slice(0, 5).map(player => ( // Show only first 5 by default
                     <TableRow key={player.id}>
                       <TableCell>{player.name}</TableCell>
-                      <TableCell>{player.state}</TableCell>
+                      <TableCell>{player.state || 'N/A'}</TableCell>
                       <TableCell>{player.rating || "Unrated"}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -494,7 +497,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Button size="sm" variant="outline" onClick={() => handleEditPlayer(player)}>
+                        <Button size="sm" variant="outline" onClick={() => handleEditPlayer(player)} disabled={isProcessingAction}>
                           Edit Player
                         </Button>
                       </TableCell>
@@ -514,13 +517,15 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
           )}
         </div>
       </div>
+      </>
+      )}
 
       {selectedPlayer && (
         <EditPlayerDialog 
           player={selectedPlayer}
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
-          onSuccess={() => setRefreshKey(prev => prev + 1)}
+          onSuccess={handlePlayerCreatedOrEdited} // Changed from setRefreshKey to dedicated handler
         />
       )}
     </div>

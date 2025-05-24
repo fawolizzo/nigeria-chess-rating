@@ -1,157 +1,82 @@
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { useSyncStorage } from "./useSyncStorage";
-import { useToastManager } from "./useToastManager";
-import { useSyncRetry } from "./useSyncRetry";
-import { useSyncLifecycle } from "./useSyncLifecycle";
+// import { useSyncStorage } from "./useSyncStorage"; // Removed as primary data sync is via context
+// import { useToastManager } from "./useToastManager"; // Toast will be handled by the calling component or directly here
+// import { useSyncRetry } from "./useSyncRetry"; // Retry logic will be part of context refresh if needed
+// import { useSyncLifecycle } from "./useSyncLifecycle"; // Lifecycle also tied to context
+import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";
 
 /**
- * Hook for managing dashboard data synchronization for officers
+ * Hook for managing dashboard data synchronization for officers.
+ * This hook now primarily reflects the state of the OfficerDashboardContext.
  */
 export function useOfficerSync() {
-  const { forceSync } = useUser();
+  const { forceSync: forceUserSync } = useUser(); // Renamed to avoid conflict if useDashboard also has forceSync
+  const { 
+    refreshDashboard, 
+    isLoading: isDashboardLoading, 
+    hasError: dashboardHasError, 
+    dataError: dashboardDataError, // Assuming context provides specific error message
+    lastLoadTime 
+  } = useDashboard();
   const { toast } = useToast();
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [syncError, setSyncError] = useState<string | undefined>(undefined);
-  
-  // Refs for tracking sync state
-  const syncInProgressRef = useRef(false);
-  const mountedRef = useRef(true);
-  
-  // Custom hooks for specific functionality
-  const { syncStorage } = useSyncStorage();
-  const { refreshToastIdRef, manageToastDisplay } = useToastManager();
-  const { retryCountRef, maxRetries, scheduleRetry } = useSyncRetry();
-  
-  // Enhanced sync function with better error handling - defined here before using in setupSyncLifecycle
+
   const syncDashboardData = useCallback(async (showToast = false) => {
-    // Prevent multiple concurrent syncs
-    if (syncInProgressRef.current || !mountedRef.current) {
-      return false;
+    logMessage(LogLevel.INFO, 'useOfficerSync', 'Manual dashboard data refresh triggered');
+    if (showToast) {
+      toast({
+        title: "Refreshing Dashboard",
+        description: "Fetching the latest dashboard data...",
+      });
     }
-    
-    syncInProgressRef.current = true;
-    
+
     try {
-      if (mountedRef.current) {
-        setIsSyncing(true);
-        setSyncError(undefined);
-      }
-      
-      logMessage(LogLevel.INFO, 'useOfficerSync', 'Starting dashboard data sync');
-      
-      // Show toast if requested
+      // Optionally, sync user-specific data if it's separate from dashboard data
+      // await forceUserSync(); 
+      // For now, focusing on dashboard data refresh. User sync is often part of initial load.
+
+      await refreshDashboard(); // This should trigger loading states in useDashboard
+
       if (showToast) {
-        manageToastDisplay("Syncing Data", "Syncing dashboard data with the latest updates...");
+        // Success toast can be shown here if refreshDashboard doesn't have its own,
+        // or if we want to explicitly confirm the manual sync action.
+        // However, if useDashboard handles its own success/error toasts on refresh, this might be redundant.
+        // For now, assuming refreshDashboard itself will indicate success/failure via its states.
+        // Let's rely on the change in `lastLoadTime` and absence of `dashboardHasError` as success.
       }
-      
-      // First sync the user data
-      try {
-        await Promise.race([
-          forceSync(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('User sync timed out')), 8000))
-        ]);
-      } catch (userSyncError) {
-        logMessage(LogLevel.WARNING, 'useOfficerSync', 'Issue syncing user data:', userSyncError);
-        // Continue with other data sync even if user sync fails
-      }
-      
-      try {
-        // Run syncs in sequence rather than parallel for better reliability
-        await syncStorage('ncr_users', 5000);
-        await syncStorage('ncr_players', 5000);
-        await syncStorage('ncr_tournaments', 5000);
-      } catch (storageError) {
-        const errorMessage = storageError instanceof Error ? storageError.message : String(storageError);
-        logMessage(LogLevel.WARNING, 'useOfficerSync', 'Issue with storage sync:', errorMessage);
-        
-        if (mountedRef.current) {
-          setSyncError(errorMessage);
-        }
-        
-        // Handle partial failure with retry logic
-        if (retryCountRef.current < maxRetries) {
-          const shouldRetry = await scheduleRetry(syncDashboardData);
-          
-          // Return false to indicate sync had an issue
-          if (!shouldRetry) return false;
-        } else {
-          // If we've exhausted retries, reset the counter but continue
-          retryCountRef.current = 0;
-        }
-      }
-      
-      if (mountedRef.current) {
-        setLastSyncTime(new Date());
-        setSyncSuccess(true);
-        setSyncError(undefined);
-      }
-      
-      // Only show success toast for manual sync operations
-      if (showToast && mountedRef.current) {
-        toast({
-          title: "Dashboard Updated",
-          description: "Dashboard data has been refreshed successfully",
-          duration: 2000,
-        });
-      }
-      
-      logMessage(LogLevel.INFO, 'useOfficerSync', 'Dashboard data sync completed');
-      retryCountRef.current = 0;
-      
-      // Clear the toast ID reference
-      refreshToastIdRef.current = null;
-      
-      return true;
+      return true; // Indicate the action was triggered
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logMessage(LogLevel.ERROR, 'useOfficerSync', 'Error syncing dashboard data:', error);
-      
-      if (mountedRef.current) {
-        setSyncSuccess(false);
-        setSyncError(errorMessage);
-        
-        if (showToast) {
-          toast({
-            title: "Sync Error",
-            description: "There was an error syncing the dashboard data. Please try again.",
-            variant: "destructive",
-            duration: 5000,
-          });
-        }
+      logMessage(LogLevel.ERROR, 'useOfficerSync', 'Error during manual dashboard refresh:', error);
+      if (showToast) {
+        toast({
+          title: "Refresh Error",
+          description: `Failed to refresh dashboard data: ${errorMessage}`,
+          variant: "destructive",
+        });
       }
-      
-      // Clear the toast ID reference
-      refreshToastIdRef.current = null;
-      
-      return false;
-    } finally {
-      if (mountedRef.current) setIsSyncing(false);
-      
-      // Add a delay before releasing the lock
-      setTimeout(() => {
-        syncInProgressRef.current = false;
-      }, 1000);
+      return false; // Indicate the action failed
     }
-  }, [forceSync, toast, syncStorage, manageToastDisplay, scheduleRetry, maxRetries]);
+  }, [refreshDashboard, toast]); // Removed forceUserSync for now, can be added if needed
+
+  // The sync status now directly reflects the state from OfficerDashboardContext
+  const isSyncing = isDashboardLoading;
+  const syncSuccess = dashboardHasError === null ? null : !dashboardHasError; // null if no load yet, true if no error, false if error
+  const syncError = dashboardDataError || (dashboardHasError ? "An error occurred while fetching dashboard data." : undefined);
   
-  // Use the lifecycle hook with the now-defined syncDashboardData function
-  const { setupSyncLifecycle } = useSyncLifecycle(syncDashboardData);
-  
-  // Set up lifecycle management
-  setupSyncLifecycle();
-  
+  // mountedRef might not be needed if lifecycle is tied to component using this hook
+  // or if context handles its own data fetching lifecycle robustly.
+  // Removing for simplification unless specific unmount-related cleanup becomes necessary.
+
   return {
-    syncDashboardData,
+    syncDashboardData, // This is the function to manually trigger a refresh
     isSyncing,
     syncSuccess,
-    lastSyncTime,
+    lastSyncTime: lastLoadTime, // Use lastLoadTime from the context
     syncError,
-    mountedRef
+    // mountedRef // Removed for simplification
   };
 }

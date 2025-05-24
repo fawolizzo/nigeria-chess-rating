@@ -6,13 +6,14 @@ import * as XLSX from 'xlsx';
 import { Player } from '@/lib/mockData';
 
 export interface FileUploadButtonProps {
-  onFileUpload?: (players: any[]) => void;
+  /** @deprecated Prefer onPlayersImported for richer player data */
+  onFileUpload?: (players: any[]) => void; 
   onPlayersImported?: (players: Partial<Player>[]) => void;
   buttonText?: string;
 }
 
 const FileUploadButton: React.FC<FileUploadButtonProps> = ({ 
-  onFileUpload, 
+  onFileUpload, // Kept for now, but marked as deprecated
   onPlayersImported,
   buttonText = "Select Excel File" 
 }) => {
@@ -251,12 +252,12 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       blitzRating: player.blitzRating
     }));
     
-    if (onFileUpload) {
-      onFileUpload(formattedPlayers);
-    }
-    
+    // Prefer onPlayersImported as it carries more complete Player data
     if (onPlayersImported) {
-      onPlayersImported(processedPlayers);
+      onPlayersImported(processedPlayers); // processedPlayers are Partial<Player>[]
+    } else if (onFileUpload) {
+      // Fallback to onFileUpload if onPlayersImported is not provided
+      onFileUpload(formattedPlayers); // formattedPlayers is a simpler structure
     }
     
     setIsLoading(false);

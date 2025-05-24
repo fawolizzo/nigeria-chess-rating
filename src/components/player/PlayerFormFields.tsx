@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import StateSelector from "@/components/selectors/StateSelector";
+import StateSelector from "@/components/selectors/StateSelector"; // This is already a default import, as identified by the error.
+// If CitySelector is used and has the same issue, it would be:
+// import CitySelector from "@/components/selectors/CitySelector"; // Assuming CitySelector exists and is default export
 
 interface PlayerFormFieldsProps {
   control: Control<any>;

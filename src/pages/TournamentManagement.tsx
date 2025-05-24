@@ -329,39 +329,64 @@ const TournamentManagement = () => {
     }
   };
 
-  const handleCreatePlayer = async (newPlayerData: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults' | 'rating' | 'rapidRating' | 'blitzRating' | 'gamesPlayed' | 'rapidGamesPlayed' | 'blitzGamesPlayed' | 'ratingStatus' | 'rapidRatingStatus' | 'blitzRatingStatus'>) => {
+  const handleCreatePlayer = async (formDataFromModal: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults' | 'rating' | 'rapidRating' | 'blitzRating' | 'gamesPlayed' | 'rapidGamesPlayed' | 'blitzGamesPlayed' | 'ratingStatus' | 'rapidRatingStatus' | 'blitzRatingStatus' | 'status'> & { rating?: number, rapidRating?: number, blitzRating?: number, gamesPlayed?: number, rapidGamesPlayed?: number, blitzGamesPlayed?: number, ratingStatus?: Player['ratingStatus'], rapidRatingStatus?: Player['rapidRatingStatus'], blitzRatingStatus?: Player['blitzRatingStatus'], status?: Player['status'] }) => {
     if (!currentUser || !tournament) return;
     
     setIsProcessing(true);
     try {
-      const createdPlayer = await createPlayerInSupabase(newPlayerData);
-      if (!createdPlayer) throw new Error("Player creation failed.");
+      // Construct the player data strictly according to Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults'>
+      // Default values for rating, gamesPlayed, and status should be handled here or by Supabase default column values.
+      const playerDataForService: Omit<Player, 'id' | 'ratingHistory' | 'tournamentResults'> = {
+        name: formDataFromModal.name,
+        title: formDataFromModal.title,
+        gender: formDataFromModal.gender,
+        state: formDataFromModal.state,
+        city: formDataFromModal.city, // Assuming city is part of newPlayerData
+        club: formDataFromModal.club, // Assuming club is part of newPlayerData
+        federationId: formDataFromModal.federationId, // Assuming federationId is part of newPlayerData
+        birthYear: formDataFromModal.birthYear,
+        // Default ratings and statuses if not provided by form/service
+        rating: formDataFromModal.rating ?? 800,
+        rapidRating: formDataFromModal.rapidRating, // Optional, might be undefined
+        blitzRating: formDataFromModal.blitzRating, // Optional, might be undefined
+        gamesPlayed: formDataFromModal.gamesPlayed ?? 0,
+        rapidGamesPlayed: formDataFromModal.rapidGamesPlayed ?? 0,
+        blitzGamesPlayed: formDataFromModal.blitzGamesPlayed ?? 0,
+        ratingStatus: formDataFromModal.ratingStatus ?? 'provisional',
+        rapidRatingStatus: formDataFromModal.rapidRatingStatus ?? (formDataFromModal.rapidRating ? 'provisional' : undefined),
+        blitzRatingStatus: formDataFromModal.blitzRatingStatus ?? (formDataFromModal.blitzRating ? 'provisional' : undefined),
+        status: formDataFromModal.status ?? 'pending', // Default to pending, officer can approve
+        achievements: formDataFromModal.achievements || [], // Ensure it's an array
+        // ratingHistory and tournamentResults are omitted as per the type for createPlayerInSupabase
+      };
 
-      setAllPlayers(prev => [...prev, createdPlayer]); // Add to global list of players
 
-      // Automatically add the new player to the current tournament
+      const createdPlayer = await createPlayerInSupabase(playerDataForService);
+      if (!createdPlayer) throw new Error("Player creation failed in service.");
+
+      setAllPlayers(prev => [...prev, createdPlayer]); 
+
       const updatedPlayerIdsArray = [...(tournament.players || []), createdPlayer.id];
       const updatedTournament = await updateTournamentInSupabase(tournament.id, { players: updatedPlayerIdsArray });
       
       if (!updatedTournament) throw new Error("Failed to add created player to tournament.");
 
       setTournament(updatedTournament);
-      setRegisteredPlayers(prev => [...prev, createdPlayer]); // Add to local registered list
+      setRegisteredPlayers(prev => [...prev, createdPlayer]); 
       setIsCreatePlayerOpen(false);
 
       if (createdPlayer.status === 'pending') {
-        // setHasPendingPlayers(true); // useEffect will handle this
         toast({
-          title: "Player Created & Added (Pending)",
-          description: "Player created and added to tournament. Requires Rating Officer approval.",
+          title: "Player Created & Added",
+          description: `${createdPlayer.name} created and added to tournament. Requires Rating Officer approval.`,
           variant: "warning"
         });
       } else {
-        toast({ title: "Player Created & Added", description: "Player created and added to the tournament." });
+        toast({ title: "Player Created & Added", description: `${createdPlayer.name} created and added to the tournament.` });
       }
     } catch (error) {
       console.error("Error creating or adding player:", error);
-      toast({ title: "Error", description: (error as Error).message || "Could not create or add player.", variant: "destructive" });
+      toast({ title: "Error Creating Player", description: (error as Error).message || "Could not create or add player.", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
@@ -454,7 +479,7 @@ const TournamentManagement = () => {
 
     const nextRoundNumber = tournament.currentRound + 1;
     if (nextRoundNumber > tournament.rounds) {
-        toast({ title: "Tournament Complete", description: "This is the final round.", variant: "info" });
+        toast({ title: "Tournament Complete", description: "This is the final round." }); // Default variant
         return;
     }
 
