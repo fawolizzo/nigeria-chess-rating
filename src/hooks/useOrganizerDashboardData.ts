@@ -36,9 +36,32 @@ export const useOrganizerDashboardData = (organizerId?: string) => {
     }
   };
 
-  useEffect(() => {
-    fetchTournaments();
-  }, [organizerId]);
+  // Add missing methods that are being called
+  const loadTournaments = fetchTournaments;
+
+  const filterTournamentsByStatus = (status: string) => {
+    return tournaments.filter(tournament => {
+      if (status === 'upcoming') {
+        return tournament.status === 'approved' && new Date(tournament.startDate) > new Date();
+      }
+      if (status === 'ongoing') {
+        const now = new Date();
+        return tournament.status === 'approved' && 
+               new Date(tournament.startDate) <= now && 
+               new Date(tournament.endDate) >= now;
+      }
+      return tournament.status === status;
+    });
+  };
+
+  const formatDisplayDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getNextTournament = () => {
+    const upcomingTournaments = filterTournamentsByStatus('upcoming');
+    return upcomingTournaments.length > 0 ? upcomingTournaments[0] : null;
+  };
 
   const createTournament = async (tournamentData: Omit<Tournament, "id" | "createdAt" | "updatedAt">) => {
     try {
@@ -107,27 +130,24 @@ export const useOrganizerDashboardData = (organizerId?: string) => {
   };
 
   const getTournamentsByStatus = (status: string) => {
-    return tournaments.filter(tournament => {
-      if (status === 'upcoming') {
-        return tournament.status === 'approved' && new Date(tournament.startDate) > new Date();
-      }
-      if (status === 'ongoing') {
-        const now = new Date();
-        return tournament.status === 'approved' && 
-               new Date(tournament.startDate) <= now && 
-               new Date(tournament.endDate) >= now;
-      }
-      return tournament.status === status;
-    });
+    return filterTournamentsByStatus(status);
   };
+
+  useEffect(() => {
+    fetchTournaments();
+  }, [organizerId]);
 
   return {
     tournaments,
     isLoading,
     error,
     fetchTournaments,
+    loadTournaments,
     createTournament,
     updateTournament,
-    getTournamentsByStatus
+    getTournamentsByStatus,
+    filterTournamentsByStatus,
+    formatDisplayDate,
+    getNextTournament
   };
 };

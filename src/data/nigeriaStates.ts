@@ -31,5 +31,7 @@ export const getCitiesForState = (stateName: string): string[] => {
   return citiesByState[stateName] || [];
 };
 
+// Re-export nigerianStates directly
+export { nigerianStates };
 // Re-export for backward compatibility
 export { nigerianStates as statesWithCities } from "@/lib/nigerianStates";

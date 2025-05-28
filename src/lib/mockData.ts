@@ -1,6 +1,8 @@
+
 export interface RatingHistoryEntry {
   date: string;
   rating: number;
+  reason?: string; // Add optional reason field
 }
 
 export interface Pairing {
@@ -39,11 +41,16 @@ export interface Player {
   ratingStatus: "provisional" | "established";
   rapidRatingStatus: "provisional" | "established";
   blitzRatingStatus: "provisional" | "established";
+  // Add missing rating history for different formats
+  rapidRatingHistory: RatingHistoryEntry[];
+  blitzRatingHistory: RatingHistoryEntry[];
   // Add missing optional properties
   title?: string;
   titleVerified?: boolean;
   achievements?: string[];
   fideId?: string;
+  birthYear?: number;
+  club?: string;
 }
 
 export interface Tournament {
@@ -68,6 +75,7 @@ export interface Tournament {
   standings: Standing[];
   createdAt: string;
   updatedAt: string;
+  processingDate?: string; // Add optional processing date
 }
 
 export interface TournamentResult {
