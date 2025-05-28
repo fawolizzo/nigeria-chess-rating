@@ -15,7 +15,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
   
   // Prepare rating data directly in the component
   const prepareRatingData = (timeFormat: "classical" | "rapid" | "blitz") => {
-    let history = [];
+    let history: { date: string; rating: number }[] = [];
     let statusLabel = "";
     let gameCount = 0;
     let currentRating = 0;
@@ -26,7 +26,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
         rating: entry.rating
       })) || [];
       gameCount = player.gamesPlayed || 0;
-      statusLabel = gameCount >= 30 ? "established" : "provisional";
+      statusLabel = player.ratingStatus || (gameCount >= 30 ? "established" : "provisional");
       currentRating = player.rating || 0;
     } else if (timeFormat === "rapid") {
       history = player.rapidRatingHistory?.map(entry => ({
@@ -34,7 +34,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
         rating: entry.rating
       })) || [];
       gameCount = player.rapidGamesPlayed || 0;
-      statusLabel = gameCount >= 30 ? "established" : "provisional";
+      statusLabel = player.rapidRatingStatus || (gameCount >= 30 ? "established" : "provisional");
       currentRating = player.rapidRating || 0;
     } else if (timeFormat === "blitz") {
       history = player.blitzRatingHistory?.map(entry => ({
@@ -42,7 +42,7 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
         rating: entry.rating
       })) || [];
       gameCount = player.blitzGamesPlayed || 0;
-      statusLabel = gameCount >= 30 ? "established" : "provisional";
+      statusLabel = player.blitzRatingStatus || (gameCount >= 30 ? "established" : "provisional");
       currentRating = player.blitzRating || 0;
     }
     
@@ -55,11 +55,20 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
           change = history[i].rating - history[i-1].rating;
         }
         
+        let reasonText = "-";
+        if (timeFormat === "classical" && player.ratingHistory && player.ratingHistory[i]?.reason) {
+          reasonText = player.ratingHistory[i].reason || "-";
+        } else if (timeFormat === "rapid" && player.rapidRatingHistory && player.rapidRatingHistory[i]?.reason) {
+          reasonText = player.rapidRatingHistory[i].reason || "-";  
+        } else if (timeFormat === "blitz" && player.blitzRatingHistory && player.blitzRatingHistory[i]?.reason) {
+          reasonText = player.blitzRatingHistory[i].reason || "-";
+        }
+        
         ratingChanges.push({
           date: history[i].date,
           rating: history[i].rating,
           change,
-          reason: (player.ratingHistory && player.ratingHistory[i]?.reason) || "-"
+          reason: reasonText
         });
       }
     }

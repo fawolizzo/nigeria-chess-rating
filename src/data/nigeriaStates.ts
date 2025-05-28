@@ -1,13 +1,5 @@
 
-import { nigerianStates, getCitiesByState } from "@/lib/nigerianStates";
-
-export const NIGERIA_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", 
-  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", 
-  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", 
-  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
-];
+import { nigerianStates as statesData, NIGERIA_STATES } from "@/lib/nigerianStates";
 
 export const nigerianStatesArray = NIGERIA_STATES;
 
@@ -15,14 +7,14 @@ export const nigerianStatesArray = NIGERIA_STATES;
 export const citiesByState: Record<string, string[]> = {};
 
 // Populate citiesByState from the nigerianStates data
-nigerianStates.forEach(state => {
+statesData.forEach(state => {
   // Map "Federal Capital Territory" to "FCT" for consistency
   const stateName = state.name === "Federal Capital Territory" ? "FCT" : state.name;
   citiesByState[stateName] = state.cities;
 });
 
 // Also add direct state name mappings for flexibility
-nigerianStates.forEach(state => {
+statesData.forEach(state => {
   citiesByState[state.name] = state.cities;
 });
 
@@ -31,7 +23,7 @@ export const getCitiesForState = (stateName: string): string[] => {
   return citiesByState[stateName] || [];
 };
 
-// Re-export nigerianStates directly
-export { nigerianStates };
+// Export nigerianStates directly
+export { statesData as nigerianStates };
 // Re-export for backward compatibility
-export { nigerianStates as statesWithCities } from "@/lib/nigerianStates";
+export { statesData as statesWithCities };

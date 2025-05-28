@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Player } from "@/lib/mockData";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -39,13 +38,15 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
       email: player.email || '',
       ratingHistory: [],
       tournamentResults: [],
-      rapidRating: FLOOR_RATING,
-      blitzRating: FLOOR_RATING,
-      rapidGamesPlayed: 0,
-      blitzGamesPlayed: 0,
-      ratingStatus: 'provisional' as const,
-      rapidRatingStatus: 'provisional' as const,
-      blitzRatingStatus: 'provisional' as const
+      rapidRating: player.rapid_rating || FLOOR_RATING,
+      blitzRating: player.blitz_rating || FLOOR_RATING,
+      rapidGamesPlayed: player.rapid_games_played || 0,
+      blitzGamesPlayed: player.blitz_games_played || 0,
+      ratingStatus: (player.games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+      rapidRatingStatus: (player.rapid_games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+      blitzRatingStatus: (player.blitz_games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+      rapidRatingHistory: [],
+      blitzRatingHistory: []
     }));
   } catch (error) {
     console.error("Error getting players from Supabase:", error);
@@ -78,13 +79,15 @@ export const getPlayerByIdFromSupabase = async (playerId: string): Promise<Playe
       email: data.email || '',
       ratingHistory: [],
       tournamentResults: [],
-      rapidRating: FLOOR_RATING,
-      blitzRating: FLOOR_RATING,
-      rapidGamesPlayed: 0,
-      blitzGamesPlayed: 0,
-      ratingStatus: 'provisional' as const,
-      rapidRatingStatus: 'provisional' as const,
-      blitzRatingStatus: 'provisional' as const
+      rapidRating: data.rapid_rating || FLOOR_RATING,
+      blitzRating: data.blitz_rating || FLOOR_RATING,
+      rapidGamesPlayed: data.rapid_games_played || 0,
+      blitzGamesPlayed: data.blitz_games_played || 0,
+      ratingStatus: (data.games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+      rapidRatingStatus: (data.rapid_games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+      blitzRatingStatus: (data.blitz_games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+      rapidRatingHistory: [],
+      blitzRatingHistory: []
     };
   } catch (error) {
     console.error(`Error getting player ${playerId} from Supabase:`, error);
@@ -114,7 +117,11 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       city: playerData.city || '',
       status: playerData.status || 'pending',
       games_played: playerData.gamesPlayed || 0,
-      gender: playerData.gender || 'M'
+      gender: playerData.gender || 'M',
+      rapid_rating: playerData.rapidRating || FLOOR_RATING,
+      blitz_rating: playerData.blitzRating || FLOOR_RATING,
+      rapid_games_played: playerData.rapidGamesPlayed || 0,
+      blitz_games_played: playerData.blitzGamesPlayed || 0
     };
 
     const { data, error } = await supabase
@@ -129,7 +136,7 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       id: data.id,
       name: data.name,
       rating: data.rating || FLOOR_RATING,
-      gender: (playerData.gender as "M" | "F") || 'M',
+      gender: (data.gender as "M" | "F") || 'M',
       state: data.state || '',
       city: data.city || '',
       country: 'Nigeria',
@@ -139,13 +146,15 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       email: data.email || '',
       ratingHistory: [],
       tournamentResults: [],
-      rapidRating: FLOOR_RATING,
-      blitzRating: FLOOR_RATING,
-      rapidGamesPlayed: 0,
-      blitzGamesPlayed: 0,
+      rapidRating: data.rapid_rating || FLOOR_RATING,
+      blitzRating: data.blitz_rating || FLOOR_RATING,
+      rapidGamesPlayed: data.rapid_games_played || 0,
+      blitzGamesPlayed: data.blitz_games_played || 0,
       ratingStatus: 'provisional',
       rapidRatingStatus: 'provisional',
-      blitzRatingStatus: 'provisional'
+      blitzRatingStatus: 'provisional',
+      rapidRatingHistory: [],
+      blitzRatingHistory: []
     };
   } catch (error) {
     console.error("Error creating player in Supabase:", error);
@@ -166,6 +175,10 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
     if (playerData.status !== undefined) dbPlayerData.status = playerData.status;
     if (playerData.gamesPlayed !== undefined) dbPlayerData.games_played = playerData.gamesPlayed;
     if (playerData.gender !== undefined) dbPlayerData.gender = playerData.gender;
+    if (playerData.rapidRating !== undefined) dbPlayerData.rapid_rating = playerData.rapidRating;
+    if (playerData.blitzRating !== undefined) dbPlayerData.blitz_rating = playerData.blitzRating;
+    if (playerData.rapidGamesPlayed !== undefined) dbPlayerData.rapid_games_played = playerData.rapidGamesPlayed;
+    if (playerData.blitzGamesPlayed !== undefined) dbPlayerData.blitz_games_played = playerData.blitzGamesPlayed;
 
     const { data, error } = await supabase
       .from('players')
@@ -180,7 +193,7 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
       id: data.id,
       name: data.name,
       rating: data.rating || FLOOR_RATING,
-      gender: (playerData.gender as "M" | "F") || 'M',
+      gender: (data.gender as "M" | "F") || 'M',
       state: data.state || '',
       city: data.city || '',
       country: 'Nigeria',
@@ -190,13 +203,15 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
       email: data.email || '',
       ratingHistory: playerData.ratingHistory || [],
       tournamentResults: playerData.tournamentResults || [],
-      rapidRating: FLOOR_RATING,
-      blitzRating: FLOOR_RATING,
-      rapidGamesPlayed: 0,
-      blitzGamesPlayed: 0,
-      ratingStatus: 'provisional',
-      rapidRatingStatus: 'provisional',
-      blitzRatingStatus: 'provisional'
+      rapidRating: data.rapid_rating || FLOOR_RATING,
+      blitzRating: data.blitz_rating || FLOOR_RATING,
+      rapidGamesPlayed: data.rapid_games_played || 0,
+      blitzGamesPlayed: data.blitz_games_played || 0,
+      ratingStatus: (data.games_played || 0) >= 30 ? 'established' : 'provisional',
+      rapidRatingStatus: (data.rapid_games_played || 0) >= 30 ? 'established' : 'provisional',
+      blitzRatingStatus: (data.blitz_games_played || 0) >= 30 ? 'established' : 'provisional',
+      rapidRatingHistory: playerData.rapidRatingHistory || [],
+      blitzRatingHistory: playerData.blitzRatingHistory || []
     };
   } catch (error) {
     console.error(`Error updating player ${playerId} in Supabase:`, error);

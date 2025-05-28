@@ -1,237 +1,207 @@
 
-/**
- * Nigerian States and FCT data
- */
-
+// Create a proper structure for Nigerian states and cities data
 export interface StateData {
-  code: string;
   name: string;
+  code?: string;
   cities: string[];
 }
 
 export const nigerianStates: StateData[] = [
   {
-    code: "AB",
     name: "Abia",
+    code: "AB",
     cities: ["Umuahia", "Aba", "Ohafia", "Arochukwu", "Bende", "Uzuakoli"]
   },
   {
-    code: "AD",
     name: "Adamawa",
+    code: "AD",
     cities: ["Yola", "Mubi", "Jimeta", "Ganye", "Numan", "Mayo-Belwa"]
   },
   {
-    code: "AK",
     name: "Akwa Ibom",
-    cities: ["Uyo", "Eket", "Ikot Ekpene", "Oron", "Abak", "Itu"]
+    code: "AK",
+    cities: ["Uyo", "Eket", "Ikot Ekpene", "Oron", "Ibeno", "Abak"]
   },
   {
-    code: "AN",
     name: "Anambra",
-    cities: ["Awka", "Onitsha", "Nnewi", "Ekwulobia", "Ihiala", "Aguata"]
+    code: "AN",
+    cities: ["Awka", "Onitsha", "Nnewi", "Ekwulobia", "Aguata", "Abagana"]
   },
   {
-    code: "BA",
     name: "Bauchi",
-    cities: ["Bauchi", "Azare", "Misau", "Jama'are", "Dass", "Tafawa Balewa"]
+    code: "BA",
+    cities: ["Bauchi", "Azare", "Misau", "Katagum", "Jama'are", "Ningi"]
   },
   {
-    code: "BY",
     name: "Bayelsa",
-    cities: ["Yenagoa", "Brass", "Nembe", "Ogbia", "Sagbama", "Ekeremor"]
+    code: "BY",
+    cities: ["Yenagoa", "Brass", "Nembe", "Ogbia", "Southern Ijaw", "Ekeremor"]
   },
   {
-    code: "BE",
     name: "Benue",
-    cities: ["Makurdi", "Gboko", "Otukpo", "Katsina-Ala", "Oju", "Vandeikya"]
+    code: "BE",
+    cities: ["Makurdi", "Gboko", "Otukpo", "Katsina-Ala", "Vandeikya", "Zaki Biam"]
   },
   {
-    code: "BO",
     name: "Borno",
-    cities: ["Maiduguri", "Biu", "Gwoza", "Bama", "Konduga", "Monguno"]
+    code: "BO",
+    cities: ["Maiduguri", "Biu", "Gwoza", "Damboa", "Bama", "Monguno"]
   },
   {
-    code: "CR",
     name: "Cross River",
-    cities: ["Calabar", "Ogoja", "Obudu", "Ikom", "Odukpani", "Akamkpa"]
+    code: "CR",
+    cities: ["Calabar", "Ugep", "Ogoja", "Ikom", "Obubra", "Obudu"]
   },
   {
-    code: "DE",
     name: "Delta",
-    cities: ["Asaba", "Warri", "Ughelli", "Sapele", "Agbor", "Burutu"]
+    code: "DE",
+    cities: ["Asaba", "Warri", "Sapele", "Agbor", "Ughelli", "Abraka"]
   },
   {
-    code: "EB",
     name: "Ebonyi",
-    cities: ["Abakaliki", "Afikpo", "Onueke", "Ishieke", "Ezzamgbo", "Unwana"]
+    code: "EB",
+    cities: ["Abakaliki", "Afikpo", "Onueke", "Ishiagu", "Okposi", "Uburu"]
   },
   {
-    code: "ED",
     name: "Edo",
+    code: "ED",
     cities: ["Benin City", "Auchi", "Ekpoma", "Uromi", "Sabongida-Ora", "Igarra"]
   },
   {
-    code: "EK",
     name: "Ekiti",
-    cities: ["Ado-Ekiti", "Ikere", "Efon", "Ijero", "Ikole", "Ise"]
+    code: "EK",
+    cities: ["Ado-Ekiti", "Ikere", "Ikole", "Efon-Alaaye", "Ijero", "Aramoko"]
   },
   {
-    code: "EN",
     name: "Enugu",
+    code: "EN",
     cities: ["Enugu", "Nsukka", "Oji River", "Awgu", "Udi", "Agbani"]
   },
   {
-    code: "FC",
     name: "Federal Capital Territory",
+    code: "FC",
     cities: ["Abuja", "Gwagwalada", "Kuje", "Bwari", "Kwali", "Abaji"]
   },
   {
-    code: "GO",
     name: "Gombe",
-    cities: ["Gombe", "Billiri", "Dukku", "Kaltungo", "Bajoga", "Kumo"]
+    code: "GO",
+    cities: ["Gombe", "Billiri", "Kaltungo", "Bajoga", "Kumo", "Dukku"]
   },
   {
-    code: "IM",
     name: "Imo",
-    cities: ["Owerri", "Orlu", "Okigwe", "Mbaise", "Oguta", "Nkwerre"]
+    code: "IM",
+    cities: ["Owerri", "Okigwe", "Orlu", "Mbaise", "Oguta", "Mbano"]
   },
   {
-    code: "JI",
     name: "Jigawa",
-    cities: ["Dutse", "Hadejia", "Birnin Kudu", "Gumel", "Kazaure", "Ringim"]
+    code: "JI",
+    cities: ["Dutse", "Hadejia", "Gumel", "Kazaure", "Ringim", "Babura"]
   },
   {
-    code: "KD",
     name: "Kaduna",
-    cities: ["Kaduna", "Zaria", "Kafanchan", "Kachia", "Birnin Gwari", "Saminaka"]
+    code: "KD",
+    cities: ["Kaduna", "Zaria", "Kafanchan", "Kagoro", "Kachia", "Birnin Gwari"]
   },
   {
-    code: "KN",
     name: "Kano",
-    cities: ["Kano", "Bichi", "Wudil", "Gaya", "Rano", "Karaye"]
+    code: "KN",
+    cities: ["Kano", "Dala", "Ungogo", "Rano", "Bichi", "Gwarzo"]
   },
   {
-    code: "KT",
     name: "Katsina",
-    cities: ["Katsina", "Funtua", "Daura", "Jibia", "Dutsin-Ma", "Kankia"]
+    code: "KT",
+    cities: ["Katsina", "Funtua", "Daura", "Dutsin-Ma", "Kankia", "Jibia"]
   },
   {
-    code: "KE",
     name: "Kebbi",
+    code: "KE",
     cities: ["Birnin Kebbi", "Argungu", "Yauri", "Zuru", "Jega", "Koko"]
   },
   {
-    code: "KO",
     name: "Kogi",
-    cities: ["Lokoja", "Okene", "Kabba", "Anyigba", "Idah", "Ankpa"]
+    code: "KO",
+    cities: ["Lokoja", "Okene", "Kabba", "Idah", "Ankpa", "Isanlu"]
   },
   {
-    code: "KW",
     name: "Kwara",
-    cities: ["Ilorin", "Offa", "Omu-Aran", "Patigi", "Jebba", "Lafiagi"]
+    code: "KW",
+    cities: ["Ilorin", "Offa", "Patigi", "Kaiama", "Jebba", "Omu-Aran"]
   },
   {
-    code: "LA",
     name: "Lagos",
-    cities: ["Ikeja", "Lagos Island", "Badagry", "Epe", "Ikorodu", "Mushin"]
+    code: "LA",
+    cities: ["Ikeja", "Lagos Island", "Badagry", "Epe", "Ikorodu", "Apapa", "Surulere", "Lekki", "Ajah"]
   },
   {
-    code: "NA",
     name: "Nasarawa",
+    code: "NA",
     cities: ["Lafia", "Keffi", "Akwanga", "Nasarawa", "Wamba", "Keana"]
   },
   {
-    code: "NI",
     name: "Niger",
-    cities: ["Minna", "Bida", "Kontagora", "Suleja", "Lapai", "New Bussa"]
+    code: "NI",
+    cities: ["Minna", "Bida", "Suleja", "Kontagora", "Lapai", "Agaie"]
   },
   {
-    code: "OG",
     name: "Ogun",
-    cities: ["Abeokuta", "Ijebu Ode", "Sagamu", "Ilaro", "Ota", "Ifo"]
+    code: "OG",
+    cities: ["Abeokuta", "Ijebu Ode", "Sagamu", "Ilaro", "Ota", "Ijebu-Igbo"]
   },
   {
-    code: "ON",
     name: "Ondo",
-    cities: ["Akure", "Ondo", "Owo", "Ikare", "Ilaje", "Okitipupa"]
+    code: "ON",
+    cities: ["Akure", "Ondo", "Owo", "Okitipupa", "Ikare", "Ore"]
   },
   {
-    code: "OS",
     name: "Osun",
-    cities: ["Osogbo", "Ile-Ife", "Ilesa", "Ede", "Iwo", "Ikire"]
+    code: "OS",
+    cities: ["Osogbo", "Ife", "Ilesa", "Ede", "Iwo", "Ejigbo"]
   },
   {
-    code: "OY",
     name: "Oyo",
+    code: "OY",
     cities: ["Ibadan", "Ogbomosho", "Oyo", "Iseyin", "Saki", "Igboho"]
   },
   {
-    code: "PL",
     name: "Plateau",
-    cities: ["Jos", "Pankshin", "Shendam", "Barkin Ladi", "Langtang", "Mangu"]
+    code: "PL",
+    cities: ["Jos", "Pankshin", "Shendam", "Langtang", "Wase", "Barkin Ladi"]
   },
   {
-    code: "RI",
     name: "Rivers",
-    cities: ["Port Harcourt", "Bonny", "Okrika", "Opobo", "Buguma", "Bori"]
+    code: "RI",
+    cities: ["Port Harcourt", "Bonny", "Degema", "Bori", "Ahoada", "Eleme"]
   },
   {
-    code: "SO",
     name: "Sokoto",
-    cities: ["Sokoto", "Tambuwal", "Wurno", "Gada", "Illela", "Rabah"]
+    code: "SO",
+    cities: ["Sokoto", "Tambuwal", "Gwadabawa", "Illela", "Rabah", "Wurno"]
   },
   {
-    code: "TA",
     name: "Taraba",
+    code: "TA",
     cities: ["Jalingo", "Wukari", "Bali", "Gembu", "Takum", "Ibi"]
   },
   {
-    code: "YO",
     name: "Yobe",
-    cities: ["Damaturu", "Potiskum", "Gashua", "Nguru", "Geidam", "Buni Yadi"]
+    code: "YO",
+    cities: ["Damaturu", "Potiskum", "Gashua", "Geidam", "Nguru", "Buni Yadi"]
   },
   {
-    code: "ZA",
     name: "Zamfara",
-    cities: ["Gusau", "Kaura Namoda", "Talata Mafara", "Anka", "Zurmi", "Shinkafi"]
+    code: "ZA",
+    cities: ["Gusau", "Kaura Namoda", "Talata Mafara", "Anka", "Zurmi", "Tsafe"]
   }
 ];
 
-// Get all states as an array of names
-export const getAllStates = (): string[] => {
-  return nigerianStates.map(state => state.name);
-};
-
-// Get all cities for a given state
+// Function to get cities for a state
 export const getCitiesByState = (stateName: string): string[] => {
-  const state = nigerianStates.find(
-    s => s.name.toLowerCase() === stateName.toLowerCase()
+  const state = nigerianStates.find(state => 
+    state.name === stateName || 
+    (stateName === "FCT" && state.name === "Federal Capital Territory")
   );
   return state ? state.cities : [];
 };
 
-// Get state by name or code
-export const getStateByNameOrCode = (nameOrCode: string): StateData | undefined => {
-  return nigerianStates.find(
-    s => 
-      s.name.toLowerCase() === nameOrCode.toLowerCase() || 
-      s.code.toLowerCase() === nameOrCode.toLowerCase()
-  );
-};
-
-// Add standard chess time controls
-export const TIME_CONTROLS = [
-  "90min",
-  "90min + 30sec",
-  "60min",
-  "60min + 30sec",
-  "30min",
-  "30min + 10sec",
-  "25min + 10sec",
-  "15min + 10sec",
-  "5min + 3sec",
-  "3min + 2sec"
-];
-
-// Export NIGERIAN_STATES as an alias to getAllStates() for backward compatibility
-export const NIGERIAN_STATES = getAllStates();
+// Export the Nigeria states array for convenience
+export const NIGERIA_STATES = nigerianStates.map(state => state.name);

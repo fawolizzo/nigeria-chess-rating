@@ -3,10 +3,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react"; // Added Loader2
-// import { getPlayerById, Player } from "@/lib/mockData"; // Removed getPlayerById
-import { Player } from "@/lib/mockData"; // Player type
-import { getPlayerByIdFromSupabase } from "@/services/playerService"; // Added
+import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { Player } from "@/lib/mockData";
+import { getPlayerByIdFromSupabase } from "@/services/playerService";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import NewPlayerProfileHeader from "@/components/player/NewPlayerProfileHeader";
@@ -17,8 +16,8 @@ const PlayerProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [player, setPlayer] = useState<Player | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Added
-  const [fetchError, setFetchError] = useState<string | null>(null); // Renamed from error to fetchError
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchPlayerData = async () => {
@@ -42,8 +41,32 @@ const PlayerProfile = () => {
         
         if (playerData) {
           console.log("[PlayerProfile] Player data fetched successfully:", playerData.id);
+          // Add mock rating history if none exists
+          if (!playerData.ratingHistory || playerData.ratingHistory.length === 0) {
+            playerData.ratingHistory = [{
+              date: new Date().toISOString(),
+              rating: playerData.rating,
+              reason: "Initial rating"
+            }];
+          }
+          
+          if (!playerData.rapidRatingHistory || playerData.rapidRatingHistory.length === 0) {
+            playerData.rapidRatingHistory = [{
+              date: new Date().toISOString(),
+              rating: playerData.rapidRating || 800,
+              reason: "Initial rapid rating"
+            }];
+          }
+          
+          if (!playerData.blitzRatingHistory || playerData.blitzRatingHistory.length === 0) {
+            playerData.blitzRatingHistory = [{
+              date: new Date().toISOString(),
+              rating: playerData.blitzRating || 800,
+              reason: "Initial blitz rating"
+            }];
+          }
+          
           setPlayer(playerData);
-          // Caching can be re-evaluated; Supabase might have its own caching, or use React Query/SWR for better cache management
         } else {
           console.warn("[PlayerProfile] Player not found with ID via Supabase:", id);
           setFetchError("Player not found. The profile may not exist or the ID is incorrect.");
@@ -51,7 +74,7 @@ const PlayerProfile = () => {
           toast({
             title: "Player Not Found",
             description: "The requested player could not be found.",
-            variant: "default", // Changed to default as it's a "not found" rather than system error
+            variant: "default",
           });
         }
       } catch (err: any) {
@@ -134,7 +157,7 @@ const PlayerProfile = () => {
             Back to Players
           </Button>
           
-          <Card className="border-yellow-400 dark:border-yellow-700"> {/* Changed border for "Not Found" */}
+          <Card className="border-yellow-400 dark:border-yellow-700">
             <CardContent className="p-8 flex flex-col items-center justify-center text-center">
               <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
               <h2 className="text-2xl font-bold mb-2">Player Not Found</h2>
