@@ -29,7 +29,7 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
       id: player.id,
       name: player.name,
       rating: player.rating || FLOOR_RATING,
-      gender: 'M' as const, // Default since not in DB
+      gender: (player.gender as "M" | "F") || 'M',
       state: player.state || '',
       city: player.city || '',
       country: 'Nigeria',
@@ -37,15 +37,15 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
       gamesPlayed: player.games_played || 0,
       phone: player.phone || '',
       email: player.email || '',
-      ratingHistory: [], // Default since not in DB
-      tournamentResults: [], // Default since not in DB
-      rapidRating: FLOOR_RATING, // Default since not in DB
-      blitzRating: FLOOR_RATING, // Default since not in DB
-      rapidGamesPlayed: 0, // Default since not in DB
-      blitzGamesPlayed: 0, // Default since not in DB
-      ratingStatus: 'provisional' as const, // Default since not in DB
-      rapidRatingStatus: 'provisional' as const, // Default since not in DB
-      blitzRatingStatus: 'provisional' as const // Default since not in DB
+      ratingHistory: [],
+      tournamentResults: [],
+      rapidRating: FLOOR_RATING,
+      blitzRating: FLOOR_RATING,
+      rapidGamesPlayed: 0,
+      blitzGamesPlayed: 0,
+      ratingStatus: 'provisional' as const,
+      rapidRatingStatus: 'provisional' as const,
+      blitzRatingStatus: 'provisional' as const
     }));
   } catch (error) {
     console.error("Error getting players from Supabase:", error);
@@ -68,7 +68,7 @@ export const getPlayerByIdFromSupabase = async (playerId: string): Promise<Playe
       id: data.id,
       name: data.name,
       rating: data.rating || FLOOR_RATING,
-      gender: 'M' as const, // Default
+      gender: (data.gender as "M" | "F") || 'M',
       state: data.state || '',
       city: data.city || '',
       country: 'Nigeria',
@@ -114,7 +114,7 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       city: playerData.city || '',
       status: playerData.status || 'pending',
       games_played: playerData.gamesPlayed || 0,
-      gender: playerData.gender || 'M' // Added gender field
+      gender: playerData.gender || 'M'
     };
 
     const { data, error } = await supabase
@@ -129,7 +129,7 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       id: data.id,
       name: data.name,
       rating: data.rating || FLOOR_RATING,
-      gender: playerData.gender || 'M',
+      gender: (playerData.gender as "M" | "F") || 'M',
       state: data.state || '',
       city: data.city || '',
       country: 'Nigeria',
@@ -165,6 +165,7 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
     if (playerData.city !== undefined) dbPlayerData.city = playerData.city;
     if (playerData.status !== undefined) dbPlayerData.status = playerData.status;
     if (playerData.gamesPlayed !== undefined) dbPlayerData.games_played = playerData.gamesPlayed;
+    if (playerData.gender !== undefined) dbPlayerData.gender = playerData.gender;
 
     const { data, error } = await supabase
       .from('players')
@@ -179,7 +180,7 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
       id: data.id,
       name: data.name,
       rating: data.rating || FLOOR_RATING,
-      gender: playerData.gender || 'M',
+      gender: (playerData.gender as "M" | "F") || 'M',
       state: data.state || '',
       city: data.city || '',
       country: 'Nigeria',

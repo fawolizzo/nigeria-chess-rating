@@ -1,3 +1,4 @@
+
 import { Player, Tournament, User } from "@/lib/mockData";
 import { getAllPlayersFromSupabase, getAllUsers as fetchOrganizersFromPlayerService, createPlayerInSupabase, updatePlayerInSupabase } from "./playerService";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -74,7 +75,14 @@ export const addPlayer = async (player: Omit<Player, "id" | "ratingHistory" | "t
       ...player,
       id: generateUniquePlayerID(),
       ratingHistory: [],
-      tournamentResults: []
+      tournamentResults: [],
+      rapidRating: FLOOR_RATING,
+      blitzRating: FLOOR_RATING,
+      rapidGamesPlayed: 0,
+      blitzGamesPlayed: 0,
+      ratingStatus: 'provisional' as const,
+      rapidRatingStatus: 'provisional' as const,
+      blitzRatingStatus: 'provisional' as const
     } as Player;
     
     players.push(newPlayer);
@@ -86,7 +94,14 @@ export const addPlayer = async (player: Omit<Player, "id" | "ratingHistory" | "t
       ...player,
       id: generateUniquePlayerID(),
       ratingHistory: [],
-      tournamentResults: []
+      tournamentResults: [],
+      rapidRating: FLOOR_RATING,
+      blitzRating: FLOOR_RATING,
+      rapidGamesPlayed: 0,
+      blitzGamesPlayed: 0,
+      ratingStatus: 'provisional' as const,
+      rapidRatingStatus: 'provisional' as const,
+      blitzRatingStatus: 'provisional' as const
     } as Player;
     
     players.push(newPlayer);
@@ -127,12 +142,16 @@ export const getTournamentById = (id: string): Tournament | undefined => {
   return tournaments.find(t => t.id === id);
 };
 
-export const getPlayersByTournamentId = (tournamentId: string): Player[] => {
-  const tournament = tournaments.find(t => t.id === tournamentId);
-  if (!tournament || !tournament.players) {
+export const getPlayersByTournamentId = async (tournamentId: string): Promise<Player[]> => {
+  try {
+    // Get all players and filter by tournament if needed
+    // This is a simplified implementation - in a real app you'd have a junction table
+    const allPlayers = await getAllPlayers();
+    return allPlayers; // Return all players for now since we don't have tournament-player relationships
+  } catch (error) {
+    console.error("Error getting players by tournament ID:", error);
     return [];
   }
-  return players.filter(p => tournament.players.includes(p.id));
 };
 
 export const updateTournament = (updatedTournament: Tournament): Tournament => {
@@ -156,7 +175,18 @@ export const initializeMockServices = () => {
         status: "approved",
         tournamentResults: [],
         ratingHistory: [],
-        state: "Lagos"
+        state: "Lagos",
+        city: "Lagos",
+        country: "Nigeria",
+        phone: "",
+        email: "",
+        rapidRating: FLOOR_RATING,
+        blitzRating: FLOOR_RATING,
+        rapidGamesPlayed: 0,
+        blitzGamesPlayed: 0,
+        ratingStatus: 'provisional',
+        rapidRatingStatus: 'provisional',
+        blitzRatingStatus: 'provisional'
       }
     ];
   }

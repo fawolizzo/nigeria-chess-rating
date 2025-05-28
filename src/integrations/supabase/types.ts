@@ -56,31 +56,46 @@ export type Database = {
       }
       players: {
         Row: {
+          city: string | null
           created_at: string
           email: string
           fide_id: string | null
+          games_played: number
+          gender: string | null
           id: string
           name: string
           phone: string | null
           rating: number | null
+          state: string | null
+          status: string
         }
         Insert: {
+          city?: string | null
           created_at?: string
           email: string
           fide_id?: string | null
+          games_played?: number
+          gender?: string | null
           id?: string
           name: string
           phone?: string | null
           rating?: number | null
+          state?: string | null
+          status?: string
         }
         Update: {
+          city?: string | null
           created_at?: string
           email?: string
           fide_id?: string | null
+          games_played?: number
+          gender?: string | null
           id?: string
           name?: string
           phone?: string | null
           rating?: number | null
+          state?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -151,12 +166,15 @@ export type Database = {
         Row: {
           city: string
           created_at: string
+          current_round: number | null
           description: string | null
           end_date: string
           id: string
           location: string
           name: string
           organizer_id: string
+          participants: number | null
+          registration_open: boolean | null
           rounds: number
           start_date: string
           state: string
@@ -167,12 +185,15 @@ export type Database = {
         Insert: {
           city: string
           created_at?: string
+          current_round?: number | null
           description?: string | null
           end_date: string
           id?: string
           location: string
           name: string
           organizer_id: string
+          participants?: number | null
+          registration_open?: boolean | null
           rounds: number
           start_date: string
           state: string
@@ -183,12 +204,15 @@ export type Database = {
         Update: {
           city?: string
           created_at?: string
+          current_round?: number | null
           description?: string | null
           end_date?: string
           id?: string
           location?: string
           name?: string
           organizer_id?: string
+          participants?: number | null
+          registration_open?: boolean | null
           rounds?: number
           start_date?: string
           state?: string

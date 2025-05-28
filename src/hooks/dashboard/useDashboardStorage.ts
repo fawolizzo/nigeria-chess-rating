@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client"; // Added Supabase client
+import { supabase } from "@/integrations/supabase/client";
 import { Tournament, Player, User } from "@/lib/mockData";
 
 interface DashboardData {
@@ -9,6 +9,59 @@ interface DashboardData {
   pendingPlayers: Player[];
   pendingOrganizers: User[];
 }
+
+// Map database tournament to application Tournament type
+const mapDatabaseTournament = (dbTournament: any): Tournament => {
+  return {
+    id: dbTournament.id,
+    name: dbTournament.name,
+    description: dbTournament.description || '',
+    startDate: dbTournament.start_date,
+    endDate: dbTournament.end_date,
+    location: dbTournament.location,
+    city: dbTournament.city,
+    state: dbTournament.state,
+    organizerId: dbTournament.organizer_id,
+    status: dbTournament.status,
+    rounds: dbTournament.rounds,
+    currentRound: dbTournament.current_round || 1,
+    category: 'classical' as const,
+    timeControl: dbTournament.time_control,
+    participants: dbTournament.participants || 0,
+    registrationOpen: dbTournament.registration_open || false,
+    players: [],
+    pairings: [],
+    standings: [],
+    createdAt: dbTournament.created_at,
+    updatedAt: dbTournament.updated_at
+  };
+};
+
+// Map database player to application Player type
+const mapDatabasePlayer = (dbPlayer: any): Player => {
+  return {
+    id: dbPlayer.id,
+    name: dbPlayer.name,
+    rating: dbPlayer.rating || 800,
+    gender: (dbPlayer.gender as "M" | "F") || 'M',
+    state: dbPlayer.state || '',
+    city: dbPlayer.city || '',
+    country: 'Nigeria',
+    status: (dbPlayer.status as "pending" | "approved" | "rejected") || 'approved',
+    gamesPlayed: dbPlayer.games_played || 0,
+    phone: dbPlayer.phone || '',
+    email: dbPlayer.email || '',
+    ratingHistory: [],
+    tournamentResults: [],
+    rapidRating: 800,
+    blitzRating: 800,
+    rapidGamesPlayed: 0,
+    blitzGamesPlayed: 0,
+    ratingStatus: 'provisional' as const,
+    rapidRatingStatus: 'provisional' as const,
+    blitzRatingStatus: 'provisional' as const
+  };
+};
 
 export const useDashboardStorage = () => {
   const [data, setData] = useState<DashboardData>({
@@ -51,13 +104,13 @@ export const useDashboardStorage = () => {
         supabase.from("tournaments").select("*").eq("status", "pending"),
         supabase.from("tournaments").select("*").or("status.eq.completed,status.eq.processed"),
         supabase.from("players").select("*").eq("status", "pending"),
-        supabase.from("users").select("*").eq("role", "tournament_organizer").eq("status", "pending"),
+        supabase.from("organizers").select("*").eq("status", "pending"),
       ]);
 
       // Clear timeout on successful load attempt (before error checking)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
-        timeoutRef.current = null; // Important to nullify after clearing
+        timeoutRef.current = null;
       }
 
       // Check for errors in fetched data
@@ -67,15 +120,23 @@ export const useDashboardStorage = () => {
       if (pendingOrganizersResult.error) throw pendingOrganizersResult.error;
 
       const fetchedData: DashboardData = {
-        pendingTournaments: pendingTournamentsResult.data as Tournament[],
-        completedTournaments: completedTournamentsResult.data as Tournament[],
-        pendingPlayers: pendingPlayersResult.data as Player[],
-        pendingOrganizers: pendingOrganizersResult.data as User[],
+        pendingTournaments: (pendingTournamentsResult.data || []).map(mapDatabaseTournament),
+        completedTournaments: (completedTournamentsResult.data || []).map(mapDatabaseTournament),
+        pendingPlayers: (pendingPlayersResult.data || []).map(mapDatabasePlayer),
+        pendingOrganizers: (pendingOrganizersResult.data || []).map(organizer => ({
+          id: organizer.id,
+          email: organizer.email,
+          fullName: organizer.name,
+          role: organizer.role,
+          status: organizer.status,
+          phone: organizer.phone || '',
+          registrationDate: organizer.created_at
+        }))
       };
 
       setData(fetchedData);
-      setHasError(false); // Explicitly set no error on success
-      setErrorMessage(null); // Clear any previous error message
+      setHasError(false);
+      setErrorMessage(null);
 
     } catch (error) {
       console.error("Error loading dashboard data:", error);

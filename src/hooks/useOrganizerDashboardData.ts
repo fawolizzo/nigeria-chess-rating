@@ -1,185 +1,133 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { useState, useEffect } from "react";
+import { Tournament } from "@/lib/mockData";
+import { getTournamentsFromSupabase } from "@/services/tournamentService";
 import { useToast } from "@/hooks/use-toast";
-import { format, isValid, parseISO } from "date-fns"; // Added parseISO
-import { TournamentFormData, TournamentFormValues } from "@/types/tournamentTypes"; // Ensure TournamentFormValues is imported if used
-import { Tournament } from "@/lib/mockData"; // Import Tournament type
-import { getTournamentsFromSupabase, createTournamentInSupabase } from "@/services/tournamentService"; // Supabase services
 
-export function useOrganizerDashboardData(userId: string | undefined) {
-  const [tournaments, setTournaments] = useState<Tournament[]>([]); // Use Tournament type
+export const useOrganizerDashboardData = (organizerId?: string) => {
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Load tournaments from Supabase
-  const loadTournaments = useCallback(async () => {
-    if (!userId) {
-      setIsLoading(false);
-      setTournaments([]);
-      logMessage(LogLevel.WARNING, 'useOrganizerDashboardData', 'User ID is undefined, cannot load tournaments.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    logMessage(LogLevel.INFO, 'useOrganizerDashboardData', 'Loading tournaments from Supabase', { userId });
-
+  const fetchTournaments = async () => {
     try {
-      // Fetch tournaments filtered by organizerId
-      const organizerTournaments = await getTournamentsFromSupabase({ organizerId: userId });
+      setIsLoading(true);
+      setError(null);
       
-      logMessage(LogLevel.INFO, 'useOrganizerDashboardData', 
-        `Found ${organizerTournaments.length} tournaments for organizer`, { userId });
+      const allTournaments = await getTournamentsFromSupabase();
       
-      setTournaments(organizerTournaments);
+      // Filter by organizer if provided
+      const filteredTournaments = organizerId 
+        ? allTournaments.filter(t => t.organizerId === organizerId)
+        : allTournaments;
+      
+      setTournaments(filteredTournaments);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      logMessage(LogLevel.ERROR, 'useOrganizerDashboardData', 'Error loading tournaments from Supabase', { error: errorMessage });
-      setError(`Failed to load tournaments: ${errorMessage}`);
-      
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tournaments';
+      setError(errorMessage);
       toast({
-        title: "Error Loading Data",
-        description: "There was a problem loading your tournaments. Please try again.",
+        title: "Error",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
-  }, [userId, toast]);
+  };
 
-  // Create new tournament in Supabase
-  const createTournament = useCallback(async (data: TournamentFormData, customTimeControl: string, isCustomTimeControl: boolean): Promise<boolean> => {
-    if (!userId) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to create a tournament.",
-        variant: "destructive"
-      });
-      return false;
-    }
-    setIsLoading(true); // Indicate processing
+  useEffect(() => {
+    fetchTournaments();
+  }, [organizerId]);
+
+  const createTournament = async (tournamentData: Omit<Tournament, "id" | "createdAt" | "updatedAt">) => {
     try {
-      const tournamentToCreate: Omit<Tournament, 'id'> = {
-        organizerId: userId,
-        name: data.name,
-        description: data.description || '',
-        location: data.location,
-        city: data.city,
-        state: data.state,
-        // Ensure dates are in 'YYYY-MM-DD' string format for Supabase if columns are `date` type
-        startDate: format(data.startDate, 'yyyy-MM-dd'), 
-        endDate: format(data.endDate, 'yyyy-MM-dd'),
-        timeControl: isCustomTimeControl ? customTimeControl : data.timeControl,
-        rounds: typeof data.rounds === 'string' ? parseInt(data.rounds, 10) : data.rounds,
-        status: 'pending', // Default status for new tournaments
-        // category, players, pairings, etc., can be added later or set to defaults if needed
+      // Convert Tournament data to database format
+      const dbTournamentData = {
+        name: tournamentData.name,
+        description: tournamentData.description,
+        startDate: tournamentData.startDate,
+        endDate: tournamentData.endDate,
+        location: tournamentData.location,
+        city: tournamentData.city,
+        state: tournamentData.state,
+        timeControl: tournamentData.timeControl,
+        rounds: tournamentData.rounds,
+        organizerId: tournamentData.organizerId,
+        status: tournamentData.status || 'pending',
+        registrationOpen: tournamentData.registrationOpen
       };
 
-      const newTournament = await createTournamentInSupabase(tournamentToCreate);
-
+      const { createTournamentInSupabase } = await import("@/services/tournamentService");
+      const newTournament = await createTournamentInSupabase(dbTournamentData);
+      
       if (newTournament) {
-        setTournaments(prev => [...prev, newTournament]);
+        setTournaments(prev => [newTournament, ...prev]);
         toast({
-          title: "Tournament Created",
-          description: "Your tournament has been submitted for approval.",
+          title: "Success",
+          description: "Tournament created successfully"
         });
-        setIsLoading(false);
-        return true;
-      } else {
-        throw new Error("Tournament creation failed in Supabase service.");
+        return newTournament;
       }
+      throw new Error("Failed to create tournament");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      logMessage(LogLevel.ERROR, 'useOrganizerDashboardData', 'Error creating tournament in Supabase', { error: errorMessage });
-      setError(`Failed to create tournament: ${errorMessage}`);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create tournament';
+      setError(errorMessage);
       toast({
-        title: "Error Creating Tournament",
-        description: "There was a problem creating your tournament. Please try again.",
+        title: "Error",
+        description: errorMessage,
         variant: "destructive"
       });
-      setIsLoading(false);
-      return false;
+      throw err;
     }
-  }, [userId, toast]);
+  };
 
-  // Filter tournaments by status
-  const filterTournamentsByStatus = useCallback((status: Tournament['status']) => { // Use type for status
-    return tournaments.filter(t => t.status === status);
-  }, [tournaments]);
-
-  // Format display date with improved timezone handling
-  const formatDisplayDate = useCallback((dateString: string | undefined | null) => {
-    if (!dateString) return 'N/A';
+  const updateTournament = async (tournamentId: string, updates: Partial<Tournament>) => {
     try {
-      // Supabase often returns ISO strings (e.g., "2024-07-15T00:00:00Z" or "2024-07-15")
-      // parseISO handles these robustly.
-      const date = parseISO(dateString); 
-      if (isValid(date)) {
-        return format(date, 'MMM dd, yyyy');
-      }
-      // Fallback for potentially non-ISO simple "YYYY-MM-DD" strings (though parseISO often handles these)
-      const dateParts = dateString.split('-');
-      if (dateParts.length === 3) {
-        const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10) - 1;
-        const day = parseInt(dateParts[2], 10);
-        const localDate = new Date(year, month, day);
-        if (isValid(localDate)) {
-          return format(localDate, 'MMM dd, yyyy');
-        }
-      }
-      return 'Invalid Date';
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'formatDisplayDate', 'Error formatting date', { dateString, error });
-      return 'N/A';
-    }
-  }, []);
-
-  // Get next upcoming tournament
-  const getNextTournament = useCallback(() => {
-    if (!tournaments || tournaments.length === 0) {
-      return undefined;
-    }
-    
-    try {
-      const upcomingApprovedTournaments = tournaments.filter(t => 
-        (t.status === 'approved' || t.status === 'upcoming') && // Consider both 'approved' and 'upcoming'
-        t.startDate && isValid(parseISO(t.startDate))
-      );
+      const { updateTournamentInSupabase } = await import("@/services/tournamentService");
+      const updatedTournament = await updateTournamentInSupabase(tournamentId, updates);
       
-      if (upcomingApprovedTournaments.length === 0) {
-        return undefined;
+      if (updatedTournament) {
+        setTournaments(prev =>
+          prev.map(t => t.id === tournamentId ? updatedTournament : t)
+        );
+        return updatedTournament;
       }
-      
-      const sortedTournaments = [...upcomingApprovedTournaments].sort((a, b) => {
-        const dateA = parseISO(a.startDate);
-        const dateB = parseISO(b.startDate);
-        return dateA.getTime() - dateB.getTime();
+      throw new Error("Failed to update tournament");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update tournament';
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
       });
-      
-      return sortedTournaments[0];
-    } catch (error) {
-      logMessage(LogLevel.ERROR, 'useOrganizerDashboardData', 'Error finding next tournament', { error });
-      return undefined;
+      throw err;
     }
-  }, [tournaments]);
+  };
 
-  // Load tournaments on mount and when userId changes
-  // Ensure loadTournaments is stable or correctly memoized if passed in dependency array
-  useEffect(() => {
-    loadTournaments();
-  }, [loadTournaments]);
+  const getTournamentsByStatus = (status: string) => {
+    return tournaments.filter(tournament => {
+      if (status === 'upcoming') {
+        return tournament.status === 'approved' && new Date(tournament.startDate) > new Date();
+      }
+      if (status === 'ongoing') {
+        const now = new Date();
+        return tournament.status === 'approved' && 
+               new Date(tournament.startDate) <= now && 
+               new Date(tournament.endDate) >= now;
+      }
+      return tournament.status === status;
+    });
+  };
 
   return {
     tournaments,
     isLoading,
     error,
-    loadTournaments,
+    fetchTournaments,
     createTournament,
-    filterTournamentsByStatus,
-    formatDisplayDate,
-    getNextTournament
+    updateTournament,
+    getTournamentsByStatus
   };
-}
+};
