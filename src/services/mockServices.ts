@@ -1,5 +1,5 @@
 import { Player, Tournament, User } from "@/lib/mockData";
-import { getAllPlayersFromSupabase, getUsersFromSupabase, createPlayerInSupabase, updatePlayerInSupabase } from "./playerService";
+import { getAllPlayersFromSupabase, getAllUsers as fetchOrganizersFromPlayerService, createPlayerInSupabase, updatePlayerInSupabase } from "./playerService";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
 import { generateUniquePlayerID } from "@/lib/playerDataUtils";
 
@@ -36,10 +36,11 @@ export const getPlayerById = async (id: string): Promise<Player | null> => {
 
 export const getAllUsers = async (): Promise<User[]> => {
   try {
-    // Try to get users from Supabase first
-    const supabaseUsers = await getUsersFromSupabase();
+    // Try to get users from Supabase first (fetches organizers as per playerService.ts)
+    const supabaseUsers = await fetchOrganizersFromPlayerService();
     if (supabaseUsers.length > 0) {
-      return supabaseUsers;
+      // Assuming the structure from 'organizers' table matches 'User' type for now
+      return supabaseUsers as User[]; 
     }
     // Fallback to local storage
     return users;

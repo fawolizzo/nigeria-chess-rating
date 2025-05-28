@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import TournamentCard from "@/components/TournamentCard";
 import { Tournament } from "@/lib/mockData";
-import { getAllTournamentsFromSupabase, addTournamentToSupabase } from "@/services/tournamentService";
+import { getTournamentsFromSupabase, createTournamentInSupabase } from "@/services/tournamentService";
 import { useToast } from "@/components/ui/use-toast";
 import { categorizeTournaments } from "@/utils/tournamentUtils";
 
@@ -23,7 +23,7 @@ const Tournaments = () => {
     const fetchTournaments = async () => {
       setIsLoading(true);
       try {
-        const tournaments = await getAllTournamentsFromSupabase({});
+        const tournaments = await getTournamentsFromSupabase();
         setTournaments(tournaments);
       } catch (error) {
         console.error("Error fetching tournaments:", error);
@@ -66,7 +66,7 @@ const Tournaments = () => {
         registrationOpen: true
       };
 
-      const createdTournament = await addTournamentToSupabase(newTournament);
+      const createdTournament = await createTournamentInSupabase(newTournament);
 
       if (createdTournament) {
         setTournaments(prevTournaments => [...prevTournaments, createdTournament]);

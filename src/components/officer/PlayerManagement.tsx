@@ -227,7 +227,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         }
         
         await addPlayer(newPlayer);
-        console.log("Created player:", newPlayer);
+        // console.log("Created player:", newPlayer); // Removed
         
         return newPlayer;
       }));

@@ -113,7 +113,8 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       state: playerData.state || '',
       city: playerData.city || '',
       status: playerData.status || 'pending',
-      games_played: playerData.gamesPlayed || 0
+      games_played: playerData.gamesPlayed || 0,
+      gender: playerData.gender || 'M' // Added gender field
     };
 
     const { data, error } = await supabase
