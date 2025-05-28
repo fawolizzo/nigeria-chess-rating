@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/date-picker';
-import { NIGERIA_STATES } from '@/data/nigeriaStates';
+import { nigerianStates } from '@/data/nigeriaStates'; // Corrected import name
 import {
   Select,
   SelectContent,
@@ -118,7 +118,7 @@ export function CreateTournamentFormUI({
                   <SelectValue placeholder="Select a state" />
                 </SelectTrigger>
                 <SelectContent>
-                  {NIGERIA_STATES.map((state) => (
+                  {nigerianStates.map((state) => ( // Corrected usage
                     <SelectItem key={state} value={state}>
                       {state}
                     </SelectItem>

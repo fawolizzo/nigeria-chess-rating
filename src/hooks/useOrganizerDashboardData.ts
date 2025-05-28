@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, isValid, parseISO } from "date-fns"; // Added parseISO
 import { TournamentFormData, TournamentFormValues } from "@/types/tournamentTypes"; // Ensure TournamentFormValues is imported if used
 import { Tournament } from "@/lib/mockData"; // Import Tournament type
-import { getAllTournamentsFromSupabase, createTournamentInSupabase } from "@/services/tournamentService"; // Supabase services
+import { getTournamentsFromSupabase, createTournamentInSupabase } from "@/services/tournamentService"; // Supabase services
 
 export function useOrganizerDashboardData(userId: string | undefined) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]); // Use Tournament type
@@ -28,7 +28,7 @@ export function useOrganizerDashboardData(userId: string | undefined) {
 
     try {
       // Fetch tournaments filtered by organizerId
-      const organizerTournaments = await getAllTournamentsFromSupabase({ organizerId: userId });
+      const organizerTournaments = await getTournamentsFromSupabase({ organizerId: userId });
       
       logMessage(LogLevel.INFO, 'useOrganizerDashboardData', 
         `Found ${organizerTournaments.length} tournaments for organizer`, { userId });

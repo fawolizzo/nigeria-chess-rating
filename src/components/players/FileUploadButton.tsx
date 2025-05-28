@@ -78,7 +78,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
 
   const processFileData = (rows: string[][]) => {
     const headers = rows[0].map(h => String(h).trim().toLowerCase());
-    console.log("File headers:", headers);
+    // console.log("File headers:", headers); // Removed
     
     const findHeaderIndex = (possibleNames: string[]) => {
       for (const name of possibleNames) {
@@ -100,7 +100,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     const genderIndex = findHeaderIndex(['gender', 'sex']);
     const stateIndex = findHeaderIndex(['state', 'region', 'province']);
     
-    console.log(`Column indices - Name: ${nameIndex}, Title: ${titleIndex}, Federation: ${federationIndex}, Classical: ${classicalRatingIndex}, Rapid: ${rapidRatingIndex}, Blitz: ${blitzRatingIndex}, State: ${stateIndex}`);
+    // console.log(`Column indices - Name: ${nameIndex}, Title: ${titleIndex}, Federation: ${federationIndex}, Classical: ${classicalRatingIndex}, Rapid: ${rapidRatingIndex}, Blitz: ${blitzRatingIndex}, State: ${stateIndex}`); // Removed
     
     if (nameIndex === -1) {
       setError("Could not find a column for player names. Please include a column with 'Name', 'Player', or 'Full Name' in the header.");
@@ -229,7 +229,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       }];
       
       processedPlayers.push(player);
-      console.log("Processed player:", player);
+      // console.log("Processed player:", player); // Removed
     }
     
     if (processedPlayers.length === 0) {
@@ -238,7 +238,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       return;
     }
     
-    console.log(`Successfully processed ${processedPlayers.length} players`);
+    // console.log(`Successfully processed ${processedPlayers.length} players`); // Removed
     
     const formattedPlayers = processedPlayers.map(player => ({
       id: player.id,
