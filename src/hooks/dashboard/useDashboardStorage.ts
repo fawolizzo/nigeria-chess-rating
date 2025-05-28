@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client"; // Added Supabase client
 import { Tournament, Player, User } from "@/lib/mockData";
 
 interface DashboardData {
@@ -40,28 +41,57 @@ export const useDashboardStorage = () => {
         setErrorMessage("Dashboard data loading timed out");
       }, 10000);
 
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data for now
-      const mockData: DashboardData = {
-        pendingTournaments: [],
-        completedTournaments: [],
-        pendingPlayers: [],
-        pendingOrganizers: []
-      };
+      // Fetch data from Supabase
+      const [
+        pendingTournamentsResult,
+        completedTournamentsResult,
+        pendingPlayersResult,
+        pendingOrganizersResult,
+      ] = await Promise.all([
+        supabase.from("tournaments").select("*").eq("status", "pending"),
+        supabase.from("tournaments").select("*").or("status.eq.completed,status.eq.processed"),
+        supabase.from("players").select("*").eq("status", "pending"),
+        supabase.from("users").select("*").eq("role", "tournament_organizer").eq("status", "pending"),
+      ]);
 
-      setData(mockData);
-      
-      // Clear timeout on successful load
+      // Clear timeout on successful load attempt (before error checking)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+        timeoutRef.current = null; // Important to nullify after clearing
       }
-      
+
+      // Check for errors in fetched data
+      if (pendingTournamentsResult.error) throw pendingTournamentsResult.error;
+      if (completedTournamentsResult.error) throw completedTournamentsResult.error;
+      if (pendingPlayersResult.error) throw pendingPlayersResult.error;
+      if (pendingOrganizersResult.error) throw pendingOrganizersResult.error;
+
+      const fetchedData: DashboardData = {
+        pendingTournaments: pendingTournamentsResult.data as Tournament[],
+        completedTournaments: completedTournamentsResult.data as Tournament[],
+        pendingPlayers: pendingPlayersResult.data as Player[],
+        pendingOrganizers: pendingOrganizersResult.data as User[],
+      };
+
+      setData(fetchedData);
+      setHasError(false); // Explicitly set no error on success
+      setErrorMessage(null); // Clear any previous error message
+
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       setHasError(true);
-      setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        setErrorMessage(String((error as { message: string }).message));
+      } else {
+        setErrorMessage("An unknown error occurred while fetching dashboard data.");
+      }
+      // Ensure timeout is cleared if an error occurs during fetch (after initial timeout setup)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     } finally {
       setIsLoading(false);
     }
