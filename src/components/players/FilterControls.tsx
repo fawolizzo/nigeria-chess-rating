@@ -3,7 +3,7 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CitySelector from "../selectors/CitySelector";
-import { NIGERIA_STATES } from "@/data/nigeriaStates";
+import { NIGERIA_STATES } from "@/lib/nigerianStates";
 
 interface FilterControlsProps {
   searchQuery: string;

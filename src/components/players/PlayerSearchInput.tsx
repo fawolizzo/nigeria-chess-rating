@@ -102,9 +102,9 @@ export const PlayerSearchInput = ({
                 <div className="space-y-2">
                   <label className="text-sm">City</label>
                   <CitySelector
-                    state={selectedState}
-                    value={selectedCity}
-                    onChange={handleCityChange}
+                    selectedState={selectedState}
+                    selectedCity={selectedCity}
+                    onCityChange={handleCityChange}
                     className="w-full"
                   />
                 </div>

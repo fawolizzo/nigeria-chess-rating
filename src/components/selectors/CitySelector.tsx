@@ -4,9 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { citiesByState } from "@/data/nigeriaStates";
 
 export interface CitySelectorProps {
-  selectedState: string;
-  selectedCity: string; 
-  onCityChange: (city: string) => void;
+  selectedState?: string;
+  selectedCity?: string; 
+  onCityChange?: (city: string) => void;
   // Add the missing state prop that's being used in PlayerSearchInput
   state?: string;
   value?: string;
@@ -26,11 +26,11 @@ export const CitySelector: React.FC<CitySelectorProps> = ({
   const [availableCities, setAvailableCities] = useState<string[]>([]);
 
   // Use state or selectedState (fallback)
-  const currentState = state || selectedState;
+  const currentState = state || selectedState || "";
   // Use value or selectedCity (fallback)
-  const currentCity = value || selectedCity;
+  const currentCity = value || selectedCity || "";
   // Use onChange or onCityChange (fallback)
-  const handleChange = onChange || onCityChange;
+  const handleChange = onChange || onCityChange || (() => {});
 
   // Update cities list when state changes
   useEffect(() => {
@@ -58,6 +58,7 @@ export const CitySelector: React.FC<CitySelectorProps> = ({
         <SelectValue placeholder="Select city" />
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value="">All Cities</SelectItem>
         {availableCities.length === 0 ? (
           <SelectItem value="none" disabled>
             No cities available

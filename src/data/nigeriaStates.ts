@@ -1,7 +1,13 @@
 
-import { nigerianStates as statesData, NIGERIA_STATES } from "@/lib/nigerianStates";
+import { nigerianStates as statesData, NIGERIA_STATES, getAllStates } from "@/lib/nigerianStates";
 
 export const nigerianStatesArray = NIGERIA_STATES;
+
+// Re-export NIGERIA_STATES directly
+export { NIGERIA_STATES };
+
+// Re-export getAllStates for backward compatibility
+export { getAllStates };
 
 // Create citiesByState mapping from the lib data
 export const citiesByState: Record<string, string[]> = {};

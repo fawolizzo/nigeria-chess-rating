@@ -205,3 +205,8 @@ export const getCitiesByState = (stateName: string): string[] => {
 
 // Export the Nigeria states array for convenience
 export const NIGERIA_STATES = nigerianStates.map(state => state.name);
+
+// Add the missing getAllStates function
+export const getAllStates = (): string[] => {
+  return NIGERIA_STATES;
+};
