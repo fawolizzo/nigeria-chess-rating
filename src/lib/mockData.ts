@@ -1,24 +1,20 @@
-export interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  role: "player" | "tournament_organizer" | "rating_officer";
-  status: "pending" | "approved" | "rejected";
-  profileImageUrl?: string;
-}
-
-export interface RatingHistory {
+export interface RatingHistoryEntry {
   date: string;
   rating: number;
-  reason: string;
 }
 
-export interface TournamentResult {
-  tournamentId: string;
-  tournamentName: string;
-  date: string;
-  result: string;
-  ratingChange: number;
+export interface Pairing {
+  round: number;
+  player1Id: string;
+  player2Id: string;
+  result: "1-0" | "0-1" | "1/2-1/2";
+}
+
+export interface Standing {
+  playerId: string;
+  points: number;
+  tieBreak1: number;
+  tieBreak2: number;
 }
 
 export interface Player {
@@ -26,19 +22,16 @@ export interface Player {
   name: string;
   rating: number;
   gender: "M" | "F";
-  state?: string;
-  city?: string;
-  country?: string;
-  phone?: string;
-  email?: string;
-  status?: "pending" | "approved" | "rejected";
+  state: string;
+  city: string;
+  country: string;
+  status: "pending" | "approved" | "rejected";
   gamesPlayed: number;
-  title?: string;
-  titleVerified?: boolean;
-  club?: string;
-  birthYear?: number;
-  ratingHistory: RatingHistory[];
+  phone: string;
+  email: string;
+  ratingHistory: RatingHistoryEntry[];
   tournamentResults: TournamentResult[];
+  // Add missing multi-format rating properties
   rapidRating: number;
   blitzRating: number;
   rapidGamesPlayed: number;
@@ -46,54 +39,58 @@ export interface Player {
   ratingStatus: "provisional" | "established";
   rapidRatingStatus: "provisional" | "established";
   blitzRatingStatus: "provisional" | "established";
-  rapidRatingHistory?: RatingHistory[];
-  blitzRatingHistory?: RatingHistory[];
-}
-
-export interface TournamentPairing {
-  roundNumber: number;
-  matches: {
-    whiteId: string;
-    blackId: string;
-    result?: "1-0" | "0-1" | "1/2-1/2" | "*";
-    whiteRatingChange?: number;
-    blackRatingChange?: number;
-  }[];
-}
-
-export interface PlayerStanding {
-  playerId: string;
-  playerName: string;
-  points: number;
-  tieBreak1?: number;
-  tieBreak2?: number;
+  // Add missing optional properties
+  title?: string;
+  titleVerified?: boolean;
+  achievements?: string[];
+  fideId?: string;
 }
 
 export interface Tournament {
   id: string;
   name: string;
-  organizer: string;
-  organizerId: string;
-  hostId?: string;
-  date: string;
+  description: string;
+  startDate: string;
+  endDate: string;
   location: string;
   city: string;
   state: string;
+  organizerId: string;
   status: "pending" | "approved" | "rejected" | "upcoming" | "ongoing" | "completed" | "processed";
-  players: Player[];
-  totalRounds: number;
+  rounds: number;
   currentRound: number;
-  category?: string;
+  category: "classical" | "rapid" | "blitz";
   timeControl: string;
-  description?: string;
-  pairings?: TournamentPairing[];
-  standings?: PlayerStanding[];
-  processingDate?: string;
+  participants: number;
+  registrationOpen: boolean;
+  players: Player[];
+  pairings: Pairing[];
+  standings: Standing[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface DashboardData {
-  pendingTournaments: Tournament[];
-  completedTournaments: Tournament[];
-  pendingPlayers: Player[];
-  pendingOrganizers: User[];
+export interface TournamentResult {
+  tournamentId: string;
+  tournamentName: string;
+  date: string;
+  ratingChange: number;
+  newRating: number;
+  // Add missing properties
+  format: "classical" | "rapid" | "blitz";
+  location: string;
+  score: number;
+  gamesPlayed: number;
+  position: number;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  fullName: string;
+  role: "player" | "tournament_organizer" | "rating_officer";
+  status: "pending" | "approved" | "rejected";
+  phone: string;
+  // Add missing property
+  registrationDate: string;
 }

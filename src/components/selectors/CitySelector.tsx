@@ -7,38 +7,54 @@ export interface CitySelectorProps {
   selectedState: string;
   selectedCity: string; 
   onCityChange: (city: string) => void;
+  // Add the missing state prop that's being used in PlayerSearchInput
+  state?: string;
+  value?: string;
+  onChange?: (city: string) => void;
+  className?: string;
 }
 
 export const CitySelector: React.FC<CitySelectorProps> = ({ 
   selectedState, 
   selectedCity, 
-  onCityChange 
+  onCityChange,
+  state, // Handle both selectedState and state props
+  value, // Handle both selectedCity and value props
+  onChange, // Handle both onCityChange and onChange props
+  className
 }) => {
   const [availableCities, setAvailableCities] = useState<string[]>([]);
 
+  // Use state or selectedState (fallback)
+  const currentState = state || selectedState;
+  // Use value or selectedCity (fallback)
+  const currentCity = value || selectedCity;
+  // Use onChange or onCityChange (fallback)
+  const handleChange = onChange || onCityChange;
+
   // Update cities list when state changes
   useEffect(() => {
-    if (selectedState) {
-      const stateCities = citiesByState[selectedState] || [];
+    if (currentState) {
+      const stateCities = citiesByState[currentState] || [];
       setAvailableCities(stateCities);
       
       // If the current selected city isn't in the new state's cities, reset it
-      if (selectedCity && !stateCities.includes(selectedCity)) {
-        onCityChange("");
+      if (currentCity && !stateCities.includes(currentCity)) {
+        handleChange("");
       }
     } else {
       setAvailableCities([]);
-      if (selectedCity) onCityChange("");
+      if (currentCity) handleChange("");
     }
-  }, [selectedState, selectedCity, onCityChange]);
+  }, [currentState, currentCity, handleChange]);
 
   return (
     <Select 
-      value={selectedCity} 
-      onValueChange={onCityChange}
-      disabled={!selectedState || availableCities.length === 0}
+      value={currentCity} 
+      onValueChange={handleChange}
+      disabled={!currentState || availableCities.length === 0}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger className={className || "w-full"}>
         <SelectValue placeholder="Select city" />
       </SelectTrigger>
       <SelectContent>
