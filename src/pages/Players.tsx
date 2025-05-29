@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
@@ -5,6 +6,7 @@ import { Player } from "@/lib/mockData";
 import PlayerCard from "@/components/players/PlayerCard";
 import FilterControls from "@/components/players/FilterControls";
 import { useToast } from "@/hooks/use-toast";
+import { AlertCircle } from "lucide-react";
 
 const Players = () => {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
@@ -13,17 +15,23 @@ const Players = () => {
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
         setIsLoading(true);
+        setError(null);
+        console.log("Fetching players from Supabase...");
         const players = await getAllPlayersFromSupabase({ status: 'approved' });
+        console.log("Fetched players:", players);
         setAllPlayers(players);
         setFilteredPlayers(players);
       } catch (error) {
         console.error("Error fetching players:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
+        setError(errorMessage);
         toast({
           title: "Error",
           description: "Failed to load players data.",
@@ -87,6 +95,22 @@ const Players = () => {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nigeria-green"></div>
           </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Error Loading Players
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {error}
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark"
+            >
+              Try Again
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPlayers.map((player) => (
@@ -95,7 +119,7 @@ const Players = () => {
           </div>
         )}
 
-        {!isLoading && filteredPlayers.length === 0 && (
+        {!isLoading && !error && filteredPlayers.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
               No players match your current filters.

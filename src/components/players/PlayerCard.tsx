@@ -4,12 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Player } from "@/lib/mockData";
 import { User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface PlayerCardProps {
   player: Player;
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
+  const navigate = useNavigate();
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -23,8 +26,15 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
     }
   };
 
+  const handleCardClick = () => {
+    navigate(`/player/${player.id}`);
+  };
+
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200">
+    <Card 
+      className="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
@@ -36,6 +46,9 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                {player.title && (
+                  <span className="text-amber-600 text-sm mr-1">{player.title}</span>
+                )}
                 {player.name}
               </h3>
               <Badge className={getStatusColor(player.status || 'approved')}>

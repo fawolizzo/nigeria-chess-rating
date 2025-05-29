@@ -56,7 +56,11 @@ export type Database = {
       }
       players: {
         Row: {
+          birth_year: number | null
+          blitz_games_played: number | null
+          blitz_rating: number | null
           city: string | null
+          club: string | null
           created_at: string
           email: string
           fide_id: string | null
@@ -65,12 +69,20 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          rapid_games_played: number | null
+          rapid_rating: number | null
           rating: number | null
           state: string | null
           status: string
+          title: string | null
+          title_verified: boolean | null
         }
         Insert: {
+          birth_year?: number | null
+          blitz_games_played?: number | null
+          blitz_rating?: number | null
           city?: string | null
+          club?: string | null
           created_at?: string
           email: string
           fide_id?: string | null
@@ -79,12 +91,20 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          rapid_games_played?: number | null
+          rapid_rating?: number | null
           rating?: number | null
           state?: string | null
           status?: string
+          title?: string | null
+          title_verified?: boolean | null
         }
         Update: {
+          birth_year?: number | null
+          blitz_games_played?: number | null
+          blitz_rating?: number | null
           city?: string | null
+          club?: string | null
           created_at?: string
           email?: string
           fide_id?: string | null
@@ -93,9 +113,13 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          rapid_games_played?: number | null
+          rapid_rating?: number | null
           rating?: number | null
           state?: string | null
           status?: string
+          title?: string | null
+          title_verified?: boolean | null
         }
         Relationships: []
       }

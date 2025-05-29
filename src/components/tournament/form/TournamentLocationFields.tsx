@@ -1,73 +1,79 @@
 
 import React from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Control } from "react-hook-form";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UseFormReturn } from "react-hook-form";
-import { NIGERIAN_STATES } from "@/lib/nigerianStates";
-import { TournamentFormSchemaType } from "./TournamentFormSchema";
+import { NIGERIA_STATES, getCitiesByState } from "@/lib/nigerianStates";
+import { CreateTournamentFormData } from "./TournamentFormSchema";
 
 interface TournamentLocationFieldsProps {
-  form: UseFormReturn<TournamentFormSchemaType>;
+  control: Control<CreateTournamentFormData>;
+  selectedState: string;
 }
 
-export function TournamentLocationFields({ form }: TournamentLocationFieldsProps) {
+const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({
+  control,
+  selectedState
+}) => {
+  const cities = selectedState ? getCitiesByState(selectedState) : [];
+
   return (
-    <>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField
-        control={form.control}
-        name="location"
+        control={control}
+        name="state"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Venue Name</FormLabel>
-            <FormControl>
-              <Input placeholder="Enter venue name" {...field} />
-            </FormControl>
+            <FormLabel>State</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {NIGERIA_STATES.map((state) => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="city"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>City</FormLabel>
+      <FormField
+        control={control}
+        name="city"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>City</FormLabel>
+            <Select 
+              onValueChange={field.onChange} 
+              value={field.value}
+              disabled={!selectedState}
+            >
               <FormControl>
-                <Input placeholder="Enter city" {...field} />
+                <SelectTrigger>
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="state"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>State</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {NIGERIAN_STATES.map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {state}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    </>
+              <SelectContent>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
   );
-}
+};
+
+export default TournamentLocationFields;
