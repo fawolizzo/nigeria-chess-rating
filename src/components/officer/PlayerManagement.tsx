@@ -87,14 +87,35 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         gender: playerData.gender || 'M',
         state: playerData.state || '',
         city: playerData.city || '',
+        country: 'Nigeria',
+        phone: playerData.phone || '',
+        email: playerData.email || '',
         gamesPlayed: 0,
         status: playerData.status || 'pending',
+        ratingStatus: 'provisional',
+        rapidRating: 800,
+        blitzRating: 800,
+        rapidGamesPlayed: 0,
+        blitzGamesPlayed: 0,
+        rapidRatingStatus: 'provisional',
+        blitzRatingStatus: 'provisional',
         tournamentResults: [],
         ratingHistory: [{
           date: new Date().toISOString(),
           rating: playerData.rating || 800,
           reason: "Initial rating"
-        }]
+        }],
+        rapidRatingHistory: [{
+          date: new Date().toISOString(),
+          rating: 800,
+          reason: "Initial rating"
+        }],
+        blitzRatingHistory: [{
+          date: new Date().toISOString(),
+          rating: 800,
+          reason: "Initial rating"
+        }],
+        achievements: []
       };
       
       await addPlayer(newPlayer);
@@ -186,48 +207,44 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
           id: ncrId,
           name: player.name,
           rating: player.rating || 900,
-          gender: player.gender || 'M',
-          state: player.state || '',
-          city: player.city || '',
-          gamesPlayed: 30,
+          gender: 'M', // Default, will be updated manually
+          state: '', // Will be updated manually  
+          city: '',
+          country: 'Nigeria',
+          phone: '',
+          email: '',
+          gamesPlayed: 31,
           status: 'approved',
           ratingStatus: 'established',
+          rapidRating: player.rapidRating || 900,
+          blitzRating: player.blitzRating || 900,
+          rapidGamesPlayed: 31,
+          blitzGamesPlayed: 31,
+          rapidRatingStatus: 'established',
+          blitzRatingStatus: 'established',
           tournamentResults: [],
           ratingHistory: [{
             date: new Date().toISOString(),
             rating: player.rating || 900,
-            reason: "Initial rating with +100 bonus"
-          }]
+            reason: "Initial FIDE rating with +100 bonus"
+          }],
+          rapidRatingHistory: [{
+            date: new Date().toISOString(),
+            rating: player.rapidRating || 900,
+            reason: "Initial FIDE rating with +100 bonus"
+          }],
+          blitzRatingHistory: [{
+            date: new Date().toISOString(),
+            rating: player.blitzRating || 900,
+            reason: "Initial FIDE rating with +100 bonus"
+          }],
+          achievements: [],
+          title: player.title,
+          titleVerified: player.title ? true : false,
+          fideId: player.fideId
         };
         
-        if (player.title) {
-          newPlayer.title = player.title;
-        }
-        
-        if (player.rapidRating) {
-          newPlayer.rapidRating = player.rapidRating;
-          newPlayer.rapidGamesPlayed = 30;
-          newPlayer.rapidRatingStatus = 'established';
-          newPlayer.rapidRatingHistory = [{
-            date: new Date().toISOString(),
-            rating: player.rapidRating,
-            reason: "Initial rating with +100 bonus"
-          }];
-        }
-        
-        if (player.blitzRating) {
-          newPlayer.blitzRating = player.blitzRating;
-          newPlayer.blitzGamesPlayed = 30;
-          newPlayer.blitzRatingStatus = 'established';
-          newPlayer.blitzRatingHistory = [{
-            date: new Date().toISOString(),
-            rating: player.blitzRating,
-            reason: "Initial rating with +100 bonus"
-          }];
-        }
-        
         await addPlayer(newPlayer);
-        // console.log("Created player:", newPlayer); // Removed
         
         return newPlayer;
       }));
@@ -236,7 +253,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       
       toast({
         title: "Upload Successful",
-        description: `${players.length} players have been uploaded and approved.`,
+        description: `${players.length} FIDE players have been uploaded and approved. State and Gender can be updated manually.`,
         variant: "default",
       });
     } catch (error) {

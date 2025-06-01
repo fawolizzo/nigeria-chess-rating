@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Upload, AlertCircle } from "lucide-react";
@@ -78,7 +79,6 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
 
   const processFileData = (rows: string[][]) => {
     const headers = rows[0].map(h => String(h).trim().toLowerCase());
-    // console.log("File headers:", headers); // Removed
     
     const findHeaderIndex = (possibleNames: string[]) => {
       for (const name of possibleNames) {
@@ -92,15 +92,11 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     
     const nameIndex = findHeaderIndex(['player', 'players', 'name', 'fullname', 'full name']);
     const titleIndex = findHeaderIndex(['title', 'titles']);
-    const federationIndex = findHeaderIndex(['fed', 'federation', 'country', 'nation']);
     const classicalRatingIndex = findHeaderIndex(['std', 'standard', 'classical', 'fide', 'rating']);
     const rapidRatingIndex = findHeaderIndex(['rpd', 'rapid']);
     const blitzRatingIndex = findHeaderIndex(['blz', 'blitz']);
     const birthYearIndex = findHeaderIndex(['b-year', 'byear', 'birth year', 'birthyear', 'year']);
-    const genderIndex = findHeaderIndex(['gender', 'sex']);
-    const stateIndex = findHeaderIndex(['state', 'region', 'province']);
-    
-    // console.log(`Column indices - Name: ${nameIndex}, Title: ${titleIndex}, Federation: ${federationIndex}, Classical: ${classicalRatingIndex}, Rapid: ${rapidRatingIndex}, Blitz: ${blitzRatingIndex}, State: ${stateIndex}`); // Removed
+    const fideIdIndex = findHeaderIndex(['fide id', 'fideid', 'fide_id', 'id']);
     
     if (nameIndex === -1) {
       setError("Could not find a column for player names. Please include a column with 'Name', 'Player', or 'Full Name' in the header.");
@@ -123,34 +119,38 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         continue;
       }
       
-      let state = "";
-      if (stateIndex !== -1 && row[stateIndex]) {
-        state = row[stateIndex].toString().trim();
-      } else if (federationIndex !== -1 && row[federationIndex]) {
-        const federation = row[federationIndex].toString();
-        if (federation.includes("NGR")) {
-          state = federation.replace("NGR", "").trim();
-        }
-      }
-      
       const ncrId = generateNcrId();
       
       const player: Partial<Player> = {
         id: ncrId,
         name: playerName.toString().trim(),
-        state: state || undefined,
+        // State and Gender will be manually updated by rating officer
+        state: '', // Will be updated manually
+        gender: 'M', // Default, will be updated manually
+        city: '',
+        country: 'Nigeria',
+        phone: '',
+        email: '',
         gamesPlayed: 31,
         status: 'approved'
       };
       
+      // Handle title
       if (titleIndex !== -1 && row[titleIndex]) {
         player.title = row[titleIndex].toString().trim();
+        player.titleVerified = true; // FIDE titles are verified
       }
       
+      // Handle FIDE ID
+      if (fideIdIndex !== -1 && row[fideIdIndex]) {
+        player.fideId = row[fideIdIndex].toString().trim();
+      }
+      
+      // Handle classical rating with +100 bonus for FIDE players
       if (classicalRatingIndex !== -1 && row[classicalRatingIndex]) {
         const rating = parseInt(row[classicalRatingIndex].toString(), 10);
         if (!isNaN(rating)) {
-          player.rating = rating + 100;
+          player.rating = rating + 100; // +100 bonus for FIDE players
           player.ratingStatus = 'established';
         } else {
           player.rating = 900;
@@ -161,6 +161,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         player.ratingStatus = 'established';
       }
       
+      // Handle rapid rating with +100 bonus
       if (rapidRatingIndex !== -1 && row[rapidRatingIndex]) {
         const rapidRating = parseInt(row[rapidRatingIndex].toString(), 10);
         if (!isNaN(rapidRating)) {
@@ -178,6 +179,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         player.rapidRatingStatus = 'established';
       }
       
+      // Handle blitz rating with +100 bonus
       if (blitzRatingIndex !== -1 && row[blitzRatingIndex]) {
         const blitzRating = parseInt(row[blitzRatingIndex].toString(), 10);
         if (!isNaN(blitzRating)) {
@@ -195,6 +197,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         player.blitzRatingStatus = 'established';
       }
       
+      // Handle birth year
       if (birthYearIndex !== -1 && row[birthYearIndex]) {
         const birthYear = parseInt(row[birthYearIndex].toString(), 10);
         if (!isNaN(birthYear)) {
@@ -202,34 +205,29 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         }
       }
       
-      if (genderIndex !== -1 && row[genderIndex]) {
-        const gender = row[genderIndex].toString().trim().toUpperCase();
-        player.gender = gender === 'F' ? 'F' : 'M';
-      } else {
-        player.gender = 'M';
-      }
-      
       const currentDate = new Date().toISOString();
       player.ratingHistory = [{
         date: currentDate,
         rating: player.rating || 900,
-        reason: "Initial rating with +100 bonus"
+        reason: "Initial FIDE rating with +100 bonus"
       }];
       
       player.rapidRatingHistory = [{
         date: currentDate,
         rating: player.rapidRating || 900,
-        reason: "Initial rating with +100 bonus"
+        reason: "Initial FIDE rating with +100 bonus"
       }];
       
       player.blitzRatingHistory = [{
         date: currentDate,
         rating: player.blitzRating || 900,
-        reason: "Initial rating with +100 bonus"
+        reason: "Initial FIDE rating with +100 bonus"
       }];
       
+      player.tournamentResults = [];
+      player.achievements = [];
+      
       processedPlayers.push(player);
-      // console.log("Processed player:", player); // Removed
     }
     
     if (processedPlayers.length === 0) {
@@ -238,17 +236,16 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       return;
     }
     
-    // console.log(`Successfully processed ${processedPlayers.length} players`); // Removed
-    
     const formattedPlayers = processedPlayers.map(player => ({
       id: player.id,
       name: player.name,
       rating: player.rating || 900,
-      state: player.state || '',
-      gender: player.gender || 'M',
+      state: '', // Will be updated manually
+      gender: 'M', // Default, will be updated manually
       title: player.title || '',
       rapidRating: player.rapidRating,
-      blitzRating: player.blitzRating
+      blitzRating: player.blitzRating,
+      fideId: player.fideId
     }));
     
     if (onFileUpload) {
@@ -289,7 +286,9 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
         <Upload className="h-10 w-10 text-gray-400 mb-2" />
         <p className="text-sm text-gray-600 mb-4">
-          Upload your player list Excel or CSV file. The file should include columns for player name, rating, state, and gender.
+          Upload FIDE player list Excel or CSV file. Required: Player Name. Optional: Title, Classical/Rapid/Blitz ratings, Birth Year, FIDE ID.
+          <br />
+          <strong>Note:</strong> State and Gender will be updated manually by the rating officer.
         </p>
         
         <input

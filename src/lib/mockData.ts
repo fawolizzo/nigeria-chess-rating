@@ -1,3 +1,4 @@
+
 export interface RatingHistoryEntry {
   date: string;
   rating: number;
@@ -12,6 +13,10 @@ export interface TournamentResult {
   opponents: number;
   performance?: number;
   format?: "classical" | "rapid" | "blitz";
+  location?: string;
+  position?: number;
+  ratingChange?: number;
+  gamesPlayed?: number;
 }
 
 export interface Player {
@@ -42,6 +47,7 @@ export interface Player {
   birthYear?: number;
   club?: string;
   fideId?: string;
+  achievements?: string[];
 }
 
 export interface Tournament {
@@ -65,6 +71,7 @@ export interface Tournament {
   createdAt: string;
   updatedAt: string;
   processingDate?: string;
+  category?: "classical" | "rapid" | "blitz";
 }
 
 export interface User {
