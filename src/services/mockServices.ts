@@ -1,4 +1,3 @@
-
 import { Player, Tournament, User } from "@/lib/mockData";
 import { getAllPlayersFromSupabase, getAllUsers as fetchOrganizersFromPlayerService, createPlayerInSupabase, updatePlayerInSupabase } from "./playerService";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -162,34 +161,12 @@ export const updateTournament = (updatedTournament: Tournament): Tournament => {
   return updatedTournament;
 };
 
-// Initialize with some default data if needed
+// Initialize with empty arrays - no demo players
 export const initializeMockServices = () => {
-  if (players.length === 0) {
-    players = [
-      {
-        id: generateUniquePlayerID(),
-        name: "Demo Player",
-        rating: 1200,
-        gender: "M",
-        gamesPlayed: 10,
-        status: "approved",
-        tournamentResults: [],
-        ratingHistory: [],
-        state: "Lagos",
-        city: "Lagos",
-        country: "Nigeria",
-        phone: "",
-        email: "",
-        rapidRating: FLOOR_RATING,
-        blitzRating: FLOOR_RATING,
-        rapidGamesPlayed: 0,
-        blitzGamesPlayed: 0,
-        ratingStatus: 'provisional',
-        rapidRatingStatus: 'provisional',
-        blitzRatingStatus: 'provisional'
-      }
-    ];
-  }
+  // Keep all arrays empty - data will come from Supabase or user creation
+  players = [];
+  users = [];
+  tournaments = [];
 };
 
 // Initialize mock data
