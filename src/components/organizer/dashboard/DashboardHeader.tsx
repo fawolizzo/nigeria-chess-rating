@@ -12,7 +12,7 @@ export function DashboardHeader({ organizerName }: DashboardHeaderProps) {
   return (
     <div className="flex justify-between items-center mb-8">
       <h1 className="text-2xl font-bold">Welcome, {organizerName}</h1>
-      <Button onClick={() => navigate('/tournaments/new')}>
+      <Button onClick={() => navigate('/tournament-management/new')}>
         Create Tournament
       </Button>
     </div>
