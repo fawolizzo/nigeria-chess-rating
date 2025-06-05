@@ -76,4 +76,6 @@ const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({
   );
 };
 
+// Export both as default and named export to handle different import patterns
 export default TournamentLocationFields;
+export { TournamentLocationFields };
