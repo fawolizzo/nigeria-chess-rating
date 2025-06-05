@@ -106,4 +106,10 @@ const runPlayerApprovalFlowTest = async (): Promise<boolean> => {
   }
 };
 
+
 export { runPlayerApprovalFlowTest };
+
+test('player approval flow', async () => {
+  const result = await runPlayerApprovalFlowTest();
+  expect(result).toBe(true);
+});

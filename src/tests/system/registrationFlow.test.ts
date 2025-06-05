@@ -89,4 +89,10 @@ const runRegistrationFlowTest = async (): Promise<boolean> => {
   }
 };
 
+
 export { runRegistrationFlowTest };
+
+test('registration flow', async () => {
+  const result = await runRegistrationFlowTest();
+  expect(result).toBe(true);
+});
