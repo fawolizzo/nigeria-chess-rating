@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { saveToStorage, clearAllData } from "@/utils/storageUtils";
+import { clearAllData } from "@/utils/storageUtils";
 import { STORAGE_KEYS } from "@/contexts/user/userContextTypes";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 
@@ -92,8 +92,8 @@ export const setupSystemTest = async (): Promise<void> => {
     await clearAllData();
     
     // Initialize empty data structures
-    saveToStorage(STORAGE_KEYS.USERS, []);
-    saveToStorage(STORAGE_KEYS.CURRENT_USER, null);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(null));
     
     // Sign out of Supabase if signed in
     await supabase.auth.signOut();
