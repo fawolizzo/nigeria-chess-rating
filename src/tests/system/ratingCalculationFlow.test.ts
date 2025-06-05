@@ -205,3 +205,8 @@ const runRatingCalculationFlowTest = async (): Promise<boolean> => {
 };
 
 export { runRatingCalculationFlowTest };
+
+test('rating calculation flow', async () => {
+  const result = await runRatingCalculationFlowTest();
+  expect(result).toBe(true);
+});

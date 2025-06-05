@@ -165,3 +165,8 @@ const runTournamentFlowTest = async (): Promise<boolean> => {
 };
 
 export { runTournamentFlowTest };
+
+test('tournament flow', async () => {
+  const result = await runTournamentFlowTest();
+  expect(result).toBe(true);
+});
