@@ -27,7 +27,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
   };
 
   const handleCardClick = () => {
-    navigate(`/player/${player.id}`);
+    navigate(`/players/${player.id}`);
   };
 
   return (
