@@ -9,9 +9,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
-    }],
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.app.json', useESM: true }],
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
