@@ -163,10 +163,28 @@ export const updateTournament = (updatedTournament: Tournament): Tournament => {
 
 // Initialize with empty arrays - no demo players
 export const initializeMockServices = () => {
-  // Keep all arrays empty - data will come from Supabase or user creation
+  // Always start with empty arrays. We no longer seed demo data here.
   players = [];
   users = [];
   tournaments = [];
+
+  // In production make sure any leftover test data is purged
+  if (import.meta.env.PROD) {
+    try {
+      localStorage.removeItem('ncr_players');
+    } catch {
+      // ignore errors in environments without localStorage
+    }
+    return;
+  }
+
+  // In development we can restore locally stored players if needed
+  try {
+    const storedPlayers = localStorage.getItem('ncr_players');
+    players = storedPlayers ? JSON.parse(storedPlayers) : [];
+  } catch {
+    players = [];
+  }
 };
 
 // Initialize mock data
