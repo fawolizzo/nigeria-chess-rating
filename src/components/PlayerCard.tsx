@@ -62,7 +62,7 @@ const PlayerCard = ({ player, showRatingChange = true }: PlayerCardProps) => {
   
   // Use React Router's Link component for more reliable navigation
   return (
-    <Link to={`/player/${player.id}`} className="block h-full">
+    <Link to={`/players/${player.id}`} className="block h-full">
       <Card 
         className="h-full relative overflow-hidden transition-all duration-300 border-gray-200 dark:border-gray-800 hover:shadow-md hover:border-nigeria-green/40 dark:hover:border-nigeria-green-light/30 cursor-pointer"
       >

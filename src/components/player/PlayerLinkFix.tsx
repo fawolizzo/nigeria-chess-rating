@@ -9,7 +9,8 @@ interface PlayerLinkProps {
 }
 
 /**
- * A simple wrapper component that ensures player links always point to the correct route
+ * A simple wrapper component that ensures player links always point to
+ * the consolidated profile route at `/players/:id`.
  */
 const PlayerLink: React.FC<PlayerLinkProps> = ({ playerId, className, children }) => {
   // Ensure we are using the correct route format: /players/:id

@@ -89,13 +89,13 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
     e.preventDefault();
     if (searchResults.length > 0) {
       const player = searchResults[0];
-      navigate(`/player/${player.id}`);
+      navigate(`/players/${player.id}`);
       handleCloseClick();
     }
   };
 
   const handlePlayerClick = (playerId: string) => {
-    navigate(`/player/${playerId}`);
+    navigate(`/players/${playerId}`);
     handleCloseClick();
   };
 
