@@ -327,4 +327,5 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
   return user || null;
 };
 
-export const FLOOR_RATING = 800;
+// Re-export the floor rating constant from the rating calculation module
+export { FLOOR_RATING } from "@/lib/ratingCalculation";
