@@ -52,6 +52,20 @@ npm run test:watch
 npm run test:coverage
 ```
 
+## Clearing local data
+
+During development the application may store temporary player data in
+`localStorage`. If you want to remove these entries, open the browser developer
+console and run:
+
+```js
+localStorage.removeItem('ncr_players');
+```
+
+Alternatively visit `/system-testing` while running the app and use the **Clear
+All Storage** button. In production builds the mock services skip loading or
+storing this data by default.
+
 ## What technologies are used for this project?
 
 This project is built with:
