@@ -50,7 +50,9 @@ describe('LoginFormInputs', () => {
     it('renders password field for tournament organizer role', () => {
       render(<LoginFormWrapper selectedRole="tournament_organizer" />);
       
-      const passwordInput = screen.getByLabelText(/Password/i);
+      const passwordInput = screen.getByLabelText(/Password/i, {
+        selector: 'input'
+      });
       expect(passwordInput).toBeInTheDocument();
       expect(passwordInput).toHaveAttribute('type', 'password');
     });
@@ -84,7 +86,9 @@ describe('LoginFormInputs', () => {
       />
     );
     
-    const visibilityButton = screen.getByRole('button', { name: '' });
+    const visibilityButton = screen.getByRole('button', {
+      name: /show password/i
+    });
     visibilityButton.click();
     
     expect(togglePasswordVisibility).toHaveBeenCalledTimes(1);
@@ -93,8 +97,12 @@ describe('LoginFormInputs', () => {
   it('shows password in plain text for both roles when showPassword is true', () => {
     render(<LoginFormWrapper selectedRole="tournament_organizer" showPassword={true} />);
     render(<LoginFormWrapper selectedRole="rating_officer" showPassword={true} />);
-    
-    const passwordInput = screen.getByLabelText(/Password|Access Code/i);
-    expect(passwordInput).toHaveAttribute('type', 'text');
+
+    const passwordInputs = screen.getAllByLabelText(/Password|Access Code/i, {
+      selector: 'input'
+    });
+    passwordInputs.forEach((input) => {
+      expect(input).toHaveAttribute('type', 'text');
+    });
   });
 });
