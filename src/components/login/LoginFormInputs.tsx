@@ -63,10 +63,10 @@ const LoginFormInputs = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Email</FormLabel>
-            <FormControl>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input 
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <FormControl>
+                <Input
                   placeholder={emailPlaceholder}
                   className={`pl-10 ${emailReadOnly ? 'bg-gray-100' : ''}`}
                   type="email"
@@ -75,8 +75,8 @@ const LoginFormInputs = ({
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                 />
-              </div>
-            </FormControl>
+              </FormControl>
+            </div>
             {selectedRole === "rating_officer" && (
               <FormDescription>
                 Fixed email for Rating Officer login
@@ -93,30 +93,31 @@ const LoginFormInputs = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>{passwordLabel}</FormLabel>
-            <FormControl>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input 
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <FormControl>
+                <Input
                   placeholder={passwordPlaceholder}
-                  className="pl-10 pr-10" 
+                  className="pl-10 pr-10"
                   type={showPassword ? "text" : "password"}
                   {...field}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-10 px-3 text-gray-400 hover:text-gray-500"
-                  onClick={togglePasswordVisibility}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </FormControl>
+              </FormControl>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-10 px-3 text-gray-400 hover:text-gray-500"
+                onClick={togglePasswordVisibility}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
             {selectedRole === "rating_officer" && (
               <FormDescription>
                 Use RNCR25 as the access code
