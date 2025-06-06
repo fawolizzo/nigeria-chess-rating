@@ -126,7 +126,7 @@ export function useCreateTournamentForm() {
         description: 'Tournament created successfully',
       });
 
-      navigate(`/tournament/${tournament.id}`);
+      navigate(`/tournaments/${tournament.id}`);
     } catch (error: any) {
       console.error('Error creating tournament:', error);
       toast({

@@ -125,7 +125,7 @@ const PlayerPerformance: React.FC<PlayerPerformanceProps> = ({ player }) => {
                       <TableRow 
                         key={result.tournamentId} 
                         className="cursor-pointer hover:bg-muted"
-                        onClick={() => navigate(`/tournament/${result.tournamentId}`)}
+                        onClick={() => navigate(`/tournaments/${result.tournamentId}`)}
                       >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
