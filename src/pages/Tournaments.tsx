@@ -145,7 +145,7 @@ const Tournaments = () => {
             <TournamentCard
               key={tournament.id}
               tournament={tournament}
-              onClickView={() => navigate(`/tournament/${tournament.id}`)}
+              onClickView={() => navigate(`/tournaments/${tournament.id}`)}
             />
           ))}
         </div>

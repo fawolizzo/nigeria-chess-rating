@@ -27,7 +27,7 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
   const [isViewAllVisible, setIsViewAllVisible] = useState(true);
   
   const handleNavigateToTournament = (tournamentId: string) => {
-    navigate(`/tournament/${tournamentId}`);
+    navigate(`/tournaments/${tournamentId}`);
   };
   
   const viewAllTournaments = () => {
