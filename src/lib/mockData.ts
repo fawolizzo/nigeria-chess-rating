@@ -1,3 +1,4 @@
+
 export interface RatingHistoryEntry {
   date: string;
   rating: number;
@@ -49,6 +50,16 @@ export interface Player {
   fideId?: string;
 }
 
+export interface PlayerStanding {
+  playerId: string;
+  playerName: string;
+  score: number;
+  rating: number;
+  tiebreak?: number;
+  buchholz?: number;
+  position: number;
+}
+
 export interface Tournament {
   id: string;
   name: string;
@@ -63,7 +74,7 @@ export interface Tournament {
   pairings: Pairing[];
   rounds: number;
   currentRound: number;
-  status: "draft" | "upcoming" | "ongoing" | "completed" | "cancelled" | "pending" | "approved" | "rejected";
+  status: "draft" | "upcoming" | "ongoing" | "completed" | "cancelled" | "pending" | "approved" | "rejected" | "processed";
   timeControl: string;
   participants: number;
   registrationOpen: boolean;

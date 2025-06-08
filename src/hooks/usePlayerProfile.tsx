@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Player } from "@/lib/mockData";
-import { getPlayerById } from "@/services/mockServices";
+import { getPlayerByIdFromSupabase } from "@/services/playerService";
 
 export const usePlayerProfile = (playerId: string | undefined) => {
   const [player, setPlayer] = useState<Player | null>(null);
@@ -19,14 +19,18 @@ export const usePlayerProfile = (playerId: string | undefined) => {
           return;
         }
         
-        const fetchedPlayer = await getPlayerById(playerId);
-        setPlayer(fetchedPlayer);
+        console.log("🔍 Fetching player profile for ID:", playerId);
+        const fetchedPlayer = await getPlayerByIdFromSupabase(playerId);
         
-        if (!fetchedPlayer) {
+        if (fetchedPlayer) {
+          console.log("✅ Player profile loaded:", fetchedPlayer.name);
+          setPlayer(fetchedPlayer);
+        } else {
+          console.log("❌ Player not found for ID:", playerId);
           setError("Player not found");
         }
       } catch (err) {
-        console.error("Error fetching player:", err);
+        console.error("💥 Error fetching player:", err);
         setError("Failed to load player data");
       } finally {
         setLoading(false);

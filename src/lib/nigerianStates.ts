@@ -1,54 +1,167 @@
 
-export const NIGERIA_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", 
-  "Federal Capital Territory", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", 
-  "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", 
-  "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", 
-  "Yobe", "Zamfara"
+export interface NigerianState {
+  name: string;
+  cities: string[];
+}
+
+export const NIGERIA_STATES: NigerianState[] = [
+  {
+    name: "Abia",
+    cities: ["Umuahia", "Aba", "Arochukwu", "Ohafia", "Bende"]
+  },
+  {
+    name: "Adamawa",
+    cities: ["Yola", "Mubi", "Jimeta", "Numan", "Ganye"]
+  },
+  {
+    name: "Akwa Ibom",
+    cities: ["Uyo", "Ikot Ekpene", "Eket", "Oron", "Abak"]
+  },
+  {
+    name: "Anambra",
+    cities: ["Awka", "Onitsha", "Nnewi", "Ekwulobia", "Agulu"]
+  },
+  {
+    name: "Bauchi",
+    cities: ["Bauchi", "Azare", "Misau", "Jama'are", "Katagum"]
+  },
+  {
+    name: "Bayelsa",
+    cities: ["Yenagoa", "Brass", "Sagbama", "Ogbia", "Nembe"]
+  },
+  {
+    name: "Benue",
+    cities: ["Makurdi", "Gboko", "Otukpo", "Katsina-Ala", "Vandeikya"]
+  },
+  {
+    name: "Borno",
+    cities: ["Maiduguri", "Biu", "Bama", "Dikwa", "Gubio"]
+  },
+  {
+    name: "Cross River",
+    cities: ["Calabar", "Ugep", "Ogoja", "Ikom", "Obudu"]
+  },
+  {
+    name: "Delta",
+    cities: ["Asaba", "Warri", "Sapele", "Ughelli", "Agbor"]
+  },
+  {
+    name: "Ebonyi",
+    cities: ["Abakaliki", "Afikpo", "Onueke", "Ezza", "Ishielu"]
+  },
+  {
+    name: "Edo",
+    cities: ["Benin City", "Auchi", "Ekpoma", "Uromi", "Igarra"]
+  },
+  {
+    name: "Ekiti",
+    cities: ["Ado-Ekiti", "Ikere", "Oye", "Efon", "Ijero"]
+  },
+  {
+    name: "Enugu",
+    cities: ["Enugu", "Nsukka", "Oji River", "Agbani", "Awgu"]
+  },
+  {
+    name: "FCT",
+    cities: ["Abuja", "Gwagwalada", "Kuje", "Bwari", "Kwali", "Abaji"]
+  },
+  {
+    name: "Gombe",
+    cities: ["Gombe", "Kumo", "Billiri", "Kaltungo", "Dukku"]
+  },
+  {
+    name: "Imo",
+    cities: ["Owerri", "Orlu", "Okigwe", "Oguta", "Mbaise"]
+  },
+  {
+    name: "Jigawa",
+    cities: ["Dutse", "Hadejia", "Kazaure", "Gumel", "Ringim"]
+  },
+  {
+    name: "Kaduna",
+    cities: ["Kaduna", "Zaria", "Kafanchan", "Kagoro", "Malumfashi"]
+  },
+  {
+    name: "Kano",
+    cities: ["Kano", "Wudil", "Garko", "Bichi", "Gwarzo"]
+  },
+  {
+    name: "Katsina",
+    cities: ["Katsina", "Daura", "Funtua", "Malumfashi", "Dutsin-Ma"]
+  },
+  {
+    name: "Kebbi",
+    cities: ["Birnin Kebbi", "Argungu", "Yauri", "Zuru", "Bagudo"]
+  },
+  {
+    name: "Kogi",
+    cities: ["Lokoja", "Okene", "Kabba", "Anyigba", "Idah"]
+  },
+  {
+    name: "Kwara",
+    cities: ["Ilorin", "Offa", "Omu-Aran", "Lafiagi", "Kaiama"]
+  },
+  {
+    name: "Lagos",
+    cities: ["Lagos Island", "Ikeja", "Epe", "Ikorodu", "Badagry"]
+  },
+  {
+    name: "Nasarawa",
+    cities: ["Lafia", "Keffi", "Akwanga", "Nasarawa", "Doma"]
+  },
+  {
+    name: "Niger",
+    cities: ["Minna", "Bida", "Kontagora", "Suleja", "New Bussa"]
+  },
+  {
+    name: "Ogun",
+    cities: ["Abeokuta", "Sagamu", "Ijebu-Ode", "Ilaro", "Ota"]
+  },
+  {
+    name: "Ondo",
+    cities: ["Akure", "Ondo", "Owo", "Ikare", "Okitipupa"]
+  },
+  {
+    name: "Osun",
+    cities: ["Osogbo", "Ile-Ife", "Ilesa", "Ede", "Iwo"]
+  },
+  {
+    name: "Oyo",
+    cities: ["Ibadan", "Ogbomoso", "Oyo", "Iseyin", "Saki"]
+  },
+  {
+    name: "Plateau",
+    cities: ["Jos", "Bukuru", "Shendam", "Pankshin", "Mangu"]
+  },
+  {
+    name: "Rivers",
+    cities: ["Port Harcourt", "Obio-Akpor", "Okrika", "Degema", "Bonny"]
+  },
+  {
+    name: "Sokoto",
+    cities: ["Sokoto", "Tambuwal", "Gwadabawa", "Bodinga", "Yabo"]
+  },
+  {
+    name: "Taraba",
+    cities: ["Jalingo", "Wukari", "Bali", "Gembu", "Serti"]
+  },
+  {
+    name: "Yobe",
+    cities: ["Damaturu", "Potiskum", "Gashua", "Nguru", "Geidam"]
+  },
+  {
+    name: "Zamfara",
+    cities: ["Gusau", "Kaura Namoda", "Talata Mafara", "Zurmi", "Anka"]
+  }
 ];
 
-export const NIGERIA_CITIES: Record<string, string[]> = {
-  "Lagos": ["Ikeja", "Lagos Island", "Victoria Island", "Ikoyi", "Surulere", "Apapa", "Agege", "Alimosho"],
-  "Kano": ["Kano Metropolitan", "Fagge", "Dala", "Gwale", "Tarauni", "Nassarawa", "Ungogo", "Kumbotso"],
-  "Ibadan": ["Ibadan North", "Ibadan South-West", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East"],
-  "Kaduna": ["Kaduna North", "Kaduna South", "Chikun", "Igabi", "Kajuru"],
-  "Port Harcourt": ["Port Harcourt City", "Obio-Akpor", "Eleme", "Okrika", "Ogu–Bolo"],
-  "Benin City": ["Oredo", "Egor", "Ikpoba-Okha", "Ovia North-East", "Ovia South-West"],
-  "Maiduguri": ["Maiduguri Metropolitan Council", "Jere", "Konduga", "Mafa"],
-  "Zaria": ["Zaria City", "Sabon Gari", "Tudun Wada"],
-  "Aba": ["Aba North", "Aba South", "Osisioma", "Ugwunagbo"],
-  "Jos": ["Jos North", "Jos South", "Jos East", "Bassa"],
-  "Ilorin": ["Ilorin West", "Ilorin East", "Ilorin South"],
-  "Oyo": ["Oyo West", "Oyo East", "Atiba"],
-  "Enugu": ["Enugu North", "Enugu South", "Enugu East"],
-  "Abeokuta": ["Abeokuta North", "Abeokuta South", "Odeda", "Ewekoro"],
-  "Abuja": ["Abuja Municipal", "Gwagwalada", "Kuje", "Bwari", "Kwali", "Abaji"],
-  "Sokoto": ["Sokoto North", "Sokoto South", "Wamako", "Kware"],
-  "Onitsha": ["Onitsha North", "Onitsha South", "Ogbaru"],
-  "Warri": ["Warri North", "Warri South", "Warri South-West"],
-  "Okene": ["Okene", "Adavi"],
-  "Calabar": ["Calabar Municipal", "Calabar South"],
-  "Uyo": ["Uyo", "Ikono", "Ibesikpo Asutan"],
-  "Abakaliki": ["Abakaliki", "Ebonyi", "Ohaukwu"],
-  "Bauchi": ["Bauchi", "Toro", "Dass"],
-  "Makurdi": ["Makurdi", "Guma", "Gwer West"],
-  "Akure": ["Akure North", "Akure South"],
-  "Gombe": ["Gombe", "Akko", "Yamaltu/Deba"],
-  "Umuahia": ["Umuahia North", "Umuahia South", "Ikwuano"],
-  "Yenagoa": ["Yenagoa", "Kolokuma/Opokuma", "Southern Ijaw"],
-  "Jalingo": ["Jalingo", "Yorro", "Zing"],
-  "Lafia": ["Lafia", "Obi", "Doma"],
-  "Ikeja": ["Ikeja", "Agege", "Alimosho"],
-  "Owerri": ["Owerri Municipal", "Owerri North", "Owerri West"],
-  "Damaturu": ["Damaturu", "Fune", "Gujba"],
-  "Gusau": ["Gusau", "Tsafe", "Bungudu"],
-  "Birnin Kebbi": ["Birnin Kebbi", "Aleiro", "Arewa Dandi"],
-  "Dutse": ["Dutse", "Kiyawa", "Auyo"],
-  "Asaba": ["Oshimili South", "Oshimili North", "Aniocha South"],
-  "Lokoja": ["Lokoja", "Kogi", "Ajaokuta"],
-  "Yola": ["Yola North", "Yola South", "Girei"],
-  "Minna": ["Minna", "Chanchaga", "Bosso"],
-  "Ado Ekiti": ["Ado Ekiti", "Irepodun/Ifelodun", "Ekiti South-West"],
-  "Osogbo": ["Osogbo", "Olorunda", "Irepodun"]
+export const getAllStates = (): string[] => {
+  return NIGERIA_STATES.map(state => state.name);
 };
+
+export const getCitiesByState = (stateName: string): string[] => {
+  const state = NIGERIA_STATES.find(s => s.name === stateName);
+  return state ? state.cities : [];
+};
+
+export const nigerianStates = NIGERIA_STATES;

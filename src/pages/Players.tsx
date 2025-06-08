@@ -5,9 +5,11 @@ import { getAllPlayersFromSupabase } from "@/services/playerService";
 import { Player } from "@/lib/mockData";
 import PlayerCard from "@/components/players/PlayerCard";
 import FilterControls from "@/components/players/FilterControls";
+import RankingTable from "@/components/RankingTable";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Grid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 const Players = () => {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
@@ -17,6 +19,7 @@ const Players = () => {
   const [selectedCity, setSelectedCity] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -24,28 +27,30 @@ const Players = () => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log("Fetching players from Supabase...");
+        console.log("🔍 Fetching players from Supabase...");
         
-        // First try to fetch all players to see what's in the database
         const allPlayersData = await getAllPlayersFromSupabase({});
-        console.log("Total players in database:", allPlayersData.length);
+        console.log("📊 Total players fetched:", allPlayersData.length);
         
         if (allPlayersData.length === 0) {
-          console.log("Database appears to be empty - no players found");
+          console.log("📝 No players found in database");
           setAllPlayers([]);
           setFilteredPlayers([]);
           return;
         }
         
-        // Filter for approved players
-        const approvedPlayers = allPlayersData.filter(player => player.status === 'approved');
-        console.log("Approved players:", approvedPlayers.length);
+        // Filter for approved players and sort by classical rating
+        const approvedPlayers = allPlayersData
+          .filter(player => player.status === 'approved')
+          .sort((a, b) => (b.rating || 800) - (a.rating || 800));
+        
+        console.log("✅ Approved players sorted by rating:", approvedPlayers.length);
         
         setAllPlayers(approvedPlayers);
         setFilteredPlayers(approvedPlayers);
         
       } catch (error) {
-        console.error("Error fetching players:", error);
+        console.error("❌ Error fetching players:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
         setError(errorMessage);
         toast({
@@ -68,6 +73,7 @@ const Players = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(player =>
         player.name.toLowerCase().includes(query) ||
+        (player.title && player.title.toLowerCase().includes(query)) ||
         (player.email && player.email.toLowerCase().includes(query)) ||
         (player.phone && player.phone.toLowerCase().includes(query))
       );
@@ -80,6 +86,9 @@ const Players = () => {
     if (selectedCity && selectedCity !== "" && selectedCity !== "all-cities") {
       filtered = filtered.filter(player => player.city === selectedCity);
     }
+
+    // Always sort by classical rating (descending)
+    filtered.sort((a, b) => (b.rating || 800) - (a.rating || 800));
 
     setFilteredPlayers(filtered);
   }, [allPlayers, searchQuery, selectedState, selectedCity]);
@@ -117,17 +126,40 @@ const Players = () => {
       
       <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Nigerian Chess Players
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Browse all registered players in the Nigerian Chess Rating system
-          </p>
-          {!isLoading && allPlayers.length > 0 && (
-            <p className="text-sm text-gray-500 mt-2">
-              Showing {filteredPlayers.length} of {allPlayers.length} approved players
-            </p>
-          )}
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Nigerian Chess Players Rankings
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Players ranked by Classical rating in the Nigerian Chess Rating system
+              </p>
+              {!isLoading && allPlayers.length > 0 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Showing {filteredPlayers.length} of {allPlayers.length} approved players
+                </p>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                <List className="h-4 w-4 mr-2" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid className="h-4 w-4 mr-2" />
+                Grid
+              </Button>
+            </div>
+          </div>
         </div>
 
         <FilterControls
@@ -166,45 +198,35 @@ const Players = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredPlayers.map((player) => (
-              <PlayerCard key={player.id} player={player} />
-            ))}
-          </div>
-        )}
-
-        {!isLoading && !error && filteredPlayers.length === 0 && allPlayers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-gray-400" />
+          <div className="mt-6">
+            {filteredPlayers.length > 0 ? (
+              viewMode === 'table' ? (
+                <RankingTable players={filteredPlayers} itemsPerPage={50} showRankings={true} />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredPlayers.map((player) => (
+                    <PlayerCard key={player.id} player={player} />
+                  ))}
+                </div>
+              )
+            ) : (
+              <div className="text-center py-12">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    {allPlayers.length === 0 ? "No Players Found" : "No Players Match Your Filters"}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {allPlayers.length === 0 
+                      ? "No players have been registered in the system yet."
+                      : "Try adjusting your search criteria to find more players."
+                    }
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No Players Found
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                No players have been registered in the system yet.
-              </p>
-              <p className="text-sm text-gray-400 dark:text-gray-500">
-                Players can be added through tournament registration or by a Rating Officer.
-              </p>
-            </div>
-          </div>
-        )}
-        
-        {!isLoading && !error && filteredPlayers.length === 0 && allPlayers.length > 0 && (
-          <div className="text-center py-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                No Players Match Your Filters
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                Try adjusting your search criteria to find more players.
-              </p>
-            </div>
+            )}
           </div>
         )}
       </div>
