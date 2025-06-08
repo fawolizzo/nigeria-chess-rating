@@ -6,7 +6,8 @@ import { Player } from "@/lib/mockData";
 import PlayerCard from "@/components/players/PlayerCard";
 import FilterControls from "@/components/players/FilterControls";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Players = () => {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
@@ -23,30 +24,33 @@ const Players = () => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log("Fetching ALL players from Supabase...");
+        console.log("Fetching players from Supabase...");
         
-        // Fetch ALL players regardless of status to see what's in the database
-        const players = await getAllPlayersFromSupabase({});
-        console.log("All players fetched:", players);
+        // First try to fetch all players to see what's in the database
+        const allPlayersData = await getAllPlayersFromSupabase({});
+        console.log("Total players in database:", allPlayersData.length);
         
-        // Also fetch approved players specifically
-        const approvedPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
-        console.log("Approved players:", approvedPlayers);
+        if (allPlayersData.length === 0) {
+          console.log("Database appears to be empty - no players found");
+          setAllPlayers([]);
+          setFilteredPlayers([]);
+          return;
+        }
         
-        // Use approved players for display, but log both for debugging
+        // Filter for approved players
+        const approvedPlayers = allPlayersData.filter(player => player.status === 'approved');
+        console.log("Approved players:", approvedPlayers.length);
+        
         setAllPlayers(approvedPlayers);
         setFilteredPlayers(approvedPlayers);
         
-        if (approvedPlayers.length === 0) {
-          console.log("No approved players found. Total players in database:", players.length);
-        }
       } catch (error) {
         console.error("Error fetching players:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
         setError(errorMessage);
         toast({
           title: "Error",
-          description: "Failed to load players data.",
+          description: "Failed to load players data. Please try again.",
           variant: "destructive"
         });
       } finally {
@@ -69,16 +73,43 @@ const Players = () => {
       );
     }
 
-    if (selectedState) {
+    if (selectedState && selectedState !== "") {
       filtered = filtered.filter(player => player.state === selectedState);
     }
 
-    if (selectedCity) {
+    if (selectedCity && selectedCity !== "" && selectedCity !== "all-cities") {
       filtered = filtered.filter(player => player.city === selectedCity);
     }
 
     setFilteredPlayers(filtered);
   }, [allPlayers, searchQuery, selectedState, selectedCity]);
+
+  const handleStateChange = (value: string) => {
+    setSelectedState(value);
+    setSelectedCity(""); // Reset city when state changes
+  };
+
+  const handleCityChange = (value: string) => {
+    setSelectedCity(value);
+  };
+
+  // Loading skeleton component
+  const PlayersSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {[...Array(8)].map((_, index) => (
+        <div key={index} className="bg-white dark:bg-gray-900 rounded-lg border p-4">
+          <div className="flex items-start space-x-3">
+            <Skeleton className="w-12 h-12 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -92,7 +123,7 @@ const Players = () => {
           <p className="text-gray-600 dark:text-gray-400">
             Browse all registered players in the Nigerian Chess Rating system
           </p>
-          {allPlayers.length > 0 && (
+          {!isLoading && allPlayers.length > 0 && (
             <p className="text-sm text-gray-500 mt-2">
               Showing {filteredPlayers.length} of {allPlayers.length} approved players
             </p>
@@ -103,14 +134,20 @@ const Players = () => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           selectedState={selectedState}
-          onStateChange={setSelectedState}
+          onStateChange={handleStateChange}
           selectedCity={selectedCity}
-          onCityChange={setSelectedCity}
+          onCityChange={handleCityChange}
         />
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nigeria-green"></div>
+          <div className="space-y-6">
+            <div className="flex justify-center py-8">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-nigeria-green" />
+                <span className="text-gray-600 dark:text-gray-400">Loading players...</span>
+              </div>
+            </div>
+            <PlayersSkeleton />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -118,12 +155,12 @@ const Players = () => {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Error Loading Players
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 text-center">
               {error}
             </p>
             <button 
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark"
+              className="px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark transition-colors"
             >
               Try Again
             </button>
@@ -138,20 +175,36 @@ const Players = () => {
 
         {!isLoading && !error && filteredPlayers.length === 0 && allPlayers.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              No players have been registered yet.
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Players can be added through tournament registration or by a Rating Officer.
-            </p>
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Players Found
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                No players have been registered in the system yet.
+              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Players can be added through tournament registration or by a Rating Officer.
+              </p>
+            </div>
           </div>
         )}
         
         {!isLoading && !error && filteredPlayers.length === 0 && allPlayers.length > 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">
-              No players match your current filters.
-            </p>
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Players Match Your Filters
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                Try adjusting your search criteria to find more players.
+              </p>
+            </div>
           </div>
         )}
       </div>

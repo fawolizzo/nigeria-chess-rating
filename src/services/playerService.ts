@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Player } from "@/lib/mockData";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -12,35 +11,72 @@ interface PlayerFilter {
 
 export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Promise<Player[]> => {
   try {
-    console.log("Fetching players from Supabase with filters:", filters);
+    console.log("🔍 Fetching players from Supabase with filters:", filters);
     
-    // First, let's check if we can access the table at all
+    // First, let's check database connectivity and table accessibility
     const { count, error: countError } = await supabase
       .from('players')
       .select('*', { count: 'exact', head: true });
     
-    console.log("Player table count:", count, "Count error:", countError);
+    if (countError) {
+      console.error("❌ Database connection or table access error:", countError);
+      throw new Error(`Database error: ${countError.message}`);
+    }
     
+    console.log(`📊 Total players in database: ${count || 0}`);
+    
+    if (count === 0) {
+      console.log("📝 Database is empty - returning empty array");
+      return [];
+    }
+    
+    // Build the query with filters
     let query = supabase.from('players').select('*');
     
     // Apply filters if provided
-    if (filters.state) query = query.eq('state', filters.state);
-    if (filters.city) query = query.eq('city', filters.city);
-    if (filters.name) query = query.ilike('name', `%${filters.name}%`);
-    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.state && filters.state !== 'all-states') {
+      query = query.eq('state', filters.state);
+      console.log(`🏢 Filtering by state: ${filters.state}`);
+    }
+    
+    if (filters.city && filters.city !== 'all-cities') {
+      query = query.eq('city', filters.city);
+      console.log(`🏙️ Filtering by city: ${filters.city}`);
+    }
+    
+    if (filters.name) {
+      query = query.ilike('name', `%${filters.name}%`);
+      console.log(`👤 Filtering by name: ${filters.name}`);
+    }
+    
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+      console.log(`📋 Filtering by status: ${filters.status}`);
+    }
     
     const { data, error } = await query;
     
     if (error) {
-      console.error("Supabase error:", error);
-      throw error;
+      console.error("❌ Query execution error:", error);
+      throw new Error(`Query failed: ${error.message}`);
     }
     
-    console.log("Raw player data from Supabase:", data);
-    console.log("Number of players found:", data?.length || 0);
+    console.log(`✅ Query successful. Found ${data?.length || 0} players`);
+    
+    if (!data || data.length === 0) {
+      console.log("📄 No players match the current filters");
+      return [];
+    }
     
     // Map database fields to our application model
-    const mappedPlayers = (data || []).map(player => {
+    const mappedPlayers = data.map((player, index) => {
+      console.log(`🔄 Mapping player ${index + 1}:`, {
+        id: player.id,
+        name: player.name,
+        status: player.status,
+        rating: player.rating
+      });
+      
       const mappedPlayer: Player = {
         id: player.id,
         name: player.name || '',
@@ -74,10 +110,21 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
       return mappedPlayer;
     });
     
-    console.log("Mapped players:", mappedPlayers);
+    console.log(`🎯 Successfully mapped ${mappedPlayers.length} players`);
     return mappedPlayers;
+    
   } catch (error) {
-    console.error("Error getting players from Supabase:", error);
+    console.error("💥 Error in getAllPlayersFromSupabase:", error);
+    
+    // Return empty array instead of throwing to prevent UI crashes
+    if (error instanceof Error) {
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    
+    // Still return empty array to prevent UI crashes, but log the error
     return [];
   }
 };
@@ -129,7 +176,8 @@ export const getPlayerByIdFromSupabase = async (playerId: string): Promise<Playe
       titleVerified: data.title_verified || false,
       birthYear: data.birth_year || undefined,
       club: data.club || undefined,
-      fideId: data.fide_id || undefined
+      fideId: data.fide_id || undefined,
+      achievements: []
     };
     
     console.log("Mapped player:", mappedPlayer);
@@ -209,7 +257,8 @@ export const createPlayerInSupabase = async (playerData: any): Promise<Player | 
       titleVerified: data.title_verified || false,
       birthYear: data.birth_year || undefined,
       club: data.club || undefined,
-      fideId: data.fide_id || undefined
+      fideId: data.fide_id || undefined,
+      achievements: []
     };
   } catch (error) {
     console.error("Error creating player in Supabase:", error);
@@ -276,7 +325,8 @@ export const updatePlayerInSupabase = async (playerId: string, playerData: Parti
       titleVerified: data.title_verified || false,
       birthYear: data.birth_year || undefined,
       club: data.club || undefined,
-      fideId: data.fide_id || undefined
+      fideId: data.fide_id || undefined,
+      achievements: []
     };
   } catch (error) {
     console.error(`Error updating player ${playerId} in Supabase:`, error);

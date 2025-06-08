@@ -31,7 +31,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         <Input
           id="searchQuery"
           type="text"
-          placeholder="Search by name..."
+          placeholder="Search by name, email, or phone..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full"
@@ -50,7 +50,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             <SelectValue placeholder="Select state" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All States</SelectItem>
+            <SelectItem value="all-states">All States</SelectItem>
             {NIGERIA_STATES.map((state) => (
               <SelectItem key={state} value={state}>
                 {state}
