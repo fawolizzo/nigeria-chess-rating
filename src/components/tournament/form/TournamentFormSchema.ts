@@ -14,4 +14,7 @@ export const createTournamentSchema = z.object({
   registrationOpen: z.boolean().default(true),
 });
 
+// Export as tournamentSchema as well for backward compatibility
+export const tournamentSchema = createTournamentSchema;
+
 export type CreateTournamentFormData = z.infer<typeof createTournamentSchema>;

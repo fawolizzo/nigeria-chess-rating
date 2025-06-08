@@ -1,11 +1,13 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/user';
 import { supabase } from '@/integrations/supabase/client';
 import { TimeControlValue } from '@/data/timeControls';
+import { createTournamentSchema } from '@/components/tournament/form/TournamentFormSchema';
 
 interface CreateTournamentFormData {
   name: string;
@@ -29,6 +31,7 @@ export function useCreateTournamentForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   const form = useForm<CreateTournamentFormData>({
+    resolver: zodResolver(createTournamentSchema),
     defaultValues: {
       startDate: new Date(),
       endDate: new Date(new Date().setDate(new Date().getDate() + 1))
