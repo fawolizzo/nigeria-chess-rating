@@ -4,8 +4,8 @@ import { z } from "zod";
 export const createTournamentSchema = z.object({
   name: z.string().min(1, "Tournament name is required"),
   description: z.string().optional(),
-  startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
+  startDate: z.date(),
+  endDate: z.date(),
   location: z.string().min(1, "Location is required"),
   state: z.string().min(1, "State is required"),
   city: z.string().min(1, "City is required"),
@@ -18,6 +18,5 @@ export const createTournamentSchema = z.object({
 export const tournamentSchema = createTournamentSchema;
 
 export type CreateTournamentFormData = z.infer<typeof createTournamentSchema>;
-
-// Export the type that other files are looking for
+export type TournamentFormData = CreateTournamentFormData;
 export type TournamentFormSchemaType = CreateTournamentFormData;

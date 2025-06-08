@@ -1,212 +1,54 @@
 
-// Create a proper structure for Nigerian states and cities data
-export interface StateData {
-  name: string;
-  code?: string;
-  cities: string[];
-}
-
-export const nigerianStates: StateData[] = [
-  {
-    name: "Abia",
-    code: "AB",
-    cities: ["Umuahia", "Aba", "Ohafia", "Arochukwu", "Bende", "Uzuakoli"]
-  },
-  {
-    name: "Adamawa",
-    code: "AD",
-    cities: ["Yola", "Mubi", "Jimeta", "Ganye", "Numan", "Mayo-Belwa"]
-  },
-  {
-    name: "Akwa Ibom",
-    code: "AK",
-    cities: ["Uyo", "Eket", "Ikot Ekpene", "Oron", "Ibeno", "Abak"]
-  },
-  {
-    name: "Anambra",
-    code: "AN",
-    cities: ["Awka", "Onitsha", "Nnewi", "Ekwulobia", "Aguata", "Abagana"]
-  },
-  {
-    name: "Bauchi",
-    code: "BA",
-    cities: ["Bauchi", "Azare", "Misau", "Katagum", "Jama'are", "Ningi"]
-  },
-  {
-    name: "Bayelsa",
-    code: "BY",
-    cities: ["Yenagoa", "Brass", "Nembe", "Ogbia", "Southern Ijaw", "Ekeremor"]
-  },
-  {
-    name: "Benue",
-    code: "BE",
-    cities: ["Makurdi", "Gboko", "Otukpo", "Katsina-Ala", "Vandeikya", "Zaki Biam"]
-  },
-  {
-    name: "Borno",
-    code: "BO",
-    cities: ["Maiduguri", "Biu", "Gwoza", "Damboa", "Bama", "Monguno"]
-  },
-  {
-    name: "Cross River",
-    code: "CR",
-    cities: ["Calabar", "Ugep", "Ogoja", "Ikom", "Obubra", "Obudu"]
-  },
-  {
-    name: "Delta",
-    code: "DE",
-    cities: ["Asaba", "Warri", "Sapele", "Agbor", "Ughelli", "Abraka"]
-  },
-  {
-    name: "Ebonyi",
-    code: "EB",
-    cities: ["Abakaliki", "Afikpo", "Onueke", "Ishiagu", "Okposi", "Uburu"]
-  },
-  {
-    name: "Edo",
-    code: "ED",
-    cities: ["Benin City", "Auchi", "Ekpoma", "Uromi", "Sabongida-Ora", "Igarra"]
-  },
-  {
-    name: "Ekiti",
-    code: "EK",
-    cities: ["Ado-Ekiti", "Ikere", "Ikole", "Efon-Alaaye", "Ijero", "Aramoko"]
-  },
-  {
-    name: "Enugu",
-    code: "EN",
-    cities: ["Enugu", "Nsukka", "Oji River", "Awgu", "Udi", "Agbani"]
-  },
-  {
-    name: "Federal Capital Territory",
-    code: "FC",
-    cities: ["Abuja", "Gwagwalada", "Kuje", "Bwari", "Kwali", "Abaji"]
-  },
-  {
-    name: "Gombe",
-    code: "GO",
-    cities: ["Gombe", "Billiri", "Kaltungo", "Bajoga", "Kumo", "Dukku"]
-  },
-  {
-    name: "Imo",
-    code: "IM",
-    cities: ["Owerri", "Okigwe", "Orlu", "Mbaise", "Oguta", "Mbano"]
-  },
-  {
-    name: "Jigawa",
-    code: "JI",
-    cities: ["Dutse", "Hadejia", "Gumel", "Kazaure", "Ringim", "Babura"]
-  },
-  {
-    name: "Kaduna",
-    code: "KD",
-    cities: ["Kaduna", "Zaria", "Kafanchan", "Kagoro", "Kachia", "Birnin Gwari"]
-  },
-  {
-    name: "Kano",
-    code: "KN",
-    cities: ["Kano", "Dala", "Ungogo", "Rano", "Bichi", "Gwarzo"]
-  },
-  {
-    name: "Katsina",
-    code: "KT",
-    cities: ["Katsina", "Funtua", "Daura", "Dutsin-Ma", "Kankia", "Jibia"]
-  },
-  {
-    name: "Kebbi",
-    code: "KE",
-    cities: ["Birnin Kebbi", "Argungu", "Yauri", "Zuru", "Jega", "Koko"]
-  },
-  {
-    name: "Kogi",
-    code: "KO",
-    cities: ["Lokoja", "Okene", "Kabba", "Idah", "Ankpa", "Isanlu"]
-  },
-  {
-    name: "Kwara",
-    code: "KW",
-    cities: ["Ilorin", "Offa", "Patigi", "Kaiama", "Jebba", "Omu-Aran"]
-  },
-  {
-    name: "Lagos",
-    code: "LA",
-    cities: ["Ikeja", "Lagos Island", "Badagry", "Epe", "Ikorodu", "Apapa", "Surulere", "Lekki", "Ajah"]
-  },
-  {
-    name: "Nasarawa",
-    code: "NA",
-    cities: ["Lafia", "Keffi", "Akwanga", "Nasarawa", "Wamba", "Keana"]
-  },
-  {
-    name: "Niger",
-    code: "NI",
-    cities: ["Minna", "Bida", "Suleja", "Kontagora", "Lapai", "Agaie"]
-  },
-  {
-    name: "Ogun",
-    code: "OG",
-    cities: ["Abeokuta", "Ijebu Ode", "Sagamu", "Ilaro", "Ota", "Ijebu-Igbo"]
-  },
-  {
-    name: "Ondo",
-    code: "ON",
-    cities: ["Akure", "Ondo", "Owo", "Okitipupa", "Ikare", "Ore"]
-  },
-  {
-    name: "Osun",
-    code: "OS",
-    cities: ["Osogbo", "Ife", "Ilesa", "Ede", "Iwo", "Ejigbo"]
-  },
-  {
-    name: "Oyo",
-    code: "OY",
-    cities: ["Ibadan", "Ogbomosho", "Oyo", "Iseyin", "Saki", "Igboho"]
-  },
-  {
-    name: "Plateau",
-    code: "PL",
-    cities: ["Jos", "Pankshin", "Shendam", "Langtang", "Wase", "Barkin Ladi"]
-  },
-  {
-    name: "Rivers",
-    code: "RI",
-    cities: ["Port Harcourt", "Bonny", "Degema", "Bori", "Ahoada", "Eleme"]
-  },
-  {
-    name: "Sokoto",
-    code: "SO",
-    cities: ["Sokoto", "Tambuwal", "Gwadabawa", "Illela", "Rabah", "Wurno"]
-  },
-  {
-    name: "Taraba",
-    code: "TA",
-    cities: ["Jalingo", "Wukari", "Bali", "Gembu", "Takum", "Ibi"]
-  },
-  {
-    name: "Yobe",
-    code: "YO",
-    cities: ["Damaturu", "Potiskum", "Gashua", "Geidam", "Nguru", "Buni Yadi"]
-  },
-  {
-    name: "Zamfara",
-    code: "ZA",
-    cities: ["Gusau", "Kaura Namoda", "Talata Mafara", "Anka", "Zurmi", "Tsafe"]
-  }
+export const NIGERIA_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", 
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", 
+  "Federal Capital Territory", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", 
+  "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", 
+  "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", 
+  "Yobe", "Zamfara"
 ];
 
-// Function to get cities for a state
-export const getCitiesByState = (stateName: string): string[] => {
-  const state = nigerianStates.find(state => 
-    state.name === stateName || 
-    (stateName === "FCT" && state.name === "Federal Capital Territory")
-  );
-  return state ? state.cities : [];
-};
-
-// Export the Nigeria states array for convenience
-export const NIGERIA_STATES = nigerianStates.map(state => state.name);
-
-// Add the missing getAllStates function
-export const getAllStates = (): string[] => {
-  return NIGERIA_STATES;
+export const NIGERIA_CITIES: Record<string, string[]> = {
+  "Lagos": ["Ikeja", "Lagos Island", "Victoria Island", "Ikoyi", "Surulere", "Apapa", "Agege", "Alimosho"],
+  "Kano": ["Kano Metropolitan", "Fagge", "Dala", "Gwale", "Tarauni", "Nassarawa", "Ungogo", "Kumbotso"],
+  "Ibadan": ["Ibadan North", "Ibadan South-West", "Ibadan North-East", "Ibadan North-West", "Ibadan South-East"],
+  "Kaduna": ["Kaduna North", "Kaduna South", "Chikun", "Igabi", "Kajuru"],
+  "Port Harcourt": ["Port Harcourt City", "Obio-Akpor", "Eleme", "Okrika", "Ogu–Bolo"],
+  "Benin City": ["Oredo", "Egor", "Ikpoba-Okha", "Ovia North-East", "Ovia South-West"],
+  "Maiduguri": ["Maiduguri Metropolitan Council", "Jere", "Konduga", "Mafa"],
+  "Zaria": ["Zaria City", "Sabon Gari", "Tudun Wada"],
+  "Aba": ["Aba North", "Aba South", "Osisioma", "Ugwunagbo"],
+  "Jos": ["Jos North", "Jos South", "Jos East", "Bassa"],
+  "Ilorin": ["Ilorin West", "Ilorin East", "Ilorin South"],
+  "Oyo": ["Oyo West", "Oyo East", "Atiba"],
+  "Enugu": ["Enugu North", "Enugu South", "Enugu East"],
+  "Abeokuta": ["Abeokuta North", "Abeokuta South", "Odeda", "Ewekoro"],
+  "Abuja": ["Abuja Municipal", "Gwagwalada", "Kuje", "Bwari", "Kwali", "Abaji"],
+  "Sokoto": ["Sokoto North", "Sokoto South", "Wamako", "Kware"],
+  "Onitsha": ["Onitsha North", "Onitsha South", "Ogbaru"],
+  "Warri": ["Warri North", "Warri South", "Warri South-West"],
+  "Okene": ["Okene", "Adavi"],
+  "Calabar": ["Calabar Municipal", "Calabar South"],
+  "Uyo": ["Uyo", "Ikono", "Ibesikpo Asutan"],
+  "Abakaliki": ["Abakaliki", "Ebonyi", "Ohaukwu"],
+  "Bauchi": ["Bauchi", "Toro", "Dass"],
+  "Makurdi": ["Makurdi", "Guma", "Gwer West"],
+  "Akure": ["Akure North", "Akure South"],
+  "Gombe": ["Gombe", "Akko", "Yamaltu/Deba"],
+  "Umuahia": ["Umuahia North", "Umuahia South", "Ikwuano"],
+  "Yenagoa": ["Yenagoa", "Kolokuma/Opokuma", "Southern Ijaw"],
+  "Jalingo": ["Jalingo", "Yorro", "Zing"],
+  "Lafia": ["Lafia", "Obi", "Doma"],
+  "Ikeja": ["Ikeja", "Agege", "Alimosho"],
+  "Owerri": ["Owerri Municipal", "Owerri North", "Owerri West"],
+  "Damaturu": ["Damaturu", "Fune", "Gujba"],
+  "Gusau": ["Gusau", "Tsafe", "Bungudu"],
+  "Birnin Kebbi": ["Birnin Kebbi", "Aleiro", "Arewa Dandi"],
+  "Dutse": ["Dutse", "Kiyawa", "Auyo"],
+  "Asaba": ["Oshimili South", "Oshimili North", "Aniocha South"],
+  "Lokoja": ["Lokoja", "Kogi", "Ajaokuta"],
+  "Yola": ["Yola North", "Yola South", "Girei"],
+  "Minna": ["Minna", "Chanchaga", "Bosso"],
+  "Ado Ekiti": ["Ado Ekiti", "Irepodun/Ifelodun", "Ekiti South-West"],
+  "Osogbo": ["Osogbo", "Olorunda", "Irepodun"]
 };

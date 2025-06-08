@@ -1,91 +1,118 @@
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import { TournamentFormValues } from "@/hooks/useTournamentManager";
-import { format } from "date-fns";
-
-import { tournamentSchema, TournamentFormSchemaType } from "./form/TournamentFormSchema";
-import { TournamentBasicDetails } from "./form/TournamentBasicDetails";
-import { TournamentDateSelection } from "./form/TournamentDateSelection";
-import { TournamentLocationFields } from "./form/TournamentLocationFields";
-import { TournamentConfigFields } from "./form/TournamentConfigFields";
-import { useCustomTimeControl } from "./form/useCustomTimeControl";
+import { useToast } from "@/hooks/use-toast";
+import { useCreateTournamentForm } from "@/hooks/useCreateTournamentForm";
+import CreateTournamentFormUI from "./form/CreateTournamentFormUI";
+import { TournamentFormData } from "./form/TournamentFormSchema";
 
 interface CreateTournamentFormProps {
-  onSubmit: (data: TournamentFormValues, customTimeControl: string, isCustomTimeControl: boolean) => void;
-  onCancel: () => void;
+  onSuccess?: () => void;
 }
 
-export function CreateTournamentForm({ onSubmit, onCancel }: CreateTournamentFormProps) {
-  const form = useForm<TournamentFormSchemaType>({
-    resolver: zodResolver(tournamentSchema),
+const CreateTournamentForm: React.FC<CreateTournamentFormProps> = ({ onSuccess }) => {
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  
+  const form = useCreateTournamentForm({
     defaultValues: {
       name: "",
       description: "",
       startDate: new Date(),
-      endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
+      endDate: new Date(),
       location: "",
-      city: "",
       state: "",
-      rounds: 9,
-      timeControl: ""
+      city: "",
+      rounds: 5,
+      timeControl: "",
+      registrationOpen: true,
     },
-    mode: "onChange"
   });
 
-  const {
-    isCustomTimeControl,
-    setIsCustomTimeControl,
-    customTimeControl,
-    setCustomTimeControl,
-    customTimeControlError,
-    setCustomTimeControlError,
-    isFormValid
-  } = useCustomTimeControl(form);
+  const handleStateChange = (state: string) => {
+    setSelectedState(state);
+    setSelectedCity("");
+    form.setValue("state", state);
+    form.setValue("city", "");
+  };
 
-  const handleSubmit = (data: TournamentFormSchemaType) => {
-    if (!isFormValid) return;
-    
-    console.log("Creating tournament with data:", {
-      ...data, 
-      timeControl: isCustomTimeControl ? customTimeControl : data.timeControl,
-      isCustomTimeControl
-    });
-    
-    // Since data is fully validated by zod, we know all required fields are present
-    onSubmit(data as TournamentFormValues, customTimeControl, isCustomTimeControl);
+  const handleCityChange = (city: string) => {
+    setSelectedCity(city);
+    form.setValue("city", city);
+  };
+
+  const onSubmit = async (data: TournamentFormData) => {
+    setIsSubmitting(true);
+    try {
+      // Convert dates to ISO strings for storage
+      const tournamentData = {
+        ...data,
+        startDate: data.startDate.toISOString().split('T')[0],
+        endDate: data.endDate.toISOString().split('T')[0],
+      };
+
+      console.log("Creating tournament:", tournamentData);
+      
+      toast({
+        title: "Tournament Created",
+        description: "Your tournament has been created successfully.",
+      });
+      
+      form.reset();
+      setSelectedState("");
+      setSelectedCity("");
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error("Error creating tournament:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create tournament. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <TournamentBasicDetails form={form} />
-        <TournamentDateSelection form={form} />
-        <TournamentLocationFields form={form} />
-        <TournamentConfigFields 
-          form={form}
-          isCustomTimeControl={isCustomTimeControl}
-          setIsCustomTimeControl={setIsCustomTimeControl}
-          customTimeControl={customTimeControl}
-          setCustomTimeControl={setCustomTimeControl}
-          customTimeControlError={customTimeControlError}
-          setCustomTimeControlError={setCustomTimeControlError}
-        />
-
-        <div className="mt-6 flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={!isFormValid || form.formState.isSubmitting}
-          >
-            Create Tournament
-          </Button>
-        </div>
-      </form>
-    </Form>
+    <div className="space-y-6">
+      <CreateTournamentFormUI
+        form={form}
+        onSubmit={onSubmit}
+        selectedState={selectedState}
+        selectedCity={selectedCity}
+        onStateChange={handleStateChange}
+        onCityChange={handleCityChange}
+        isSubmitting={isSubmitting}
+      />
+      
+      <div className="flex justify-end space-x-4">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => {
+            form.reset();
+            setSelectedState("");
+            setSelectedCity("");
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Creating..." : "Create Tournament"}
+        </Button>
+      </div>
+    </div>
   );
-}
+};
+
+export default CreateTournamentForm;

@@ -1,4 +1,3 @@
-
 export interface RatingHistoryEntry {
   date: string;
   rating: number;
@@ -27,27 +26,27 @@ export interface Player {
   state: string;
   city: string;
   country: string;
-  status: "pending" | "approved" | "rejected";
-  gamesPlayed: number;
   phone: string;
   email: string;
-  ratingHistory: RatingHistoryEntry[];
-  tournamentResults: TournamentResult[];
+  gamesPlayed: number;
+  status: "pending" | "approved" | "rejected";
+  ratingStatus: "provisional" | "established";
   rapidRating: number;
   blitzRating: number;
   rapidGamesPlayed: number;
   blitzGamesPlayed: number;
-  ratingStatus: "provisional" | "established";
   rapidRatingStatus: "provisional" | "established";
   blitzRatingStatus: "provisional" | "established";
+  tournamentResults: TournamentResult[];
+  ratingHistory: RatingHistoryEntry[];
   rapidRatingHistory: RatingHistoryEntry[];
   blitzRatingHistory: RatingHistoryEntry[];
+  achievements: string[];
   title?: string;
   titleVerified?: boolean;
   birthYear?: number;
   club?: string;
   fideId?: string;
-  achievements?: string[];
 }
 
 export interface Tournament {
@@ -61,16 +60,14 @@ export interface Tournament {
   state: string;
   organizerId: string;
   players: Player[];
-  status: "pending" | "approved" | "rejected" | "upcoming" | "ongoing" | "completed" | "processed";
+  pairings: Pairing[];
   rounds: number;
   currentRound: number;
+  status: "draft" | "upcoming" | "ongoing" | "completed" | "cancelled" | "pending" | "approved" | "rejected";
   timeControl: string;
-  registrationOpen: boolean;
   participants: number;
-  pairings: Pairing[];
-  createdAt: string;
-  updatedAt: string;
-  processingDate?: string;
+  registrationOpen: boolean;
+  standings?: PlayerStanding[];
   category?: "classical" | "rapid" | "blitz";
 }
 
@@ -99,14 +96,11 @@ export interface Pairing {
   tournamentId: string;
   round: number;
   player1Id: string;
-  player2Id: string | null;
-  result: "1-0" | "0-1" | "1/2-1/2" | "*";
-  player1Rating?: number;
-  player2Rating?: number;
+  player2Id: string;
+  result?: "*" | "1-0" | "0-1" | "1/2-1/2";
   player1RatingChange?: number;
   player2RatingChange?: number;
 }
-
 
 // Re-export the floor rating constant from the rating calculation module
 export { FLOOR_RATING } from "@/lib/ratingCalculation";
