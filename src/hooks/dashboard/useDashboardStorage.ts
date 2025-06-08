@@ -31,7 +31,6 @@ const mapDatabaseTournament = (dbTournament: any): Tournament => {
     registrationOpen: dbTournament.registration_open || false,
     players: [],
     pairings: [],
-    standings: [],
     createdAt: dbTournament.created_at,
     updatedAt: dbTournament.updated_at
   };
@@ -41,7 +40,7 @@ const mapDatabaseTournament = (dbTournament: any): Tournament => {
 const mapDatabasePlayer = (dbPlayer: any): Player => {
   return {
     id: dbPlayer.id,
-    name: dbPlayer.name,
+    name: dbPlayer.name || '',
     rating: dbPlayer.rating || 800,
     gender: (dbPlayer.gender as "M" | "F") || 'M',
     state: dbPlayer.state || '',
@@ -53,13 +52,16 @@ const mapDatabasePlayer = (dbPlayer: any): Player => {
     email: dbPlayer.email || '',
     ratingHistory: [],
     tournamentResults: [],
-    rapidRating: 800,
-    blitzRating: 800,
-    rapidGamesPlayed: 0,
-    blitzGamesPlayed: 0,
-    ratingStatus: 'provisional' as const,
-    rapidRatingStatus: 'provisional' as const,
-    blitzRatingStatus: 'provisional' as const
+    rapidRating: dbPlayer.rapid_rating || 800,
+    blitzRating: dbPlayer.blitz_rating || 800,
+    rapidGamesPlayed: dbPlayer.rapid_games_played || 0,
+    blitzGamesPlayed: dbPlayer.blitz_games_played || 0,
+    ratingStatus: (dbPlayer.games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+    rapidRatingStatus: (dbPlayer.rapid_games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+    blitzRatingStatus: (dbPlayer.blitz_games_played || 0) >= 30 ? 'established' : 'provisional' as const,
+    rapidRatingHistory: [],
+    blitzRatingHistory: [],
+    achievements: []
   };
 };
 
@@ -127,7 +129,7 @@ export const useDashboardStorage = () => {
           id: organizer.id,
           email: organizer.email,
           fullName: organizer.name,
-          role: organizer.role,
+          role: (organizer.role as "tournament_organizer" | "rating_officer" | "player") || "tournament_organizer",
           status: organizer.status,
           phone: organizer.phone || '',
           registrationDate: organizer.created_at

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Player } from "@/lib/mockData";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -12,6 +13,14 @@ interface PlayerFilter {
 export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Promise<Player[]> => {
   try {
     console.log("Fetching players from Supabase with filters:", filters);
+    
+    // First, let's check if we can access the table at all
+    const { count, error: countError } = await supabase
+      .from('players')
+      .select('*', { count: 'exact', head: true });
+    
+    console.log("Player table count:", count, "Count error:", countError);
+    
     let query = supabase.from('players').select('*');
     
     // Apply filters if provided
@@ -28,6 +37,7 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
     }
     
     console.log("Raw player data from Supabase:", data);
+    console.log("Number of players found:", data?.length || 0);
     
     // Map database fields to our application model
     const mappedPlayers = (data || []).map(player => {
@@ -58,7 +68,8 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
         titleVerified: player.title_verified || false,
         birthYear: player.birth_year || undefined,
         club: player.club || undefined,
-        fideId: player.fide_id || undefined
+        fideId: player.fide_id || undefined,
+        achievements: []
       };
       return mappedPlayer;
     });

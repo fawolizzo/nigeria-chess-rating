@@ -23,11 +23,23 @@ const Players = () => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log("Fetching players from Supabase...");
-        const players = await getAllPlayersFromSupabase({ status: 'approved' });
-        console.log("Fetched players:", players);
-        setAllPlayers(players);
-        setFilteredPlayers(players);
+        console.log("Fetching ALL players from Supabase...");
+        
+        // Fetch ALL players regardless of status to see what's in the database
+        const players = await getAllPlayersFromSupabase({});
+        console.log("All players fetched:", players);
+        
+        // Also fetch approved players specifically
+        const approvedPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
+        console.log("Approved players:", approvedPlayers);
+        
+        // Use approved players for display, but log both for debugging
+        setAllPlayers(approvedPlayers);
+        setFilteredPlayers(approvedPlayers);
+        
+        if (approvedPlayers.length === 0) {
+          console.log("No approved players found. Total players in database:", players.length);
+        }
       } catch (error) {
         console.error("Error fetching players:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
@@ -80,6 +92,11 @@ const Players = () => {
           <p className="text-gray-600 dark:text-gray-400">
             Browse all registered players in the Nigerian Chess Rating system
           </p>
+          {allPlayers.length > 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              Showing {filteredPlayers.length} of {allPlayers.length} approved players
+            </p>
+          )}
         </div>
 
         <FilterControls
@@ -119,7 +136,18 @@ const Players = () => {
           </div>
         )}
 
-        {!isLoading && !error && filteredPlayers.length === 0 && (
+        {!isLoading && !error && filteredPlayers.length === 0 && allPlayers.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              No players have been registered yet.
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              Players can be added through tournament registration or by a Rating Officer.
+            </p>
+          </div>
+        )}
+        
+        {!isLoading && !error && filteredPlayers.length === 0 && allPlayers.length > 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
               No players match your current filters.

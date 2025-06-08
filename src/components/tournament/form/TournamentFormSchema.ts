@@ -18,3 +18,6 @@ export const createTournamentSchema = z.object({
 export const tournamentSchema = createTournamentSchema;
 
 export type CreateTournamentFormData = z.infer<typeof createTournamentSchema>;
+
+// Export the type that other files are looking for
+export type TournamentFormSchemaType = CreateTournamentFormData;
