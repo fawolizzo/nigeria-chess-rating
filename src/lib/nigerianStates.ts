@@ -10,7 +10,7 @@ export const NIGERIA_STATES: NigerianState[] = [
     cities: ["Umuahia", "Aba", "Arochukwu", "Ohafia", "Bende"]
   },
   {
-    name: "Adamawa",
+    name: "Adamawa", 
     cities: ["Yola", "Mubi", "Jimeta", "Numan", "Ganye"]
   },
   {
@@ -163,5 +163,8 @@ export const getCitiesByState = (stateName: string): string[] => {
   const state = NIGERIA_STATES.find(s => s.name === stateName);
   return state ? state.cities : [];
 };
+
+// Export all cities for backwards compatibility
+export const NIGERIA_CITIES = NIGERIA_STATES.flatMap(state => state.cities);
 
 export const nigerianStates = NIGERIA_STATES;

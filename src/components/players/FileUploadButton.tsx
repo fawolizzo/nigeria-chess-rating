@@ -21,7 +21,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const generateNcrId = () => {
-    const randomPart = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+    const randomPart = Math.floor(1000 + Math.random() * 9000);
     return `NCR${randomPart}`;
   };
 
@@ -124,7 +124,6 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       const player: Partial<Player> = {
         id: ncrId,
         name: playerName.toString().trim(),
-        // State and Gender will be manually updated by rating officer
         state: '', // Will be updated manually
         gender: 'M', // Default, will be updated manually
         city: '',
@@ -138,7 +137,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       // Handle title
       if (titleIndex !== -1 && row[titleIndex]) {
         player.title = row[titleIndex].toString().trim();
-        player.titleVerified = true; // FIDE titles are verified
+        player.titleVerified = true;
       }
       
       // Handle FIDE ID
@@ -150,7 +149,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       if (classicalRatingIndex !== -1 && row[classicalRatingIndex]) {
         const rating = parseInt(row[classicalRatingIndex].toString(), 10);
         if (!isNaN(rating)) {
-          player.rating = rating + 100; // +100 bonus for FIDE players
+          player.rating = rating + 100;
           player.ratingStatus = 'established';
         } else {
           player.rating = 900;
@@ -236,12 +235,22 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       return;
     }
     
-    const formattedPlayers = processedPlayers.map(player => ({
+    // Sort players by classical rating (highest first) for stable ranking
+    const sortedPlayers = processedPlayers.sort((a, b) => {
+      const ratingA = a.rating || 900;
+      const ratingB = b.rating || 900;
+      return ratingB - ratingA; // Descending order
+    });
+    
+    console.log("📤 FileUpload: Processed players sorted by rating:", 
+      sortedPlayers.map(p => `${p.name}: ${p.rating}`));
+    
+    const formattedPlayers = sortedPlayers.map(player => ({
       id: player.id,
       name: player.name,
       rating: player.rating || 900,
-      state: '', // Will be updated manually
-      gender: 'M', // Default, will be updated manually
+      state: '',
+      gender: 'M',
       title: player.title || '',
       rapidRating: player.rapidRating,
       blitzRating: player.blitzRating,
@@ -253,7 +262,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     }
     
     if (onPlayersImported) {
-      onPlayersImported(processedPlayers);
+      onPlayersImported(sortedPlayers);
     }
     
     setIsLoading(false);
@@ -288,7 +297,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         <p className="text-sm text-gray-600 mb-4">
           Upload FIDE player list Excel or CSV file. Required: Player Name. Optional: Title, Classical/Rapid/Blitz ratings, Birth Year, FIDE ID.
           <br />
-          <strong>Note:</strong> State and Gender will be updated manually by the rating officer.
+          <strong>Note:</strong> Players will be ranked by Classical rating (highest first). State and Gender will be updated manually by the rating officer.
         </p>
         
         <input

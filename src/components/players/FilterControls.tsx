@@ -2,16 +2,16 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import CitySelector from "../selectors/CitySelector";
-import { NIGERIA_STATES } from "@/lib/nigerianStates";
+import { Search } from "lucide-react";
+import { NIGERIA_STATES, getCitiesByState } from "@/lib/nigerianStates";
 
 interface FilterControlsProps {
   searchQuery: string;
-  onSearchChange: (value: string) => void;
+  onSearchChange: (query: string) => void;
   selectedState: string;
-  onStateChange: (value: string) => void;
+  onStateChange: (state: string) => void;
   selectedCity: string;
-  onCityChange: (value: string) => void;
+  onCityChange: (city: string) => void;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -20,57 +20,63 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   selectedState,
   onStateChange,
   selectedCity,
-  onCityChange
+  onCityChange,
 }) => {
+  const cities = selectedState && selectedState !== "all-states" 
+    ? getCitiesByState(selectedState) 
+    : [];
+
+  const handleStateChange = (value: string) => {
+    onStateChange(value);
+    if (value === "all-states" || value === "") {
+      onCityChange("all-cities");
+    }
+  };
+
   return (
-    <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div>
-        <label htmlFor="searchQuery" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Search Players
-        </label>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
         <Input
-          id="searchQuery"
-          type="text"
-          placeholder="Search by name, email, or phone..."
+          type="search"
+          placeholder="Search players by name, title, or rating..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full"
+          className="pl-9"
         />
       </div>
       
-      <div>
-        <label htmlFor="stateFilter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Filter by State
-        </label>
-        <Select 
-          value={selectedState}
-          onValueChange={onStateChange}
-        >
-          <SelectTrigger id="stateFilter" className="w-full">
-            <SelectValue placeholder="Select state" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all-states">All States</SelectItem>
-            {NIGERIA_STATES.map((state) => (
-              <SelectItem key={state} value={state}>
-                {state}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div>
-        <label htmlFor="cityFilter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Filter by City
-        </label>
-        <CitySelector
-          selectedState={selectedState}
-          selectedCity={selectedCity}
-          onCityChange={onCityChange}
-          className="w-full"
-        />
-      </div>
+      <Select value={selectedState} onValueChange={handleStateChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="All States" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all-states">All States</SelectItem>
+          {NIGERIA_STATES.map((state) => (
+            <SelectItem key={state.name} value={state.name}>
+              {state.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select 
+        value={selectedCity} 
+        onValueChange={onCityChange}
+        disabled={!selectedState || selectedState === "all-states"}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="All Cities" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all-cities">All Cities</SelectItem>
+          {cities.map((city) => (
+            <SelectItem key={city} value={city}>
+              {city}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };

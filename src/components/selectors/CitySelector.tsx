@@ -1,31 +1,39 @@
 
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { NIGERIA_CITIES } from "@/lib/nigerianStates";
+import { getCitiesByState } from "@/lib/nigerianStates";
 
 interface CitySelectorProps {
   selectedState: string;
   selectedCity: string;
-  onCityChange: (value: string) => void;
-  className?: string;
+  onCityChange: (city: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
 }
 
 const CitySelector: React.FC<CitySelectorProps> = ({
   selectedState,
   selectedCity,
   onCityChange,
-  className = ""
+  placeholder = "Select city",
+  disabled = false
 }) => {
-  const availableCities = selectedState ? NIGERIA_CITIES[selectedState] || [] : [];
+  const cities = selectedState && selectedState !== "all-states" 
+    ? getCitiesByState(selectedState) 
+    : [];
 
   return (
-    <Select value={selectedCity} onValueChange={onCityChange}>
-      <SelectTrigger className={className}>
-        <SelectValue placeholder="Select city" />
+    <Select 
+      value={selectedCity} 
+      onValueChange={onCityChange}
+      disabled={disabled || !selectedState || selectedState === "all-states"}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all-cities">All Cities</SelectItem>
-        {availableCities.map((city) => (
+        {cities.map((city) => (
           <SelectItem key={city} value={city}>
             {city}
           </SelectItem>

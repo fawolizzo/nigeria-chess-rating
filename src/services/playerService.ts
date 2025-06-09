@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Player } from "@/lib/mockData";
 import { FLOOR_RATING } from "@/lib/ratingCalculation";
@@ -68,7 +69,7 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
       return [];
     }
     
-    // Map database fields to our application model
+    // Map database fields to our application model and sort by classical rating (highest first)
     const mappedPlayers = data.map((player, index) => {
       console.log(`🔄 Mapping player ${index + 1}:`, {
         id: player.id,
@@ -110,8 +111,17 @@ export const getAllPlayersFromSupabase = async (filters: PlayerFilter = {}): Pro
       return mappedPlayer;
     });
     
-    console.log(`🎯 Successfully mapped ${mappedPlayers.length} players`);
-    return mappedPlayers;
+    // Sort by classical rating in descending order (highest rating first)
+    const sortedPlayers = mappedPlayers.sort((a, b) => {
+      const ratingA = a.rating || FLOOR_RATING;
+      const ratingB = b.rating || FLOOR_RATING;
+      return ratingB - ratingA; // Descending order
+    });
+    
+    console.log(`🎯 Successfully mapped and sorted ${sortedPlayers.length} players by classical rating`);
+    console.log(`🏆 Top player: ${sortedPlayers[0]?.name} (${sortedPlayers[0]?.rating})`);
+    
+    return sortedPlayers;
     
   } catch (error) {
     console.error("💥 Error in getAllPlayersFromSupabase:", error);

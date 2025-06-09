@@ -1,31 +1,34 @@
 
 import React from "react";
-import { Control } from "react-hook-form";
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { UseFormReturn } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NIGERIA_STATES, getCitiesByState } from "@/lib/nigerianStates";
-import { CreateTournamentFormData } from "./TournamentFormSchema";
 
 interface TournamentLocationFieldsProps {
-  control: Control<CreateTournamentFormData>;
-  selectedState: string;
+  form: UseFormReturn<any>;
 }
 
-const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({
-  control,
-  selectedState
-}) => {
+const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({ form }) => {
+  const selectedState = form.watch("state");
   const cities = selectedState ? getCitiesByState(selectedState) : [];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField
-        control={control}
+        control={form.control}
         name="state"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>State</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value}>
+            <FormLabel>State *</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select state" />
@@ -33,8 +36,8 @@ const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({
               </FormControl>
               <SelectContent>
                 {NIGERIA_STATES.map((state) => (
-                  <SelectItem key={state} value={state}>
-                    {state}
+                  <SelectItem key={state.name} value={state.name}>
+                    {state.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -45,14 +48,14 @@ const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({
       />
 
       <FormField
-        control={control}
+        control={form.control}
         name="city"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>City</FormLabel>
+            <FormLabel>City *</FormLabel>
             <Select 
               onValueChange={field.onChange} 
-              value={field.value}
+              defaultValue={field.value}
               disabled={!selectedState}
             >
               <FormControl>
@@ -72,10 +75,22 @@ const TournamentLocationFields: React.FC<TournamentLocationFieldsProps> = ({
           </FormItem>
         )}
       />
+
+      <FormField
+        control={form.control}
+        name="location"
+        render={({ field }) => (
+          <FormItem className="md:col-span-2">
+            <FormLabel>Venue/Location *</FormLabel>
+            <FormControl>
+              <Input placeholder="e.g., Chess Center Lagos, National Theatre Complex" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 };
 
-// Export both as default and named export to handle different import patterns
 export default TournamentLocationFields;
-export { TournamentLocationFields };

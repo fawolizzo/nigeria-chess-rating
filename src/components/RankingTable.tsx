@@ -34,14 +34,17 @@ const RankingTable: React.FC<RankingTableProps> = ({
   itemsPerPage = 10, 
   showRankings = true 
 }) => {
-  // Sort players by classical rating (descending order)
+  // Sort players by classical rating (descending order) - highest rating first
   const sortedPlayers = [...players].sort((a, b) => {
     const ratingA = a.rating || 800;
     const ratingB = b.rating || 800;
-    return ratingB - ratingA;
+    return ratingB - ratingA; // Descending order for rankings
   });
 
   const displayPlayers = sortedPlayers.slice(0, itemsPerPage);
+
+  console.log("🏆 RankingTable: Displaying players sorted by rating:", 
+    displayPlayers.map(p => `${p.name}: ${p.rating}`));
 
   if (displayPlayers.length === 0) {
     return (
