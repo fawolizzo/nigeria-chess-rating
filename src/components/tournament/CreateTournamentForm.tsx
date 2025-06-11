@@ -18,3 +18,4 @@ const CreateTournamentForm = () => {
 };
 
 export default CreateTournamentForm;
+export { CreateTournamentForm };

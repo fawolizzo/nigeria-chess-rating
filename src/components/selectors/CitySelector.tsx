@@ -9,6 +9,7 @@ interface CitySelectorProps {
   onCityChange: (city: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  className?: string;
 }
 
 const CitySelector: React.FC<CitySelectorProps> = ({
@@ -16,7 +17,8 @@ const CitySelector: React.FC<CitySelectorProps> = ({
   selectedCity,
   onCityChange,
   placeholder = "Select city",
-  disabled = false
+  disabled = false,
+  className = ""
 }) => {
   const cities = selectedState && selectedState !== "all-states" 
     ? getCitiesByState(selectedState) 
@@ -28,7 +30,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({
       onValueChange={onCityChange}
       disabled={disabled || !selectedState || selectedState === "all-states"}
     >
-      <SelectTrigger>
+      <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

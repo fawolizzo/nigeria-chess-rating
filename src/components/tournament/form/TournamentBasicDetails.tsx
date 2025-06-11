@@ -1,26 +1,31 @@
 
 import React from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { UseFormReturn } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { UseFormReturn } from "react-hook-form";
-import { TournamentFormSchemaType } from "./TournamentFormSchema";
 
 interface TournamentBasicDetailsProps {
-  form: UseFormReturn<TournamentFormSchemaType>;
+  form: UseFormReturn<any>;
 }
 
-export function TournamentBasicDetails({ form }: TournamentBasicDetailsProps) {
+export const TournamentBasicDetails: React.FC<TournamentBasicDetailsProps> = ({ form }) => {
   return (
-    <>
+    <div className="space-y-4">
       <FormField
         control={form.control}
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Tournament Name</FormLabel>
+            <FormLabel>Tournament Name *</FormLabel>
             <FormControl>
-              <Input placeholder="Enter tournament name" {...field} />
+              <Input placeholder="e.g., Lagos Open Chess Championship 2024" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -35,8 +40,8 @@ export function TournamentBasicDetails({ form }: TournamentBasicDetailsProps) {
             <FormLabel>Description</FormLabel>
             <FormControl>
               <Textarea 
-                placeholder="Provide a description of your tournament" 
-                rows={3} 
+                placeholder="Brief description of the tournament..."
+                className="min-h-[100px]"
                 {...field} 
               />
             </FormControl>
@@ -44,6 +49,8 @@ export function TournamentBasicDetails({ form }: TournamentBasicDetailsProps) {
           </FormItem>
         )}
       />
-    </>
+    </div>
   );
-}
+};
+
+export default TournamentBasicDetails;

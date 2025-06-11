@@ -1,47 +1,39 @@
 
-import React, { useState, useEffect } from "react";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React from "react";
 import { UseFormReturn } from "react-hook-form";
-import { TIME_CONTROLS } from "@/data/timeControls";
-import { TournamentFormSchemaType } from "./TournamentFormSchema";
-import { validateTimeControl } from "@/utils/timeControlValidation";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface TournamentConfigFieldsProps {
-  form: UseFormReturn<TournamentFormSchemaType>;
+  form: UseFormReturn<any>;
   isCustomTimeControl: boolean;
-  setIsCustomTimeControl: (value: boolean) => void;
-  customTimeControl: string;
-  setCustomTimeControl: (value: string) => void;
-  customTimeControlError: string | null;
-  setCustomTimeControlError: (value: string | null) => void;
+  validateCustomTimeControl: (value: string) => string | null;
+  updateCustomTimeControlState: (value: string) => void;
+  watchTimeControl: string;
 }
 
-export function TournamentConfigFields({ 
-  form, 
-  isCustomTimeControl, 
-  setIsCustomTimeControl,
-  customTimeControl,
-  setCustomTimeControl,
-  customTimeControlError,
-  setCustomTimeControlError
-}: TournamentConfigFieldsProps) {
-  
-  // Validate the custom time control whenever it changes
-  useEffect(() => {
-    if (isCustomTimeControl) {
-      const validationResult = validateTimeControl(customTimeControl);
-      if (!validationResult.isValid) {
-        setCustomTimeControlError(validationResult.error || "Invalid time control format");
-      } else {
-        setCustomTimeControlError(null);
-      }
-    } else {
-      setCustomTimeControlError(null);
-    }
-  }, [customTimeControl, isCustomTimeControl, setCustomTimeControlError]);
+export const TournamentConfigFields: React.FC<TournamentConfigFieldsProps> = ({
+  form,
+  isCustomTimeControl,
+  validateCustomTimeControl,
+  updateCustomTimeControlState,
+  watchTimeControl,
+}) => {
+  const timeControlOptions = [
+    { value: "90+30", label: "90 minutes + 30 seconds (Classical)" },
+    { value: "25+10", label: "25 minutes + 10 seconds (Rapid)" },
+    { value: "5+3", label: "5 minutes + 3 seconds (Blitz)" },
+    { value: "3+2", label: "3 minutes + 2 seconds (Blitz)" },
+    { value: "custom", label: "Custom Time Control" },
+  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -50,20 +42,40 @@ export function TournamentConfigFields({
         name="rounds"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Number of Rounds</FormLabel>
-            <Select
-              onValueChange={(value) => field.onChange(parseInt(value, 10))}
-              value={field.value.toString()}
-            >
+            <FormLabel>Number of Rounds *</FormLabel>
+            <FormControl>
+              <Input 
+                type="number" 
+                min="1" 
+                max="20" 
+                {...field}
+                onChange={(e) => field.onChange(parseInt(e.target.value))}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="timeControl"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Time Control *</FormLabel>
+            <Select onValueChange={(value) => {
+              field.onChange(value);
+              updateCustomTimeControlState(value);
+            }} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select rounds" />
+                  <SelectValue placeholder="Select time control" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {[5, 6, 7, 8, 9, 11].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} Rounds
+                {timeControlOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -73,71 +85,49 @@ export function TournamentConfigFields({
         )}
       />
 
-      <div>
+      {isCustomTimeControl && (
         <FormField
           control={form.control}
-          name="timeControl"
+          name="customTimeControl"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Time Control</FormLabel>
-              <div className="space-y-2">
-                {!isCustomTimeControl ? (
-                  <Select 
-                    onValueChange={(value) => {
-                      if (value === "custom") {
-                        setIsCustomTimeControl(true);
-                        setCustomTimeControlError(null);
-                        field.onChange("");
-                      } else {
-                        field.onChange(value);
-                      }
-                    }} 
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time control" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {TIME_CONTROLS.map((timeControl) => (
-                        <SelectItem key={timeControl.value} value={timeControl.value}>
-                          {timeControl.label}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="custom">Custom Time Control</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="space-y-2">
-                    <Input 
-                      value={customTimeControl}
-                      onChange={(e) => {
-                        setCustomTimeControl(e.target.value);
-                        // Validation will be handled by the useEffect
-                      }}
-                      placeholder="e.g., 90min or 15min + 10sec"
-                      className={customTimeControlError ? "border-red-500" : ""}
-                    />
-                    {customTimeControlError && (
-                      <p className="text-sm text-red-500">{customTimeControlError}</p>
-                    )}
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setIsCustomTimeControl(false)}
-                    >
-                      Use preset time control
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <FormItem className="md:col-span-2">
+              <FormLabel>Custom Time Control *</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="e.g., 60+15 (format: minutes+increment)"
+                  {...field}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-      </div>
+      )}
+
+      <FormField
+        control={form.control}
+        name="registrationOpen"
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 md:col-span-2">
+            <div className="space-y-0.5">
+              <FormLabel className="text-base">
+                Open Registration
+              </FormLabel>
+              <div className="text-sm text-muted-foreground">
+                Allow players to register for this tournament
+              </div>
+            </div>
+            <FormControl>
+              <Switch
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
     </div>
   );
-}
+};
+
+export default TournamentConfigFields;

@@ -6,15 +6,15 @@ import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Trophy, Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import TournamentBasicDetails from "./TournamentBasicDetails";
+import { TournamentBasicDetails } from "./TournamentBasicDetails";
 import TournamentLocationFields from "./TournamentLocationFields";
 import TournamentDateSelection from "./TournamentDateSelection";
-import TournamentConfigFields from "./TournamentConfigFields";
-import { NIGERIA_STATES } from "@/lib/nigerianStates";
+import { TournamentConfigFields } from "./TournamentConfigFields";
 
 interface CreateTournamentFormUIProps {
   form: UseFormReturn<any>;
-  onSubmit: (data: any) => void;
+  onSubmit?: (data: any) => void;
+  handleSubmit: (data: any) => void;
   isSubmitting: boolean;
   errorMsg: string | null;
   isCustomTimeControl: boolean;
@@ -26,6 +26,7 @@ interface CreateTournamentFormUIProps {
 const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
   form,
   onSubmit,
+  handleSubmit,
   isSubmitting,
   errorMsg,
   isCustomTimeControl,
@@ -33,6 +34,8 @@ const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
   updateCustomTimeControlState,
   watchTimeControl,
 }) => {
+  const submitHandler = onSubmit || handleSubmit;
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center mb-8">
@@ -45,7 +48,7 @@ const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(submitHandler)} className="space-y-6">
           {/* Basic Details */}
           <Card>
             <CardHeader>
@@ -146,3 +149,4 @@ const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
 };
 
 export default CreateTournamentFormUI;
+export { CreateTournamentFormUI };

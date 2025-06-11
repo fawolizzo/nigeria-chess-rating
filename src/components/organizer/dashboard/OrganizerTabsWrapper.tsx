@@ -1,7 +1,7 @@
 
 import React from "react";
 import { OrganizerTabs } from "@/components/organizer/OrganizerTabs";
-import { CreateTournamentForm } from "@/components/tournament/CreateTournamentForm";
+import CreateTournamentForm from "@/components/tournament/CreateTournamentForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TournamentFormData } from "@/types/tournamentTypes";
 
@@ -36,10 +36,7 @@ export function OrganizerTabsWrapper({
               Enter the details for your new chess tournament
             </DialogDescription>
           </DialogHeader>
-          <CreateTournamentForm
-            onSubmit={handleCreateTournament}
-            onCancel={() => setIsCreateTournamentOpen(false)}
-          />
+          <CreateTournamentForm />
         </DialogContent>
       </Dialog>
       <OrganizerTabs

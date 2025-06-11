@@ -1,37 +1,18 @@
 
-import { useCreateTournamentForm } from '@/hooks/useCreateTournamentForm';
-import { CreateTournamentFormUI } from '@/components/tournament/form/CreateTournamentFormUI';
+import React from "react";
+import Navbar from "@/components/Navbar";
+import CreateTournamentFormUI from "@/components/tournament/form/CreateTournamentFormUI";
+import { useCreateTournamentForm } from "@/hooks/useCreateTournamentForm";
 
 export default function CreateTournament() {
-  const {
-    form,
-    isCustomTimeControl,
-    isSubmitting,
-    errorMsg,
-    validateCustomTimeControl,
-    handleSubmit,
-    updateCustomTimeControlState,
-    navigate,
-    watchTimeControl,
-  } = useCreateTournamentForm();
-
-  const handleCancel = () => {
-    navigate('/organizer-dashboard');
-  };
+  const formData = useCreateTournamentForm();
 
   return (
-    <div className="container mx-auto py-8">
-      <CreateTournamentFormUI 
-        form={form}
-        isCustomTimeControl={isCustomTimeControl}
-        watchTimeControl={watchTimeControl}
-        isSubmitting={isSubmitting}
-        errorMsg={errorMsg}
-        validateCustomTimeControl={validateCustomTimeControl}
-        updateCustomTimeControlState={updateCustomTimeControlState}
-        onCancel={handleCancel}
-        onSubmit={handleSubmit}
-      />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Navbar />
+      <div className="container mx-auto px-4 pt-24 pb-20">
+        <CreateTournamentFormUI {...formData} />
+      </div>
     </div>
   );
 }
