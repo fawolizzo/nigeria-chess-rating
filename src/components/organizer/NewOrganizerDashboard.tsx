@@ -1,91 +1,84 @@
 
 import React, { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Tournament } from "@/lib/mockData";
-import { TournamentFormData } from "@/types/tournamentTypes";
+import { useUser } from "@/contexts/UserContext";
+import { useNavigate } from "react-router-dom";
+import { useTournamentManager } from "@/hooks/useTournamentManager";
+import { Tournament, TournamentFormData } from "@/types/tournamentTypes";
 import { OrganizerTabsWrapper } from "./dashboard/OrganizerTabsWrapper";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 
-const NewOrganizerDashboard = () => {
+const NewOrganizerDashboard: React.FC = () => {
+  const { currentUser } = useUser();
+  const navigate = useNavigate();
+  const { tournaments, createTournament, loading, error } = useTournamentManager();
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
-  const { toast } = useToast();
 
+  // Filter tournaments by status - fix the status comparison
   const filterTournamentsByStatus = (status: string): Tournament[] => {
-    return tournaments.filter(tournament => {
-      switch (status) {
-        case "upcoming":
-          return tournament.status === "upcoming" || tournament.status === "pending";
-        case "ongoing":
-          return tournament.status === "ongoing";
-        case "completed":
-          return tournament.status === "completed";
-        case "rejected":
-          return tournament.status === "rejected";
-        default:
-          return true;
-      }
-    });
-  };
-
-  const handleCreateTournament = (
-    data: TournamentFormData,
-    customTimeControl: string,
-    isCustomTimeControl: boolean
-  ): boolean => {
-    try {
-      const newTournament: Tournament = {
-        id: Date.now().toString(),
-        name: data.name,
-        description: data.description || "",
-        startDate: data.startDate.toISOString().split('T')[0],
-        endDate: data.endDate.toISOString().split('T')[0],
-        location: data.location,
-        city: data.city,
-        state: data.state,
-        organizerId: "current-organizer",
-        status: "pending",
-        timeControl: isCustomTimeControl ? customTimeControl : data.timeControl,
-        rounds: data.rounds,
-        currentRound: 1,
-        participants: 0,
-        registrationOpen: data.registrationOpen,
-        players: [],
-        pairings: [],
-        results: [],
-      };
-
-      setTournaments(prev => [...prev, newTournament]);
-      setIsCreateTournamentOpen(false);
-      
-      toast({
-        title: "Tournament Created",
-        description: "Your tournament has been submitted for approval.",
-      });
-
-      return true;
-    } catch (error) {
-      console.error("Error creating tournament:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create tournament. Please try again.",
-        variant: "destructive",
-      });
-      return false;
+    if (!tournaments) return [];
+    
+    switch (status) {
+      case "upcoming":
+        return tournaments.filter(t => t.status === "approved" && new Date(t.startDate) > new Date());
+      case "pending":
+        return tournaments.filter(t => t.status === "pending");
+      case "ongoing":
+        return tournaments.filter(t => t.status === "ongoing");
+      case "completed":
+        return tournaments.filter(t => t.status === "completed");
+      case "rejected":
+        return tournaments.filter(t => t.status === "rejected");
+      default:
+        return tournaments;
     }
-  };
-
-  const handleViewDetails = (id: string) => {
-    console.log("View details for tournament:", id);
-  };
-
-  const handleManage = (id: string) => {
-    console.log("Manage tournament:", id);
   };
 
   const onCreateTournament = () => {
     setIsCreateTournamentOpen(true);
   };
+
+  const onViewDetails = (id: string) => {
+    navigate(`/tournament/${id}`);
+  };
+
+  const onManage = (id: string) => {
+    navigate(`/tournament-management/${id}`);
+  };
+
+  const handleCreateTournament = (
+    data: TournamentFormData, 
+    customTimeControl: string, 
+    isCustomTimeControl: boolean
+  ): boolean => {
+    try {
+      // Add default values for missing properties
+      const tournamentData = {
+        ...data,
+        registrationOpen: data.registrationOpen ?? true,
+        participants: 0,
+        currentRound: 1,
+        players: [],
+        pairings: [],
+        results: []
+      };
+
+      createTournament(tournamentData, customTimeControl, isCustomTimeControl);
+      setIsCreateTournamentOpen(false);
+      return true;
+    } catch (error) {
+      logMessage(LogLevel.ERROR, 'NewOrganizerDashboard', 'Error creating tournament:', error);
+      return false;
+    }
+  };
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading tournaments...</div>;
+  }
+
+  if (error) {
+    return <div className="p-4 text-center text-red-600">Error: {error}</div>;
+  }
 
   return (
     <OrganizerTabsWrapper
@@ -93,8 +86,8 @@ const NewOrganizerDashboard = () => {
       setActiveTab={setActiveTab}
       filterTournamentsByStatus={filterTournamentsByStatus}
       onCreateTournament={onCreateTournament}
-      onViewDetails={handleViewDetails}
-      onManage={handleManage}
+      onViewDetails={onViewDetails}
+      onManage={onManage}
       isCreateTournamentOpen={isCreateTournamentOpen}
       setIsCreateTournamentOpen={setIsCreateTournamentOpen}
       handleCreateTournament={handleCreateTournament}
@@ -103,4 +96,3 @@ const NewOrganizerDashboard = () => {
 };
 
 export default NewOrganizerDashboard;
-export { NewOrganizerDashboard };
