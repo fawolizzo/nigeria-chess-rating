@@ -98,6 +98,8 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       rapidGamesPlayed: 0,
       blitzGamesPlayed: 0,
       created_at: new Date().toISOString(),
+      title: newPlayer.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" | undefined,
+      tournamentResults: [],
     };
 
     const updatedPlayers = [...players, player];

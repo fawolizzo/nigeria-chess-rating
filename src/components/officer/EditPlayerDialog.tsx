@@ -22,20 +22,20 @@ import { Player } from "@/lib/mockData";
 import StateSelector from "@/components/selectors/StateSelector";
 import CitySelector from "@/components/selectors/CitySelector";
 import { useToast } from "@/hooks/use-toast";
-import { updatePlayer } from "@/services/mockServices";
+import { updatePlayerInSupabase } from "@/services/playerService";
 
 interface EditPlayerDialogProps {
   player: Player;
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onClose: () => void;
+  onSave: (updatedPlayer: Player) => void;
 }
 
 const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   player,
   isOpen,
-  onOpenChange,
-  onSuccess
+  onClose,
+  onSave
 }) => {
   const [formData, setFormData] = useState({
     name: player.name,
@@ -81,16 +81,20 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
         city: formData.city,
       };
 
-      await updatePlayer(updatedPlayer);
-
-      toast({
-        title: "Player updated",
-        description: `${formData.name}'s information has been updated.`,
-        duration: 3000,
-      });
+      const result = await updatePlayerInSupabase(updatedPlayer.id, updatedPlayer);
       
-      onSuccess();
-      onOpenChange(false);
+      if (result) {
+        toast({
+          title: "Player updated",
+          description: `${formData.name}'s information has been updated.`,
+          duration: 3000,
+        });
+        
+        onSave(updatedPlayer);
+        onClose();
+      } else {
+        throw new Error("Update failed");
+      }
     } catch (error) {
       console.error("Error updating player:", error);
       toast({
@@ -105,7 +109,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Player</DialogTitle>
@@ -177,7 +181,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={onClose}
               disabled={isSubmitting}
             >
               Cancel

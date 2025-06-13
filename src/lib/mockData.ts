@@ -3,6 +3,17 @@ export interface RatingHistory {
   date: string;
   rating: number;
   change: number;
+  reason?: string;
+}
+
+export interface TournamentResult {
+  tournamentId: string;
+  tournamentName: string;
+  date: string;
+  result: string;
+  opponent: string;
+  ratingChange: number;
+  format: "classical" | "rapid" | "blitz";
 }
 
 export interface Player {
@@ -36,6 +47,7 @@ export interface Player {
   achievements?: string[];
   club?: string;
   birthYear?: number;
+  tournamentResults?: TournamentResult[];
 }
 
 export interface Pairing {
@@ -55,18 +67,18 @@ export interface Tournament {
   id: string;
   name: string;
   description: string;
-  startDate: string;
-  endDate: string;
+  start_date: string;
+  end_date: string;
   location: string;
   city: string;
   state: string;
-  organizerId: string;
-  status: "pending" | "approved" | "ongoing" | "completed" | "rejected";
-  timeControl: string;
+  organizer_id: string;
+  status: "pending" | "approved" | "rejected" | "ongoing" | "completed" | "processed";
+  time_control: string;
   rounds: number;
-  currentRound: number;
+  current_round: number;
   participants: number;
-  registrationOpen: boolean;
+  registration_open: boolean;
   players: Player[];
   pairings: Pairing[];
   results: Result[];
@@ -87,3 +99,6 @@ export interface PlayerWithScore extends Player {
   score: number;
   tiebreak?: number;
 }
+
+// Export type alias for backward compatibility
+export type RatingHistoryEntry = RatingHistory;

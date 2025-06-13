@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,10 @@ interface MultiSelectPlayersProps {
   onOpenChange: (open: boolean) => void;
   onPlayersSelected: (players: Player[]) => void;
   excludeIds?: string[];
+  excludePlayerIds?: string[];
   hideDialog?: boolean;
   includePendingPlayers?: boolean;
+  allPlayers?: Player[];
 }
 
 const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
@@ -22,33 +23,45 @@ const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
   onOpenChange,
   onPlayersSelected,
   excludeIds = [],
+  excludePlayerIds = [],
   hideDialog = false,
-  includePendingPlayers = false
+  includePendingPlayers = false,
+  allPlayers
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  // Combine excludeIds and excludePlayerIds for backward compatibility
+  const combinedExcludeIds = [...excludeIds, ...excludePlayerIds];
+
   useEffect(() => {
     const loadPlayers = () => {
       try {
-        const storedPlayers = localStorage.getItem('players');
-        if (storedPlayers) {
-          const allPlayers: Player[] = JSON.parse(storedPlayers);
-          const filteredPlayers = allPlayers.filter(player => {
-            // Filter by status
-            const statusMatch = includePendingPlayers ? 
-              (player.status === "approved" || player.status === "pending") : 
-              player.status === "approved";
-            
-            // Filter out excluded IDs
-            const notExcluded = !excludeIds.includes(player.id);
-            
-            return statusMatch && notExcluded;
-          });
-          setPlayers(filteredPlayers);
+        let playersToUse: Player[] = [];
+        
+        if (allPlayers) {
+          playersToUse = allPlayers;
+        } else {
+          const storedPlayers = localStorage.getItem('players');
+          if (storedPlayers) {
+            playersToUse = JSON.parse(storedPlayers);
+          }
         }
+
+        const filteredPlayers = playersToUse.filter(player => {
+          // Filter by status
+          const statusMatch = includePendingPlayers ? 
+            (player.status === "approved" || player.status === "pending") : 
+            player.status === "approved";
+          
+          // Filter out excluded IDs
+          const notExcluded = !combinedExcludeIds.includes(player.id);
+          
+          return statusMatch && notExcluded;
+        });
+        setPlayers(filteredPlayers);
       } catch (error) {
         console.error('Error loading players:', error);
       } finally {
@@ -59,7 +72,7 @@ const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
     if (isOpen) {
       loadPlayers();
     }
-  }, [isOpen, excludeIds, includePendingPlayers]);
+  }, [isOpen, combinedExcludeIds, includePendingPlayers, allPlayers]);
 
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

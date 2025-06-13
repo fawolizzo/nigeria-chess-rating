@@ -10,7 +10,7 @@ import { logMessage, LogLevel } from "@/utils/debugLogger";
 const NewOrganizerDashboard: React.FC = () => {
   const { currentUser } = useUser();
   const navigate = useNavigate();
-  const { tournaments, createTournament, loading, error } = useTournamentManager();
+  const { tournaments, createTournament, isLoading, loadError } = useTournamentManager();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
 
@@ -20,7 +20,7 @@ const NewOrganizerDashboard: React.FC = () => {
     
     switch (status) {
       case "upcoming":
-        return tournaments.filter(t => t.status === "approved" && new Date(t.startDate) > new Date());
+        return tournaments.filter(t => t.status === "approved" && new Date(t.start_date) > new Date());
       case "pending":
         return tournaments.filter(t => t.status === "pending");
       case "ongoing":
@@ -56,11 +56,6 @@ const NewOrganizerDashboard: React.FC = () => {
       const tournamentData = {
         ...data,
         registrationOpen: data.registrationOpen ?? true,
-        participants: 0,
-        currentRound: 1,
-        players: [],
-        pairings: [],
-        results: []
       };
 
       createTournament(tournamentData, customTimeControl, isCustomTimeControl);
@@ -72,12 +67,12 @@ const NewOrganizerDashboard: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="p-4 text-center">Loading tournaments...</div>;
   }
 
-  if (error) {
-    return <div className="p-4 text-center text-red-600">Error: {error}</div>;
+  if (loadError) {
+    return <div className="p-4 text-center text-red-600">Error: {loadError}</div>;
   }
 
   return (

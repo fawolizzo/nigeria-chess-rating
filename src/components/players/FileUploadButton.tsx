@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Upload, AlertCircle } from "lucide-react";
@@ -131,13 +130,18 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         phone: '',
         email: '',
         gamesPlayed: 31,
-        status: 'approved'
+        status: 'approved',
+        tournamentResults: []
       };
       
       // Handle title
       if (titleIndex !== -1 && row[titleIndex]) {
-        player.title = row[titleIndex].toString().trim();
-        player.titleVerified = true;
+        const titleValue = row[titleIndex].toString().trim();
+        const validTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"];
+        if (validTitles.includes(titleValue)) {
+          player.title = titleValue as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM";
+          player.titleVerified = true;
+        }
       }
       
       // Handle FIDE ID
@@ -208,18 +212,21 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       player.ratingHistory = [{
         date: currentDate,
         rating: player.rating || 900,
+        change: 0,
         reason: "Initial FIDE rating with +100 bonus"
       }];
       
       player.rapidRatingHistory = [{
         date: currentDate,
         rating: player.rapidRating || 900,
+        change: 0,
         reason: "Initial FIDE rating with +100 bonus"
       }];
       
       player.blitzRatingHistory = [{
         date: currentDate,
         rating: player.blitzRating || 900,
+        change: 0,
         reason: "Initial FIDE rating with +100 bonus"
       }];
       

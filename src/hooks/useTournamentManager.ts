@@ -88,7 +88,9 @@ export function useTournamentManager() {
       const formattedEndDate = format(tournamentData.endDate, 'yyyy-MM-dd');
       
       // Use consistent field naming with the rest of the application
-      const timeControlValue = isCustomTimeControl ? customTimeControl : tournamentData.timeControl;
+      const timeControlValue = isCustomTimeControl && tournamentData.customTimeControl 
+        ? tournamentData.customTimeControl 
+        : tournamentData.timeControl;
 
       const newTournament: Tournament = {
         id: uuidv4(),
@@ -103,6 +105,9 @@ export function useTournamentManager() {
         time_control: timeControlValue,
         organizer_id: currentUser.id,
         status: 'pending',
+        current_round: 1,
+        participants: 0,
+        registration_open: tournamentData.registrationOpen ?? true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -121,11 +126,6 @@ export function useTournamentManager() {
         
         tournamentsArray.push(newTournament);
         localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsArray));
-        
-        // Broadcast a storage sync event to notify other tabs/windows
-        if (window.sendSyncEvent) {
-          window.sendSyncEvent('STORAGE_UPDATED', 'ncr_tournaments');
-        }
         
         // Update local state with user's tournaments only
         const userTournaments = tournamentsArray.filter(t => t.organizer_id === currentUser?.id);

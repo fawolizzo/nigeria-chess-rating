@@ -46,6 +46,7 @@ const PlayerProfile = () => {
             playerData.ratingHistory = [{
               date: new Date().toISOString(),
               rating: playerData.rating,
+              change: 0,
               reason: "Initial rating"
             }];
           }
@@ -54,6 +55,7 @@ const PlayerProfile = () => {
             playerData.rapidRatingHistory = [{
               date: new Date().toISOString(),
               rating: playerData.rapidRating || 800,
+              change: 0,
               reason: "Initial rapid rating"
             }];
           }
@@ -62,6 +64,7 @@ const PlayerProfile = () => {
             playerData.blitzRatingHistory = [{
               date: new Date().toISOString(),
               rating: playerData.blitzRating || 800,
+              change: 0,
               reason: "Initial blitz rating"
             }];
           }
