@@ -1,3 +1,4 @@
+
 import { Tournament } from "@/lib/mockData";
 import { v4 as uuidv4 } from "uuid";
 import { saveToStorage, getFromStorage } from "@/utils/storageUtils";
@@ -7,19 +8,19 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
   const newTournament: Tournament = {
     id: uuidv4(),
     name: tournamentData.name || "",
-    startDate: tournamentData.startDate || new Date().toISOString(),
-    endDate: tournamentData.endDate || new Date().toISOString(),
+    start_date: tournamentData.start_date || new Date().toISOString(),
+    end_date: tournamentData.end_date || new Date().toISOString(),
     location: tournamentData.location || "",
-    format: tournamentData.format || "Swiss",
     rounds: tournamentData.rounds || 5,
-    timeControl: tournamentData.timeControl || "90+30",
+    time_control: tournamentData.time_control || "90+30",
     description: tournamentData.description || "",
-    organizerId: tournamentData.organizerId || "",
-    status: "planning",
-    participants: [],
-    winner: tournamentData.winner || null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    organizer_id: tournamentData.organizer_id || "",
+    status: "pending",
+    participants: 0,
+    current_round: 1,
+    registration_open: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     city: tournamentData.city || "",
     state: tournamentData.state || "",
   };
@@ -33,6 +34,10 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
     console.error("Error creating tournament:", error);
     throw new Error("Failed to create tournament");
   }
+};
+
+export const createTournamentInSupabase = async (tournamentData: Partial<Tournament>): Promise<Tournament> => {
+  return createTournament(tournamentData);
 };
 
 export const getAllTournamentsFromSupabase = async (filters: {
@@ -54,7 +59,7 @@ export const getAllTournamentsFromSupabase = async (filters: {
 
     // Filter by organizerId
     if (filters.organizerId) {
-      tournaments = tournaments.filter(tournament => tournament && tournament.organizerId === filters.organizerId);
+      tournaments = tournaments.filter(tournament => tournament && tournament.organizer_id === filters.organizerId);
     }
 
     return tournaments;
@@ -62,6 +67,13 @@ export const getAllTournamentsFromSupabase = async (filters: {
     console.error("Error fetching tournaments:", error);
     return [];
   }
+};
+
+export const getTournamentsFromSupabase = async (filters: {
+  status?: string;
+  organizerId?: string;
+} = {}): Promise<Tournament[]> => {
+  return getAllTournamentsFromSupabase(filters);
 };
 
 export const getTournamentFromSupabase = async (id: string): Promise<Tournament | null> => {
@@ -87,7 +99,7 @@ export const updateTournamentInSupabase = async (id: string, updates: Partial<To
     const updatedTournament = {
       ...tournaments[tournamentIndex],
       ...updates,
-      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     tournaments[tournamentIndex] = updatedTournament;
@@ -123,15 +135,11 @@ export const addPlayerToTournament = async (tournamentId: string, players: Playe
     
     const tournament = tournaments[tournamentIndex];
     if (!tournament.participants) {
-      tournament.participants = [];
+      tournament.participants = 0;
     }
     
-    // Add players that aren't already in the tournament
-    players.forEach(player => {
-      if (!tournament.participants.find((p: Player) => p.id === player.id)) {
-        tournament.participants.push(player);
-      }
-    });
+    // For now, just update the participant count
+    tournament.participants += players.length;
     
     tournaments[tournamentIndex] = tournament;
     saveToStorage('tournaments', tournaments);
@@ -152,8 +160,8 @@ export const removePlayerFromTournament = async (tournamentId: string, playerId:
     }
     
     const tournament = tournaments[tournamentIndex];
-    if (tournament.participants) {
-      tournament.participants = tournament.participants.filter((p: Player) => p.id !== playerId);
+    if (tournament.participants && tournament.participants > 0) {
+      tournament.participants -= 1;
     }
     
     tournaments[tournamentIndex] = tournament;

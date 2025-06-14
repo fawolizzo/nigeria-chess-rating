@@ -2,7 +2,7 @@
 import React from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Mail, Phone } from "lucide-react";
+import { MapPin, Mail, Phone, Info } from "lucide-react";
 
 const About = () => {
   return (
@@ -10,7 +10,14 @@ const About = () => {
       <Navbar />
       
       <div className="container pt-24 pb-20 px-4 max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 text-center">
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/lovable-uploads/f6331ac0-4301-4fb1-a69c-e9d40250dc43.png" 
+              alt="About NCR" 
+              className="w-16 h-16"
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
             About Nigerian Chess Rating System
           </h1>

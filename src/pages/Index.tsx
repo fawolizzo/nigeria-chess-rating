@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,14 +54,20 @@ const Index = () => {
   const TopPlayersSection = () => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle className="text-xl font-bold flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            Top Rated Players
-          </CardTitle>
-          <CardDescription>
-            Leading players by Classical rating
-          </CardDescription>
+        <div className="flex items-center gap-3">
+          <img 
+            src="/lovable-uploads/362142dd-98df-49bb-949e-58332bb00376.png" 
+            alt="Players" 
+            className="w-8 h-8"
+          />
+          <div>
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              Top Rated Players
+            </CardTitle>
+            <CardDescription>
+              Leading players by Classical rating
+            </CardDescription>
+          </div>
         </div>
         <Button variant="outline" asChild>
           <Link to="/players">View All</Link>
