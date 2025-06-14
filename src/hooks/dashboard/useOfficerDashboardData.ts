@@ -29,6 +29,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
   const { tournaments, players, isLoading: storageLoading, updateTournaments, updatePlayers } = useDashboardStorage();
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingOrganizers, setPendingOrganizers] = useState<User[]>([]);
   const dataTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Filter tournaments by status
@@ -38,22 +39,48 @@ export const useOfficerDashboardData = (): DashboardResult => {
   // Filter players by status
   const pendingPlayers = players.filter(p => p.status === "pending");
 
-  // Mock pending organizers for now
-  const [pendingOrganizers, setPendingOrganizers] = useState<User[]>([]);
-
-  // Load organizers from localStorage
+  // Load organizers from localStorage with error handling
   useEffect(() => {
     try {
       const storedUsers = localStorage.getItem('ncr_users');
       if (storedUsers) {
-        const users: User[] = JSON.parse(storedUsers);
-        const pending = users.filter(u => u.role === "tournament_organizer" && u.status === "pending");
-        setPendingOrganizers(pending);
+        const parsed = JSON.parse(storedUsers);
+        
+        // Handle both direct array and wrapped object formats
+        let users: User[] = [];
+        if (Array.isArray(parsed)) {
+          users = parsed;
+        } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.data)) {
+          users = parsed.data;
+        } else if (parsed && typeof parsed === 'object') {
+          // If it's an object but not wrapped, try to extract user data
+          users = Object.values(parsed).filter((item): item is User => 
+            typeof item === 'object' && 
+            item !== null && 
+            'role' in item && 
+            'status' in item
+          );
+        }
+        
+        // Ensure users is an array before filtering
+        if (Array.isArray(users)) {
+          const pending = users.filter(u => 
+            u.role === "tournament_organizer" && 
+            u.status === "pending"
+          );
+          setPendingOrganizers(pending);
+        } else {
+          console.warn('Users data is not in expected format:', parsed);
+          setPendingOrganizers([]);
+        }
+      } else {
+        setPendingOrganizers([]);
       }
     } catch (error) {
       console.error('Error loading organizers:', error);
       setHasError(true);
       setErrorMessage('Failed to load organizer data');
+      setPendingOrganizers([]);
     }
   }, []);
 

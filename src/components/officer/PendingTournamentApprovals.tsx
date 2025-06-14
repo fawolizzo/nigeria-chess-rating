@@ -1,11 +1,11 @@
-import React from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, AlertTriangle, Info } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import { Tournament } from "@/lib/mockData";
-import { formatDate } from "@/utils/dateUtils";
-import { updateTournament } from "@/services/mockServices";
+import { Calendar, MapPin, Users, Trophy, Clock, CheckCircle, XCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { updateTournamentInSupabase } from "@/services/tournamentService";
 
 interface PendingTournamentApprovalsProps {
   tournaments: Tournament[];
@@ -16,124 +16,112 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
   tournaments, 
   onApprovalUpdate 
 }) => {
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
-  
-  const handleApproveTournament = async (tournament: Tournament) => {
+
+  const handleApproval = async (tournamentId: string, approved: boolean) => {
+    if (processingIds.has(tournamentId)) return;
+
+    setProcessingIds(prev => new Set(prev).add(tournamentId));
+
     try {
-      const updatedTournament = {
-        ...tournament,
-        status: "approved" as Tournament["status"]
-      };
-      
-      updateTournament(updatedTournament);
+      const newStatus = approved ? "approved" : "rejected";
+      await updateTournamentInSupabase(tournamentId, { status: newStatus });
       
       toast({
-        title: "Tournament Approved",
-        description: "The tournament has been approved successfully",
-        variant: "default",
+        title: approved ? "Tournament Approved" : "Tournament Rejected",
+        description: `The tournament has been ${approved ? "approved" : "rejected"}.`,
       });
       
       onApprovalUpdate();
     } catch (error) {
-      console.error("Error approving tournament:", error);
+      console.error("Error updating tournament:", error);
       toast({
         title: "Error",
-        description: "Failed to approve tournament",
+        description: "Failed to update tournament status. Please try again.",
         variant: "destructive",
+      });
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tournamentId);
+        return newSet;
       });
     }
   };
-  
-  const handleRejectTournament = async (tournament: Tournament) => {
-    try {
-      const updatedTournament = {
-        ...tournament,
-        status: "rejected" as Tournament["status"]
-      };
-      
-      updateTournament(updatedTournament);
-      
-      toast({
-        title: "Tournament Rejected",
-        description: "The tournament has been rejected",
-        variant: "destructive",
-      });
-      
-      onApprovalUpdate();
-    } catch (error) {
-      console.error("Error rejecting tournament:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject tournament",
-        variant: "destructive",
-      });
-    }
-  };
-  
+
+  if (tournaments.length === 0) {
+    return (
+      <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-md">
+        <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pending tournaments</h3>
+        <p className="text-gray-500 dark:text-gray-400">
+          Tournament approval requests will appear here.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Pending Tournament Approvals</h2>
-          <p className="text-sm text-muted-foreground">
-            Tournaments waiting for your approval
-          </p>
-        </div>
-        <div className="flex items-center bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-md p-2 text-sm">
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          <span>{tournaments.length} pending</span>
-        </div>
-      </div>
+      <h2 className="text-xl font-semibold mb-4">Pending Tournament Approvals</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tournaments.map((tournament) => (
-          <Card key={tournament.id} className="overflow-hidden">
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 px-4 py-2 flex items-center gap-2">
-              <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-              <span className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Requires Approval</span>
+          <div key={tournament.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-medium text-gray-900 dark:text-white">{tournament.name}</h3>
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">
+                Pending
+              </Badge>
             </div>
             
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{tournament.name}</CardTitle>
-              <CardDescription>
-                {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="pb-2">
-              <div className="text-sm space-y-1">
-                <div>Location: {tournament.location}, {tournament.state}</div>
-                <div>Rounds: {tournament.rounds}</div>
-                <div>Time Control: {tournament.timeControl || "Standard"}</div>
+            <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2" />
+                <span>{tournament.start_date} - {tournament.end_date}</span>
               </div>
-            </CardContent>
-            
-            <CardFooter className="pt-2 flex gap-2 border-t">
-              <Button 
-                variant="outline" 
-                className="flex-1 bg-green-50 hover:bg-green-100 border-green-200 text-green-700" 
-                onClick={() => handleApproveTournament(tournament)}
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2" />
+                <span>{tournament.location}</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="h-4 w-4 mr-2" />
+                <span>{tournament.participants} participants</span>
+              </div>
+              <div className="flex items-center">
+                <Trophy className="h-4 w-4 mr-2" />
+                <span>{tournament.rounds} rounds</span>
+              </div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                <span>{tournament.time_control}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleApproval(tournament.id, true)}
+                disabled={processingIds.has(tournament.id)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
+                <CheckCircle className="h-4 w-4 mr-1" />
                 Approve
               </Button>
-              <Button 
-                variant="outline" 
-                className="flex-1 bg-red-50 hover:bg-red-100 border-red-200 text-red-700" 
-                onClick={() => handleRejectTournament(tournament)}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleApproval(tournament.id, false)}
+                disabled={processingIds.has(tournament.id)}
+                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
               >
-                <XCircle className="h-4 w-4 mr-2" />
+                <XCircle className="h-4 w-4 mr-1" />
                 Reject
               </Button>
-            </CardFooter>
-          </Card>
-        ))}
-        
-        {tournaments.length === 0 && (
-          <div className="col-span-full py-8 text-center">
-            <p className="text-gray-500">No pending tournaments to approve</p>
+            </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

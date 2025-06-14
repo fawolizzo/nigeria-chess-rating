@@ -1,157 +1,182 @@
+
 import React from "react";
-import { Player, TournamentResult } from "@/lib/mockData";
-import { getTournamentById } from "@/services/mockServices";
-import PerformanceChart from "@/components/PerformanceChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getKFactor } from "@/lib/ratingCalculation";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { Trophy } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { TournamentResult } from "@/lib/mockData";
+import { Trophy, Calendar, MapPin, TrendingUp, TrendingDown } from "lucide-react";
 
 interface PlayerPerformanceProps {
-  player: Player;
+  tournamentResults: TournamentResult[];
 }
 
-const PlayerPerformance: React.FC<PlayerPerformanceProps> = ({ player }) => {
-  const navigate = useNavigate();
-  const kFactor = getKFactor(player.rating, player.gamesPlayed || 0);
+const PlayerPerformance: React.FC<PlayerPerformanceProps> = ({ tournamentResults }) => {
+  // Calculate performance statistics
+  const totalTournaments = tournamentResults.length;
+  const totalRatingChange = tournamentResults.reduce((sum, result) => sum + result.ratingChange, 0);
+  const averageRatingChange = totalTournaments > 0 ? totalRatingChange / totalTournaments : 0;
   
-  // Get rating stats
-  const ratingHistory = player.ratingHistory || [];
-  const initialRating = ratingHistory.length > 0 ? ratingHistory[0].rating : player.rating;
-  const ratingChange = player.rating - initialRating;
+  const wins = tournamentResults.filter(result => result.result === "1-0").length;
+  const draws = tournamentResults.filter(result => result.result === "1/2-1/2").length;
+  const losses = tournamentResults.filter(result => result.result === "0-1").length;
   
-  // Determine performance trend
-  let performanceTrend = "stable";
-  if (ratingHistory.length >= 3) {
-    const recent = ratingHistory.slice(-3);
-    const increases = recent.filter((entry, i) => 
-      i > 0 && entry.rating > recent[i-1].rating
-    ).length;
-    
-    const decreases = recent.filter((entry, i) => 
-      i > 0 && entry.rating < recent[i-1].rating
-    ).length;
-    
-    if (increases >= 2) performanceTrend = "improving";
-    else if (decreases >= 2) performanceTrend = "declining";
-  }
-  
+  const winPercentage = totalTournaments > 0 ? ((wins + draws * 0.5) / totalTournaments) * 100 : 0;
+
+  // Group tournaments by format
+  const formatStats = tournamentResults.reduce((acc, result) => {
+    if (!acc[result.format]) {
+      acc[result.format] = { count: 0, ratingChange: 0 };
+    }
+    acc[result.format].count++;
+    acc[result.format].ratingChange += result.ratingChange;
+    return acc;
+  }, {} as Record<string, { count: number; ratingChange: number }>);
+
+  const formatTournamentResults = (results: TournamentResult[]) => {
+    return results.map((result, index) => {
+      // Mock tournament data for display
+      const mockTournament = {
+        id: result.tournamentId,
+        name: result.tournamentName,
+        start_date: result.date,
+        end_date: result.date,
+        location: result.location || "Lagos, Nigeria"
+      };
+
+      return (
+        <div key={index} className="border border-gray-200 dark:border-gray-800 rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-start mb-2">
+            <h4 className="font-medium text-gray-900 dark:text-white">{mockTournament.name}</h4>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${
+              result.ratingChange > 0 ? 'bg-green-100 text-green-700' : 
+              result.ratingChange < 0 ? 'bg-red-100 text-red-700' : 
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {result.ratingChange > 0 ? <TrendingUp className="h-3 w-3" /> : 
+               result.ratingChange < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+              {result.ratingChange > 0 ? '+' : ''}{result.ratingChange}
+            </div>
+          </div>
+          
+          <div className="space-y-1 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center">
+              <Calendar className="h-3 w-3 mr-2" />
+              <span>{mockTournament.start_date} - {mockTournament.end_date}</span>
+            </div>
+            <div className="flex items-center">
+              <MapPin className="h-3 w-3 mr-2" />
+              <span>{mockTournament.location}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>vs {result.opponent}</span>
+              <span className="font-medium">{result.result}</span>
+            </div>
+            {result.position && (
+              <div className="flex items-center">
+                <Trophy className="h-3 w-3 mr-2" />
+                <span>Position: {result.position}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <PerformanceChart player={player} />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Performance Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Current K-Factor
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Tournaments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">K={kFactor}</div>
-            <p className="text-sm text-gray-500 mt-1">
-              {kFactor === 40 ? "New player" : 
-               kFactor === 32 ? "Below 2100" :
-               kFactor === 24 ? "2100-2399" : "2400 and above"}
+            <div className="text-2xl font-bold">{totalTournaments}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{winPercentage.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">
+              {wins}W - {draws}D - {losses}L
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Games Played
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{player.gamesPlayed || ratingHistory.length}</div>
-            <p className="text-sm text-gray-500 mt-1">
-              {player.gamesPlayed && player.gamesPlayed < 30 ? 
-                `${30 - player.gamesPlayed} more until established rating` : 
-                "Established rating"}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Lifetime Change
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Avg Rating Change</CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${
-              ratingChange > 0 ? "text-green-500" : 
-              ratingChange < 0 ? "text-red-500" : ""
+              averageRatingChange > 0 ? 'text-green-600' : 
+              averageRatingChange < 0 ? 'text-red-600' : 
+              'text-gray-600'
             }`}>
-              {ratingChange > 0 ? "+" : ""}{ratingChange}
+              {averageRatingChange > 0 ? '+' : ''}{averageRatingChange.toFixed(1)}
             </div>
-            <p className="text-sm text-gray-500 mt-1">
-              {performanceTrend === "improving" ? "Improving trend" : 
-               performanceTrend === "declining" ? "Declining trend" : "Stable performance"}
-            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Rating Change</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${
+              totalRatingChange > 0 ? 'text-green-600' : 
+              totalRatingChange < 0 ? 'text-red-600' : 
+              'text-gray-600'
+            }`}>
+              {totalRatingChange > 0 ? '+' : ''}{totalRatingChange}
+            </div>
           </CardContent>
         </Card>
       </div>
-      
-      {/* Tournament Results Table */}
+
+      {/* Format Statistics */}
+      {Object.keys(formatStats).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance by Format</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.entries(formatStats).map(([format, stats]) => (
+                <div key={format} className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h4 className="font-medium capitalize">{format}</h4>
+                  <p className="text-sm text-muted-foreground">{stats.count} tournaments</p>
+                  <p className={`font-bold ${
+                    stats.ratingChange > 0 ? 'text-green-600' : 
+                    stats.ratingChange < 0 ? 'text-red-600' : 
+                    'text-gray-600'
+                  }`}>
+                    {stats.ratingChange > 0 ? '+' : ''}{stats.ratingChange} total
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Tournament Results */}
       <Card>
         <CardHeader>
-          <CardTitle>Tournament Results</CardTitle>
+          <CardTitle>Tournament History</CardTitle>
         </CardHeader>
         <CardContent>
-          {player.tournamentResults.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tournament</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Rating Change</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {player.tournamentResults.map(result => {
-                    const tournament = getTournamentById(result.tournamentId);
-                    return (
-                      <TableRow 
-                        key={result.tournamentId} 
-                        className="cursor-pointer hover:bg-muted"
-                        onClick={() => navigate(`/tournaments/${result.tournamentId}`)}
-                      >
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Trophy size={16} className="text-amber-500" />
-                            {tournament?.name || `Tournament #${result.tournamentId}`}
-                          </div>
-                          {tournament && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {tournament.startDate} - {tournament.endDate}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{result.position}</TableCell>
-                        <TableCell className={result.ratingChange >= 0 ? "text-green-500" : "text-red-500"}>
-                          {result.ratingChange > 0 ? "+" : ""}{result.ratingChange}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+          {tournamentResults.length > 0 ? (
+            <div className="space-y-4">
+              {formatTournamentResults(tournamentResults.slice(0, 10))}
             </div>
           ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              No tournament results available
-            </div>
+            <p className="text-center text-muted-foreground py-8">
+              No tournament results available yet.
+            </p>
           )}
         </CardContent>
       </Card>
