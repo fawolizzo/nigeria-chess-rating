@@ -19,8 +19,10 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     fideId: playerData.fideId || "",
     status: "approved",
     ratingStatus: "provisional",
-    gamesPlayed: 0,
-    created_at: new Date().toISOString()
+    gamesPlayed: playerData.gamesPlayed || 0,
+    created_at: new Date().toISOString(),
+    gender: playerData.gender || "M",
+    country: playerData.country || "Nigeria"
   };
 
   try {
@@ -38,15 +40,11 @@ export const createPlayerInSupabase = async (playerData: Partial<Player>): Promi
   return createPlayer(playerData);
 };
 
-const isTitle = (title: any): title is "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" => {
-  return ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"].includes(title);
-};
-
 export const getAllPlayersFromSupabase = async (filters: {
   state?: string;
   city?: string;
   status?: string;
-}): Promise<Player[]> => {
+} = {}): Promise<Player[]> => {
   try {
     let players = getFromStorage('players', []);
     
@@ -56,16 +54,19 @@ export const getAllPlayersFromSupabase = async (filters: {
       return [];
     }
     
+    // Filter for approved players by default
+    if (!filters.status) {
+      players = players.filter((player: Player) => player && player.status === 'approved');
+    } else if (filters.status && filters.status !== 'all') {
+      players = players.filter((player: Player) => player && player.status === filters.status);
+    }
+    
     if (filters.state && filters.state !== "") {
       players = players.filter((player: Player) => player && player.state === filters.state);
     }
     
     if (filters.city && filters.city !== "" && filters.city !== "all-cities") {
       players = players.filter((player: Player) => player && player.city === filters.city);
-    }
-    
-    if (filters.status) {
-      players = players.filter((player: Player) => player && player.status === filters.status);
     }
     
     return players;
@@ -145,7 +146,10 @@ export const uploadPlayersFromExcel = async (file: File): Promise<{ success: boo
         blitzRating: parseInt(rowData.BlitzRating || rowData.blitzRating) || 800,
         title: (rowData.Title || rowData.title || "") as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" | undefined,
         titleVerified: Boolean(rowData.TitleVerified || rowData.titleVerified || false),
-        fideId: rowData.FideId || rowData.fideId || ""
+        fideId: rowData.FideId || rowData.fideId || "",
+        gamesPlayed: parseInt(rowData.GamesPlayed || rowData.gamesPlayed) || 31,
+        gender: (rowData.Gender || rowData.gender || "M") as "M" | "F",
+        country: rowData.Country || rowData.country || "Nigeria"
       };
 
       const existingPlayer = players.find((p: Player) => 
@@ -188,6 +192,60 @@ export const rejectPlayerInSupabase = async (id: string): Promise<boolean> => {
     return result !== null;
   } catch (error) {
     console.error("Error rejecting player:", error);
+    return false;
+  }
+};
+
+// Add these missing functions for tournament services
+export const addPlayerToTournament = async (tournamentId: string, players: Player[]): Promise<boolean> => {
+  try {
+    const tournaments = getFromStorage('tournaments', []);
+    const tournamentIndex = tournaments.findIndex((t: any) => t.id === tournamentId);
+    
+    if (tournamentIndex === -1) {
+      return false;
+    }
+    
+    const tournament = tournaments[tournamentIndex];
+    if (!tournament.players) {
+      tournament.players = [];
+    }
+    
+    // Add players that aren't already in the tournament
+    players.forEach(player => {
+      if (!tournament.players.find((p: Player) => p.id === player.id)) {
+        tournament.players.push(player);
+      }
+    });
+    
+    tournaments[tournamentIndex] = tournament;
+    saveToStorage('tournaments', tournaments);
+    return true;
+  } catch (error) {
+    console.error("Error adding players to tournament:", error);
+    return false;
+  }
+};
+
+export const removePlayerFromTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
+  try {
+    const tournaments = getFromStorage('tournaments', []);
+    const tournamentIndex = tournaments.findIndex((t: any) => t.id === tournamentId);
+    
+    if (tournamentIndex === -1) {
+      return false;
+    }
+    
+    const tournament = tournaments[tournamentIndex];
+    if (tournament.players) {
+      tournament.players = tournament.players.filter((p: Player) => p.id !== playerId);
+    }
+    
+    tournaments[tournamentIndex] = tournament;
+    saveToStorage('tournaments', tournaments);
+    return true;
+  } catch (error) {
+    console.error("Error removing player from tournament:", error);
     return false;
   }
 };

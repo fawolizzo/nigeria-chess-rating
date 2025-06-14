@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,26 +19,18 @@ const Index = () => {
         setIsLoadingPlayers(true);
         console.log("🏠 Home page: Fetching top players...");
         
-        // First try Supabase
-        let allPlayers: Player[] = [];
-        try {
-          allPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
-          console.log("🏠 Fetched from Supabase:", allPlayers.length, "players");
-        } catch (supabaseError) {
-          console.log("⚠️ Supabase failed, trying localStorage...");
-          // Fallback to localStorage
-          const storedPlayers = localStorage.getItem('players');
-          if (storedPlayers) {
-            const parsed = JSON.parse(storedPlayers);
-            allPlayers = Array.isArray(parsed) ? parsed.filter((p: Player) => p.status === 'approved') : [];
-            console.log("🏠 Fetched from localStorage:", allPlayers.length, "players");
-          }
-        }
+        // Get approved players from service
+        const allPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
+        console.log("🏠 Fetched players:", allPlayers.length, "players");
+        console.log("📋 Players sample:", allPlayers.slice(0, 3));
         
         // Sort by classical rating and take top 10
-        const sortedPlayers = allPlayers
-          .sort((a, b) => (b.rating || 800) - (a.rating || 800))
-          .slice(0, 10);
+        const sortedPlayers = Array.isArray(allPlayers) 
+          ? allPlayers
+              .filter(player => player && typeof player === 'object')
+              .sort((a, b) => (b.rating || 800) - (a.rating || 800))
+              .slice(0, 10)
+          : [];
         
         console.log("🏆 Top 10 players by rating:", sortedPlayers.map(p => ({ name: p.name, rating: p.rating })));
         setTopPlayers(sortedPlayers);
@@ -52,6 +43,11 @@ const Index = () => {
     };
 
     fetchTopPlayers();
+    
+    // Set up an interval to refresh data every 10 seconds
+    const interval = setInterval(fetchTopPlayers, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const TopPlayersSection = () => (

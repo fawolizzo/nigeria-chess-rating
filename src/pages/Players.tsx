@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
@@ -27,30 +26,32 @@ const Players = () => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log("🔍 Fetching players from storage...");
+        console.log("🔍 Players page: Fetching players from storage...");
         
-        const allPlayersData = await getAllPlayersFromSupabase({});
-        console.log("📊 Total players fetched:", allPlayersData?.length || 0);
+        const allPlayersData = await getAllPlayersFromSupabase({ status: 'approved' });
+        console.log("📊 Total approved players fetched:", allPlayersData?.length || 0);
+        console.log("📋 Players data:", allPlayersData);
         
         // Ensure we have a valid array
         const playersArray = Array.isArray(allPlayersData) ? allPlayersData : [];
         
         if (playersArray.length === 0) {
-          console.log("📝 No players found in database");
+          console.log("📝 No approved players found in database");
           setAllPlayers([]);
           setFilteredPlayers([]);
           return;
         }
         
-        // Filter for approved players and sort by classical rating
-        const approvedPlayers = playersArray
-          .filter(player => player && player.status === 'approved')
+        // Sort by classical rating (descending)
+        const sortedPlayers = playersArray
+          .filter(player => player && typeof player === 'object')
           .sort((a, b) => (b.rating || 800) - (a.rating || 800));
         
-        console.log("✅ Approved players sorted by rating:", approvedPlayers.length);
+        console.log("✅ Approved players sorted by rating:", sortedPlayers.length);
+        console.log("🏆 Top 3 players:", sortedPlayers.slice(0, 3).map(p => ({ name: p.name, rating: p.rating })));
         
-        setAllPlayers(approvedPlayers);
-        setFilteredPlayers(approvedPlayers);
+        setAllPlayers(sortedPlayers);
+        setFilteredPlayers(sortedPlayers);
         
       } catch (error) {
         console.error("❌ Error fetching players:", error);
@@ -69,6 +70,11 @@ const Players = () => {
     };
 
     fetchPlayers();
+    
+    // Set up an interval to refresh data every 5 seconds
+    const interval = setInterval(fetchPlayers, 5000);
+    
+    return () => clearInterval(interval);
   }, [toast]);
 
   useEffect(() => {
@@ -235,7 +241,7 @@ const Players = () => {
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400">
                     {!Array.isArray(allPlayers) || allPlayers.length === 0 
-                      ? "No players have been registered in the system yet."
+                      ? "No players have been registered in the system yet. Rating Officers can upload players via their dashboard."
                       : "Try adjusting your search criteria to find more players."
                     }
                   </p>
