@@ -17,6 +17,7 @@ const Navbar = () => {
     { path: "/", label: "Home", icon: Home },
     { path: "/players", label: "Players", icon: Users },
     { path: "/tournaments", label: "Tournaments", icon: Calendar },
+    { path: "/about", label: "About", icon: Trophy },
   ];
 
   const handleLogout = () => {
@@ -79,7 +80,7 @@ const Navbar = () => {
                 
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {currentUser.name}
+                    {currentUser.fullName || currentUser.email}
                   </span>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     Logout
@@ -158,7 +159,7 @@ const Navbar = () => {
                   
                   <div className="flex flex-col space-y-2">
                     <span className="text-sm text-gray-600 dark:text-gray-300 px-3">
-                      Logged in as: {currentUser.name}
+                      Logged in as: {currentUser.fullName || currentUser.email}
                     </span>
                     <Button variant="ghost" size="sm" onClick={handleLogout} className="justify-start">
                       Logout

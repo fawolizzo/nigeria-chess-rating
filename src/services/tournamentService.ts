@@ -1,49 +1,81 @@
 
-import { Tournament, Player, Pairing } from "@/lib/mockData";
-import { supabase } from "@/integrations/supabase/client";
+import { Tournament, Player, Pairing, Result } from "@/lib/mockData";
+import { v4 as uuidv4 } from "uuid";
 
-export const saveTournament = (tournament: Tournament): void => {
+export const createTournament = async (tournamentData: Partial<Tournament>): Promise<Tournament> => {
+  const newTournament: Tournament = {
+    id: uuidv4(),
+    name: tournamentData.name || "",
+    description: tournamentData.description || "",
+    start_date: tournamentData.start_date || new Date().toISOString(),
+    end_date: tournamentData.end_date || new Date().toISOString(),
+    location: tournamentData.location || "",
+    city: tournamentData.city || "",
+    state: tournamentData.state || "",
+    organizer_id: tournamentData.organizer_id || "",
+    players: [],
+    pairings: [],
+    rounds: tournamentData.rounds || 5,
+    current_round: 1,
+    status: "pending",
+    time_control: tournamentData.time_control || "90+30",
+    participants: 0,
+    registration_open: tournamentData.registration_open ?? true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
   try {
-    const tournaments = getAllTournaments();
-    const existingIndex = tournaments.findIndex(t => t.id === tournament.id);
+    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    tournaments.push(newTournament);
+    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    return newTournament;
+  } catch (error) {
+    console.error("Error creating tournament:", error);
+    throw new Error("Failed to create tournament");
+  }
+};
+
+export const updateTournament = async (id: string, updates: Partial<Tournament>): Promise<Tournament> => {
+  try {
+    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const index = tournaments.findIndex((t: Tournament) => t.id === id);
     
-    if (existingIndex >= 0) {
-      tournaments[existingIndex] = tournament;
-    } else {
-      tournaments.push(tournament);
+    if (index === -1) {
+      throw new Error("Tournament not found");
     }
+
+    const updatedTournament = {
+      ...tournaments[index],
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+
+    tournaments[index] = updatedTournament;
+    localStorage.setItem('tournaments', JSON.stringify(tournaments));
     
-    localStorage.setItem('ncr_tournaments', JSON.stringify(tournaments));
+    return updatedTournament;
   } catch (error) {
-    console.error("Error saving tournament:", error);
+    console.error("Error updating tournament:", error);
+    throw new Error("Failed to update tournament");
   }
 };
 
-export const getAllTournaments = (): Tournament[] => {
+export const getTournament = async (id: string): Promise<Tournament | null> => {
   try {
-    const data = localStorage.getItem('ncr_tournaments');
-    return data ? JSON.parse(data) : [];
+    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    return tournaments.find((t: Tournament) => t.id === id) || null;
   } catch (error) {
-    console.error("Error getting tournaments:", error);
-    return [];
-  }
-};
-
-export const getTournamentById = (id: string): Tournament | null => {
-  try {
-    const tournaments = getAllTournaments();
-    return tournaments.find(t => t.id === id) || null;
-  } catch (error) {
-    console.error("Error getting tournament by ID:", error);
+    console.error("Error getting tournament:", error);
     return null;
   }
 };
 
-export const deleteTournament = (id: string): boolean => {
+export const deleteTournament = async (id: string): Promise<boolean> => {
   try {
-    const tournaments = getAllTournaments();
-    const filteredTournaments = tournaments.filter(t => t.id !== id);
-    localStorage.setItem('ncr_tournaments', JSON.stringify(filteredTournaments));
+    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const filtered = tournaments.filter((t: Tournament) => t.id !== id);
+    localStorage.setItem('tournaments', JSON.stringify(filtered));
     return true;
   } catch (error) {
     console.error("Error deleting tournament:", error);
@@ -51,172 +83,46 @@ export const deleteTournament = (id: string): boolean => {
   }
 };
 
-export const getTournamentsFromSupabase = async (): Promise<Tournament[]> => {
+export const addPlayerToTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*');
+    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
     
-    if (error) throw error;
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
+
+    if (!tournament.players.includes(playerId)) {
+      tournament.players.push(playerId);
+      tournament.participants = tournament.players.length;
+      tournament.updated_at = new Date().toISOString();
+      localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    }
     
-    return data?.map(tournament => ({
-      id: tournament.id,
-      name: tournament.name,
-      description: tournament.description || '',
-      startDate: tournament.start_date,
-      endDate: tournament.end_date,
-      location: tournament.location,
-      city: tournament.city,
-      state: tournament.state,
-      organizerId: tournament.organizer_id,
-      players: [],
-      pairings: [],
-      rounds: tournament.rounds,
-      currentRound: tournament.current_round || 1,
-      status: tournament.status as Tournament['status'],
-      timeControl: tournament.time_control,
-      participants: tournament.participants || 0,
-      registrationOpen: tournament.registration_open || true,
-    })) || [];
+    return true;
   } catch (error) {
-    console.error("Error fetching tournaments from Supabase:", error);
-    return [];
+    console.error("Error adding player to tournament:", error);
+    return false;
   }
 };
 
-export const getTournamentByIdFromSupabase = async (id: string): Promise<Tournament | null> => {
+export const removePlayerFromTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
     
-    if (error) throw error;
-    if (!data) return null;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      startDate: data.start_date,
-      endDate: data.end_date,
-      location: data.location,
-      city: data.city,
-      state: data.state,
-      organizerId: data.organizer_id,
-      players: [],
-      pairings: [],
-      rounds: data.rounds,
-      currentRound: data.current_round || 1,
-      status: data.status as Tournament['status'],
-      timeControl: data.time_control,
-      participants: data.participants || 0,
-      registrationOpen: data.registration_open || true,
-    };
-  } catch (error) {
-    console.error("Error fetching tournament by ID from Supabase:", error);
-    return null;
-  }
-};
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
 
-export const createTournamentInSupabase = async (tournamentData: Partial<Tournament>): Promise<Tournament | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('tournaments')
-      .insert([{
-        name: tournamentData.name,
-        description: tournamentData.description,
-        start_date: tournamentData.startDate,
-        end_date: tournamentData.endDate,
-        location: tournamentData.location,
-        city: tournamentData.city,
-        state: tournamentData.state,
-        organizer_id: tournamentData.organizerId,
-        rounds: tournamentData.rounds,
-        status: tournamentData.status || 'pending',
-        time_control: tournamentData.timeControl,
-        participants: tournamentData.participants || 0,
-        registration_open: tournamentData.registrationOpen !== false,
-      }])
-      .select()
-      .single();
+    tournament.players = tournament.players.filter((id: string) => id !== playerId);
+    tournament.participants = tournament.players.length;
+    tournament.updated_at = new Date().toISOString();
+    localStorage.setItem('tournaments', JSON.stringify(tournaments));
     
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      startDate: data.start_date,
-      endDate: data.end_date,
-      location: data.location,
-      city: data.city,
-      state: data.state,
-      organizerId: data.organizer_id,
-      players: [],
-      pairings: [],
-      rounds: data.rounds,
-      currentRound: data.current_round || 1,
-      status: data.status as Tournament['status'],
-      timeControl: data.time_control,
-      participants: data.participants || 0,
-      registrationOpen: data.registration_open || true,
-    };
+    return true;
   } catch (error) {
-    console.error("Error creating tournament in Supabase:", error);
-    return null;
-  }
-};
-
-export const updateTournamentInSupabase = async (id: string, tournamentData: Partial<Tournament>): Promise<Tournament | null> => {
-  try {
-    const updateData: any = {};
-    
-    if (tournamentData.name !== undefined) updateData.name = tournamentData.name;
-    if (tournamentData.description !== undefined) updateData.description = tournamentData.description;
-    if (tournamentData.startDate !== undefined) updateData.start_date = tournamentData.startDate;
-    if (tournamentData.endDate !== undefined) updateData.end_date = tournamentData.endDate;
-    if (tournamentData.location !== undefined) updateData.location = tournamentData.location;
-    if (tournamentData.city !== undefined) updateData.city = tournamentData.city;
-    if (tournamentData.state !== undefined) updateData.state = tournamentData.state;
-    if (tournamentData.status !== undefined) updateData.status = tournamentData.status;
-    if (tournamentData.rounds !== undefined) updateData.rounds = tournamentData.rounds;
-    if (tournamentData.currentRound !== undefined) updateData.current_round = tournamentData.currentRound;
-    if (tournamentData.timeControl !== undefined) updateData.time_control = tournamentData.timeControl;
-    if (tournamentData.participants !== undefined) updateData.participants = tournamentData.participants;
-    if (tournamentData.registrationOpen !== undefined) updateData.registration_open = tournamentData.registrationOpen;
-    
-    const { data, error } = await supabase
-      .from('tournaments')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description || '',
-      startDate: data.start_date,
-      endDate: data.end_date,
-      location: data.location,
-      city: data.city,
-      state: data.state,
-      organizerId: data.organizer_id,
-      players: [],
-      pairings: [],
-      rounds: data.rounds,
-      currentRound: data.current_round || 1,
-      status: data.status as Tournament['status'],
-      timeControl: data.time_control,
-      participants: data.participants || 0,
-      registrationOpen: data.registration_open || true,
-    };
-  } catch (error) {
-    console.error("Error updating tournament in Supabase:", error);
-    return null;
+    console.error("Error removing player from tournament:", error);
+    return false;
   }
 };
