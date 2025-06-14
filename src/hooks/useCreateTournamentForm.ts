@@ -1,87 +1,84 @@
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
-import { createTournamentSchema, TournamentFormData } from "@/components/tournament/form/TournamentFormSchema";
 import { useToast } from "@/hooks/use-toast";
+import { createTournament } from "@/services/tournamentService";
+import { useUser } from "@/contexts/UserContext";
+
+interface TournamentFormData {
+  name: string;
+  description: string;
+  location: string;
+  city: string;
+  state: string;
+  rounds: number;
+  startDate: Date;
+  endDate: Date;
+  timeControl: string;
+  registrationOpen: boolean;
+}
 
 export const useCreateTournamentForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isCustomTimeControl, setIsCustomTimeControl] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser } = useUser();
 
-  const form = useForm<TournamentFormData>({
-    resolver: zodResolver(createTournamentSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      startDate: new Date(),
-      endDate: new Date(),
-      location: "",
-      state: "",
-      city: "",
-      rounds: 5,
-      timeControl: "",
-      registrationOpen: true,
-    },
-  });
-
-  const watchTimeControl = form.watch("timeControl");
-
-  const validateCustomTimeControl = (value: string): string | null => {
-    const timeControlPattern = /^\d+\+\d+$/;
-    if (!timeControlPattern.test(value)) {
-      return "Time control must be in format: minutes+increment (e.g., 90+30)";
+  const createTournamentFromForm = async (
+    formData: TournamentFormData,
+    customTimeControl?: string,
+    isCustomTimeControl?: boolean
+  ): Promise<boolean> => {
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a tournament",
+        variant: "destructive",
+      });
+      return false;
     }
-    return null;
-  };
 
-  const updateCustomTimeControlState = (value: string) => {
-    setIsCustomTimeControl(value === "custom");
-  };
-
-  const handleSubmit = async (data: TournamentFormData) => {
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      setErrorMsg(null);
+      const timeControlValue = isCustomTimeControl && customTimeControl ? customTimeControl : formData.timeControl;
+      
+      const tournamentData = {
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+        city: formData.city,
+        state: formData.state,
+        rounds: formData.rounds,
+        start_date: formData.startDate.toISOString(),
+        end_date: formData.endDate.toISOString(),
+        time_control: timeControlValue,
+        organizer_id: currentUser.id,
+        registration_open: formData.registrationOpen,
+        status: "pending" as const,
+      };
 
-      // Validate custom time control if selected
-      if (isCustomTimeControl && data.customTimeControl) {
-        const error = validateCustomTimeControl(data.customTimeControl);
-        if (error) {
-          setErrorMsg(error);
-          return;
-        }
-      }
-
-      console.log("Creating tournament with data:", data);
+      await createTournament(tournamentData);
       
       toast({
         title: "Tournament Created",
-        description: "Your tournament has been created successfully.",
+        description: "Your tournament has been submitted for approval",
       });
-
-      navigate("/organizer-dashboard");
+      
+      return true;
     } catch (error) {
       console.error("Error creating tournament:", error);
-      setErrorMsg("Failed to create tournament. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to create tournament. Please try again.",
+        variant: "destructive",
+      });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return {
-    form,
-    isCustomTimeControl,
+    createTournamentFromForm,
     isSubmitting,
-    errorMsg,
-    validateCustomTimeControl,
-    handleSubmit,
-    updateCustomTimeControlState,
-    navigate,
-    watchTimeControl,
   };
 };

@@ -1,6 +1,7 @@
 
 import { Tournament, Player, Pairing, Result } from "@/lib/mockData";
 import { v4 as uuidv4 } from "uuid";
+import { saveToStorage, getFromStorage } from "@/utils/storageUtils";
 
 export const createTournament = async (tournamentData: Partial<Tournament>): Promise<Tournament> => {
   const newTournament: Tournament = {
@@ -15,6 +16,7 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
     organizer_id: tournamentData.organizer_id || "",
     players: [],
     pairings: [],
+    results: [],
     rounds: tournamentData.rounds || 5,
     current_round: 1,
     status: "pending",
@@ -26,9 +28,9 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
   };
 
   try {
-    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournaments = getFromStorage('tournaments', []);
     tournaments.push(newTournament);
-    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    saveToStorage('tournaments', tournaments);
     return newTournament;
   } catch (error) {
     console.error("Error creating tournament:", error);
@@ -36,9 +38,13 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
   }
 };
 
+export const createTournamentInSupabase = async (tournamentData: Partial<Tournament>): Promise<Tournament> => {
+  return createTournament(tournamentData);
+};
+
 export const updateTournament = async (id: string, updates: Partial<Tournament>): Promise<Tournament> => {
   try {
-    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournaments = getFromStorage('tournaments', []);
     const index = tournaments.findIndex((t: Tournament) => t.id === id);
     
     if (index === -1) {
@@ -52,7 +58,7 @@ export const updateTournament = async (id: string, updates: Partial<Tournament>)
     };
 
     tournaments[index] = updatedTournament;
-    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    saveToStorage('tournaments', tournaments);
     
     return updatedTournament;
   } catch (error) {
@@ -61,9 +67,13 @@ export const updateTournament = async (id: string, updates: Partial<Tournament>)
   }
 };
 
+export const updateTournamentInSupabase = async (id: string, updates: Partial<Tournament>): Promise<Tournament> => {
+  return updateTournament(id, updates);
+};
+
 export const getTournament = async (id: string): Promise<Tournament | null> => {
   try {
-    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournaments = getFromStorage('tournaments', []);
     return tournaments.find((t: Tournament) => t.id === id) || null;
   } catch (error) {
     console.error("Error getting tournament:", error);
@@ -71,11 +81,20 @@ export const getTournament = async (id: string): Promise<Tournament | null> => {
   }
 };
 
+export const getTournamentsFromSupabase = async (): Promise<Tournament[]> => {
+  try {
+    return getFromStorage('tournaments', []);
+  } catch (error) {
+    console.error("Error getting tournaments:", error);
+    return [];
+  }
+};
+
 export const deleteTournament = async (id: string): Promise<boolean> => {
   try {
-    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournaments = getFromStorage('tournaments', []);
     const filtered = tournaments.filter((t: Tournament) => t.id !== id);
-    localStorage.setItem('tournaments', JSON.stringify(filtered));
+    saveToStorage('tournaments', filtered);
     return true;
   } catch (error) {
     console.error("Error deleting tournament:", error);
@@ -85,7 +104,7 @@ export const deleteTournament = async (id: string): Promise<boolean> => {
 
 export const addPlayerToTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
   try {
-    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournaments = getFromStorage('tournaments', []);
     const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
     
     if (!tournament) {
@@ -96,7 +115,7 @@ export const addPlayerToTournament = async (tournamentId: string, playerId: stri
       tournament.players.push(playerId);
       tournament.participants = tournament.players.length;
       tournament.updated_at = new Date().toISOString();
-      localStorage.setItem('tournaments', JSON.stringify(tournaments));
+      saveToStorage('tournaments', tournaments);
     }
     
     return true;
@@ -108,7 +127,7 @@ export const addPlayerToTournament = async (tournamentId: string, playerId: stri
 
 export const removePlayerFromTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
   try {
-    const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+    const tournaments = getFromStorage('tournaments', []);
     const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
     
     if (!tournament) {
@@ -118,7 +137,7 @@ export const removePlayerFromTournament = async (tournamentId: string, playerId:
     tournament.players = tournament.players.filter((id: string) => id !== playerId);
     tournament.participants = tournament.players.length;
     tournament.updated_at = new Date().toISOString();
-    localStorage.setItem('tournaments', JSON.stringify(tournaments));
+    saveToStorage('tournaments', tournaments);
     
     return true;
   } catch (error) {

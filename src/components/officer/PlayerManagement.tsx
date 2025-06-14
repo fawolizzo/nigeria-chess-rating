@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Check, X, Search, UserPlus, Edit } from "lucide-react";
+import { Check, X, Search, UserPlus, Edit, Upload } from "lucide-react";
 import { Player } from "@/lib/mockData";
 import { useToast } from "@/hooks/use-toast";
 import StateSelector from "@/components/selectors/StateSelector";
 import CitySelector from "@/components/selectors/CitySelector";
 import EditPlayerDialog from "./EditPlayerDialog";
+import FileUploadButton from "@/components/players/FileUploadButton";
 
 interface PlayerManagementProps {
   onPlayerApproval: () => void;
@@ -23,6 +24,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [isCreatePlayerOpen, setIsCreatePlayerOpen] = useState(false);
+  const [isUploadPlayersOpen, setIsUploadPlayersOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const { toast } = useToast();
 
@@ -126,6 +128,63 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     });
   };
 
+  const handlePlayersImported = (importedPlayers: Partial<Player>[]) => {
+    const currentPlayers = [...players];
+    let addedCount = 0;
+
+    importedPlayers.forEach((playerData) => {
+      if (playerData.name && playerData.email) {
+        const existingPlayer = currentPlayers.find(p => 
+          p.email === playerData.email || p.name === playerData.name
+        );
+
+        if (!existingPlayer) {
+          const newPlayer: Player = {
+            id: `player-${Date.now()}-${Math.random()}`,
+            name: playerData.name,
+            email: playerData.email || "",
+            phone: playerData.phone || "",
+            state: playerData.state || "",
+            city: playerData.city || "",
+            gender: playerData.gender || "M",
+            rating: playerData.rating || 800,
+            rapidRating: playerData.rapidRating || 800,
+            blitzRating: playerData.blitzRating || 800,
+            gamesPlayed: playerData.gamesPlayed || 0,
+            rapidGamesPlayed: playerData.rapidGamesPlayed || 0,
+            blitzGamesPlayed: playerData.blitzGamesPlayed || 0,
+            status: "approved",
+            title: playerData.title,
+            titleVerified: playerData.titleVerified || false,
+            fideId: playerData.fideId || "",
+            created_at: new Date().toISOString(),
+            tournamentResults: playerData.tournamentResults || [],
+            ratingHistory: playerData.ratingHistory || [],
+            rapidRatingHistory: playerData.rapidRatingHistory || [],
+            blitzRatingHistory: playerData.blitzRatingHistory || [],
+            achievements: playerData.achievements || [],
+            club: playerData.club || "",
+            birthYear: playerData.birthYear,
+            ratingStatus: playerData.ratingStatus || "provisional",
+            rapidRatingStatus: playerData.rapidRatingStatus || "provisional",
+            blitzRatingStatus: playerData.blitzRatingStatus || "provisional"
+          };
+          currentPlayers.push(newPlayer);
+          addedCount++;
+        }
+      }
+    });
+
+    savePlayersToStorage(currentPlayers);
+    setIsUploadPlayersOpen(false);
+    onPlayerApproval();
+    
+    toast({
+      title: "Players Imported",
+      description: `Successfully imported ${addedCount} players`,
+    });
+  };
+
   const filteredPlayers = players.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          player.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -146,115 +205,132 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
           </p>
         </div>
         
-        <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-nigeria-green hover:bg-nigeria-green-dark">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Player
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Player</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={newPlayer.name}
-                  onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                  placeholder="Player name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newPlayer.email}
-                  onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
-                  placeholder="player@example.com"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={newPlayer.phone}
-                  onChange={(e) => setNewPlayer({ ...newPlayer, phone: e.target.value })}
-                  placeholder="Phone number"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="gender">Gender</Label>
-                <Select value={newPlayer.gender} onValueChange={(value: "M" | "F") => setNewPlayer({ ...newPlayer, gender: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="M">Male</SelectItem>
-                    <SelectItem value="F">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="state">State</Label>
-                <StateSelector
-                  selectedState={newPlayer.state}
-                  onStateChange={(state) => setNewPlayer({ ...newPlayer, state, city: "" })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="city">City</Label>
-                <CitySelector
-                  selectedState={newPlayer.state}
-                  selectedCity={newPlayer.city}
-                  onCityChange={(city) => setNewPlayer({ ...newPlayer, city })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="fideId">FIDE ID</Label>
-                <Input
-                  id="fideId"
-                  value={newPlayer.fideId}
-                  onChange={(e) => setNewPlayer({ ...newPlayer, fideId: e.target.value })}
-                  placeholder="FIDE ID (optional)"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Select value={newPlayer.title} onValueChange={(value) => setNewPlayer({ ...newPlayer, title: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select title (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No Title</SelectItem>
-                    <SelectItem value="GM">Grandmaster (GM)</SelectItem>
-                    <SelectItem value="IM">International Master (IM)</SelectItem>
-                    <SelectItem value="FM">FIDE Master (FM)</SelectItem>
-                    <SelectItem value="CM">Candidate Master (CM)</SelectItem>
-                    <SelectItem value="WGM">Woman Grandmaster (WGM)</SelectItem>
-                    <SelectItem value="WIM">Woman International Master (WIM)</SelectItem>
-                    <SelectItem value="WFM">Woman FIDE Master (WFM)</SelectItem>
-                    <SelectItem value="WCM">Woman Candidate Master (WCM)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button onClick={handleCreatePlayer} className="w-full bg-nigeria-green hover:bg-nigeria-green-dark">
-                Create Player
+        <div className="flex gap-2">
+          <Dialog open={isUploadPlayersOpen} onOpenChange={setIsUploadPlayersOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Players
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Upload Players from Excel</DialogTitle>
+              </DialogHeader>
+              <FileUploadButton onPlayersImported={handlePlayersImported} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isCreatePlayerOpen} onOpenChange={setIsCreatePlayerOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-nigeria-green hover:bg-nigeria-green-dark">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Player
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Player</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    value={newPlayer.name}
+                    onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                    placeholder="Player name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newPlayer.email}
+                    onChange={(e) => setNewPlayer({ ...newPlayer, email: e.target.value })}
+                    placeholder="player@example.com"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={newPlayer.phone}
+                    onChange={(e) => setNewPlayer({ ...newPlayer, phone: e.target.value })}
+                    placeholder="Phone number"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select value={newPlayer.gender} onValueChange={(value: "M" | "F") => setNewPlayer({ ...newPlayer, gender: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="M">Male</SelectItem>
+                      <SelectItem value="F">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="state">State</Label>
+                  <StateSelector
+                    selectedState={newPlayer.state}
+                    onStateChange={(state) => setNewPlayer({ ...newPlayer, state, city: "" })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <CitySelector
+                    selectedState={newPlayer.state}
+                    selectedCity={newPlayer.city}
+                    onCityChange={(city) => setNewPlayer({ ...newPlayer, city })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="fideId">FIDE ID</Label>
+                  <Input
+                    id="fideId"
+                    value={newPlayer.fideId}
+                    onChange={(e) => setNewPlayer({ ...newPlayer, fideId: e.target.value })}
+                    placeholder="FIDE ID (optional)"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Select value={newPlayer.title} onValueChange={(value) => setNewPlayer({ ...newPlayer, title: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select title (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Title</SelectItem>
+                      <SelectItem value="GM">Grandmaster (GM)</SelectItem>
+                      <SelectItem value="IM">International Master (IM)</SelectItem>
+                      <SelectItem value="FM">FIDE Master (FM)</SelectItem>
+                      <SelectItem value="CM">Candidate Master (CM)</SelectItem>
+                      <SelectItem value="WGM">Woman Grandmaster (WGM)</SelectItem>
+                      <SelectItem value="WIM">Woman International Master (WIM)</SelectItem>
+                      <SelectItem value="WFM">Woman FIDE Master (WFM)</SelectItem>
+                      <SelectItem value="WCM">Woman Candidate Master (WCM)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button onClick={handleCreatePlayer} className="w-full bg-nigeria-green hover:bg-nigeria-green-dark">
+                  Create Player
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}

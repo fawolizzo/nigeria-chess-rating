@@ -1,3 +1,4 @@
+
 import { Player } from "@/lib/mockData";
 import { v4 as uuidv4 } from "uuid";
 import { saveToStorage, getFromStorage } from "@/utils/storageUtils";
@@ -10,7 +11,6 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     phone: playerData.phone || "",
     state: playerData.state || "",
     city: playerData.city || "",
-    dateOfBirth: playerData.dateOfBirth || "",
     rating: playerData.rating || 800,
     rapidRating: playerData.rapidRating || 800,
     blitzRating: playerData.blitzRating || 800,
@@ -33,6 +33,10 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     console.error("Error creating player:", error);
     throw new Error("Failed to create player");
   }
+};
+
+export const createPlayerInSupabase = async (playerData: Partial<Player>): Promise<Player> => {
+  return createPlayer(playerData);
 };
 
 const isTitle = (title: any): title is "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" => {
@@ -66,6 +70,10 @@ export const getAllPlayersFromSupabase = async (filters: {
   }
 };
 
+export const getAllUsers = async (): Promise<Player[]> => {
+  return getAllPlayersFromSupabase({});
+};
+
 export const updatePlayerInSupabase = async (id: string, updates: Partial<Player>): Promise<Player | null> => {
   try {
     const players = getFromStorage('players', []);
@@ -79,9 +87,7 @@ export const updatePlayerInSupabase = async (id: string, updates: Partial<Player
     const updatedPlayer = {
       ...players[playerIndex],
       ...updates,
-      // Handle title field type safety
-      title: updates.title ? updates.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" : players[playerIndex].title,
-      updated_at: new Date().toISOString()
+      title: updates.title ? updates.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" : players[playerIndex].title
     };
 
     players[playerIndex] = updatedPlayer;
@@ -102,6 +108,10 @@ export const getPlayerFromSupabase = async (id: string): Promise<Player | null> 
     console.error("Error getting player:", error);
     return null;
   }
+};
+
+export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | null> => {
+  return getPlayerFromSupabase(id);
 };
 
 export const uploadPlayersFromExcel = async (file: File): Promise<{ success: boolean; message: string; count?: number }> => {
@@ -125,7 +135,6 @@ export const uploadPlayersFromExcel = async (file: File): Promise<{ success: boo
         phone: rowData.Phone || rowData.phone || "",
         state: rowData.State || rowData.state || "",
         city: rowData.City || rowData.city || "",
-        dateOfBirth: rowData.DateOfBirth || rowData.dateOfBirth || "",
         rating: parseInt(rowData.Rating || rowData.rating) || 800,
         rapidRating: parseInt(rowData.RapidRating || rowData.rapidRating) || 800,
         blitzRating: parseInt(rowData.BlitzRating || rowData.blitzRating) || 800,
@@ -134,7 +143,6 @@ export const uploadPlayersFromExcel = async (file: File): Promise<{ success: boo
         fideId: rowData.FideId || rowData.fideId || ""
       };
 
-      // Check if player already exists
       const existingPlayer = players.find((p: Player) => 
         p.email === playerData.email || p.name === playerData.name
       );
@@ -161,10 +169,7 @@ export const uploadPlayersFromExcel = async (file: File): Promise<{ success: boo
 
 export const approvePlayerInSupabase = async (id: string): Promise<boolean> => {
   try {
-    const result = await updatePlayerInSupabase(id, { 
-      status: "approved",
-      updated_at: new Date().toISOString()
-    });
+    const result = await updatePlayerInSupabase(id, { status: "approved" });
     return result !== null;
   } catch (error) {
     console.error("Error approving player:", error);
@@ -174,10 +179,7 @@ export const approvePlayerInSupabase = async (id: string): Promise<boolean> => {
 
 export const rejectPlayerInSupabase = async (id: string): Promise<boolean> => {
   try {
-    const result = await updatePlayerInSupabase(id, { 
-      status: "rejected",
-      updated_at: new Date().toISOString()
-    });
+    const result = await updatePlayerInSupabase(id, { status: "rejected" });
     return result !== null;
   } catch (error) {
     console.error("Error rejecting player:", error);

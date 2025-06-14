@@ -1,153 +1,93 @@
 
 import { useState, useEffect } from "react";
 import { Tournament } from "@/lib/mockData";
-import { getTournamentsFromSupabase } from "@/services/tournamentService";
+import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
+import { getTournamentsFromSupabase, createTournamentInSupabase, updateTournamentInSupabase } from "@/services/tournamentService";
 
-export const useOrganizerDashboardData = (organizerId?: string) => {
+export const useOrganizerDashboardData = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { currentUser } = useUser();
   const { toast } = useToast();
 
-  const fetchTournaments = async () => {
+  const loadTournaments = async () => {
     try {
       setIsLoading(true);
-      setError(null);
-      
       const allTournaments = await getTournamentsFromSupabase();
       
-      // Filter by organizer if provided
-      const filteredTournaments = organizerId 
-        ? allTournaments.filter(t => t.organizer_id === organizerId)
-        : allTournaments;
+      // Filter tournaments for current organizer
+      const organizerTournaments = currentUser 
+        ? allTournaments.filter(t => t.organizer_id === currentUser.id)
+        : [];
       
-      setTournaments(filteredTournaments);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch tournaments';
-      setError(errorMessage);
+      setTournaments(organizerTournaments);
+    } catch (error) {
+      console.error("Error loading tournaments:", error);
       toast({
         title: "Error",
-        description: errorMessage,
-        variant: "destructive"
+        description: "Failed to load tournaments",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Add missing methods that are being called
-  const loadTournaments = fetchTournaments;
+  useEffect(() => {
+    if (currentUser) {
+      loadTournaments();
+    }
+  }, [currentUser]);
+
+  const createTournament = async (tournamentData: any) => {
+    try {
+      if (!currentUser) {
+        throw new Error("User not authenticated");
+      }
+
+      const newTournament = await createTournamentInSupabase({
+        ...tournamentData,
+        organizer_id: currentUser.id,
+      });
+
+      await loadTournaments(); // Reload tournaments
+      return newTournament;
+    } catch (error) {
+      console.error("Error creating tournament:", error);
+      throw error;
+    }
+  };
+
+  const updateTournament = async (id: string, updates: Partial<Tournament>) => {
+    try {
+      const updatedTournament = await updateTournamentInSupabase(id, updates);
+      await loadTournaments(); // Reload tournaments
+      return updatedTournament;
+    } catch (error) {
+      console.error("Error updating tournament:", error);
+      throw error;
+    }
+  };
 
   const filterTournamentsByStatus = (status: string) => {
     return tournaments.filter(tournament => {
-      if (status === 'upcoming') {
-        return tournament.status === 'approved' && new Date(tournament.start_date) > new Date();
-      }
-      if (status === 'ongoing') {
-        const now = new Date();
-        return tournament.status === 'approved' && 
-               new Date(tournament.start_date) <= now && 
-               new Date(tournament.end_date) >= now;
-      }
+      if (status === "all") return true;
+      if (status === "upcoming") return tournament.status === "approved" && new Date(tournament.start_date) > new Date();
       return tournament.status === status;
     });
   };
 
-  const formatDisplayDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const refreshData = () => {
+    loadTournaments();
   };
-
-  const getNextTournament = () => {
-    const upcomingTournaments = filterTournamentsByStatus('upcoming');
-    return upcomingTournaments.length > 0 ? upcomingTournaments[0] : null;
-  };
-
-  const createTournament = async (tournamentData: Omit<Tournament, "id" | "created_at" | "updated_at">) => {
-    try {
-      // Convert Tournament data to database format
-      const dbTournamentData = {
-        name: tournamentData.name,
-        description: tournamentData.description,
-        start_date: tournamentData.start_date,
-        end_date: tournamentData.end_date,
-        location: tournamentData.location,
-        city: tournamentData.city,
-        state: tournamentData.state,
-        time_control: tournamentData.time_control,
-        rounds: tournamentData.rounds,
-        organizer_id: tournamentData.organizer_id,
-        status: tournamentData.status || 'pending',
-        registration_open: tournamentData.registration_open
-      };
-
-      const { createTournamentInSupabase } = await import("@/services/tournamentService");
-      const newTournament = await createTournamentInSupabase(dbTournamentData);
-      
-      if (newTournament) {
-        setTournaments(prev => [newTournament, ...prev]);
-        toast({
-          title: "Success",
-          description: "Tournament created successfully"
-        });
-        return newTournament;
-      }
-      throw new Error("Failed to create tournament");
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create tournament';
-      setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      throw err;
-    }
-  };
-
-  const updateTournament = async (tournamentId: string, updates: Partial<Tournament>) => {
-    try {
-      const { updateTournamentInSupabase } = await import("@/services/tournamentService");
-      const updatedTournament = await updateTournamentInSupabase(tournamentId, updates);
-      
-      if (updatedTournament) {
-        setTournaments(prev =>
-          prev.map(t => t.id === tournamentId ? updatedTournament : t)
-        );
-        return updatedTournament;
-      }
-      throw new Error("Failed to update tournament");
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update tournament';
-      setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-      throw err;
-    }
-  };
-
-  const getTournamentsByStatus = (status: string) => {
-    return filterTournamentsByStatus(status);
-  };
-
-  useEffect(() => {
-    fetchTournaments();
-  }, [organizerId]);
 
   return {
     tournaments,
     isLoading,
-    error,
-    fetchTournaments,
-    loadTournaments,
     createTournament,
     updateTournament,
-    getTournamentsByStatus,
     filterTournamentsByStatus,
-    formatDisplayDate,
-    getNextTournament
+    refreshData,
   };
 };
