@@ -27,12 +27,15 @@ const Players = () => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log("🔍 Fetching players from Supabase...");
+        console.log("🔍 Fetching players from storage...");
         
         const allPlayersData = await getAllPlayersFromSupabase({});
-        console.log("📊 Total players fetched:", allPlayersData.length);
+        console.log("📊 Total players fetched:", allPlayersData?.length || 0);
         
-        if (allPlayersData.length === 0) {
+        // Ensure we have a valid array
+        const playersArray = Array.isArray(allPlayersData) ? allPlayersData : [];
+        
+        if (playersArray.length === 0) {
           console.log("📝 No players found in database");
           setAllPlayers([]);
           setFilteredPlayers([]);
@@ -40,8 +43,8 @@ const Players = () => {
         }
         
         // Filter for approved players and sort by classical rating
-        const approvedPlayers = allPlayersData
-          .filter(player => player.status === 'approved')
+        const approvedPlayers = playersArray
+          .filter(player => player && player.status === 'approved')
           .sort((a, b) => (b.rating || 800) - (a.rating || 800));
         
         console.log("✅ Approved players sorted by rating:", approvedPlayers.length);
@@ -53,6 +56,8 @@ const Players = () => {
         console.error("❌ Error fetching players:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
         setError(errorMessage);
+        setAllPlayers([]);
+        setFilteredPlayers([]);
         toast({
           title: "Error",
           description: "Failed to load players data. Please try again.",
@@ -67,28 +72,38 @@ const Players = () => {
   }, [toast]);
 
   useEffect(() => {
-    let filtered = allPlayers;
+    if (!Array.isArray(allPlayers)) {
+      return;
+    }
+
+    let filtered = [...allPlayers];
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(player =>
-        player.name.toLowerCase().includes(query) ||
-        (player.title && player.title.toLowerCase().includes(query)) ||
-        (player.email && player.email.toLowerCase().includes(query)) ||
-        (player.phone && player.phone.toLowerCase().includes(query))
+        player && (
+          player.name?.toLowerCase().includes(query) ||
+          (player.title && player.title.toLowerCase().includes(query)) ||
+          (player.email && player.email.toLowerCase().includes(query)) ||
+          (player.phone && player.phone.toLowerCase().includes(query))
+        )
       );
     }
 
     if (selectedState && selectedState !== "") {
-      filtered = filtered.filter(player => player.state === selectedState);
+      filtered = filtered.filter(player => player && player.state === selectedState);
     }
 
     if (selectedCity && selectedCity !== "" && selectedCity !== "all-cities") {
-      filtered = filtered.filter(player => player.city === selectedCity);
+      filtered = filtered.filter(player => player && player.city === selectedCity);
     }
 
     // Always sort by classical rating (descending)
-    filtered.sort((a, b) => (b.rating || 800) - (a.rating || 800));
+    filtered.sort((a, b) => {
+      const ratingA = a?.rating || 800;
+      const ratingB = b?.rating || 800;
+      return ratingB - ratingA;
+    });
 
     setFilteredPlayers(filtered);
   }, [allPlayers, searchQuery, selectedState, selectedCity]);
@@ -134,9 +149,9 @@ const Players = () => {
               <p className="text-gray-600 dark:text-gray-400">
                 Players ranked by Classical rating in the Nigerian Chess Rating system
               </p>
-              {!isLoading && allPlayers.length > 0 && (
+              {!isLoading && Array.isArray(allPlayers) && allPlayers.length > 0 && (
                 <p className="text-sm text-gray-500 mt-2">
-                  Showing {filteredPlayers.length} of {allPlayers.length} approved players
+                  Showing {Array.isArray(filteredPlayers) ? filteredPlayers.length : 0} of {allPlayers.length} approved players
                 </p>
               )}
             </div>
@@ -199,7 +214,7 @@ const Players = () => {
           </div>
         ) : (
           <div className="mt-6">
-            {filteredPlayers.length > 0 ? (
+            {Array.isArray(filteredPlayers) && filteredPlayers.length > 0 ? (
               viewMode === 'table' ? (
                 <RankingTable players={filteredPlayers} itemsPerPage={50} showRankings={true} />
               ) : (
@@ -216,10 +231,10 @@ const Players = () => {
                     <AlertCircle className="h-8 w-8 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {allPlayers.length === 0 ? "No Players Found" : "No Players Match Your Filters"}
+                    {!Array.isArray(allPlayers) || allPlayers.length === 0 ? "No Players Found" : "No Players Match Your Filters"}
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400">
-                    {allPlayers.length === 0 
+                    {!Array.isArray(allPlayers) || allPlayers.length === 0 
                       ? "No players have been registered in the system yet."
                       : "Try adjusting your search criteria to find more players."
                     }

@@ -100,7 +100,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       rapidGamesPlayed: 0,
       blitzGamesPlayed: 0,
       created_at: new Date().toISOString(),
-      title: newPlayer.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" | undefined,
+      title: newPlayer.title === "" || newPlayer.title === "none" ? undefined : newPlayer.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM",
       tournamentResults: [],
     };
 
@@ -311,7 +311,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
                       <SelectValue placeholder="Select title (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Title</SelectItem>
+                      <SelectItem value="no-title">No Title</SelectItem>
                       <SelectItem value="GM">Grandmaster (GM)</SelectItem>
                       <SelectItem value="IM">International Master (IM)</SelectItem>
                       <SelectItem value="FM">FIDE Master (FM)</SelectItem>

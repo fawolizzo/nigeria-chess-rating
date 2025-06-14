@@ -31,8 +31,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <Logo />
-            <span className="font-bold text-xl text-nigeria-green">NCR</span>
+            <Logo showText={false} />
           </Link>
 
           {/* Desktop Navigation */}

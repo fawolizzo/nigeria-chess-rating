@@ -20,8 +20,7 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     status: "approved",
     ratingStatus: "provisional",
     gamesPlayed: 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date().toISOString()
   };
 
   try {
@@ -51,16 +50,22 @@ export const getAllPlayersFromSupabase = async (filters: {
   try {
     let players = getFromStorage('players', []);
     
+    // Ensure we return an array
+    if (!Array.isArray(players)) {
+      console.warn("Players data is not an array, returning empty array");
+      return [];
+    }
+    
     if (filters.state && filters.state !== "") {
-      players = players.filter((player: Player) => player.state === filters.state);
+      players = players.filter((player: Player) => player && player.state === filters.state);
     }
     
     if (filters.city && filters.city !== "" && filters.city !== "all-cities") {
-      players = players.filter((player: Player) => player.city === filters.city);
+      players = players.filter((player: Player) => player && player.city === filters.city);
     }
     
     if (filters.status) {
-      players = players.filter((player: Player) => player.status === filters.status);
+      players = players.filter((player: Player) => player && player.status === filters.status);
     }
     
     return players;
