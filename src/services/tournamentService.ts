@@ -23,6 +23,9 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
     updated_at: new Date().toISOString(),
     city: tournamentData.city || "",
     state: tournamentData.state || "",
+    players: [],
+    pairings: [],
+    results: []
   };
 
   try {

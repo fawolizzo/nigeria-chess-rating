@@ -1,4 +1,3 @@
-
 export interface RatingHistory {
   date: string;
   rating: number;
@@ -72,25 +71,24 @@ export interface Result {
 export interface Tournament {
   id: string;
   name: string;
-  description: string;
   start_date: string;
   end_date: string;
   location: string;
-  city: string;
-  state: string;
+  rounds: number;
+  time_control: string;
+  description: string;
   organizer_id: string;
   status: "pending" | "approved" | "rejected" | "ongoing" | "completed" | "processed";
-  time_control: string;
-  rounds: number;
-  current_round: number;
   participants: number;
+  current_round: number;
   registration_open: boolean;
-  players: Player[];
-  pairings: Pairing[];
-  results: Result[];
-  category?: "classical" | "rapid" | "blitz";
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+  city: string;
+  state: string;
+  players?: Player[];
+  pairings?: Pairing[];
+  results?: Result[];
 }
 
 export interface User {
