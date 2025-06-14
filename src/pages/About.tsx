@@ -2,6 +2,7 @@
 import React from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, Mail, Phone } from "lucide-react";
 
 const About = () => {
   return (
@@ -82,6 +83,45 @@ const About = () => {
                 <li>Creates a centralized repository of Nigerian chess player profiles</li>
                 <li>Promotes transparency in the rating process</li>
               </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                Contact Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-nigeria-green" />
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">Address</p>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Nigerian Chess Federation Headquarters<br />
+                      National Stadium Complex, Surulere<br />
+                      Lagos, Nigeria
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-nigeria-green" />
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">Email</p>
+                    <p className="text-gray-600 dark:text-gray-400">info@nigerianrating.com</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-nigeria-green" />
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">Phone</p>
+                    <p className="text-gray-600 dark:text-gray-400">+234 803 123 4567</p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

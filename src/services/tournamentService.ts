@@ -1,30 +1,27 @@
-
-import { Tournament, Player, Pairing, Result } from "@/lib/mockData";
+import { Tournament } from "@/lib/mockData";
 import { v4 as uuidv4 } from "uuid";
 import { saveToStorage, getFromStorage } from "@/utils/storageUtils";
+import { Player } from "@/lib/mockData";
 
 export const createTournament = async (tournamentData: Partial<Tournament>): Promise<Tournament> => {
   const newTournament: Tournament = {
     id: uuidv4(),
     name: tournamentData.name || "",
-    description: tournamentData.description || "",
-    start_date: tournamentData.start_date || new Date().toISOString(),
-    end_date: tournamentData.end_date || new Date().toISOString(),
+    startDate: tournamentData.startDate || new Date().toISOString(),
+    endDate: tournamentData.endDate || new Date().toISOString(),
     location: tournamentData.location || "",
+    format: tournamentData.format || "Swiss",
+    rounds: tournamentData.rounds || 5,
+    timeControl: tournamentData.timeControl || "90+30",
+    description: tournamentData.description || "",
+    organizerId: tournamentData.organizerId || "",
+    status: "planning",
+    participants: [],
+    winner: tournamentData.winner || null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     city: tournamentData.city || "",
     state: tournamentData.state || "",
-    organizer_id: tournamentData.organizer_id || "",
-    players: [],
-    pairings: [],
-    results: [],
-    rounds: tournamentData.rounds || 5,
-    current_round: 1,
-    status: "pending",
-    time_control: tournamentData.time_control || "90+30",
-    participants: 0,
-    registration_open: tournamentData.registration_open ?? true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
   };
 
   try {
@@ -38,40 +35,36 @@ export const createTournament = async (tournamentData: Partial<Tournament>): Pro
   }
 };
 
-export const createTournamentInSupabase = async (tournamentData: Partial<Tournament>): Promise<Tournament> => {
-  return createTournament(tournamentData);
-};
-
-export const updateTournament = async (id: string, updates: Partial<Tournament>): Promise<Tournament> => {
+export const getAllTournamentsFromSupabase = async (filters: {
+  status?: string;
+  organizerId?: string;
+} = {}): Promise<Tournament[]> => {
   try {
-    const tournaments = getFromStorage('tournaments', []);
-    const index = tournaments.findIndex((t: Tournament) => t.id === id);
-    
-    if (index === -1) {
-      throw new Error("Tournament not found");
+    let tournaments = getFromStorage<Tournament[]>('tournaments', []);
+
+    if (!Array.isArray(tournaments)) {
+      console.warn("Tournaments data is not an array, returning empty array");
+      return [];
     }
 
-    const updatedTournament = {
-      ...tournaments[index],
-      ...updates,
-      updated_at: new Date().toISOString()
-    };
+    // Filter by status
+    if (filters.status && filters.status !== 'all') {
+      tournaments = tournaments.filter(tournament => tournament && tournament.status === filters.status);
+    }
 
-    tournaments[index] = updatedTournament;
-    saveToStorage('tournaments', tournaments);
-    
-    return updatedTournament;
+    // Filter by organizerId
+    if (filters.organizerId) {
+      tournaments = tournaments.filter(tournament => tournament && tournament.organizerId === filters.organizerId);
+    }
+
+    return tournaments;
   } catch (error) {
-    console.error("Error updating tournament:", error);
-    throw new Error("Failed to update tournament");
+    console.error("Error fetching tournaments:", error);
+    return [];
   }
 };
 
-export const updateTournamentInSupabase = async (id: string, updates: Partial<Tournament>): Promise<Tournament> => {
-  return updateTournament(id, updates);
-};
-
-export const getTournament = async (id: string): Promise<Tournament | null> => {
+export const getTournamentFromSupabase = async (id: string): Promise<Tournament | null> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
     return tournaments.find((t: Tournament) => t.id === id) || null;
@@ -81,20 +74,37 @@ export const getTournament = async (id: string): Promise<Tournament | null> => {
   }
 };
 
-export const getTournamentsFromSupabase = async (): Promise<Tournament[]> => {
+export const updateTournamentInSupabase = async (id: string, updates: Partial<Tournament>): Promise<Tournament | null> => {
   try {
-    return getFromStorage('tournaments', []);
+    const tournaments = getFromStorage('tournaments', []);
+    const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === id);
+
+    if (tournamentIndex === -1) {
+      console.error("Tournament not found:", id);
+      return null;
+    }
+
+    const updatedTournament = {
+      ...tournaments[tournamentIndex],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    tournaments[tournamentIndex] = updatedTournament;
+    saveToStorage('tournaments', tournaments);
+
+    return updatedTournament;
   } catch (error) {
-    console.error("Error getting tournaments:", error);
-    return [];
+    console.error("Error updating tournament:", error);
+    return null;
   }
 };
 
-export const deleteTournament = async (id: string): Promise<boolean> => {
+export const deleteTournamentInSupabase = async (id: string): Promise<boolean> => {
   try {
-    const tournaments = getFromStorage('tournaments', []);
-    const filtered = tournaments.filter((t: Tournament) => t.id !== id);
-    saveToStorage('tournaments', filtered);
+    let tournaments = getFromStorage('tournaments', []);
+    tournaments = tournaments.filter((t: Tournament) => t.id !== id);
+    saveToStorage('tournaments', tournaments);
     return true;
   } catch (error) {
     console.error("Error deleting tournament:", error);
@@ -102,25 +112,32 @@ export const deleteTournament = async (id: string): Promise<boolean> => {
   }
 };
 
-export const addPlayerToTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
+export const addPlayerToTournament = async (tournamentId: string, players: Player[]): Promise<boolean> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
-    const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
+    const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
     
-    if (!tournament) {
-      throw new Error("Tournament not found");
-    }
-
-    if (!tournament.players.includes(playerId)) {
-      tournament.players.push(playerId);
-      tournament.participants = tournament.players.length;
-      tournament.updated_at = new Date().toISOString();
-      saveToStorage('tournaments', tournaments);
+    if (tournamentIndex === -1) {
+      return false;
     }
     
+    const tournament = tournaments[tournamentIndex];
+    if (!tournament.participants) {
+      tournament.participants = [];
+    }
+    
+    // Add players that aren't already in the tournament
+    players.forEach(player => {
+      if (!tournament.participants.find((p: Player) => p.id === player.id)) {
+        tournament.participants.push(player);
+      }
+    });
+    
+    tournaments[tournamentIndex] = tournament;
+    saveToStorage('tournaments', tournaments);
     return true;
   } catch (error) {
-    console.error("Error adding player to tournament:", error);
+    console.error("Error adding players to tournament:", error);
     return false;
   }
 };
@@ -128,17 +145,19 @@ export const addPlayerToTournament = async (tournamentId: string, playerId: stri
 export const removePlayerFromTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
-    const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
+    const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
     
-    if (!tournament) {
-      throw new Error("Tournament not found");
+    if (tournamentIndex === -1) {
+      return false;
     }
-
-    tournament.players = tournament.players.filter((id: string) => id !== playerId);
-    tournament.participants = tournament.players.length;
-    tournament.updated_at = new Date().toISOString();
-    saveToStorage('tournaments', tournaments);
     
+    const tournament = tournaments[tournamentIndex];
+    if (tournament.participants) {
+      tournament.participants = tournament.participants.filter((p: Player) => p.id !== playerId);
+    }
+    
+    tournaments[tournamentIndex] = tournament;
+    saveToStorage('tournaments', tournaments);
     return true;
   } catch (error) {
     console.error("Error removing player from tournament:", error);
