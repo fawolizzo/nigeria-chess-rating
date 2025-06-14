@@ -6,15 +6,12 @@ export { approvePlayerInSupabase, rejectPlayerInSupabase } from "./playerApprova
 export { uploadPlayersFromExcel } from "./playerExcelService";
 export { addPlayerToTournament, removePlayerFromTournament } from "./playerTournamentService";
 
+// Import functions for legacy exports
+import { createPlayer, getPlayerFromSupabase, updatePlayerInSupabase } from "./playerCoreService";
+import { getPlayerByIdFromSupabase } from "./playerQueryService";
+
 // Legacy exports for backward compatibility
 export const createPlayerInSupabase = createPlayer;
-export const getPlayerFromSupabase as getPlayerFromSupabase;
-export const getPlayerByIdFromSupabase as getPlayerByIdFromSupabase;
-
-// Fix the exports
-import { createPlayer } from "./playerCoreService";
-import { getPlayerFromSupabase as getPlayer, getPlayerByIdFromSupabase as getPlayerById } from "./playerQueryService";
-
-export const createPlayerInSupabase = createPlayer;
-export { getPlayer as getPlayerFromSupabase };
-export { getPlayerById as getPlayerByIdFromSupabase };
+export const getPlayerFromSupabase as getPlayerFromSupabaseAlias = getPlayerFromSupabase;
+export const getPlayerByIdFromSupabase as getPlayerByIdAlias = getPlayerByIdFromSupabase;
+export const updatePlayerInSupabase as updatePlayerAlias = updatePlayerInSupabase;
