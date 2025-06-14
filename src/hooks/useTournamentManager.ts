@@ -1,167 +1,149 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from "react";
+import { Tournament, Player } from "@/lib/mockData";
+import { TournamentFormData } from "@/components/tournament/form/TournamentFormSchema";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/contexts/UserContext";
-import { Tournament, TournamentFormData } from "@/types/tournamentTypes";
-import { v4 as uuidv4 } from 'uuid';
-import { format } from 'date-fns';
-import { logMessage, LogLevel } from "@/utils/debugLogger";
 
-export function useTournamentManager() {
+export interface TournamentManagerHook {
+  tournaments: Tournament[];
+  isLoading: boolean;
+  loadError: string;
+  createTournament: (tournamentData: TournamentFormData, customTimeControl: string, isCustomTimeControl: boolean) => boolean;
+  loadTournaments: () => Promise<void>;
+  retry: () => void;
+  generatePairings: (tournamentId: string) => Promise<void>;
+  recordResult: (tournamentId: string, pairingId: string, result: string) => Promise<void>;
+  addPlayerToTournament: (tournamentId: string, players: Player[]) => Promise<void>;
+  removePlayerFromTournament: (tournamentId: string, playerId: string) => Promise<void>;
+  toggleRegistration: (tournamentId: string) => Promise<void>;
+  startTournament: (tournamentId: string) => Promise<void>;
+  completeTournament: (tournamentId: string) => Promise<void>;
+  nextRound: (tournamentId: string) => Promise<void>;
+}
+
+export const useTournamentManager = (): TournamentManagerHook => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const { currentUser } = useUser();
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const { toast } = useToast();
 
-  const loadTournaments = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
-
+  const loadTournaments = async () => {
     try {
-      logMessage(LogLevel.INFO, 'useTournamentManager', 'Loading tournaments', {
-        userId: currentUser?.id
-      });
+      setIsLoading(true);
+      setLoadError("");
       
-      if (!currentUser?.id) {
-        logMessage(LogLevel.WARNING, 'useTournamentManager', 'No current user ID, cannot load tournaments');
-        setTournaments([]);
-        return [];
-      }
-
-      const storedTournaments = localStorage.getItem('ncr_tournaments');
+      // Load from localStorage
+      const storedTournaments = localStorage.getItem('tournaments');
       if (storedTournaments) {
-        const parsedTournaments: Tournament[] = JSON.parse(storedTournaments);
-        
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournaments raw data loaded', { 
-          totalCount: parsedTournaments.length,
-        });
-        
-        // Explicitly filter by the current user's ID
-        const userTournaments = parsedTournaments.filter(t => t.organizer_id === currentUser?.id);
-        
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Filtered tournaments for current user', { 
-          userTournamentsCount: userTournaments.length,
-          userId: currentUser?.id
-        });
-        
-        setTournaments(userTournaments);
-        return userTournaments;
+        const parsed = JSON.parse(storedTournaments);
+        setTournaments(Array.isArray(parsed) ? parsed : []);
       } else {
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'No tournaments found in localStorage');
         setTournaments([]);
-        return [];
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setLoadError(`Failed to load tournaments: ${errorMessage}`);
-      logMessage(LogLevel.ERROR, 'useTournamentManager', 'Error loading tournaments from localStorage', error);
-      return [];
+      console.error("Error loading tournaments:", error);
+      setLoadError("Failed to load tournaments");
+      setTournaments([]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser?.id]);
+  };
 
-  const createTournament = useCallback(
-    (
-      tournamentData: TournamentFormData,
-      customTimeControl: string,
-      isCustomTimeControl: boolean
-    ): boolean => {
-      if (!currentUser) {
-        toast({
-          title: "Not Authenticated",
-          description: "You must be logged in to create a tournament.",
-          variant: "destructive",
-        });
-        logMessage(LogLevel.ERROR, 'useTournamentManager', 'User not authenticated, cannot create tournament');
-        return false;
-      }
+  useEffect(() => {
+    loadTournaments();
+  }, []);
 
-      logMessage(LogLevel.INFO, 'useTournamentManager', 'Creating tournament', { 
-        tournamentName: tournamentData.name,
-        userId: currentUser.id
-      });
+  const createTournament = (tournamentData: TournamentFormData, customTimeControl: string, isCustomTimeControl: boolean): boolean => {
+    try {
+      const timeControl = isCustomTimeControl ? customTimeControl : tournamentData.timeControl || "60+30";
       
-      // Format dates properly - ensure they are in YYYY-MM-DD format for consistency
-      const formattedStartDate = format(tournamentData.startDate, 'yyyy-MM-dd');
-      const formattedEndDate = format(tournamentData.endDate, 'yyyy-MM-dd');
-      
-      // Use consistent field naming with the rest of the application
-      const timeControlValue = isCustomTimeControl && tournamentData.customTimeControl 
-        ? tournamentData.customTimeControl 
-        : tournamentData.timeControl;
-
       const newTournament: Tournament = {
-        id: uuidv4(),
-        name: tournamentData.name,
+        id: `tournament-${Date.now()}`,
+        name: tournamentData.name || "",
         description: tournamentData.description || "",
-        start_date: formattedStartDate,
-        end_date: formattedEndDate,
-        location: tournamentData.location,
-        city: tournamentData.city,
-        state: tournamentData.state,
-        rounds: tournamentData.rounds,
-        time_control: timeControlValue,
-        organizer_id: currentUser.id,
-        status: 'pending',
+        start_date: tournamentData.startDate?.toISOString().split('T')[0] || "",
+        end_date: tournamentData.endDate?.toISOString().split('T')[0] || "",
+        location: tournamentData.location || "",
+        city: tournamentData.city || "",
+        state: tournamentData.state || "",
+        organizer_id: "organizer-1",
+        status: "pending" as const,
+        rounds: tournamentData.rounds || 5,
         current_round: 1,
+        time_control: timeControl,
         participants: 0,
         registration_open: tournamentData.registrationOpen ?? true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        players: [],
+        pairings: [],
+        results: []
       };
 
-      try {
-        const existingTournaments = localStorage.getItem('ncr_tournaments');
-        const tournamentsArray = existingTournaments ? JSON.parse(existingTournaments) : [];
-        
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Adding new tournament to storage', { 
-          existingCount: tournamentsArray.length,
-          newTournamentId: newTournament.id
-        });
-        
-        // Debug log to verify tournament data before saving
-        console.log("Saving tournament to localStorage:", newTournament);
-        
-        tournamentsArray.push(newTournament);
-        localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsArray));
-        
-        // Update local state with user's tournaments only
-        const userTournaments = tournamentsArray.filter(t => t.organizer_id === currentUser?.id);
-        setTournaments(userTournaments);
-
-        toast({
-          title: "Tournament Created",
-          description: "Your tournament has been created successfully and is pending approval.",
-        });
-        logMessage(LogLevel.INFO, 'useTournamentManager', 'Tournament created successfully', { 
-          tournamentId: newTournament.id,
-          status: newTournament.status
-        });
-        return true;
-      } catch (error) {
-        toast({
-          title: "Failed to Create Tournament",
-          description: "There was an error creating the tournament.",
-          variant: "destructive",
-        });
-        logMessage(LogLevel.ERROR, 'useTournamentManager', 'Failed to create tournament', error);
-        return false;
-      }
-    },
-    [currentUser, toast]
-  );
-
-  const retry = useCallback(() => {
-    loadTournaments();
-  }, [loadTournaments]);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadTournaments();
+      const updatedTournaments = [...tournaments, newTournament];
+      setTournaments(updatedTournaments);
+      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+      
+      toast({
+        title: "Success",
+        description: "Tournament created successfully",
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error creating tournament:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create tournament",
+        variant: "destructive",
+      });
+      return false;
     }
-  }, [currentUser, loadTournaments]);
+  };
+
+  const generatePairings = async (tournamentId: string) => {
+    // Implementation for generating pairings
+    console.log("Generating pairings for tournament:", tournamentId);
+  };
+
+  const recordResult = async (tournamentId: string, pairingId: string, result: string) => {
+    // Implementation for recording results
+    console.log("Recording result:", { tournamentId, pairingId, result });
+  };
+
+  const addPlayerToTournament = async (tournamentId: string, players: Player[]) => {
+    // Implementation for adding players
+    console.log("Adding players to tournament:", { tournamentId, players });
+  };
+
+  const removePlayerFromTournament = async (tournamentId: string, playerId: string) => {
+    // Implementation for removing player
+    console.log("Removing player from tournament:", { tournamentId, playerId });
+  };
+
+  const toggleRegistration = async (tournamentId: string) => {
+    // Implementation for toggling registration
+    console.log("Toggling registration for tournament:", tournamentId);
+  };
+
+  const startTournament = async (tournamentId: string) => {
+    // Implementation for starting tournament
+    console.log("Starting tournament:", tournamentId);
+  };
+
+  const completeTournament = async (tournamentId: string) => {
+    // Implementation for completing tournament
+    console.log("Completing tournament:", tournamentId);
+  };
+
+  const nextRound = async (tournamentId: string) => {
+    // Implementation for next round
+    console.log("Moving to next round:", tournamentId);
+  };
+
+  const retry = () => {
+    loadTournaments();
+  };
 
   return {
     tournaments,
@@ -169,9 +151,14 @@ export function useTournamentManager() {
     loadError,
     createTournament,
     loadTournaments,
-    retry
+    retry,
+    generatePairings,
+    recordResult,
+    addPlayerToTournament,
+    removePlayerFromTournament,
+    toggleRegistration,
+    startTournament,
+    completeTournament,
+    nextRound
   };
-}
-
-// Re-export the type for backward compatibility
-export type { TournamentFormData as TournamentFormValues };
+};

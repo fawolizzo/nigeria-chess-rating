@@ -1,160 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Player, Tournament } from '@/lib/mockData';
-import { AlertCircle } from 'lucide-react';
 
-interface TournamentRatingDialogProps {
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Tournament } from "@/lib/mockData";
+
+export interface TournamentRatingDialogProps {
   tournament: Tournament;
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onProcessed: (processedTournament: Tournament) => void;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 const TournamentRatingDialog: React.FC<TournamentRatingDialogProps> = ({
   tournament,
   isOpen,
-  onOpenChange,
-  onProcessed
+  onClose,
+  onSuccess
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [ratingResults, setRatingResults] = useState<any[]>([]);
-  const [hasError, setHasError] = useState(false);
-  const [errorDetails, setErrorDetails] = useState('');
+  const { toast } = useToast();
 
-  // Process tournament's matches and calculate new ratings
-  useEffect(() => {
-    if (isOpen && tournament) {
-      try {
-        // Check if tournament is ready for processing
-        if (!tournament.rounds || tournament.rounds === 0) {
-          setHasError(true);
-          setErrorDetails('Tournament has no rounds defined.');
-          return;
-        }
-
-        if (!tournament.pairings || tournament.pairings.length === 0) {
-          setHasError(true);
-          setErrorDetails('Tournament has no matches to process.');
-          return;
-        }
-
-        // We'd actually calculate the ratings here using tournament data
-        // For demo, let's create some mock results
-        const mockResults = (tournament.players || []).map(playerId => ({
-          playerId,
-          initialRating: 1200 + Math.floor(Math.random() * 400),
-          finalRating: 1200 + Math.floor(Math.random() * 400),
-          gamesPlayed: Math.floor(Math.random() * 5) + 3,
-          performance: (Math.random() * 100).toFixed(1) + '%'
-        }));
-
-        setRatingResults(mockResults);
-        setHasError(false);
-      } catch (error) {
-        console.error('Error processing tournament ratings:', error);
-        setHasError(true);
-        setErrorDetails(error instanceof Error ? error.message : 'Unknown error');
-      }
-    }
-  }, [isOpen, tournament]);
-
-  const processRatings = async () => {
+  const handleProcessRatings = async () => {
+    setIsProcessing(true);
+    
     try {
-      setIsProcessing(true);
-
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Create updated tournament with status
-      const processedTournament: Tournament = {
-        ...tournament,
-        status: "processed" as Tournament["status"]
-      };
-
-      onProcessed(processedTournament);
+      // Simulate rating processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Close the dialog after processing
-      onOpenChange(false);
+      // Update tournament status to processed
+      const tournaments = JSON.parse(localStorage.getItem('tournaments') || '[]');
+      const updatedTournaments = tournaments.map((t: Tournament) =>
+        t.id === tournament.id ? { ...t, status: 'processed' } : t
+      );
+      localStorage.setItem('tournaments', JSON.stringify(updatedTournaments));
+      
+      toast({
+        title: "Success",
+        description: "Tournament ratings have been processed successfully.",
+      });
+      
+      onSuccess();
+      onClose();
     } catch (error) {
-      console.error('Error finalizing tournament processing:', error);
-      setHasError(true);
-      setErrorDetails(error instanceof Error ? error.message : 'Failed to process tournament ratings');
+      toast({
+        title: "Error",
+        description: "Failed to process tournament ratings.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Process Tournament Ratings</DialogTitle>
-          <DialogDescription>
-            Review the calculated rating changes for each player. Once processed, these changes will be applied to player profiles.
-          </DialogDescription>
         </DialogHeader>
-
-        {hasError ? (
-          <Alert variant="destructive" className="my-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {errorDetails || 'An error occurred while calculating ratings.'}
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="max-h-[350px] overflow-y-auto my-4">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 text-left">Player</th>
-                  <th className="py-2 text-right">Initial Rating</th>
-                  <th className="py-2 text-right">Final Rating</th>
-                  <th className="py-2 text-right">Change</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ratingResults.map((result, index) => {
-                  const change = result.finalRating - result.initialRating;
-                  return (
-                    <tr key={index} className="border-b">
-                      <td className="py-2 text-left">Player {index + 1}</td>
-                      <td className="py-2 text-right">{result.initialRating}</td>
-                      <td className="py-2 text-right">{result.finalRating}</td>
-                      <td className={`py-2 text-right font-medium ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : ''}`}>
-                        {change > 0 ? `+${change}` : change}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Process ratings for tournament: <strong>{tournament.name}</strong>
+          </p>
+          
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose} disabled={isProcessing}>
+              Cancel
+            </Button>
+            <Button onClick={handleProcessRatings} disabled={isProcessing}>
+              {isProcessing ? "Processing..." : "Process Ratings"}
+            </Button>
           </div>
-        )}
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isProcessing}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={processRatings}
-            disabled={isProcessing || hasError || ratingResults.length === 0}
-          >
-            {isProcessing ? 'Processing...' : 'Process Ratings'}
-          </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

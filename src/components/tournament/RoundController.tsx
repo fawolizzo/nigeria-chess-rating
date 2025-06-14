@@ -1,54 +1,67 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Play, SkipForward, Trophy } from "lucide-react";
 
-interface RoundControllerProps {
+export interface RoundControllerProps {
+  tournamentId: string;
   currentRound: number;
   totalRounds: number;
-  onAdvanceRound: () => Promise<void>;
-  canAdvanceRound: boolean;
+  onGeneratePairings: () => Promise<void>;
+  onNextRound: () => Promise<void>;
+  isOrganizer: boolean;
   isProcessing: boolean;
 }
 
-const RoundController = ({
+const RoundController: React.FC<RoundControllerProps> = ({
+  tournamentId,
   currentRound,
   totalRounds,
-  onAdvanceRound,
-  canAdvanceRound,
+  onGeneratePairings,
+  onNextRound,
+  isOrganizer,
   isProcessing
-}: RoundControllerProps) => {
-  const handleAdvanceRound = async () => {
-    await onAdvanceRound();
-  };
-
+}) => {
   return (
-    <div className="flex justify-between items-center px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-md mb-4">
-      <div>
-        <span className="font-medium">Round:</span> {currentRound} of {totalRounds}
-      </div>
-      
-      {currentRound < totalRounds && (
-        <Button
-          size="sm"
-          onClick={handleAdvanceRound}
-          disabled={!canAdvanceRound || isProcessing}
-          className="flex items-center gap-1"
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              Next Round
-              <ChevronRight size={16} />
-            </>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Trophy className="h-5 w-5" />
+          Round {currentRound} of {totalRounds}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage the current round and generate pairings for the next round.
+          </p>
+          
+          {isOrganizer && (
+            <div className="flex gap-2">
+              <Button 
+                onClick={onGeneratePairings} 
+                disabled={isProcessing}
+                variant="outline"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Generate Pairings
+              </Button>
+              
+              {currentRound < totalRounds && (
+                <Button 
+                  onClick={onNextRound} 
+                  disabled={isProcessing}
+                >
+                  <SkipForward className="h-4 w-4 mr-2" />
+                  Next Round
+                </Button>
+              )}
+            </div>
           )}
-        </Button>
-      )}
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -2,9 +2,8 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, Trophy, Star, TrendingUp, Clock, Award } from "lucide-react";
+import { Calendar, MapPin, Users, Trophy, Star, TrendingUp, Award, Home } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
 import RankingTable from "@/components/RankingTable";
@@ -21,8 +20,21 @@ const Index = () => {
         setIsLoadingPlayers(true);
         console.log("🏠 Home page: Fetching top players...");
         
-        const allPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
-        console.log("🏠 Fetched players count:", allPlayers.length);
+        // First try Supabase
+        let allPlayers: Player[] = [];
+        try {
+          allPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
+          console.log("🏠 Fetched from Supabase:", allPlayers.length, "players");
+        } catch (supabaseError) {
+          console.log("⚠️ Supabase failed, trying localStorage...");
+          // Fallback to localStorage
+          const storedPlayers = localStorage.getItem('players');
+          if (storedPlayers) {
+            const parsed = JSON.parse(storedPlayers);
+            allPlayers = Array.isArray(parsed) ? parsed.filter((p: Player) => p.status === 'approved') : [];
+            console.log("🏠 Fetched from localStorage:", allPlayers.length, "players");
+          }
+        }
         
         // Sort by classical rating and take top 10
         const sortedPlayers = allPlayers
@@ -33,6 +45,7 @@ const Index = () => {
         setTopPlayers(sortedPlayers);
       } catch (error) {
         console.error("❌ Error fetching top players:", error);
+        setTopPlayers([]);
       } finally {
         setIsLoadingPlayers(false);
       }
@@ -77,7 +90,7 @@ const Index = () => {
           <div className="text-center py-8 text-muted-foreground">
             <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p>No players found</p>
-            <p className="text-sm">Players will appear here once they are approved</p>
+            <p className="text-sm">Players will appear here once they are uploaded by the Rating Officer</p>
           </div>
         )}
       </CardContent>
@@ -234,6 +247,22 @@ const Index = () => {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick Access Navigation */}
+        <div className="bg-gradient-to-r from-nigeria-green to-nigeria-green-dark rounded-lg p-6 text-white mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Quick Access</h3>
+              <p className="opacity-90">Navigate to key sections of the application</p>
+            </div>
+            <Button variant="secondary" asChild>
+              <Link to="/" className="flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Home
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* CTA Section */}

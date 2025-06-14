@@ -1,20 +1,17 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Search, Trophy } from "lucide-react";
 import TournamentCard from "@/components/TournamentCard";
 import { Tournament } from "@/lib/mockData";
-import { getTournamentsFromSupabase, createTournamentInSupabase } from "@/services/tournamentService";
-import { useToast } from "@/components/ui/use-toast";
-import { categorizeTournaments } from "@/utils/tournamentUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const Tournaments = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTournamentName, setNewTournamentName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -23,8 +20,16 @@ const Tournaments = () => {
     const fetchTournaments = async () => {
       setIsLoading(true);
       try {
-        const tournaments = await getTournamentsFromSupabase();
-        setTournaments(tournaments);
+        // Simulate a short delay then load from localStorage
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const storedTournaments = localStorage.getItem('tournaments');
+        if (storedTournaments) {
+          const parsed = JSON.parse(storedTournaments);
+          setTournaments(Array.isArray(parsed) ? parsed : []);
+        } else {
+          setTournaments([]);
+        }
       } catch (error) {
         console.error("Error fetching tournaments:", error);
         toast({
@@ -32,6 +37,7 @@ const Tournaments = () => {
           description: "Failed to load tournaments. Please try again.",
           variant: "destructive"
         });
+        setTournaments([]);
       } finally {
         setIsLoading(false);
       }
@@ -40,120 +46,69 @@ const Tournaments = () => {
     fetchTournaments();
   }, [toast]);
 
-  const handleCreateTournament = async () => {
-    if (!newTournamentName.trim()) {
-      toast({
-        title: "Error",
-        description: "Tournament name cannot be empty.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const newTournament = {
-        name: newTournamentName,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
-        location: "Online",
-        organizerId: "user-1", // Replace with actual organizer ID
-        status: "upcoming" as const, // Explicit type casting to Tournament['status']
-        rounds: 5,
-        currentRound: 1,
-        category: "classical" as const,
-        timeControl: "60+30",
-        participants: 0,
-        registrationOpen: true
-      };
-
-      const createdTournament = await createTournamentInSupabase(newTournament);
-
-      if (createdTournament) {
-        setTournaments(prevTournaments => [...prevTournaments, createdTournament]);
-        setNewTournamentName("");
-        setIsCreateOpen(false);
-        toast({
-          title: "Success",
-          description: "Tournament created successfully.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to create tournament.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error creating tournament:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create tournament. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const filteredTournaments = tournaments.filter(tournament =>
     tournament.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const { upcoming, ongoing, completed, processed } = categorizeTournaments(filteredTournaments);
-
   return (
-    <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-        <div className="relative w-full md:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <Input
-            type="search"
-            placeholder="Search tournaments..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 w-full md:w-[300px]"
-          />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Navbar />
+      
+      <div className="container pt-24 pb-20 px-4 max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Chess Tournaments
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Browse and participate in rated chess tournaments across Nigeria
+          </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="mt-4 md:mt-0 flex items-center gap-2">
-          <Plus size={16} />
-          Create Tournament
-        </Button>
-      </div>
 
-      {isCreateOpen && (
-        <div className="mb-6 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
-          <h3 className="text-lg font-medium mb-2">Create New Tournament</h3>
-          <div className="flex flex-col md:flex-row items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+          <div className="relative w-full md:w-auto">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
             <Input
-              type="text"
-              placeholder="Tournament Name"
-              value={newTournamentName}
-              onChange={(e) => setNewTournamentName(e.target.value)}
-              className="w-full md:w-auto"
+              type="search"
+              placeholder="Search tournaments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-full md:w-[300px]"
             />
-            <Button onClick={handleCreateTournament}>Create</Button>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
           </div>
         </div>
-      )}
 
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      ) : filteredTournaments.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTournaments.map(tournament => (
-            <TournamentCard
-              key={tournament.id}
-              tournament={tournament}
-              onClickView={() => navigate(`/tournaments/${tournament.id}`)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="py-6 text-center text-gray-500 dark:text-gray-400">
-          No tournaments found.
-        </div>
-      )}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <div className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <div className="w-4 h-4 border-2 border-nigeria-green border-t-transparent rounded-full animate-spin"></div>
+              Loading tournaments...
+            </div>
+          </div>
+        ) : filteredTournaments.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTournaments.map(tournament => (
+              <TournamentCard
+                key={tournament.id}
+                tournament={tournament}
+                onClickView={() => navigate(`/tournaments/${tournament.id}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Trophy className="mx-auto h-16 w-16 text-gray-300 mb-4" />
+            <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+              {searchQuery ? "No tournaments match your search" : "No tournaments found"}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              {searchQuery 
+                ? "Try adjusting your search criteria" 
+                : "Tournaments will appear here once they are created and approved"
+              }
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
