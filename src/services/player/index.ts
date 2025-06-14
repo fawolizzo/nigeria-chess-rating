@@ -1,4 +1,5 @@
 
+
 // Export all player service functions from centralized location
 export { createPlayer, updatePlayerInSupabase, getPlayerFromSupabase } from "./playerCoreService";
 export { getAllPlayersFromSupabase, getAllUsers, getPlayerByIdFromSupabase } from "./playerQueryService";
@@ -12,6 +13,7 @@ import { getPlayerByIdFromSupabase } from "./playerQueryService";
 
 // Legacy exports for backward compatibility
 export const createPlayerInSupabase = createPlayer;
-export const getPlayerFromSupabase as getPlayerFromSupabaseAlias = getPlayerFromSupabase;
-export const getPlayerByIdFromSupabase as getPlayerByIdAlias = getPlayerByIdFromSupabase;
-export const updatePlayerInSupabase as updatePlayerAlias = updatePlayerInSupabase;
+export const getPlayerFromSupabaseAlias = getPlayerFromSupabase;
+export const getPlayerByIdAlias = getPlayerByIdFromSupabase;
+export const updatePlayerAlias = updatePlayerInSupabase;
+
