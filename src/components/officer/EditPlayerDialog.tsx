@@ -29,13 +29,15 @@ interface EditPlayerDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedPlayer: Player) => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   player,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  onOpenChange
 }) => {
   const [formData, setFormData] = useState({
     name: player.name,
@@ -65,6 +67,15 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
 
   const handleGenderChange = (gender: "M" | "F") => {
     setFormData(prev => ({ ...prev, gender }));
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    }
+    if (!open) {
+      onClose();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +120,7 @@ const EditPlayerDialog: React.FC<EditPlayerDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Player</DialogTitle>

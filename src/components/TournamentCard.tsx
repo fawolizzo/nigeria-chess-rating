@@ -22,7 +22,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
   // Get status color class
   const getStatusColorClass = (status: string) => {
     switch (status) {
-      case "upcoming":
+      case "approved":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
       case "ongoing":
         return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
@@ -41,8 +41,8 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
 
   const getStatus = (status: string) => {
     switch (status) {
-      case "upcoming":
-        return "Upcoming";
+      case "approved":
+        return "Approved";
       case "ongoing":
         return "Ongoing";
       case "completed":
@@ -79,7 +79,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
             <CalendarIcon className="h-4 w-4 mr-2" />
             <span>
-              {formatDate(tournament.startDate)} - {formatDate(tournament.endDate)}
+              {formatDate(tournament.start_date)} - {formatDate(tournament.end_date)}
             </span>
           </div>
           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
@@ -96,7 +96,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
           </div>
           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
             <Clock className="h-4 w-4 mr-2" />
-            <span>{tournament.timeControl}</span>
+            <span>{tournament.time_control}</span>
           </div>
         </div>
 

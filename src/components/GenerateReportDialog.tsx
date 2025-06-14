@@ -28,7 +28,7 @@ const GenerateReportDialog: React.FC<GenerateReportDialogProps> = ({
       // Create a simple text report
       const reportContent = `
 Tournament Report: ${tournament.name}
-Date: ${tournament.startDate} - ${tournament.endDate}
+Date: ${tournament.start_date} - ${tournament.end_date}
 Location: ${tournament.location}, ${tournament.state}
 Total Players: ${players.length}
 Rounds: ${tournament.rounds}

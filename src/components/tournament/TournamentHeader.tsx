@@ -28,13 +28,13 @@ const TournamentHeader = ({
         <div>
           <h1 className="text-2xl font-bold">{tournament?.name}</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            {tournament?.startDate} to {tournament?.endDate} • {tournament?.location}
+            {tournament?.start_date} to {tournament?.end_date} • {tournament?.location}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {/* Different actions based on tournament status */}
-          {tournament?.status === "upcoming" && (
+          {tournament?.status === "approved" && (
             <>
               <Button 
                 onClick={onToggleRegistration} 
@@ -47,7 +47,7 @@ const TournamentHeader = ({
                 ) : (
                   <UserPlus size={16} />
                 )}
-                {tournament.registrationOpen ? "Close Registration" : "Open Registration"}
+                {tournament.registration_open ? "Close Registration" : "Open Registration"}
               </Button>
               
               <Button 

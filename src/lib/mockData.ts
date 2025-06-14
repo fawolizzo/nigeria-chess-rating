@@ -14,6 +14,10 @@ export interface TournamentResult {
   opponent: string;
   ratingChange: number;
   format: "classical" | "rapid" | "blitz";
+  location?: string;
+  position?: number;
+  score?: number;
+  gamesPlayed?: number;
 }
 
 export interface Player {
@@ -54,6 +58,8 @@ export interface Pairing {
   table: number;
   white: string;
   black: string;
+  roundNumber?: number;
+  matches?: any[];
 }
 
 export interface Result {
@@ -83,6 +89,8 @@ export interface Tournament {
   pairings: Pairing[];
   results: Result[];
   category?: "classical" | "rapid" | "blitz";
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface User {

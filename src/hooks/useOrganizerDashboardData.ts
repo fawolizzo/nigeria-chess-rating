@@ -19,7 +19,7 @@ export const useOrganizerDashboardData = (organizerId?: string) => {
       
       // Filter by organizer if provided
       const filteredTournaments = organizerId 
-        ? allTournaments.filter(t => t.organizerId === organizerId)
+        ? allTournaments.filter(t => t.organizer_id === organizerId)
         : allTournaments;
       
       setTournaments(filteredTournaments);
@@ -42,13 +42,13 @@ export const useOrganizerDashboardData = (organizerId?: string) => {
   const filterTournamentsByStatus = (status: string) => {
     return tournaments.filter(tournament => {
       if (status === 'upcoming') {
-        return tournament.status === 'approved' && new Date(tournament.startDate) > new Date();
+        return tournament.status === 'approved' && new Date(tournament.start_date) > new Date();
       }
       if (status === 'ongoing') {
         const now = new Date();
         return tournament.status === 'approved' && 
-               new Date(tournament.startDate) <= now && 
-               new Date(tournament.endDate) >= now;
+               new Date(tournament.start_date) <= now && 
+               new Date(tournament.end_date) >= now;
       }
       return tournament.status === status;
     });
@@ -63,22 +63,22 @@ export const useOrganizerDashboardData = (organizerId?: string) => {
     return upcomingTournaments.length > 0 ? upcomingTournaments[0] : null;
   };
 
-  const createTournament = async (tournamentData: Omit<Tournament, "id" | "createdAt" | "updatedAt">) => {
+  const createTournament = async (tournamentData: Omit<Tournament, "id" | "created_at" | "updated_at">) => {
     try {
       // Convert Tournament data to database format
       const dbTournamentData = {
         name: tournamentData.name,
         description: tournamentData.description,
-        startDate: tournamentData.startDate,
-        endDate: tournamentData.endDate,
+        start_date: tournamentData.start_date,
+        end_date: tournamentData.end_date,
         location: tournamentData.location,
         city: tournamentData.city,
         state: tournamentData.state,
-        timeControl: tournamentData.timeControl,
+        time_control: tournamentData.time_control,
         rounds: tournamentData.rounds,
-        organizerId: tournamentData.organizerId,
+        organizer_id: tournamentData.organizer_id,
         status: tournamentData.status || 'pending',
-        registrationOpen: tournamentData.registrationOpen
+        registration_open: tournamentData.registration_open
       };
 
       const { createTournamentInSupabase } = await import("@/services/tournamentService");
