@@ -1,173 +1,91 @@
-
+import { describe, it, expect } from '@jest/globals';
+import { Tournament, Player } from "@/lib/mockData";
 import { 
-  setupSystemTest, 
-  teardownSystemTest, 
-  generateTestData,
-  simulateRegistration,
-  simulateLogin,
-  TestUser
-} from './setup';
-import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { Tournament, Player } from "@/types/tournamentTypes";
+  createTournament, 
+  getAllTournaments, 
+  getTournamentById,
+  addPlayerToTournament 
+} from "@/services/tournamentService";
 
-const runTournamentFlowTest = async (): Promise<boolean> => {
-  try {
-    logMessage(LogLevel.INFO, 'SystemTest', '===== STARTING TOURNAMENT FLOW TEST =====');
+describe('Tournament Flow Tests', () => {
+  let mockTournament: Tournament;
+  let mockPlayer: Player;
+
+  beforeEach(() => {
+    // Clear localStorage before each test
+    localStorage.clear();
     
-    // Setup test environment
-    await setupSystemTest();
-    
-    // Generate test data
-    const { ratingOfficer, organizer, testPlayers, testTournament } = generateTestData();
-    
-    // Register and log in the tournament organizer (approved)
-    await simulateRegistration({ ...organizer, status: 'approved' });
-    const organizerLoggedIn = await simulateLogin(
-      organizer.email, 
-      organizer.password, 
-      organizer.role
-    );
-    if (!organizerLoggedIn) {
-      throw new Error('Tournament organizer login failed');
-    }
-    
-    // Set as current organizer
-    const currentOrganizer = JSON.parse(localStorage.getItem('ncr_current_user') || 'null');
-    
-    // Initialize players and tournaments in localStorage
-    const players = testPlayers.map((player, index) => ({
-      id: `player-${index + 1}`,
-      name: player.name,
-      rating: player.rating,
-      nationalId: player.nationalId,
-      state: player.state,
-      status: player.status as 'active' | 'inactive' | 'pending' | 'approved', // Cast to match our Player interface
-      gamesPlayed: 0,
-      organizerId: currentOrganizer.id,
-      registrationDate: new Date().toISOString(),
-      lastModified: Date.now()
-    }));
-    
-    localStorage.setItem('ncr_players', JSON.stringify(players));
-    
-    // Create a new tournament
-    const tournament: Tournament = {
-      id: `tournament-${Date.now()}`,
-      name: testTournament.name,
-      description: testTournament.description, // Use the description from testTournament that we added in setup.ts
-      start_date: testTournament.startDate, // Already a string from setup.ts
-      end_date: testTournament.endDate, // Already a string from setup.ts
-      location: testTournament.venue,
-      city: testTournament.city,
-      state: testTournament.state,
-      time_control: testTournament.timeControl,
-      rounds: testTournament.rounds,
-      organizer_id: currentOrganizer.id,
-      status: 'pending', // Use pending to match our Tournament interface
+    mockPlayer = {
+      id: 'player-1',
+      name: 'Test Player',
+      email: 'test@example.com',
+      phone: '+234567890',
+      state: 'Lagos',
+      city: 'Lagos',
+      rating: 1200,
+      rapidRating: 1150,
+      blitzRating: 1100,
+      status: 'approved',
+      ratingStatus: 'provisional',
+      gamesPlayed: 5,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      gender: 'M',
+      country: 'Nigeria'
     };
-    
-    const tournaments = [tournament];
-    localStorage.setItem('ncr_tournaments', JSON.stringify(tournaments));
-    
-    // Simulate starting the tournament
-    const updatedTournament = {
-      ...tournament,
-      status: 'ongoing',
-      currentRound: 1
-    };
-    
-    const updatedTournaments = [updatedTournament];
-    localStorage.setItem('ncr_tournaments', JSON.stringify(updatedTournaments));
-    
-    // Simulate generating pairings for round 1
-    const pairings = {
-      roundNumber: 1,
-      matches: [
-        {
-          whiteId: players[0].id,
-          blackId: players[1].id,
-          result: "*" // No result yet
-        }
-      ]
-    };
-    
-    const tournamentWithPairings = {
-      ...updatedTournament,
-      pairings: [pairings]
-    };
-    
-    const tournamentsWithPairings = [tournamentWithPairings];
-    localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsWithPairings));
-    
-    // Simulate recording results
-    const pairingsWithResults = {
-      ...pairings,
-      matches: [
-        {
-          whiteId: players[0].id,
-          blackId: players[1].id,
-          result: "1-0" // White wins
-        }
-      ]
-    };
-    
-    const tournamentWithResults = {
-      ...tournamentWithPairings,
-      pairings: [pairingsWithResults]
-    };
-    
-    const tournamentsWithResults = [tournamentWithResults];
-    localStorage.setItem('ncr_tournaments', JSON.stringify(tournamentsWithResults));
-    
-    // Simulate completing the tournament
-    const completedTournament = {
-      ...tournamentWithResults,
-      status: 'completed',
-      currentRound: 1
-    };
-    
-    const completedTournaments = [completedTournament];
-    localStorage.setItem('ncr_tournaments', JSON.stringify(completedTournaments));
-    
-    // Log in as rating officer to approve the tournament
-    await simulateRegistration(ratingOfficer);
-    const officerLoggedIn = await simulateLogin(
-      ratingOfficer.email, 
-      ratingOfficer.accessCode!, 
-      ratingOfficer.role
-    );
-    
-    if (!officerLoggedIn) {
-      throw new Error('Rating officer login failed');
-    }
-    
-    // Simulate processing tournament for ratings
-    const processedTournament = {
-      ...completedTournament,
-      status: 'processed'
-    };
-    
-    const processedTournaments = [processedTournament];
-    localStorage.setItem('ncr_tournaments', JSON.stringify(processedTournaments));
-    
-    // Cleanup
-    await teardownSystemTest();
-    
-    logMessage(LogLevel.INFO, 'SystemTest', '===== TOURNAMENT FLOW TEST PASSED =====');
-    return true;
-  } catch (error) {
-    logMessage(LogLevel.ERROR, 'SystemTest', '===== TOURNAMENT FLOW TEST FAILED =====', error);
-    await teardownSystemTest();
-    return false;
-  }
-};
 
+    mockTournament = {
+      id: 'test-tournament-1',
+      name: 'Test Tournament',
+      description: 'A test tournament',
+      start_date: '2024-12-20',
+      end_date: '2024-12-21',
+      location: 'Test Location',
+      city: 'Lagos',
+      state: 'Lagos',
+      time_control: 'Classical',
+      rounds: 5,
+      organizer_id: 'test-organizer',
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      current_round: 1,
+      participants: 0,
+      registration_open: true,
+      players: [],
+      pairings: [],
+      results: []
+    };
+  });
 
-export { runTournamentFlowTest };
+  it('should create a tournament', async () => {
+    const tournament = await createTournament(mockTournament);
+    expect(tournament).toBeDefined();
+    expect(tournament.name).toBe(mockTournament.name);
+  });
 
-test('tournament flow', async () => {
-  const result = await runTournamentFlowTest();
-  expect(result).toBe(true);
+  it('should retrieve all tournaments', async () => {
+    await createTournament(mockTournament);
+    const tournaments = await getAllTournaments();
+    expect(tournaments).toBeDefined();
+    expect(tournaments.length).toBeGreaterThan(0);
+  });
+
+  it('should retrieve a tournament by ID', async () => {
+    await createTournament(mockTournament);
+    const tournament = await getTournamentById(mockTournament.id);
+    expect(tournament).toBeDefined();
+    expect(tournament?.id).toBe(mockTournament.id);
+  });
+
+  it('should add a player to a tournament', async () => {
+    await createTournament(mockTournament);
+    const success = await addPlayerToTournament(mockTournament.id, [mockPlayer]);
+    expect(success).toBe(true);
+
+    const tournament = await getTournamentById(mockTournament.id);
+    expect(tournament).toBeDefined();
+    expect(tournament?.players).toBeDefined();
+    expect(tournament?.players?.length).toBe(1);
+    expect(tournament?.players?.[0].id).toBe(mockPlayer.id);
+  });
 });
