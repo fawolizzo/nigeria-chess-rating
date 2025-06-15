@@ -1,4 +1,5 @@
-import { describe, it, expect } from '@jest/globals';
+
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { Tournament, Player } from "@/lib/mockData";
 import { 
   createTournament, 
@@ -89,3 +90,8 @@ describe('Tournament Flow Tests', () => {
     expect(tournament?.players?.[0].id).toBe(mockPlayer.id);
   });
 });
+
+export const runTournamentFlowTest = async () => {
+  // This is a placeholder for running tests programmatically
+  console.log('Tournament flow tests would run here');
+};

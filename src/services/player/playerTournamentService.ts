@@ -1,29 +1,29 @@
 
-import { Player } from "@/lib/mockData";
-import { saveToStorage, getFromStorage } from "@/utils/storageUtils";
+import { Tournament, Player } from "@/lib/mockData";
+import { getFromStorage, saveToStorage } from "@/utils/storageUtils";
 
 export const addPlayerToTournament = async (tournamentId: string, players: Player[]): Promise<boolean> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
-    const tournamentIndex = tournaments.findIndex((t: any) => t.id === tournamentId);
+    const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
     
     if (tournamentIndex === -1) {
+      console.error("Tournament not found:", tournamentId);
       return false;
     }
-    
+
     const tournament = tournaments[tournamentIndex];
-    if (!tournament.players) {
-      tournament.players = [];
-    }
+    const existingPlayerIds = tournament.players?.map((p: Player) => p.id) || [];
     
-    // Add players that aren't already in the tournament
-    players.forEach(player => {
-      if (!tournament.players.find((p: Player) => p.id === player.id)) {
-        tournament.players.push(player);
-      }
-    });
+    // Add new players that aren't already in the tournament
+    const newPlayers = players.filter(player => !existingPlayerIds.includes(player.id));
     
-    tournaments[tournamentIndex] = tournament;
+    tournaments[tournamentIndex] = {
+      ...tournament,
+      players: [...(tournament.players || []), ...newPlayers],
+      participants: (tournament.participants || 0) + newPlayers.length
+    };
+
     saveToStorage('tournaments', tournaments);
     return true;
   } catch (error) {
@@ -35,18 +35,22 @@ export const addPlayerToTournament = async (tournamentId: string, players: Playe
 export const removePlayerFromTournament = async (tournamentId: string, playerId: string): Promise<boolean> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
-    const tournamentIndex = tournaments.findIndex((t: any) => t.id === tournamentId);
+    const tournamentIndex = tournaments.findIndex((t: Tournament) => t.id === tournamentId);
     
     if (tournamentIndex === -1) {
+      console.error("Tournament not found:", tournamentId);
       return false;
     }
-    
+
     const tournament = tournaments[tournamentIndex];
-    if (tournament.players) {
-      tournament.players = tournament.players.filter((p: Player) => p.id !== playerId);
-    }
+    const updatedPlayers = (tournament.players || []).filter((p: Player) => p.id !== playerId);
     
-    tournaments[tournamentIndex] = tournament;
+    tournaments[tournamentIndex] = {
+      ...tournament,
+      players: updatedPlayers,
+      participants: updatedPlayers.length
+    };
+
     saveToStorage('tournaments', tournaments);
     return true;
   } catch (error) {

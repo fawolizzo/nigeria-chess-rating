@@ -7,7 +7,7 @@ export const getTournamentStatus = (tournament: Tournament): "pending" | "approv
   const endDate = new Date(tournament.end_date);
 
   // Check explicit status first
-  if (tournament.status === "pending" || tournament.status === "approved" || tournament.status === "rejected" || tournament.status === "processed") {
+  if (tournament.status === "pending" || tournament.status === "rejected" || tournament.status === "processed") {
     return tournament.status;
   }
 
