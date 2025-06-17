@@ -69,6 +69,11 @@ export const updateTournament = async (id: string, updates: Partial<Tournament>)
   }
 };
 
+// Legacy exports for backward compatibility
+export const createTournamentInSupabase = createTournament;
+export const getTournamentsFromSupabase = getAllTournaments;
+export const updateTournamentInSupabase = updateTournament;
+
 export const addPlayerToTournament = async (tournamentId: string, players: Player[]): Promise<boolean> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
@@ -125,7 +130,7 @@ export const generatePairings = async (tournamentId: string): Promise<boolean> =
   }
 };
 
-export const recordResult = async (tournamentId: string, pairingId: string, result: string): Promise<boolean> => {
+export const recordResult = async (tournamentId: string, pairingId: string, result: "1-0" | "0-1" | "1/2-1/2"): Promise<boolean> => {
   try {
     const tournaments = getFromStorage('tournaments', []);
     const tournament = tournaments.find((t: Tournament) => t.id === tournamentId);
@@ -136,18 +141,18 @@ export const recordResult = async (tournamentId: string, pairingId: string, resu
 
     // Update pairing with result
     const updatedPairings = tournament.pairings?.map((pairing: Pairing) => 
-      pairing.id === pairingId ? { ...pairing, result } : pairing
+      pairing.pairingId === pairingId ? { ...pairing, result } : pairing
     ) || [];
 
     // Add to results
-    const pairing = tournament.pairings?.find((p: Pairing) => p.id === pairingId);
+    const pairing = tournament.pairings?.find((p: Pairing) => p.pairingId === pairingId);
     if (pairing) {
       const newResult: Result = {
         id: uuidv4(),
         tournamentId,
         round: tournament.current_round || 1,
-        whiteId: pairing.whiteId,
-        blackId: pairing.blackId,
+        whiteId: pairing.whitePlayerId,
+        blackId: pairing.blackPlayerId,
         result,
         date: new Date().toISOString()
       };

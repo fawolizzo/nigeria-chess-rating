@@ -18,3 +18,6 @@ export const runSystemTests = async () => {
     console.error("❌ System tests failed:", error);
   }
 };
+
+// Legacy export for backward compatibility
+export const runAllSystemTests = runSystemTests;

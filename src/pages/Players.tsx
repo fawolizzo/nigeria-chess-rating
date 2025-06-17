@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
@@ -28,6 +29,20 @@ const Players = () => {
         setError(null);
         console.log("🔍 Players page: Fetching players from storage...");
         
+        // First check localStorage directly
+        const rawStorageData = localStorage.getItem('players');
+        console.log("📦 Raw localStorage data:", rawStorageData);
+        
+        if (rawStorageData) {
+          try {
+            const parsedData = JSON.parse(rawStorageData);
+            console.log("📊 Parsed localStorage players:", parsedData);
+            console.log("📊 Number of players in localStorage:", parsedData?.length || 0);
+          } catch (parseError) {
+            console.error("❌ Error parsing localStorage data:", parseError);
+          }
+        }
+        
         const allPlayersData = await getAllPlayersFromSupabase({ status: 'approved' });
         console.log("📊 Total approved players fetched:", allPlayersData?.length || 0);
         console.log("📋 Players data:", allPlayersData);
@@ -37,6 +52,11 @@ const Players = () => {
         
         if (playersArray.length === 0) {
           console.log("📝 No approved players found in database");
+          
+          // Also check for any players regardless of status
+          const allPlayersRegardlessOfStatus = await getAllPlayersFromSupabase({ status: 'all' });
+          console.log("🔍 Total players (all statuses):", allPlayersRegardlessOfStatus?.length || 0);
+          
           setAllPlayers([]);
           setFilteredPlayers([]);
           return;
@@ -200,7 +220,21 @@ const Players = () => {
                 <span className="text-gray-600 dark:text-gray-400">Loading players...</span>
               </div>
             </div>
-            <PlayersSkeleton />
+            {/* PlayersSkeleton component */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, index) => (
+                <div key={index} className="bg-white dark:bg-gray-900 rounded-lg border p-4">
+                  <div className="flex items-start space-x-3">
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12">
