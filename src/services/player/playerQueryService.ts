@@ -13,7 +13,6 @@ export const getAllPlayersFromSupabase = async (filters: {
     let players = getFromStorage('players', []);
     console.log("📊 Raw players from storage:", players);
     console.log("📊 Players array length:", players?.length || 0);
-    console.log("📊 First 3 players:", players?.slice(0, 3));
     
     // Ensure we return an array
     if (!Array.isArray(players)) {
@@ -21,22 +20,31 @@ export const getAllPlayersFromSupabase = async (filters: {
       return [];
     }
     
-    // Log all players before filtering
-    console.log("📋 All players before filtering:", players.map(p => ({ 
+    // Log all players with their statuses before filtering
+    console.log("📋 All players with statuses:", players.map(p => ({ 
       id: p?.id, 
       name: p?.name, 
-      status: p?.status 
+      status: p?.status || 'NO_STATUS' 
     })));
     
-    // Filter for approved players by default
-    if (!filters.status) {
-      const beforeFilterLength = players.length;
-      players = players.filter((player: Player) => player && player.status === 'approved');
-      console.log(`✅ Filtered for approved players: ${beforeFilterLength} -> ${players.length}`);
+    // Apply status filtering
+    if (filters.status === 'all') {
+      // Return all players regardless of status
+      console.log("🔧 Returning all players (status: 'all')");
     } else if (filters.status && filters.status !== 'all') {
+      // Filter for specific status
       const beforeFilterLength = players.length;
       players = players.filter((player: Player) => player && player.status === filters.status);
       console.log(`🔧 Filtered for status '${filters.status}': ${beforeFilterLength} -> ${players.length}`);
+    } else {
+      // Default: filter for approved players, but also include players without explicit status
+      const beforeFilterLength = players.length;
+      players = players.filter((player: Player) => {
+        if (!player) return false;
+        // Include players with 'approved' status OR players without a status (legacy data)
+        return player.status === 'approved' || !player.status || player.status === undefined;
+      });
+      console.log(`✅ Filtered for approved/legacy players: ${beforeFilterLength} -> ${players.length}`);
     }
     
     if (filters.state && filters.state !== "") {
@@ -67,8 +75,8 @@ export const getAllPlayersFromSupabase = async (filters: {
 };
 
 export const getAllUsers = async (): Promise<Player[]> => {
-  console.log("👥 getAllUsers called");
-  return getAllPlayersFromSupabase({});
+  console.log("👥 getAllUsers called - fetching all players regardless of status");
+  return getAllPlayersFromSupabase({ status: 'all' });
 };
 
 export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | null> => {
@@ -76,7 +84,7 @@ export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | nu
     console.log("🔍 Getting player by ID:", id);
     const players = getFromStorage('players', []);
     const player = players.find((p: Player) => p.id === id) || null;
-    console.log("👤 Found player:", player ? { id: player.id, name: player.name } : null);
+    console.log("👤 Found player:", player ? { id: player.id, name: player.name, status: player.status } : null);
     return player;
   } catch (error) {
     console.error("❌ Error getting player:", error);

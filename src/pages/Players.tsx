@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
@@ -31,31 +30,49 @@ const Players = () => {
         
         // First check localStorage directly
         const rawStorageData = localStorage.getItem('players');
-        console.log("📦 Raw localStorage data:", rawStorageData);
+        console.log("📦 Raw localStorage data exists:", !!rawStorageData);
+        console.log("📦 Raw localStorage data length:", rawStorageData?.length || 0);
         
         if (rawStorageData) {
           try {
             const parsedData = JSON.parse(rawStorageData);
-            console.log("📊 Parsed localStorage players:", parsedData);
-            console.log("📊 Number of players in localStorage:", parsedData?.length || 0);
+            console.log("📊 Parsed localStorage players count:", parsedData?.length || 0);
+            console.log("📊 Sample localStorage players:", parsedData?.slice(0, 3)?.map((p: Player) => ({
+              id: p?.id,
+              name: p?.name,
+              status: p?.status || 'NO_STATUS'
+            })));
           } catch (parseError) {
             console.error("❌ Error parsing localStorage data:", parseError);
           }
+        } else {
+          console.log("📦 No localStorage data found");
         }
         
-        const allPlayersData = await getAllPlayersFromSupabase({ status: 'approved' });
-        console.log("📊 Total approved players fetched:", allPlayersData?.length || 0);
-        console.log("📋 Players data:", allPlayersData);
+        // Try to get approved players first
+        let allPlayersData = await getAllPlayersFromSupabase({ status: 'approved' });
+        console.log("📊 Approved players fetched:", allPlayersData?.length || 0);
+        
+        // If no approved players found, try to get all players
+        if (!allPlayersData || allPlayersData.length === 0) {
+          console.log("🔍 No approved players found, trying to fetch all players...");
+          allPlayersData = await getAllPlayersFromSupabase({ status: 'all' });
+          console.log("📊 All players (any status) fetched:", allPlayersData?.length || 0);
+        }
         
         // Ensure we have a valid array
         const playersArray = Array.isArray(allPlayersData) ? allPlayersData : [];
         
         if (playersArray.length === 0) {
-          console.log("📝 No approved players found in database");
+          console.log("📝 No players found in database");
           
-          // Also check for any players regardless of status
-          const allPlayersRegardlessOfStatus = await getAllPlayersFromSupabase({ status: 'all' });
-          console.log("🔍 Total players (all statuses):", allPlayersRegardlessOfStatus?.length || 0);
+          // Debug: Check if there are ANY players in storage at all
+          const debugPlayers = localStorage.getItem('players');
+          if (debugPlayers) {
+            const debugParsed = JSON.parse(debugPlayers);
+            console.log("🔍 Debug: Total players in localStorage:", debugParsed?.length || 0);
+            console.log("🔍 Debug: Player statuses:", debugParsed?.map((p: Player) => p?.status));
+          }
           
           setAllPlayers([]);
           setFilteredPlayers([]);
@@ -67,8 +84,8 @@ const Players = () => {
           .filter(player => player && typeof player === 'object')
           .sort((a, b) => (b.rating || 800) - (a.rating || 800));
         
-        console.log("✅ Approved players sorted by rating:", sortedPlayers.length);
-        console.log("🏆 Top 3 players:", sortedPlayers.slice(0, 3).map(p => ({ name: p.name, rating: p.rating })));
+        console.log("✅ Players sorted by rating:", sortedPlayers.length);
+        console.log("🏆 Top 3 players:", sortedPlayers.slice(0, 3).map(p => ({ name: p.name, rating: p.rating, status: p.status })));
         
         setAllPlayers(sortedPlayers);
         setFilteredPlayers(sortedPlayers);
@@ -177,7 +194,7 @@ const Players = () => {
               </p>
               {!isLoading && Array.isArray(allPlayers) && allPlayers.length > 0 && (
                 <p className="text-sm text-gray-500 mt-2">
-                  Showing {Array.isArray(filteredPlayers) ? filteredPlayers.length : 0} of {allPlayers.length} approved players
+                  Showing {Array.isArray(filteredPlayers) ? filteredPlayers.length : 0} of {allPlayers.length} players
                 </p>
               )}
             </div>
@@ -220,21 +237,7 @@ const Players = () => {
                 <span className="text-gray-600 dark:text-gray-400">Loading players...</span>
               </div>
             </div>
-            {/* PlayersSkeleton component */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, index) => (
-                <div key={index} className="bg-white dark:bg-gray-900 rounded-lg border p-4">
-                  <div className="flex items-start space-x-3">
-                    <Skeleton className="w-12 h-12 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                      <Skeleton className="h-3 w-2/3" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PlayersSkeleton />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -279,6 +282,9 @@ const Players = () => {
                       : "Try adjusting your search criteria to find more players."
                     }
                   </p>
+                  <div className="mt-4 text-xs text-gray-400">
+                    Debug: Check console for detailed player data information
+                  </div>
                 </div>
               </div>
             )}
