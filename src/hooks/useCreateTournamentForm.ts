@@ -38,8 +38,8 @@ export const useCreateTournamentForm = () => {
         city: formData.city,
         state: formData.state,
         rounds: formData.rounds,
-        start_date: formData.startDate,
-        end_date: formData.endDate,
+        start_date: formData.startDate.toISOString().split('T')[0], // Convert Date to string
+        end_date: formData.endDate.toISOString().split('T')[0], // Convert Date to string
         time_control: timeControl,
         organizer_id: currentUser.id,
         registration_open: true,

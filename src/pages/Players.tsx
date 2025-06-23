@@ -26,54 +26,42 @@ const Players = () => {
       try {
         setIsLoading(true);
         setError(null);
-        console.log("🔍 Players page: Fetching players from storage...");
+        console.log("🔍 Players page: Starting fetch...");
         
-        // First check localStorage directly
+        // Debug localStorage first
         const rawStorageData = localStorage.getItem('players');
-        console.log("📦 Raw localStorage data exists:", !!rawStorageData);
-        console.log("📦 Raw localStorage data length:", rawStorageData?.length || 0);
+        console.log("📦 localStorage 'players' exists:", !!rawStorageData);
         
         if (rawStorageData) {
           try {
             const parsedData = JSON.parse(rawStorageData);
-            console.log("📊 Parsed localStorage players count:", parsedData?.length || 0);
-            console.log("📊 Sample localStorage players:", parsedData?.slice(0, 3)?.map((p: Player) => ({
+            console.log("📊 localStorage players count:", parsedData?.length || 0);
+            console.log("📊 Sample players from localStorage:", parsedData?.slice(0, 3)?.map((p: Player) => ({
               id: p?.id,
               name: p?.name,
               status: p?.status || 'NO_STATUS'
             })));
           } catch (parseError) {
-            console.error("❌ Error parsing localStorage data:", parseError);
+            console.error("❌ Error parsing localStorage:", parseError);
           }
-        } else {
-          console.log("📦 No localStorage data found");
         }
         
-        // Try to get approved players first
-        let allPlayersData = await getAllPlayersFromSupabase({ status: 'approved' });
-        console.log("📊 Approved players fetched:", allPlayersData?.length || 0);
-        
-        // If no approved players found, try to get all players
-        if (!allPlayersData || allPlayersData.length === 0) {
-          console.log("🔍 No approved players found, trying to fetch all players...");
-          allPlayersData = await getAllPlayersFromSupabase({ status: 'all' });
-          console.log("📊 All players (any status) fetched:", allPlayersData?.length || 0);
-        }
+        // Try to get all players without filtering first
+        console.log("🔍 Fetching ALL players...");
+        let allPlayersData = await getAllPlayersFromSupabase({ status: 'all' });
+        console.log("📊 All players fetched:", allPlayersData?.length || 0);
+        console.log("📊 All players data:", allPlayersData?.slice(0, 3)?.map(p => ({ 
+          id: p?.id, 
+          name: p?.name, 
+          status: p?.status 
+        })));
         
         // Ensure we have a valid array
         const playersArray = Array.isArray(allPlayersData) ? allPlayersData : [];
+        console.log("📊 Final players array length:", playersArray.length);
         
         if (playersArray.length === 0) {
-          console.log("📝 No players found in database");
-          
-          // Debug: Check if there are ANY players in storage at all
-          const debugPlayers = localStorage.getItem('players');
-          if (debugPlayers) {
-            const debugParsed = JSON.parse(debugPlayers);
-            console.log("🔍 Debug: Total players in localStorage:", debugParsed?.length || 0);
-            console.log("🔍 Debug: Player statuses:", debugParsed?.map((p: Player) => p?.status));
-          }
-          
+          console.log("❌ No players found at all");
           setAllPlayers([]);
           setFilteredPlayers([]);
           return;
@@ -84,14 +72,18 @@ const Players = () => {
           .filter(player => player && typeof player === 'object')
           .sort((a, b) => (b.rating || 800) - (a.rating || 800));
         
-        console.log("✅ Players sorted by rating:", sortedPlayers.length);
-        console.log("🏆 Top 3 players:", sortedPlayers.slice(0, 3).map(p => ({ name: p.name, rating: p.rating, status: p.status })));
+        console.log("✅ Final sorted players:", sortedPlayers.length);
+        console.log("🏆 Top 3 players:", sortedPlayers.slice(0, 3).map(p => ({ 
+          name: p.name, 
+          rating: p.rating, 
+          status: p.status 
+        })));
         
         setAllPlayers(sortedPlayers);
         setFilteredPlayers(sortedPlayers);
         
       } catch (error) {
-        console.error("❌ Error fetching players:", error);
+        console.error("❌ Error in fetchPlayers:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
         setError(errorMessage);
         setAllPlayers([]);
@@ -108,8 +100,8 @@ const Players = () => {
 
     fetchPlayers();
     
-    // Set up an interval to refresh data every 5 seconds
-    const interval = setInterval(fetchPlayers, 5000);
+    // Set up an interval to refresh data every 10 seconds
+    const interval = setInterval(fetchPlayers, 10000);
     
     return () => clearInterval(interval);
   }, [toast]);
@@ -197,6 +189,10 @@ const Players = () => {
                   Showing {Array.isArray(filteredPlayers) ? filteredPlayers.length : 0} of {allPlayers.length} players
                 </p>
               )}
+              {/* Debug info */}
+              <div className="mt-2 text-xs text-gray-400">
+                Debug: Loading={isLoading.toString()}, AllPlayers={allPlayers.length}, Error={error || 'none'}
+              </div>
             </div>
             
             <div className="flex gap-2">

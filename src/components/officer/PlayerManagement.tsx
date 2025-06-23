@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -368,7 +367,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
           </Card>
         ) : (
           filteredPlayers.map((player) => (
-            <Card key={player.id} className="overflow-hidden">
+            <Card key={`player-${player.id}`} className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
