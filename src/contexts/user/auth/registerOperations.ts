@@ -1,117 +1,53 @@
-
-import { User, SyncEventType } from '@/types/userTypes';
-import { getFromStorage, saveToStorage } from '@/utils/storageUtils';
-import { sendSyncEvent } from '@/utils/storageSync';
+import { User } from '@/types/userTypes';
 import { logMessage, LogLevel, logUserEvent } from '@/utils/debugLogger';
-import { STORAGE_KEYS } from '../userContextTypes';
-import { monitorSync } from '@/utils/monitorSync';
-import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
 import { sendEmailToUser } from './emailOperations';
 
-/**
- * Register a new user
- */
+const DEFAULT_ACCESS_CODE = "RNCR25";
+
 export const registerUser = async (
   userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' },
   setUsers: React.Dispatch<React.SetStateAction<User[]>>,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
-  forceSyncAllStorage: (keys?: string[]) => Promise<boolean>,
+  _forceSyncAllStorage: (keys?: string[]) => Promise<boolean>,
   getRatingOfficerEmails: () => string[]
 ): Promise<boolean> => {
-  return monitorSync('register', userData.email, async () => {
-    try {
-      setIsLoading(true);
-      
-      await forceSyncAllStorage([STORAGE_KEYS.USERS]);
-      
-      const latestUsers = getFromStorage<User[]>(STORAGE_KEYS.USERS, []);
-      setUsers(latestUsers);
-      
-      validateUserData(latestUsers, userData);
-      
-      const newUser = createUserObject(userData);
-      
-      console.log("Creating new user:", newUser);
-      
-      const updatedUsers = [...latestUsers, newUser];
-      
-      saveAndSyncUsers(updatedUsers, setUsers);
-      
-      logUserEvent('register', newUser.id, { 
-        email: userData.email, 
-        role: userData.role, 
-        status: newUser.status
+  try {
+    setIsLoading(true);
+    let newUser: User | null = null;
+    if (userData.role === 'rating_officer') {
+      // Register rating officer in Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.accessCode || DEFAULT_ACCESS_CODE,
+        options: {
+          data: {
+            fullName: userData.fullName,
+            phoneNumber: userData.phoneNumber,
+            state: userData.state,
+            role: 'rating_officer',
+            status: 'approved',
+          }
+        }
       });
-      
-      await sendRegistrationEmails(newUser, getRatingOfficerEmails);
-      
-      return true;
-    } catch (error: any) {
-      logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  });
-};
-
-/**
- * Validate that the user doesn't already exist
- */
-function validateUserData(users: User[], userData: any): void {
-  const emailExists = users.some(user => 
-    user.email.toLowerCase() === userData.email.toLowerCase()
-  );
-  
-  if (emailExists) {
-    throw new Error('Email is already registered');
-  }
-}
-
-/**
- * Create a complete user object with generated ID and timestamps
- */
-function createUserObject(userData: any): User {
-  const id = uuidv4();
-  const registrationDate = new Date().toISOString();
-  
-  // Generate access code for rating officers if one is not provided
-  let accessCode = userData.accessCode;
-  if (userData.role === 'rating_officer' && !accessCode) {
-    accessCode = "RNCR25"; // Use updated access code
-  }
-  
-  const status = userData.status || (userData.role === 'rating_officer' ? 'approved' as const : 'pending' as const);
-  
-  return {
-    ...userData,
-    id,
-    registrationDate,
-    status,
-    accessCode,
-    lastModified: Date.now()
-  };
-}
-
-/**
- * Save users to storage and update state
- */
-function saveAndSyncUsers(users: User[], setUsers: React.Dispatch<React.SetStateAction<User[]>>): void {
-  setUsers(users);
-  saveToStorage(STORAGE_KEYS.USERS, users);
-  sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEYS.USERS, users);
-}
-
-/**
- * Send appropriate registration notification emails
- */
-async function sendRegistrationEmails(
-  newUser: User, 
-  getRatingOfficerEmails: () => string[]
-): Promise<void> {
-  // Send emails (in production this would use a real email service)
-  if (newUser.role === 'rating_officer' && newUser.accessCode) {
-    try {
+      if (error) {
+        logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
+        throw new Error(error.message || 'Registration failed');
+      }
+      const user = data.user;
+      newUser = {
+        id: user?.id || '',
+        email: user?.email || userData.email,
+        fullName: userData.fullName,
+        phoneNumber: userData.phoneNumber,
+        state: userData.state,
+        role: 'rating_officer',
+        status: 'approved',
+        registrationDate: user?.created_at || new Date().toISOString(),
+        lastModified: Date.now(),
+        accessCode: userData.accessCode || DEFAULT_ACCESS_CODE
+      };
+      // Send access code email
       await sendEmailToUser(
         newUser.email,
         'Your Rating Officer Access Code',
@@ -121,15 +57,39 @@ async function sendRegistrationEmails(
         <p>Your access code is: <strong>${newUser.accessCode}</strong></p>
         <p>Please use this code to log in to your account.</p>`
       );
-    } catch (emailError) {
-      logMessage(LogLevel.ERROR, 'RegisterOperations', 'Failed to send access code email:', emailError);
-    }
-  }
-  
-  if (newUser.role === 'tournament_organizer') {
-    try {
+    } else if (userData.role === 'tournament_organizer') {
+      // Register tournament organizer in organizers table
+      const { data, error } = await supabase
+        .from('organizers')
+        .insert([
+          {
+            id: undefined,
+            email: userData.email,
+            name: userData.fullName,
+            ...(userData.phoneNumber ? { phone: userData.phoneNumber } : {}),
+            role: 'tournament_organizer',
+            status: userData.status || 'pending',
+          }
+        ])
+        .select()
+        .single();
+      if (error) {
+        logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
+        throw new Error(error.message || 'Registration failed');
+      }
+      newUser = {
+        id: data.id,
+        email: data.email,
+        fullName: data.name,
+        phoneNumber: data.phone || '',
+        state: '', // Add state if available in data
+        role: 'tournament_organizer',
+        status: (data.status as 'pending' | 'approved' | 'rejected'),
+        registrationDate: data.created_at,
+        lastModified: Date.now(),
+      };
+      // Notify rating officers
       const ratingOfficerEmails = getRatingOfficerEmails();
-      
       if (ratingOfficerEmails.length > 0) {
         for (const officerEmail of ratingOfficerEmails) {
           await sendEmailToUser(
@@ -144,8 +104,20 @@ async function sendRegistrationEmails(
           );
         }
       }
-    } catch (emailError) {
-      logMessage(LogLevel.ERROR, 'RegisterOperations', 'Failed to send notification email to rating officers:', emailError);
     }
+    if (newUser) {
+      setUsers([newUser]);
+      logUserEvent('register', newUser.id, {
+        email: newUser.email,
+        role: newUser.role,
+        status: newUser.status
+      });
+    }
+    return true;
+  } catch (error: any) {
+    logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
+    throw error;
+  } finally {
+    setIsLoading(false);
   }
-}
+};
