@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Tournament, Player } from "@/lib/mockData";
 import { User } from '@/types/userTypes';
 import { useDashboardStorage } from "./useDashboardStorage";
-import { getFromStorage } from '@/utils/storageUtils';
+import { getFromStorageSync } from '@/utils/storageUtils';
 
 export interface DashboardResult {
   pendingTournaments: Tournament[];
@@ -17,7 +17,8 @@ export interface DashboardResult {
 }
 
 export const useOfficerDashboardData = (): DashboardResult => {
-  const { tournaments, players, isLoading: storageLoading, updateTournaments, updatePlayers } = useDashboardStorage();
+  const { tournaments, isLoading: storageLoading, updateTournaments } = useDashboardStorage();
+  const [players, setPlayers] = useState<Player[]>([]);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingOrganizers, setPendingOrganizers] = useState<User[]>([]);
@@ -28,25 +29,31 @@ export const useOfficerDashboardData = (): DashboardResult => {
   const pendingTournaments = tournaments.filter(t => t.status === "pending");
   const completedTournaments = tournaments.filter(t => t.status === "completed" || t.status === "approved");
   
-  // Filter players by status - use the proper storage system
+  // Filter players by status
   const pendingPlayers = players.filter(p => p.status === "pending");
 
-  // Load organizers from storage with error handling
+  // Load players and organizers from storage with error handling
   useEffect(() => {
-    const loadOrganizers = () => {
+    const loadData = () => {
       try {
-        const organizers = getFromStorage('users', []);
+        // Load players from storage
+        const storedPlayers = getFromStorageSync('players', []);
+        setPlayers(Array.isArray(storedPlayers) ? storedPlayers : []);
+
+        // Load organizers from storage
+        const organizers = getFromStorageSync('users', []);
         const pending = organizers.filter((user: User) => 
           user.role === 'tournament_organizer' && user.status === 'pending'
         );
         setPendingOrganizers(pending);
       } catch (error) {
-        console.error('Error loading organizers:', error);
+        console.error('Error loading dashboard data:', error);
+        setPlayers([]);
         setPendingOrganizers([]);
       }
     };
 
-    loadOrganizers();
+    loadData();
   }, []);
 
   // Set up real-time data refresh
@@ -58,15 +65,15 @@ export const useOfficerDashboardData = (): DashboardResult => {
         setErrorMessage(null);
 
         // Refresh players from storage
-        const currentPlayers = getFromStorage('players', []);
-        updatePlayers(currentPlayers);
+        const currentPlayers = getFromStorageSync('players', []);
+        setPlayers(Array.isArray(currentPlayers) ? currentPlayers : []);
 
         // Refresh tournaments from storage
-        const currentTournaments = getFromStorage('tournaments', []);
+        const currentTournaments = getFromStorageSync('tournaments', []);
         updateTournaments(currentTournaments);
 
         // Refresh organizers
-        const organizers = getFromStorage('users', []);
+        const organizers = getFromStorageSync('users', []);
         const pending = organizers.filter((user: User) => 
           user.role === 'tournament_organizer' && user.status === 'pending'
         );
@@ -99,7 +106,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
         clearTimeout(dataTimeoutRef.current);
       }
     };
-  }, [updatePlayers, updateTournaments]);
+  }, [updateTournaments]);
 
   const refreshData = () => {
     try {
@@ -108,15 +115,15 @@ export const useOfficerDashboardData = (): DashboardResult => {
       setErrorMessage(null);
 
       // Refresh players from storage
-      const currentPlayers = getFromStorage('players', []);
-      updatePlayers(currentPlayers);
+      const currentPlayers = getFromStorageSync('players', []);
+      setPlayers(Array.isArray(currentPlayers) ? currentPlayers : []);
 
       // Refresh tournaments from storage
-      const currentTournaments = getFromStorage('tournaments', []);
+      const currentTournaments = getFromStorageSync('tournaments', []);
       updateTournaments(currentTournaments);
 
       // Refresh organizers
-      const organizers = getFromStorage('users', []);
+      const organizers = getFromStorageSync('users', []);
       const pending = organizers.filter((user: User) => 
         user.role === 'tournament_organizer' && user.status === 'pending'
       );

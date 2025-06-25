@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -20,6 +19,7 @@ import TournamentManagement from "@/pages/TournamentManagement";
 import CreateTournament from "@/pages/CreateTournament";
 import Players from "@/pages/Players";
 import PlayerProfile from "@/pages/PlayerProfile";
+import TestStorage from "@/pages/TestStorage";
 
 // Import dashboard components
 import NewOfficerDashboard from "@/pages/NewOfficerDashboard";
@@ -60,6 +60,7 @@ function App() {
               <Route path="/tournament-management/new" element={<CreateTournament />} />
               <Route path="/players" element={<Players />} />
               <Route path="/players/:id" element={<PlayerProfile />} />
+              <Route path="/test-storage" element={<TestStorage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />

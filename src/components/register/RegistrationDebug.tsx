@@ -1,81 +1,62 @@
-
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { getFromStorage } from '@/utils/storageUtils';
+import React from "react";
+import { getFromStorageSync } from '@/utils/storageUtils';
+import { User } from '@/types/userTypes';
 
 const RegistrationDebug = () => {
-  // Never show in production environment under any circumstances
-  const isProduction = import.meta.env.PROD;
-  if (isProduction) {
-    return null;
-  }
-  
-  const [expanded, setExpanded] = useState(false);
-
-  const getUserData = () => {
-    const users = getFromStorage('ncr_users', []);
-    
-    return {
-      totalUsers: Array.isArray(users) ? users.length : 0,
-      ratingOfficers: Array.isArray(users) ? users.filter((u: any) => u.role === 'rating_officer').map((u: any) => ({
-        email: '[Email hidden]',
-        status: u.status,
-        hasPassword: !!u.password,
-        hasAccessCode: !!u.accessCode
-      })) : [],
-      organizers: Array.isArray(users) ? users.filter((u: any) => u.role === 'tournament_organizer').map((u: any) => ({
-        email: u.email,
-        status: u.status
-      })) : []
-    };
-  };
-
-  const data = getUserData();
+  // Get all users from storage for debugging
+  const users = getFromStorageSync<User[]>('ncr_users', []);
 
   return (
-    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-md overflow-hidden bg-gray-50 dark:bg-gray-900/50">
-      <Button 
-        variant="ghost" 
-        className="w-full flex justify-between items-center p-3 text-xs"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <span>Registration Debug Information</span>
-        {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-      </Button>
+    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+      <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+        🔧 Registration Debug Information
+      </h3>
       
-      {expanded && (
-        <div className="p-3 text-xs font-mono">
-          <div>Total Users: {data.totalUsers}</div>
-          <div>Rating Officers: {data.ratingOfficers.length}</div>
-          <div>
-            {data.ratingOfficers.length > 0 && (
-              <div className="mt-1 ml-2">
-                {data.ratingOfficers.map((officer: any, index: number) => (
-                  <div key={index} className="mb-1">
-                    {officer.email} (Status: {officer.status}, Password: {officer.hasPassword ? "Yes" : "No"}, Access Code: {officer.hasAccessCode ? "Yes" : "No"})
-                  </div>
+      <div className="space-y-3 text-sm">
+        <div>
+          <strong>Total Users in Storage:</strong>
+          <div className="text-xs">
+            Count: {users.length}
+            {users.length > 0 && (
+              <ul className="list-disc list-inside mt-1">
+                {users.map((user, idx) => (
+                  <li key={idx}>
+                    {user.email} ({user.role}) - {user.status}
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </div>
-          <div>Tournament Organizers: {data.organizers.length}</div>
-          <div>
-            {data.organizers.length > 0 && (
-              <div className="mt-1 ml-2">
-                {data.organizers.map((organizer: any, index: number) => (
-                  <div key={index} className="mb-1">
-                    {organizer.email} (Status: {organizer.status})
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="mt-2 text-gray-500">
-            Note: This debug panel is for development and testing purposes only.
           </div>
         </div>
-      )}
+        
+        <div>
+          <strong>Rating Officers:</strong>
+          {users.filter(u => u.role === 'rating_officer').length === 0 && (
+            <div className="text-red-500 ml-2">No rating officers found!</div>
+          )}
+          {users.filter(u => u.role === 'rating_officer').map((officer, idx) => (
+            <div key={idx} className="ml-2 mb-1 p-1 border-b border-gray-200 dark:border-gray-700">
+              <div><span className="text-blue-500">Email:</span> {officer.email}</div>
+              <div><span className="text-blue-500">Status:</span> {officer.status}</div>
+              <div><span className="text-blue-500">Access Code:</span> {officer.accessCode || "RNCR25"}</div>
+            </div>
+          ))}
+        </div>
+        
+        <div>
+          <strong>Tournament Organizers:</strong>
+          {users.filter(u => u.role === 'tournament_organizer').length === 0 && (
+            <div className="text-red-500 ml-2">No tournament organizers found!</div>
+          )}
+          {users.filter(u => u.role === 'tournament_organizer').map((organizer, idx) => (
+            <div key={idx} className="ml-2 mb-1 p-1 border-b border-gray-200 dark:border-gray-700">
+              <div><span className="text-blue-500">Email:</span> {organizer.email}</div>
+              <div><span className="text-blue-500">Status:</span> {organizer.status}</div>
+              <div><span className="text-blue-500">Has Password:</span> {organizer.password ? "Yes" : "No"}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

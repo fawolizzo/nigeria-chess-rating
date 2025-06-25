@@ -2,6 +2,13 @@
  * Types definitions for user-related functionality
  */
 
+// Storage key constants
+export const STORAGE_KEY_USERS = 'ncr_users';
+export const STORAGE_KEY_CURRENT_USER = 'ncr_current_user';
+export const STORAGE_KEY_PLAYERS = 'ncr_players';
+export const STORAGE_KEY_TOURNAMENTS = 'ncr_tournaments';
+export const STORAGE_KEY_SETTINGS = 'ncr_settings';
+
 export interface User {
   id: string;
   fullName: string;
