@@ -49,7 +49,7 @@ const Players = () => {
   }, [toast]);
 
   useEffect(() => {
-    let filtered = [...allPlayers];
+    let filtered = Array.isArray(allPlayers) ? [...allPlayers] : [];
     if (searchQuery.trim()) {
       filtered = filtered.filter(player =>
         player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

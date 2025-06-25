@@ -19,21 +19,21 @@ export const getAllPlayersFromSupabase = async (filters: {
   }
 
   const { data, error } = await query;
-  if (error) {
+  if (error || !Array.isArray(data)) {
     console.error("❌ Error fetching players from Supabase:", error);
     return [];
   }
   // Optionally sort by rating
-  return (data as Player[]).sort((a, b) => (b.rating || 800) - (a.rating || 800));
+  return data.sort((a, b) => (b.rating || 800) - (a.rating || 800));
 };
 
 export const getAllUsers = async (): Promise<Player[]> => {
   const { data, error } = await supabase.from('players').select('*');
-  if (error) {
+  if (error || !Array.isArray(data)) {
     console.error("❌ Error fetching all users from Supabase:", error);
     return [];
   }
-  return data as Player[];
+  return data;
 };
 
 export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | null> => {
@@ -42,7 +42,7 @@ export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | nu
     .select('*')
     .eq('id', id)
     .single();
-  if (error) {
+  if (error || !data) {
     console.error("❌ Error getting player from Supabase:", error);
     return null;
   }

@@ -45,7 +45,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     const loadPlayers = async () => {
       try {
         const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
-        setPlayers(fetchedPlayers);
+        setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
       } catch (error) {
         console.error('Error loading players:', error);
         setPlayers([]);
@@ -134,15 +134,15 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     });
   };
 
-  const filteredPlayers = players.filter(player => {
+  const filteredPlayers = (Array.isArray(players) ? players : []).filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          player.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === "all" || player.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const pendingCount = players.filter(p => p.status === "pending").length;
-  const approvedCount = players.filter(p => p.status === "approved").length;
+  const pendingCount = (Array.isArray(players) ? players : []).filter(p => p.status === "pending").length;
+  const approvedCount = (Array.isArray(players) ? players : []).filter(p => p.status === "approved").length;
 
   return (
     <div className="space-y-6">
