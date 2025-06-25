@@ -13,7 +13,7 @@ import StateSelector from "@/components/selectors/StateSelector";
 import CitySelector from "@/components/selectors/CitySelector";
 import EditPlayerDialog from "./EditPlayerDialog";
 import FileUploadButton from "@/components/players/FileUploadButton";
-import { createPlayer, updatePlayerInSupabase, getAllPlayersFromSupabase } from "@/services/playerService";
+import { getFromStorage, saveToStorage } from "@/utils/storageUtils";
 
 interface PlayerManagementProps {
   onPlayerApproval: () => void;
@@ -40,12 +40,13 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     title: "",
   });
 
-  // Load players from Supabase
+  // Load players from storage using the proper storage system
   useEffect(() => {
-    const loadPlayers = async () => {
+    const loadPlayers = () => {
       try {
-        const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
-        setPlayers(fetchedPlayers);
+        const storedPlayers = getFromStorage('players', []);
+        console.log("🔍 PlayerManagement: Loaded players from storage:", storedPlayers.length);
+        setPlayers(storedPlayers);
       } catch (error) {
         console.error('Error loading players:', error);
         setPlayers([]);
@@ -53,32 +54,43 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     };
 
     loadPlayers();
+    
+    // Set up interval to refresh data every 5 seconds
     const interval = setInterval(loadPlayers, 5000);
+    
     return () => clearInterval(interval);
-  }, [selectedStatus]);
+  }, []);
 
-  // Save players to Supabase (handled by create/update functions)
-
-  const handleApproval = async (playerId: string, status: "approved" | "rejected") => {
+  // Save players to storage using the proper storage system
+  const savePlayersToStorage = (updatedPlayers: Player[]) => {
     try {
-      const player = players.find(p => p.id === playerId);
-      if (!player) return;
-      await updatePlayerInSupabase(playerId, { status });
-      onPlayerApproval();
-      toast({
-        title: status === "approved" ? "Player Approved" : "Player Rejected",
-        description: `Player has been ${status}`,
-      });
+      console.log("💾 PlayerManagement: Saving players to storage:", updatedPlayers.length);
+      saveToStorage('players', updatedPlayers);
+      setPlayers(updatedPlayers);
     } catch (error) {
+      console.error('Error saving players:', error);
       toast({
         title: "Error",
-        description: "Failed to update player status",
+        description: "Failed to save players data",
         variant: "destructive",
       });
     }
   };
 
-  const handleCreatePlayer = async () => {
+  const handleApproval = (playerId: string, status: "approved" | "rejected") => {
+    const updatedPlayers = players.map(player =>
+      player.id === playerId ? { ...player, status } : player
+    );
+    savePlayersToStorage(updatedPlayers);
+    onPlayerApproval();
+    
+    toast({
+      title: status === "approved" ? "Player Approved" : "Player Rejected",
+      description: `Player has been ${status}`,
+    });
+  };
+
+  const handleCreatePlayer = () => {
     if (!newPlayer.name || !newPlayer.email) {
       toast({
         title: "Error",
@@ -87,47 +99,135 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       });
       return;
     }
-    try {
-      await createPlayer({ ...newPlayer });
-      setNewPlayer({
-        name: "",
-        email: "",
-        phone: "",
-        state: "",
-        city: "",
-        gender: "M",
-        fideId: "",
-        title: "",
-      });
-      setIsCreatePlayerOpen(false);
-      onPlayerApproval();
-      toast({
-        title: "Player Created",
-        description: "New player has been added successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create player",
-        variant: "destructive",
-      });
-    }
+
+    const player: Player = {
+      id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      ...newPlayer,
+      status: "approved",
+      rating: 800,
+      rapidRating: 800,
+      blitzRating: 800,
+      gamesPlayed: 0,
+      rapidGamesPlayed: 0,
+      blitzGamesPlayed: 0,
+      created_at: new Date().toISOString(),
+      title: newPlayer.title === "" || newPlayer.title === "none" ? undefined : newPlayer.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM",
+      tournamentResults: [],
+      ratingHistory: [{
+        date: new Date().toISOString(),
+        rating: 800,
+        change: 0,
+        reason: "Initial rating"
+      }],
+      rapidRatingHistory: [{
+        date: new Date().toISOString(),
+        rating: 800,
+        change: 0,
+        reason: "Initial rapid rating"
+      }],
+      blitzRatingHistory: [{
+        date: new Date().toISOString(),
+        rating: 800,
+        change: 0,
+        reason: "Initial blitz rating"
+      }],
+      ratingStatus: "provisional",
+      rapidRatingStatus: "provisional",
+      blitzRatingStatus: "provisional",
+      country: "Nigeria"
+    };
+
+    const updatedPlayers = [...players, player];
+    savePlayersToStorage(updatedPlayers);
+    
+    // Reset form
+    setNewPlayer({
+      name: "",
+      email: "",
+      phone: "",
+      state: "",
+      city: "",
+      gender: "M",
+      fideId: "",
+      title: "",
+    });
+    
+    setIsCreatePlayerOpen(false);
+    onPlayerApproval();
+    
+    toast({
+      title: "Player Created",
+      description: "New player has been added successfully",
+    });
   };
 
-  const handlePlayersImported = async (importedPlayers: Partial<Player>[]) => {
+  const handlePlayersImported = (importedPlayers: Partial<Player>[]) => {
+    const currentPlayers = [...players];
     let addedCount = 0;
-    for (const playerData of importedPlayers) {
+
+    importedPlayers.forEach((playerData) => {
       if (playerData.name && playerData.email) {
-        try {
-          await createPlayer(playerData);
+        const existingPlayer = currentPlayers.find(p => 
+          p.email === playerData.email || p.name === playerData.name
+        );
+
+        if (!existingPlayer) {
+          const newPlayer: Player = {
+            id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: playerData.name,
+            email: playerData.email || "",
+            phone: playerData.phone || "",
+            state: playerData.state || "",
+            city: playerData.city || "",
+            gender: playerData.gender || "M",
+            rating: playerData.rating || 800,
+            rapidRating: playerData.rapidRating || 800,
+            blitzRating: playerData.blitzRating || 800,
+            gamesPlayed: playerData.gamesPlayed || 0,
+            rapidGamesPlayed: playerData.rapidGamesPlayed || 0,
+            blitzGamesPlayed: playerData.blitzGamesPlayed || 0,
+            status: "approved",
+            title: playerData.title,
+            titleVerified: playerData.titleVerified || false,
+            fideId: playerData.fideId || "",
+            created_at: new Date().toISOString(),
+            tournamentResults: playerData.tournamentResults || [],
+            ratingHistory: playerData.ratingHistory || [{
+              date: new Date().toISOString(),
+              rating: playerData.rating || 800,
+              change: 0,
+              reason: "Initial rating"
+            }],
+            rapidRatingHistory: playerData.rapidRatingHistory || [{
+              date: new Date().toISOString(),
+              rating: playerData.rapidRating || 800,
+              change: 0,
+              reason: "Initial rapid rating"
+            }],
+            blitzRatingHistory: playerData.blitzRatingHistory || [{
+              date: new Date().toISOString(),
+              rating: playerData.blitzRating || 800,
+              change: 0,
+              reason: "Initial blitz rating"
+            }],
+            achievements: playerData.achievements || [],
+            club: playerData.club || "",
+            birthYear: playerData.birthYear,
+            ratingStatus: playerData.ratingStatus || "provisional",
+            rapidRatingStatus: playerData.rapidRatingStatus || "provisional",
+            blitzRatingStatus: playerData.blitzRatingStatus || "provisional",
+            country: playerData.country || "Nigeria"
+          };
+          currentPlayers.push(newPlayer);
           addedCount++;
-        } catch (error) {
-          // Optionally handle error for each player
         }
       }
-    }
+    });
+
+    savePlayersToStorage(currentPlayers);
     setIsUploadPlayersOpen(false);
     onPlayerApproval();
+    
     toast({
       title: "Players Imported",
       description: `Successfully imported ${addedCount} players`,
@@ -389,7 +489,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
             const updatedPlayers = players.map(p => 
               p.id === updatedPlayer.id ? updatedPlayer : p
             );
-            setPlayers(updatedPlayers);
+            savePlayersToStorage(updatedPlayers);
             setEditingPlayer(null);
             onPlayerApproval();
             toast({

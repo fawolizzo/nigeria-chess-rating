@@ -25,11 +25,42 @@ const Players = () => {
     try {
       setIsLoading(true);
       setError(null);
+      
+      console.log("🏠 Players page: Fetching players...");
+      
+      // Get approved players from service
       const players = await getAllPlayersFromSupabase({ status: 'approved' });
-      setAllPlayers(players);
-      setFilteredPlayers(players);
+      console.log("🏠 Fetched players:", players.length, "players");
+      
+      if (players.length > 0) {
+        console.log("📋 Players sample:", players.slice(0, 3).map(p => ({ 
+          name: p.name, 
+          rating: p.rating, 
+          status: p.status 
+        })));
+      }
+      
+      // Sort by classical rating (highest first)
+      const sortedPlayers = Array.isArray(players) 
+        ? players
+            .filter(player => player && typeof player === 'object')
+            .sort((a, b) => (b.rating || 800) - (a.rating || 800))
+        : [];
+      
+      console.log("✅ Final sorted players:", sortedPlayers.length);
+      console.log("🏆 Top 3 players:", sortedPlayers.slice(0, 3).map(p => ({ 
+        name: p.name, 
+        rating: p.rating, 
+        status: p.status 
+      })));
+      
+      setAllPlayers(sortedPlayers);
+      setFilteredPlayers(sortedPlayers);
+      
     } catch (error) {
-      setError("Failed to load players data");
+      console.error("❌ Error in fetchPlayers:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load players data";
+      setError(errorMessage);
       setAllPlayers([]);
       setFilteredPlayers([]);
       toast({
@@ -44,12 +75,18 @@ const Players = () => {
 
   useEffect(() => {
     fetchPlayers();
+    
+    // Set up an interval to refresh data every 10 seconds
     const interval = setInterval(fetchPlayers, 10000);
+    
     return () => clearInterval(interval);
   }, [toast]);
 
+  // Apply filters whenever search query or location filters change
   useEffect(() => {
     let filtered = [...allPlayers];
+
+    // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(player =>
         player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -57,12 +94,17 @@ const Players = () => {
         (player.fideId && player.fideId.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
+
+    // Apply state filter
     if (selectedState && selectedState !== "all-states") {
       filtered = filtered.filter(player => player.state === selectedState);
     }
+
+    // Apply city filter
     if (selectedCity && selectedCity !== "all-cities") {
       filtered = filtered.filter(player => player.city === selectedCity);
     }
+
     setFilteredPlayers(filtered);
   }, [allPlayers, searchQuery, selectedState, selectedCity]);
 

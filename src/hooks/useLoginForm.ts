@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -5,8 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 import { logMessage, LogLevel } from "@/utils/debugLogger";
 import { LoginFormData, loginSchema } from "@/components/login/LoginFormInputs";
 import { useUser } from "@/contexts/UserContext";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 
 export const useLoginForm = () => {
   const { login: localLogin } = useUser();
@@ -15,7 +14,6 @@ export const useLoginForm = () => {
   const [error, setError] = useState("");
   const { toast } = useToast();
   const [loginStage, setLoginStage] = useState("idle");
-  const navigate = useNavigate();
 
   // Form setup with validation
   const form = useForm<LoginFormData>({
@@ -67,81 +65,126 @@ export const useLoginForm = () => {
       email: data.email,
       role: data.role,
     });
+    
     if (isLoading) return;
+    
     setIsLoading(true);
     setError("");
     setLoginStage("starting");
+    
     try {
       setLoginStage("validating_input");
+      
       if (data.role === "rating_officer") {
+        // For rating officer, use predefined credentials
         setLoginStage("authenticating_rating_officer");
+        
         try {
           logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Rating Officer login with email:', data.email);
+          
           // Always use default rating officer email
           data.email = "ncro@ncr.com";
-          // Use Supabase Auth to sign in
-          const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: data.password, // access code
+          
+          // Try to login with 5 second timeout
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Login timed out")), 5000);
           });
-          if (signInError) {
-            throw new Error(signInError.message);
+          
+          // Use Promise.race to implement timeout
+          const success = await Promise.race([
+            localLogin(data.email, data.password, data.role),
+            timeoutPromise
+          ]) as boolean;
+          
+          if (success) {
+            setLoginStage("success");
+            
+            toast({
+              title: "Login Successful",
+              description: "Welcome back! You are now logged in as a Rating Officer.",
+            });
+            
+            logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful');
+          } else {
+            throw new Error("Invalid access code for Rating Officer account");
           }
-          setLoginStage("success");
-          toast({
-            title: "Login Successful",
-            description: "Welcome back! You are now logged in as a Rating Officer.",
-          });
-          logMessage(LogLevel.INFO, 'useLoginForm', 'Rating Officer login successful');
-          navigate("/officer-dashboard");
         } catch (error: any) {
-          logMessage(LogLevel.ERROR, 'useLoginForm', 'Rating Officer login error', {
+          logMessage(LogLevel.ERROR, 'useLoginForm', 'Rating Officer login error', { 
             error: error.message,
             loginStage
           });
-          setError(error.message || "Invalid access code for Rating Officer account");
-          toast({
-            title: "Login Failed",
-            description: error.message || "Invalid access code for Rating Officer account",
-            variant: "destructive"
-          });
+          
+          throw new Error(
+            error.message === "Login timed out" 
+              ? "Authentication timed out. Please try again." 
+              : "Invalid access code for Rating Officer account"
+          );
         }
       } else {
+        // For tournament organizer, login directly
         setLoginStage("authenticating_tournament_organizer");
+        
         try {
           logMessage(LogLevel.INFO, 'useLoginForm', 'Attempting Tournament Organizer login with email:', data.email);
+          
           if (data.email === "" || data.email.toLowerCase() === "org@ncr.com") {
+            // Use default tournament organizer email if empty or matches default
             data.email = "org@ncr.com";
           }
-          const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: data.password,
+          
+          // Simple login with timeout
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Login timed out")), 5000);
           });
-          if (signInError) {
-            throw new Error(signInError.message);
+          
+          const success = await Promise.race([
+            localLogin(data.email, data.password, data.role),
+            timeoutPromise
+          ]) as boolean;
+          
+          setLoginStage(success ? "success" : "failed");
+          
+          if (success) {
+            logMessage(LogLevel.INFO, 'useLoginForm', 'Tournament Organizer login successful');
+            
+            toast({
+              title: "Login Successful",
+              description: "Welcome back! You are now logged in as a Tournament Organizer.",
+              duration: 3000,
+            });
+          } else {
+            throw new Error("Invalid credentials. Please check your email and password.");
           }
-          setLoginStage("success");
-          toast({
-            title: "Login Successful",
-            description: "Welcome back! You are now logged in as a Tournament Organizer.",
-            duration: 3000,
-          });
-          navigate("/organizer-dashboard");
         } catch (error: any) {
-          logMessage(LogLevel.ERROR, 'useLoginForm', 'Tournament Organizer login error', {
+          logMessage(LogLevel.ERROR, 'useLoginForm', 'Tournament Organizer login error', { 
             error: error.message,
             loginStage
           });
-          setError(error.message || "Invalid credentials. Please check your email and password.");
-          toast({
-            title: "Login Failed",
-            description: error.message || "Invalid credentials. Please check your email and password.",
-            variant: "destructive"
-          });
+          
+          throw error;
         }
       }
-    } finally {
+    } catch (error: any) {
+      logMessage(LogLevel.ERROR, 'useLoginForm', `Login error at stage: ${loginStage}`, {
+        error: error.message,
+        stack: error.stack,
+      });
+      
+      setError(error.message || "An unexpected error occurred during login.");
+      
+      toast({
+        title: "Login Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      
       setIsLoading(false);
+      setLoginStage("error");
+    } finally {
+      // For success, keep isLoading true to show spinner during redirection
+      if (loginStage !== "success") {
+        setIsLoading(false);
+      }
     }
   };
 
