@@ -60,7 +60,6 @@ export const loginUser = async (
         registrationDate: orgData.created_at,
         lastModified: Date.now(),
       };
-      setUsers([userProfile]);
     } else if (role === 'rating_officer') {
       // Use user_metadata from Supabase auth
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -81,8 +80,12 @@ export const loginUser = async (
         lastModified: Date.now(),
         accessCode: DEFAULT_ACCESS_CODE
       };
-      setUsers([userProfile]);
     }
+    if (!userProfile) {
+      setIsLoading(false);
+      throw new Error('Login failed: No user profile returned from Supabase. Please check your credentials or contact support.');
+    }
+    setUsers([userProfile]);
     setCurrentUser(userProfile);
     logMessage(LogLevel.INFO, 'LoginOperations', `Login successful for ${role}: ${loginEmail}`);
     return true;

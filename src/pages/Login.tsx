@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginForm from "@/components/login/LoginForm";
@@ -16,6 +15,7 @@ const Login = () => {
   const [loadingDuration, setLoadingDuration] = useState(0);
   const [showTimeout, setShowTimeout] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Debug logging for login page rendering
   useEffect(() => {
@@ -29,6 +29,11 @@ const Login = () => {
   // Handle redirect after successful login with improved reliability
   useEffect(() => {
     if (!isLoading && currentUser && !redirecting) {
+      // Defensive check: ensure currentUser has required fields
+      if (!currentUser.email || !currentUser.role) {
+        setError("Login failed: Invalid user profile returned. Please try again or contact support.");
+        return;
+      }
       setRedirecting(true);
       
       logMessage(LogLevel.INFO, 'Login', 'User authenticated, redirecting', {
@@ -75,8 +80,28 @@ const Login = () => {
 
   const handleManualRefresh = async () => {
     setShowTimeout(false);
+    setError(null);
     await refreshUserData();
   };
+
+  // Error display
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+          <div className="flex justify-center">
+            <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
+          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button onClick={() => window.location.reload()} className="w-full mt-4">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Loading state with spinner
   if (isLoading || redirecting) {
@@ -118,7 +143,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <LoginForm />
+        <LoginForm setError={setError} />
         
         {!import.meta.env.PROD && (
           <div className="mt-6">

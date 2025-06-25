@@ -1,4 +1,3 @@
-
 import { Form } from "@/components/ui/form";
 import { useLoginForm } from "@/hooks/useLoginForm";
 import RoleSelector from "@/components/login/RoleSelector";
@@ -6,8 +5,13 @@ import LoginFormInputs from "@/components/login/LoginFormInputs";
 import LoginButton from "@/components/login/LoginButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import React from "react";
 
-const LoginForm = () => {
+interface LoginFormProps {
+  setError?: (msg: string) => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ setError }) => {
   const {
     form,
     selectedRole,
@@ -17,7 +21,7 @@ const LoginForm = () => {
     handleRoleChange,
     togglePasswordVisibility,
     onSubmit
-  } = useLoginForm();
+  } = useLoginForm(setError);
 
   return (
     <div>
