@@ -49,11 +49,28 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     country: playerData.country || "Nigeria"
   };
   
-  console.log('📤 createPlayer: Sending to Supabase:', supabasePlayer);
+  // Filter to only include fields that exist in Supabase schema
+  const validFields = [
+    'birth_year', 'blitz_games_played', 'blitz_rating', 'city', 'club', 
+    'created_at', 'email', 'fide_id', 'games_played', 'gender', 'id', 
+    'name', 'phone', 'rapid_games_played', 'rapid_rating', 'rating', 
+    'state', 'status', 'title', 'title_verified'
+  ];
+  
+  const cleanPlayerData = Object.keys(supabasePlayer).reduce((acc, key) => {
+    if (validFields.includes(key)) {
+      acc[key] = supabasePlayer[key];
+    } else {
+      console.log(`⚠️ Filtering out invalid field: ${key}`);
+    }
+    return acc;
+  }, {} as any);
+  
+  console.log('📤 createPlayer: Sending to Supabase:', cleanPlayerData);
   
   const { data, error } = await supabase
     .from('players')
-    .insert([supabasePlayer])
+    .insert([cleanPlayerData])
     .select()
     .single();
     
