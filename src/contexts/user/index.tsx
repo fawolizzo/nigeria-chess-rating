@@ -1,12 +1,7 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserContextType, SyncEventType } from '@/types/userTypes';
-import { saveToStorage, forceSyncAllStorage, clearAllData as clearAllStorageData } from '@/utils/storageUtils';
-import { sendSyncEvent } from '@/utils/storageSync';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { sendEmail } from '@/services/emailService';
-import { STORAGE_KEYS } from './userContextTypes';
-import { initializeUserData } from './userInitializer';
 import { 
   loginUser, 
   registerUser, 
@@ -18,12 +13,6 @@ import { forceSyncUserData, refreshUserData as refreshUserDataOp } from './userD
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Add these to the window for debug purposes
-if (typeof window !== 'undefined') {
-  window.ncrForceSyncFunction = forceSyncAllStorage;
-  window.ncrClearAllData = clearAllStorageData;
-}
-
 interface UserProviderProps {
   children: ReactNode;
 }
@@ -32,87 +21,63 @@ export const UserProvider = ({ children }: UserProviderProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Initialize user data on component mount
+  // On mount, only call the Supabase-based initialization (creating/checking default users)
   useEffect(() => {
     const initialize = async () => {
       try {
         setIsLoading(true);
-        
-        // First try to create the initial rating officer if needed
         const { default: createInitialRatingOfficerIfNeeded } = await import('@/utils/createInitialRatingOfficer');
         await createInitialRatingOfficerIfNeeded();
-        
-        // Then initialize user data
-        await initializeUserData(setUsers, setCurrentUser, setIsInitialized, forceSyncAllStorage);
+        // TODO: Fetch users and currentUser from Supabase and set state here
       } catch (error) {
         logMessage(LogLevel.ERROR, 'UserContext', 'Error initializing user data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    
     initialize();
   }, []);
-  
-  // Sync users to storage whenever they change
-  useEffect(() => {
-    if (isInitialized) {
-      logMessage(LogLevel.INFO, 'UserContext', 'Syncing user data to storage');
-      saveToStorage(STORAGE_KEYS.USERS, users);
-    }
-  }, [users, isInitialized]);
-  
-  // Sync current user to storage whenever it changes
-  useEffect(() => {
-    if (isInitialized && currentUser !== null) {
-      logMessage(LogLevel.INFO, 'UserContext', `Syncing current user to storage: ${currentUser.email}`);
-      saveToStorage(STORAGE_KEYS.CURRENT_USER, currentUser);
-    } else if (isInitialized && currentUser === null) {
-      logMessage(LogLevel.INFO, 'UserContext', 'Clearing current user from storage');
-      saveToStorage(STORAGE_KEYS.CURRENT_USER, null);
-    }
-  }, [currentUser, isInitialized]);
-  
+
+  // TODO: Implement Supabase-based login, register, approve, reject, and user fetching logic
+
   const login = async (email: string, authValue: string, role: 'tournament_organizer' | 'rating_officer'): Promise<boolean> => {
-    return loginUser(email, authValue, role, setUsers, setCurrentUser, setIsLoading, forceSyncAllStorage);
+    // Replace with Supabase-based login logic
+    return loginUser(email, authValue, role, setUsers, setCurrentUser, setIsLoading, async () => true);
   };
-  
+
   const logout = () => {
     setCurrentUser(null);
-    saveToStorage(STORAGE_KEYS.CURRENT_USER, null);
-    
-    sendSyncEvent(SyncEventType.LOGOUT);
-    
-    // Fixed: Directly use the imported logUserEvent function
-    logUserEvent('logout', currentUser?.id);
+    // Optionally, sign out from Supabase
   };
-  
+
   const register = async (userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }): Promise<boolean> => {
-    return registerUser(userData, setUsers, setIsLoading, forceSyncAllStorage, getRatingOfficerEmails);
+    // Replace with Supabase-based registration logic
+    return registerUser(userData, setUsers, setIsLoading, async () => true, getRatingOfficerEmails);
   };
-  
+
   const approveUser = (userId: string) => {
     approveUserOperation(userId, users, setUsers);
   };
-  
+
   const rejectUser = (userId: string) => {
     rejectUserOperation(userId, users, setUsers);
   };
-  
+
   const getRatingOfficerEmails = (): string[] => {
     return getRatingOfficerEmailsOperation(users);
   };
-  
+
   const forceSync = async (): Promise<boolean> => {
-    return forceSyncUserData(setUsers, setCurrentUser, setIsLoading, forceSyncAllStorage);
+    // Replace with Supabase-based sync logic
+    return true;
   };
-  
+
   const refreshUserData = async (): Promise<boolean> => {
-    return refreshUserDataOp(setUsers, setCurrentUser, users, currentUser);
+    // Replace with Supabase-based refresh logic
+    return true;
   };
-  
+
   const contextValue: UserContextType = {
     currentUser,
     users,
@@ -126,9 +91,9 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     getRatingOfficerEmails,
     refreshUserData,
     forceSync,
-    clearAllData: clearAllStorageData
+    clearAllData: async () => true // No-op for now
   };
-  
+
   return (
     <UserContext.Provider value={contextValue}>
       {children}
