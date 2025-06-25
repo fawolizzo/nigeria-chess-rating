@@ -16,7 +16,7 @@ import { Player } from "@/lib/mockData";
 interface PlayerFormModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (player: Player) => void;
+  onCreate: (player: Partial<Player>) => void;
   isProcessing: boolean;
 }
 
@@ -53,8 +53,7 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
       return;
     }
 
-    const newPlayer: Player = {
-      id: `player-${Date.now()}`,
+    const newPlayer: Partial<Player> = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,

@@ -36,41 +36,34 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
   
   // Map to Supabase schema if needed (e.g., snake_case)
   const supabasePlayer = {
-    ...playerData,
     name: playerData.name,
     email: playerData.email,
     // Add defaults if needed
     status: playerData.status || "approved",
     rating: playerData.rating || 800,
-    rapidRating: playerData.rapidRating || 800,
-    blitzRating: playerData.blitzRating || 800,
+    rapid_rating: playerData.rapidRating || 800,
+    blitz_rating: playerData.blitzRating || 800,
     created_at: playerData.created_at || new Date().toISOString(),
     gender: playerData.gender || "M",
-    country: playerData.country || "Nigeria"
+    country: playerData.country || "Nigeria",
+    // Map camelCase to snake_case
+    fide_id: playerData.fideId,
+    games_played: playerData.gamesPlayed || 0,
+    rapid_games_played: playerData.rapidGamesPlayed || 0,
+    blitz_games_played: playerData.blitzGamesPlayed || 0,
+    birth_year: playerData.birthYear,
+    title: playerData.title,
+    title_verified: playerData.titleVerified,
+    phone: playerData.phone,
+    state: playerData.state,
+    city: playerData.city
   };
   
-  // Filter to only include fields that exist in Supabase schema
-  const validFields = [
-    'birth_year', 'blitz_games_played', 'blitz_rating', 'city', 'club', 
-    'created_at', 'email', 'fide_id', 'games_played', 'gender', 'id', 
-    'name', 'phone', 'rapid_games_played', 'rapid_rating', 'rating', 
-    'state', 'status', 'title', 'title_verified'
-  ];
-  
-  const cleanPlayerData = Object.keys(supabasePlayer).reduce((acc, key) => {
-    if (validFields.includes(key)) {
-      acc[key] = supabasePlayer[key];
-    } else {
-      console.log(`⚠️ Filtering out invalid field: ${key}`);
-    }
-    return acc;
-  }, {} as any);
-  
-  console.log('📤 createPlayer: Sending to Supabase:', cleanPlayerData);
+  console.log('📤 createPlayer: Sending to Supabase:', supabasePlayer);
   
   const { data, error } = await supabase
     .from('players')
-    .insert([cleanPlayerData])
+    .insert([supabasePlayer])
     .select()
     .single();
     
@@ -85,7 +78,37 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
   }
   
-  const createdPlayer = data as Player;
+  // Transform the returned data from snake_case to camelCase
+  const createdPlayer: Player = {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    fideId: data.fide_id,
+    title: data.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" | undefined,
+    titleVerified: data.title_verified,
+    rating: data.rating,
+    rapidRating: data.rapid_rating,
+    blitzRating: data.blitz_rating,
+    state: data.state,
+    city: data.city,
+    country: "Nigeria", // Default value
+    gender: data.gender as "M" | "F",
+    status: data.status as "pending" | "approved" | "rejected",
+    created_at: data.created_at,
+    gamesPlayed: data.games_played,
+    rapidGamesPlayed: data.rapid_games_played,
+    blitzGamesPlayed: data.blitz_games_played,
+    birthYear: data.birth_year,
+    club: data.club,
+    // Initialize empty arrays for fields not in Supabase schema
+    ratingHistory: [],
+    rapidRatingHistory: [],
+    blitzRatingHistory: [],
+    achievements: [],
+    tournamentResults: []
+  };
+  
   console.log('✅ createPlayer: Successfully created in Supabase:', createdPlayer.name);
   
   // Also save to localStorage for RO dashboard compatibility

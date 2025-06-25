@@ -63,11 +63,14 @@ export const getAllPlayersFromSupabase = async (filters: {
     return [];
   }
   
+  // Transform snake_case data to camelCase Player interface
+  const transformedData = data.map(transformSupabasePlayer);
+  
   // Optionally sort by rating
-  const sortedData = (data as Player[]).sort((a, b) => (b.rating || 800) - (a.rating || 800));
+  const sortedData = transformedData.sort((a, b) => (b.rating || 800) - (a.rating || 800));
   console.log('✅ Returning', sortedData.length, 'players from Supabase');
   
-  return sortedData as Player[];
+  return sortedData;
 };
 
 export const getAllUsers = async (): Promise<Player[]> => {
@@ -76,7 +79,7 @@ export const getAllUsers = async (): Promise<Player[]> => {
     console.error("❌ Error fetching all users from Supabase:", error);
     return [];
   }
-  return data;
+  return data.map(transformSupabasePlayer);
 };
 
 export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | null> => {
@@ -89,5 +92,38 @@ export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | nu
     console.error("❌ Error getting player from Supabase:", error);
     return null;
   }
-  return data as Player;
+  return transformSupabasePlayer(data);
+};
+
+// Transform snake_case Supabase data to camelCase Player interface
+const transformSupabasePlayer = (supabasePlayer: any): Player => {
+  return {
+    id: supabasePlayer.id,
+    name: supabasePlayer.name,
+    email: supabasePlayer.email,
+    phone: supabasePlayer.phone,
+    fideId: supabasePlayer.fide_id,
+    title: supabasePlayer.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM" | undefined,
+    titleVerified: supabasePlayer.title_verified,
+    rating: supabasePlayer.rating,
+    rapidRating: supabasePlayer.rapid_rating,
+    blitzRating: supabasePlayer.blitz_rating,
+    state: supabasePlayer.state,
+    city: supabasePlayer.city,
+    country: "Nigeria", // Default value
+    gender: supabasePlayer.gender as "M" | "F",
+    status: supabasePlayer.status as "pending" | "approved" | "rejected",
+    created_at: supabasePlayer.created_at,
+    gamesPlayed: supabasePlayer.games_played,
+    rapidGamesPlayed: supabasePlayer.rapid_games_played,
+    blitzGamesPlayed: supabasePlayer.blitz_games_played,
+    birthYear: supabasePlayer.birth_year,
+    club: supabasePlayer.club,
+    // Initialize empty arrays for fields not in Supabase schema
+    ratingHistory: [],
+    rapidRatingHistory: [],
+    blitzRatingHistory: [],
+    achievements: [],
+    tournamentResults: []
+  };
 };

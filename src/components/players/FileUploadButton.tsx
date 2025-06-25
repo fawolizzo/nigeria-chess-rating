@@ -77,216 +77,197 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
   };
 
   const processFileData = (rows: string[][]) => {
-    const headers = rows[0].map(h => String(h).trim().toLowerCase());
-    
-    const findHeaderIndex = (possibleNames: string[]) => {
-      for (const name of possibleNames) {
-        const index = headers.findIndex(header => 
-          header.includes(name.toLowerCase())
-        );
-        if (index !== -1) return index;
-      }
-      return -1;
-    };
-    
-    const nameIndex = findHeaderIndex(['player', 'players', 'name', 'fullname', 'full name']);
-    const titleIndex = findHeaderIndex(['title', 'titles']);
-    const classicalRatingIndex = findHeaderIndex(['std', 'standard', 'classical', 'fide', 'rating']);
-    const rapidRatingIndex = findHeaderIndex(['rpd', 'rapid']);
-    const blitzRatingIndex = findHeaderIndex(['blz', 'blitz']);
-    const birthYearIndex = findHeaderIndex(['b-year', 'byear', 'birth year', 'birthyear', 'year']);
-    const fideIdIndex = findHeaderIndex(['fide id', 'fideid', 'fide_id', 'id']);
-    
-    if (nameIndex === -1) {
-      setError("Could not find a column for player names. Please include a column with 'Name', 'Player', or 'Full Name' in the header.");
-      setIsLoading(false);
-      return;
-    }
-    
-    const processedPlayers: Partial<Player>[] = [];
-    
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
+    try {
+      const headers = rows[0].map(h => String(h).trim().toLowerCase());
       
-      if (!row.length || (nameIndex !== -1 && !row[nameIndex])) {
-        continue;
-      }
-      
-      let playerName = nameIndex !== -1 ? row[nameIndex] : "";
-      
-      if (!playerName || playerName.toString().trim() === "") {
-        continue;
-      }
-      
-      const ncrId = generateNcrId();
-      
-      // Generate a default email if none is provided (required by createPlayer)
-      const defaultEmail = `${playerName.toString().trim().toLowerCase().replace(/\s+/g, '.')}@ncr.temp`;
-      
-      const player: Partial<Player> = {
-        id: ncrId,
-        name: playerName.toString().trim(),
-        email: defaultEmail, // Use default email instead of empty string
-        state: '', // Will be updated manually
-        gender: 'M', // Default, will be updated manually
-        city: '',
-        country: 'Nigeria',
-        phone: '',
-        gamesPlayed: 31,
-        status: 'approved',
-        tournamentResults: []
+      const findHeaderIndex = (possibleNames: string[]) => {
+        for (const name of possibleNames) {
+          const index = headers.findIndex(header => 
+            header.includes(name.toLowerCase())
+          );
+          if (index !== -1) return index;
+        }
+        return -1;
       };
       
-      // Handle title
-      if (titleIndex !== -1 && row[titleIndex]) {
-        const titleValue = row[titleIndex].toString().trim();
-        const validTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"];
-        if (validTitles.includes(titleValue)) {
-          player.title = titleValue as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM";
-          player.titleVerified = true;
+      const nameIndex = findHeaderIndex(['player', 'players', 'name', 'fullname', 'full name']);
+      const titleIndex = findHeaderIndex(['title', 'titles']);
+      const classicalRatingIndex = findHeaderIndex(['std', 'standard', 'classical', 'fide', 'rating']);
+      const rapidRatingIndex = findHeaderIndex(['rpd', 'rapid']);
+      const blitzRatingIndex = findHeaderIndex(['blz', 'blitz']);
+      const birthYearIndex = findHeaderIndex(['b-year', 'byear', 'birth year', 'birthyear', 'year']);
+      const fideIdIndex = findHeaderIndex(['fide id', 'fideid', 'fide_id', 'id']);
+      
+      if (nameIndex === -1) {
+        setError("Could not find a column for player names. Please include a column with 'Name', 'Player', or 'Full Name' in the header.");
+        setIsLoading(false);
+        return;
+      }
+      
+      const processedPlayers: Partial<Player>[] = [];
+      
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        
+        if (!row.length || (nameIndex !== -1 && !row[nameIndex])) {
+          continue;
         }
-      }
-      
-      // Handle FIDE ID
-      if (fideIdIndex !== -1 && row[fideIdIndex]) {
-        player.fideId = row[fideIdIndex].toString().trim();
-      }
-      
-      // Handle classical rating with +100 bonus for FIDE players
-      if (classicalRatingIndex !== -1 && row[classicalRatingIndex]) {
-        const rating = parseInt(row[classicalRatingIndex].toString(), 10);
-        if (!isNaN(rating)) {
-          player.rating = rating + 100;
-          player.ratingStatus = 'established';
+        
+        let playerName = nameIndex !== -1 ? row[nameIndex] : "";
+        
+        if (!playerName || playerName.toString().trim() === "") {
+          continue;
+        }
+        
+        const ncrId = generateNcrId();
+        
+        // Generate a default email if none is provided (required by createPlayer)
+        const defaultEmail = `${playerName.toString().trim().toLowerCase().replace(/\s+/g, '.')}@ncr.temp`;
+        
+        const player: Partial<Player> = {
+          name: playerName.toString().trim(),
+          email: defaultEmail, // Use default email instead of empty string
+          state: '', // Will be updated manually
+          gender: 'M', // Default, will be updated manually
+          city: '',
+          country: 'Nigeria',
+          phone: '',
+          gamesPlayed: 31,
+          status: 'approved',
+          fideId: ncrId // Store NCR ID in fide_id field instead of id
+        };
+        
+        // Handle title
+        if (titleIndex !== -1 && row[titleIndex]) {
+          const titleValue = row[titleIndex].toString().trim();
+          const validTitles = ["GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"];
+          if (validTitles.includes(titleValue)) {
+            player.title = titleValue as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM";
+            player.titleVerified = true;
+          }
+        }
+        
+        // Handle FIDE ID - if there's a FIDE ID in the file, use it; otherwise use the generated NCR ID
+        if (fideIdIndex !== -1 && row[fideIdIndex]) {
+          const fideIdValue = row[fideIdIndex].toString().trim();
+          if (fideIdValue && fideIdValue !== '') {
+            player.fideId = fideIdValue; // Use actual FIDE ID from file
+          } else {
+            player.fideId = ncrId; // Use generated NCR ID as fallback
+          }
+        } else {
+          player.fideId = ncrId; // Use generated NCR ID when no FIDE ID in file
+        }
+        
+        // Handle classical rating with +100 bonus for FIDE players
+        if (classicalRatingIndex !== -1 && row[classicalRatingIndex]) {
+          const rating = parseInt(row[classicalRatingIndex].toString(), 10);
+          if (!isNaN(rating)) {
+            player.rating = rating + 100;
+          } else {
+            player.rating = 900;
+          }
         } else {
           player.rating = 900;
-          player.ratingStatus = 'established';
         }
-      } else {
-        player.rating = 900;
-        player.ratingStatus = 'established';
-      }
-      
-      // Handle rapid rating with +100 bonus
-      if (rapidRatingIndex !== -1 && row[rapidRatingIndex]) {
-        const rapidRating = parseInt(row[rapidRatingIndex].toString(), 10);
-        if (!isNaN(rapidRating)) {
-          player.rapidRating = rapidRating + 100;
-          player.rapidGamesPlayed = 31;
-          player.rapidRatingStatus = 'established';
+        
+        // Handle rapid rating with +100 bonus
+        if (rapidRatingIndex !== -1 && row[rapidRatingIndex]) {
+          const rapidRating = parseInt(row[rapidRatingIndex].toString(), 10);
+          if (!isNaN(rapidRating)) {
+            player.rapidRating = rapidRating + 100;
+            player.rapidGamesPlayed = 31;
+          } else {
+            player.rapidRating = 900;
+            player.rapidGamesPlayed = 31;
+          }
         } else {
           player.rapidRating = 900;
           player.rapidGamesPlayed = 31;
-          player.rapidRatingStatus = 'established';
         }
-      } else {
-        player.rapidRating = 900;
-        player.rapidGamesPlayed = 31;
-        player.rapidRatingStatus = 'established';
-      }
-      
-      // Handle blitz rating with +100 bonus
-      if (blitzRatingIndex !== -1 && row[blitzRatingIndex]) {
-        const blitzRating = parseInt(row[blitzRatingIndex].toString(), 10);
-        if (!isNaN(blitzRating)) {
-          player.blitzRating = blitzRating + 100;
-          player.blitzGamesPlayed = 31;
-          player.blitzRatingStatus = 'established';
+        
+        // Handle blitz rating with +100 bonus
+        if (blitzRatingIndex !== -1 && row[blitzRatingIndex]) {
+          const blitzRating = parseInt(row[blitzRatingIndex].toString(), 10);
+          if (!isNaN(blitzRating)) {
+            player.blitzRating = blitzRating + 100;
+            player.blitzGamesPlayed = 31;
+          } else {
+            player.blitzRating = 900;
+            player.blitzGamesPlayed = 31;
+          }
         } else {
           player.blitzRating = 900;
           player.blitzGamesPlayed = 31;
-          player.blitzRatingStatus = 'established';
         }
-      } else {
-        player.blitzRating = 900;
-        player.blitzGamesPlayed = 31;
-        player.blitzRatingStatus = 'established';
+        
+        // Handle birth year
+        if (birthYearIndex !== -1 && row[birthYearIndex]) {
+          const birthYear = parseInt(row[birthYearIndex].toString(), 10);
+          if (!isNaN(birthYear)) {
+            player.birthYear = birthYear;
+          }
+        }
+        
+        // Add created_at timestamp
+        player.created_at = new Date().toISOString();
+        
+        processedPlayers.push(player);
       }
       
-      // Handle birth year
-      if (birthYearIndex !== -1 && row[birthYearIndex]) {
-        const birthYear = parseInt(row[birthYearIndex].toString(), 10);
-        if (!isNaN(birthYear)) {
-          player.birthYear = birthYear;
-        }
+      if (processedPlayers.length === 0) {
+        setError("No valid players found in the uploaded file");
+        setIsLoading(false);
+        return;
       }
       
-      const currentDate = new Date().toISOString();
-      player.ratingHistory = [{
-        date: currentDate,
+      // Sort players by classical rating (highest first) for stable ranking
+      const sortedPlayers = processedPlayers.sort((a, b) => {
+        const ratingA = a.rating || 900;
+        const ratingB = b.rating || 900;
+        return ratingB - ratingA; // Descending order
+      });
+      
+      console.log("📤 FileUpload: Processed players sorted by rating:", 
+        sortedPlayers.map(p => `${p.name}: ${p.rating}`));
+      
+      console.log("📋 FileUpload: Full player data being passed to import:", 
+        sortedPlayers.map(p => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          status: p.status,
+          rating: p.rating
+        }))
+      );
+      
+      const formattedPlayers = sortedPlayers.map(player => ({
+        id: player.id,
+        name: player.name,
         rating: player.rating || 900,
-        change: 0,
-        reason: "Initial FIDE rating with +100 bonus"
-      }];
+        state: '',
+        gender: 'M',
+        title: player.title || '',
+        rapid_rating: player.rapidRating,
+        blitz_rating: player.blitzRating,
+        fide_id: player.fideId
+      }));
       
-      player.rapidRatingHistory = [{
-        date: currentDate,
-        rating: player.rapidRating || 900,
-        change: 0,
-        reason: "Initial FIDE rating with +100 bonus"
-      }];
+      if (onFileUpload) {
+        onFileUpload(formattedPlayers);
+      }
       
-      player.blitzRatingHistory = [{
-        date: currentDate,
-        rating: player.blitzRating || 900,
-        change: 0,
-        reason: "Initial FIDE rating with +100 bonus"
-      }];
+      if (onPlayersImported) {
+        console.log("🚀 FileUpload: Calling onPlayersImported with", sortedPlayers.length, "players");
+        onPlayersImported(sortedPlayers);
+      }
       
-      player.tournamentResults = [];
-      player.achievements = [];
-      
-      processedPlayers.push(player);
-    }
-    
-    if (processedPlayers.length === 0) {
-      setError("No valid players found in the uploaded file");
       setIsLoading(false);
-      return;
+    } catch (error) {
+      console.error("Error processing file:", error);
+      setError("Failed to process the uploaded file. Please check the format.");
+      setIsLoading(false);
     }
-    
-    // Sort players by classical rating (highest first) for stable ranking
-    const sortedPlayers = processedPlayers.sort((a, b) => {
-      const ratingA = a.rating || 900;
-      const ratingB = b.rating || 900;
-      return ratingB - ratingA; // Descending order
-    });
-    
-    console.log("📤 FileUpload: Processed players sorted by rating:", 
-      sortedPlayers.map(p => `${p.name}: ${p.rating}`));
-    
-    console.log("📋 FileUpload: Full player data being passed to import:", 
-      sortedPlayers.map(p => ({
-        id: p.id,
-        name: p.name,
-        email: p.email,
-        status: p.status,
-        rating: p.rating
-      }))
-    );
-    
-    const formattedPlayers = sortedPlayers.map(player => ({
-      id: player.id,
-      name: player.name,
-      rating: player.rating || 900,
-      state: '',
-      gender: 'M',
-      title: player.title || '',
-      rapidRating: player.rapidRating,
-      blitzRating: player.blitzRating,
-      fideId: player.fideId
-    }));
-    
-    if (onFileUpload) {
-      onFileUpload(formattedPlayers);
-    }
-    
-    if (onPlayersImported) {
-      console.log("🚀 FileUpload: Calling onPlayersImported with", sortedPlayers.length, "players");
-      onPlayersImported(sortedPlayers);
-    }
-    
-    setIsLoading(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,15 +281,18 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     
     if (fileExt !== 'xlsx' && fileExt !== 'xls' && fileExt !== 'csv') {
       setError("Please upload an Excel file (.xlsx or .xls) or CSV file (.csv)");
+      e.target.value = ''; // Reset file input
       return;
     }
     
     if (file.size > 5 * 1024 * 1024) {
       setError("File size exceeds 5MB limit");
+      e.target.value = ''; // Reset file input
       return;
     }
     
     processExcelFile(file);
+    e.target.value = ''; // Reset file input after processing
   };
 
   return (
