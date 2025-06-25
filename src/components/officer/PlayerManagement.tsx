@@ -13,6 +13,7 @@ import StateSelector from "@/components/selectors/StateSelector";
 import CitySelector from "@/components/selectors/CitySelector";
 import EditPlayerDialog from "./EditPlayerDialog";
 import FileUploadButton from "@/components/players/FileUploadButton";
+import { getFromStorage, saveToStorage } from "@/utils/storageUtils";
 
 interface PlayerManagementProps {
   onPlayerApproval: () => void;
@@ -39,29 +40,40 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     title: "",
   });
 
-  // Load players from localStorage
+  // Load players from storage using the proper storage system
   useEffect(() => {
     const loadPlayers = () => {
       try {
-        const storedPlayers = localStorage.getItem('players');
-        if (storedPlayers) {
-          setPlayers(JSON.parse(storedPlayers));
-        }
+        const storedPlayers = getFromStorage('players', []);
+        console.log("🔍 PlayerManagement: Loaded players from storage:", storedPlayers.length);
+        setPlayers(storedPlayers);
       } catch (error) {
         console.error('Error loading players:', error);
+        setPlayers([]);
       }
     };
 
     loadPlayers();
+    
+    // Set up interval to refresh data every 5 seconds
+    const interval = setInterval(loadPlayers, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
-  // Save players to localStorage
+  // Save players to storage using the proper storage system
   const savePlayersToStorage = (updatedPlayers: Player[]) => {
     try {
-      localStorage.setItem('players', JSON.stringify(updatedPlayers));
+      console.log("💾 PlayerManagement: Saving players to storage:", updatedPlayers.length);
+      saveToStorage('players', updatedPlayers);
       setPlayers(updatedPlayers);
     } catch (error) {
       console.error('Error saving players:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save players data",
+        variant: "destructive",
+      });
     }
   };
 
@@ -89,7 +101,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     }
 
     const player: Player = {
-      id: `player-${Date.now()}`,
+      id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       ...newPlayer,
       status: "approved",
       rating: 800,
@@ -101,6 +113,28 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       created_at: new Date().toISOString(),
       title: newPlayer.title === "" || newPlayer.title === "none" ? undefined : newPlayer.title as "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM",
       tournamentResults: [],
+      ratingHistory: [{
+        date: new Date().toISOString(),
+        rating: 800,
+        change: 0,
+        reason: "Initial rating"
+      }],
+      rapidRatingHistory: [{
+        date: new Date().toISOString(),
+        rating: 800,
+        change: 0,
+        reason: "Initial rapid rating"
+      }],
+      blitzRatingHistory: [{
+        date: new Date().toISOString(),
+        rating: 800,
+        change: 0,
+        reason: "Initial blitz rating"
+      }],
+      ratingStatus: "provisional",
+      rapidRatingStatus: "provisional",
+      blitzRatingStatus: "provisional",
+      country: "Nigeria"
     };
 
     const updatedPlayers = [...players, player];
@@ -139,7 +173,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
 
         if (!existingPlayer) {
           const newPlayer: Player = {
-            id: `player-${Date.now()}-${Math.random()}`,
+            id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: playerData.name,
             email: playerData.email || "",
             phone: playerData.phone || "",
@@ -158,15 +192,31 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
             fideId: playerData.fideId || "",
             created_at: new Date().toISOString(),
             tournamentResults: playerData.tournamentResults || [],
-            ratingHistory: playerData.ratingHistory || [],
-            rapidRatingHistory: playerData.rapidRatingHistory || [],
-            blitzRatingHistory: playerData.blitzRatingHistory || [],
+            ratingHistory: playerData.ratingHistory || [{
+              date: new Date().toISOString(),
+              rating: playerData.rating || 800,
+              change: 0,
+              reason: "Initial rating"
+            }],
+            rapidRatingHistory: playerData.rapidRatingHistory || [{
+              date: new Date().toISOString(),
+              rating: playerData.rapidRating || 800,
+              change: 0,
+              reason: "Initial rapid rating"
+            }],
+            blitzRatingHistory: playerData.blitzRatingHistory || [{
+              date: new Date().toISOString(),
+              rating: playerData.blitzRating || 800,
+              change: 0,
+              reason: "Initial blitz rating"
+            }],
             achievements: playerData.achievements || [],
             club: playerData.club || "",
             birthYear: playerData.birthYear,
             ratingStatus: playerData.ratingStatus || "provisional",
             rapidRatingStatus: playerData.rapidRatingStatus || "provisional",
-            blitzRatingStatus: playerData.blitzRatingStatus || "provisional"
+            blitzRatingStatus: playerData.blitzRatingStatus || "provisional",
+            country: playerData.country || "Nigeria"
           };
           currentPlayers.push(newPlayer);
           addedCount++;

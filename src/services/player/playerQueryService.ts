@@ -1,4 +1,3 @@
-
 import { Player } from "@/lib/mockData";
 import { getFromStorage } from "@/utils/storageUtils";
 
@@ -11,8 +10,7 @@ export const getAllPlayersFromSupabase = async (filters: {
     console.log("🔍 getAllPlayersFromSupabase called with filters:", filters);
     
     let players = getFromStorage('players', []);
-    console.log("📊 Raw players from storage:", players);
-    console.log("📊 Players array length:", players?.length || 0);
+    console.log("📊 Raw players from storage:", players?.length || 0);
     
     // Ensure we return an array
     if (!Array.isArray(players)) {
@@ -59,7 +57,10 @@ export const getAllPlayersFromSupabase = async (filters: {
       console.log(`🏙️ Filtered for city '${filters.city}': ${beforeFilterLength} -> ${players.length}`);
     }
     
-    console.log("🏁 Final filtered players:", players.length);
+    // Sort players by rating (highest first) for consistent display
+    players.sort((a, b) => (b.rating || 800) - (a.rating || 800));
+    
+    console.log("🏁 Final filtered and sorted players:", players.length);
     console.log("📝 Final players sample:", players.slice(0, 3).map(p => ({ 
       id: p?.id, 
       name: p?.name, 
