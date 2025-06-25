@@ -125,48 +125,59 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     let errorCount = 0;
     const errors: string[] = [];
 
-    for (const playerData of importedPlayers) {
-      if (playerData.name && playerData.email) {
-        try {
-          await createPlayer(playerData);
-          addedCount++;
-        } catch (error) {
-          errorCount++;
-          errors.push(`Failed to create player ${playerData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    try {
+      for (const playerData of importedPlayers) {
+        if (playerData.name && playerData.email) {
+          try {
+            await createPlayer(playerData);
+            addedCount++;
+          } catch (error) {
+            errorCount++;
+            errors.push(`Failed to create player ${playerData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            console.error(`Failed to create player ${playerData.name}:`, error); // Log individual errors
+          }
         }
       }
-    }
 
-    // Always refresh the player list
-    try {
-      const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
-      setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
-    } catch (error) {
-      // Optionally handle refresh error
-    }
+      // Always refresh the player list
+      try {
+        const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
+        setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
+      } catch (error) {
+        console.error('Error refreshing players after import:', error);
+        // Optionally handle refresh error with a toast, but don't let it block UI updates
+      }
 
-    onPlayerApproval();
+      onPlayerApproval(); // This callback might trigger further UI updates or data fetching
 
-    if (addedCount > 0 && errorCount === 0) {
+      if (addedCount > 0 && errorCount === 0) {
+        toast({
+          title: "Players Imported Successfully",
+          description: `Successfully imported ${addedCount} players.`,
+        });
+      } else if (addedCount > 0 && errorCount > 0) {
+        toast({
+          title: "Import Completed with Some Errors",
+          description: `Imported ${addedCount} players, ${errorCount} failed. Check console for details.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Import Failed",
+          description: "No players were imported. This could be due to issues with the file data or network problems. Please check your file and try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (e) {
+      // Catch any unexpected errors during the import process itself
+      console.error("Unexpected error during player import handling:", e);
       toast({
-        title: "Players Imported Successfully",
-        description: `Successfully imported ${addedCount} players.`,
+        title: "Import Error",
+        description: "An unexpected error occurred during the import process.",
+        variant: "destructive",
       });
-      setIsUploadPlayersOpen(false); // Close immediately on full success
-    } else if (addedCount > 0 && errorCount > 0) {
-      toast({
-        title: "Import Completed with Some Errors",
-        description: `Imported ${addedCount} players, ${errorCount} failed. Check console for details.`,
-        variant: "destructive"
-      });
-      setIsUploadPlayersOpen(false); // Close even on partial success
-    } else {
-      toast({
-        title: "Import Failed",
-        description: "No players were imported. Please check your file and try again.",
-        variant: "destructive"
-      });
-      setIsUploadPlayersOpen(false); // Close on total failure
+    } finally {
+      setIsUploadPlayersOpen(false); // Ensure the dialog is always closed
     }
   };
 
