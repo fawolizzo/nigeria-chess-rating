@@ -138,11 +138,10 @@ export default function OrganizerDashboard() {
   };
   
   // Helper function to filter tournaments by status
-  const filterTournamentsByStatus = (status: string) => {
-    if (!tournaments || tournaments.length === 0) {
-      return [];
-    }
-    return tournaments.filter(t => t.status === status);
+  const getTournamentsByStatus = (status: string) => {
+    return Array.isArray(tournaments) 
+      ? tournaments.filter(t => t.status === status)
+      : [];
   };
   
   // Format display date with improved timezone handling for YYYY-MM-DD format
@@ -189,10 +188,11 @@ export default function OrganizerDashboard() {
     
     try {
       // Updated to filter for approved tournaments instead of upcoming/ongoing
-      const validTournaments = tournaments.filter(t => 
-        t.status === 'approved' && 
-        t.start_date // Ensure there's a start date
-      );
+      const validTournaments = Array.isArray(tournaments)
+        ? tournaments.filter(t => 
+            t.status === "approved" && new Date(t.start_date) > new Date()
+          )
+        : [];
       
       if (validTournaments.length === 0) {
         return undefined;
@@ -244,7 +244,7 @@ export default function OrganizerDashboard() {
     <OrganizerDashboardLayout
       currentUser={currentUser}
       tournaments={tournaments}
-      filterTournamentsByStatus={filterTournamentsByStatus}
+      filterTournamentsByStatus={getTournamentsByStatus}
       nextTournament={nextTournament}
       formatDisplayDate={formatDisplayDate}
       onCreateTournament={onCreateTournament}
@@ -252,7 +252,7 @@ export default function OrganizerDashboard() {
       <OrganizerTabsWrapper 
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        filterTournamentsByStatus={filterTournamentsByStatus}
+        filterTournamentsByStatus={getTournamentsByStatus}
         onCreateTournament={onCreateTournament}
         onViewDetails={onViewDetails}
         onManage={onManage}

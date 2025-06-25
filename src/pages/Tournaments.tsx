@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -46,9 +45,18 @@ const Tournaments = () => {
     fetchTournaments();
   }, [toast]);
 
-  const filteredTournaments = tournaments.filter(tournament =>
-    tournament.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTournaments = Array.isArray(tournaments)
+    ? tournaments.filter(tournament => {
+        if (!searchQuery.trim()) return true;
+        
+        const query = searchQuery.toLowerCase();
+        return (
+          tournament.name.toLowerCase().includes(query) ||
+          tournament.location.toLowerCase().includes(query) ||
+          tournament.status.toLowerCase().includes(query)
+        );
+      })
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

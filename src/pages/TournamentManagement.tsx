@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tournament, Player, Pairing, Result } from "@/lib/mockData";
@@ -265,9 +264,11 @@ export default function TournamentManagement() {
     );
   }
 
-  const currentRoundPairings = tournament.pairings?.filter(p => 
-    p.roundNumber === tournament.current_round
-  ) || [];
+  const currentRoundPairings = Array.isArray(tournament.pairings) 
+    ? tournament.pairings.filter(p => 
+        p.round === tournament.current_round
+      )
+    : [];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

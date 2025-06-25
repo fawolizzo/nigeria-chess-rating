@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Player } from "@/lib/mockData";
@@ -74,11 +73,13 @@ const NewPlayerProfileContent: React.FC<NewPlayerProfileContentProps> = ({ playe
     }
     
     // Filter tournament results for this format
-    const tournamentResults = player.tournamentResults?.filter(result => {
-      if (timeFormat === "rapid") return result.format === "rapid";
-      if (timeFormat === "blitz") return result.format === "blitz";
-      return result.format === "classical" || !result.format;
-    }) || [];
+    const tournamentResults = Array.isArray(player.tournamentResults)
+      ? player.tournamentResults.filter(result => {
+          if (timeFormat === "rapid") return result.format === "rapid";
+          if (timeFormat === "blitz") return result.format === "blitz";
+          return result.format === "classical" || !result.format;
+        })
+      : [];
     
     return {
       history,

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TournamentResult } from "@/lib/mockData";
@@ -14,9 +13,15 @@ const PlayerPerformance: React.FC<PlayerPerformanceProps> = ({ tournamentResults
   const totalRatingChange = tournamentResults.reduce((sum, result) => sum + result.ratingChange, 0);
   const averageRatingChange = totalTournaments > 0 ? totalRatingChange / totalTournaments : 0;
   
-  const wins = tournamentResults.filter(result => result.result === "1-0").length;
-  const draws = tournamentResults.filter(result => result.result === "1/2-1/2").length;
-  const losses = tournamentResults.filter(result => result.result === "0-1").length;
+  const wins = Array.isArray(tournamentResults) 
+    ? tournamentResults.filter(result => result.result === "1-0").length 
+    : 0;
+  const draws = Array.isArray(tournamentResults) 
+    ? tournamentResults.filter(result => result.result === "1/2-1/2").length 
+    : 0;
+  const losses = Array.isArray(tournamentResults) 
+    ? tournamentResults.filter(result => result.result === "0-1").length 
+    : 0;
   
   const winPercentage = totalTournaments > 0 ? ((wins + draws * 0.5) / totalTournaments) * 100 : 0;
 

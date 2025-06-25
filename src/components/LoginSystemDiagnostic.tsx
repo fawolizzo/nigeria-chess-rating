@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
+import { logMessage, LogLevel } from "@/utils/debugLogger";
 import {
   Accordion,
   AccordionContent,
@@ -7,8 +8,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { checkStorageHealth } from "@/utils/debugLogger";
 import { Loader2, RefreshCw, Check, X, AlertTriangle, Database } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle as AlertTriangleIcon, CheckCircle, Clock, Users, UserCheck, UserX } from "lucide-react";
 
 /**
  * Diagnostic component for checking login and registration system health
@@ -37,18 +40,23 @@ const LoginSystemDiagnostic: React.FC = () => {
     pendingTournamentOrganizers: 0
   });
   
+  const [storageHealth, setStorageHealth] = useState<{ healthy: boolean; issues: string[] }>({
+    healthy: true,
+    issues: []
+  });
+  
   // Calculate user statistics
   useEffect(() => {
-    const ratingOfficers = users.filter(u => u.role === "rating_officer");
-    const approvedRatingOfficers = ratingOfficers.filter(u => u.status === "approved");
-    const pendingRatingOfficers = ratingOfficers.filter(u => u.status === "pending");
+    const ratingOfficers = Array.isArray(users) ? users.filter(u => u.role === "rating_officer") : [];
+    const approvedRatingOfficers = Array.isArray(ratingOfficers) ? ratingOfficers.filter(u => u.status === "approved") : [];
+    const pendingRatingOfficers = Array.isArray(ratingOfficers) ? ratingOfficers.filter(u => u.status === "pending") : [];
     
-    const tournamentOrganizers = users.filter(u => u.role === "tournament_organizer");
-    const approvedTournamentOrganizers = tournamentOrganizers.filter(u => u.status === "approved");
-    const pendingTournamentOrganizers = tournamentOrganizers.filter(u => u.status === "pending");
+    const tournamentOrganizers = Array.isArray(users) ? users.filter(u => u.role === "tournament_organizer") : [];
+    const approvedTournamentOrganizers = Array.isArray(tournamentOrganizers) ? tournamentOrganizers.filter(u => u.status === "approved") : [];
+    const pendingTournamentOrganizers = Array.isArray(tournamentOrganizers) ? tournamentOrganizers.filter(u => u.status === "pending") : [];
     
     setUserStats({
-      totalUsers: users.length,
+      totalUsers: Array.isArray(users) ? users.length : 0,
       ratingOfficers: ratingOfficers.length,
       approvedRatingOfficers: approvedRatingOfficers.length,
       pendingRatingOfficers: pendingRatingOfficers.length,
@@ -66,9 +74,11 @@ const LoginSystemDiagnostic: React.FC = () => {
       await refreshUserData();
       await forceSync();
       
-      // Check storage health
-      const healthCheck = checkStorageHealth();
-      setHealthStatus(healthCheck);
+      // Storage health is no longer relevant after Supabase migration
+      setHealthStatus({
+        healthy: true,
+        issues: []
+      });
       
       setLastChecked(new Date());
     } catch (error) {
