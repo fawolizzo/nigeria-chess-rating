@@ -34,11 +34,10 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     throw new Error(`Database connection failed: ${connectionError instanceof Error ? connectionError.message : 'Unknown error'}`);
   }
   
-  // Map to Supabase schema if needed (e.g., snake_case)
+  // Map to Supabase schema properly
   const supabasePlayer = {
     name: playerData.name,
     email: playerData.email,
-    // Add defaults if needed
     status: playerData.status || "approved",
     rating: playerData.rating || 800,
     rapid_rating: playerData.rapidRating || 800,
@@ -46,17 +45,17 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     created_at: playerData.created_at || new Date().toISOString(),
     gender: playerData.gender || "M",
     country: playerData.country || "Nigeria",
-    // Map camelCase to snake_case
-    fide_id: playerData.fideId,
-    games_played: playerData.gamesPlayed || 0,
-    rapid_games_played: playerData.rapidGamesPlayed || 0,
-    blitz_games_played: playerData.blitzGamesPlayed || 0,
-    birth_year: playerData.birthYear,
-    title: playerData.title,
-    title_verified: playerData.titleVerified,
-    phone: playerData.phone,
-    state: playerData.state,
-    city: playerData.city
+    fide_id: playerData.fideId || null,
+    games_played: playerData.gamesPlayed || 31,
+    rapid_games_played: playerData.rapidGamesPlayed || 31,
+    blitz_games_played: playerData.blitzGamesPlayed || 31,
+    birth_year: playerData.birthYear || null,
+    title: playerData.title || null,
+    title_verified: playerData.titleVerified || false,
+    phone: playerData.phone || "",
+    state: playerData.state || "",
+    city: playerData.city || "",
+    club: playerData.club || ""
   };
   
   console.log('📤 createPlayer: Sending to Supabase:', supabasePlayer);
@@ -110,16 +109,6 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
   };
   
   console.log('✅ createPlayer: Successfully created in Supabase:', createdPlayer.name);
-  
-  // Also save to localStorage for RO dashboard compatibility
-  try {
-    const existingPlayers = getFromStorageSync('players', []);
-    const updatedPlayers = Array.isArray(existingPlayers) ? [...existingPlayers, createdPlayer] : [createdPlayer];
-    saveToStorageSync('players', updatedPlayers);
-    console.log('✅ Player saved to both Supabase and localStorage:', createdPlayer.name);
-  } catch (localError) {
-    console.error('⚠️ Error saving to localStorage (continuing with Supabase):', localError);
-  }
   
   return createdPlayer;
 };
