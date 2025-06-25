@@ -1,3 +1,4 @@
+
 import { Player } from "@/lib/mockData";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,14 +29,21 @@ export const getAllPlayersFromSupabase = async (filters: {
   
   let query = supabase.from('players').select('*');
 
+  // Only apply status filter if it's not "all" and not undefined
   if (filters.status && filters.status !== 'all') {
     query = query.eq('status', filters.status);
+    console.log('🔍 Applied status filter:', filters.status);
+  } else {
+    console.log('🔍 No status filter applied, fetching all players');
   }
+  
   if (filters.state) {
     query = query.eq('state', filters.state);
+    console.log('🔍 Applied state filter:', filters.state);
   }
   if (filters.city) {
     query = query.eq('city', filters.city);
+    console.log('🔍 Applied city filter:', filters.city);
   }
 
   const { data, error } = await query;
@@ -44,7 +52,13 @@ export const getAllPlayersFromSupabase = async (filters: {
     dataLength: data?.length || 0,
     error: error?.message || 'none',
     errorCode: error?.code || 'none',
-    filters
+    filters,
+    sampleData: data?.slice(0, 3)?.map(p => ({ 
+      id: p.id, 
+      name: p.name, 
+      status: p.status,
+      rating: p.rating 
+    })) || []
   });
   
   if (error) {
@@ -63,7 +77,7 @@ export const getAllPlayersFromSupabase = async (filters: {
     return [];
   }
   
-  // Optionally sort by rating
+  // Sort by rating (highest first)
   const sortedData = (data as Player[]).sort((a, b) => (b.rating || 800) - (a.rating || 800));
   console.log('✅ Returning', sortedData.length, 'players from Supabase');
   
@@ -71,15 +85,18 @@ export const getAllPlayersFromSupabase = async (filters: {
 };
 
 export const getAllUsers = async (): Promise<Player[]> => {
+  console.log('🔄 getAllUsers called');
   const { data, error } = await supabase.from('players').select('*');
   if (error || !Array.isArray(data)) {
     console.error("❌ Error fetching all users from Supabase:", error);
     return [];
   }
+  console.log('✅ getAllUsers returned', data.length, 'players');
   return data;
 };
 
 export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | null> => {
+  console.log('🔄 getPlayerByIdFromSupabase called with id:', id);
   const { data, error } = await supabase
     .from('players')
     .select('*')
@@ -89,5 +106,6 @@ export const getPlayerByIdFromSupabase = async (id: string): Promise<Player | nu
     console.error("❌ Error getting player from Supabase:", error);
     return null;
   }
+  console.log('✅ getPlayerByIdFromSupabase returned player:', data.name);
   return data as Player;
 };

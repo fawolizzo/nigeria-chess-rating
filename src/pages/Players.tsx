@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { getAllPlayersFromSupabase } from "@/services/playerService";
@@ -6,7 +7,7 @@ import PlayerCard from "@/components/players/PlayerCard";
 import FilterControls from "@/components/players/FilterControls";
 import RankingTable from "@/components/RankingTable";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Loader2, Grid, List } from "lucide-react";
+import { AlertCircle, Loader2, Grid, List, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 
@@ -19,29 +20,47 @@ const Players = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
-  const fetchPlayers = async () => {
+  const fetchPlayers = async (showRefreshingState = false) => {
     try {
       console.log('🔄 Players page: Starting to fetch players...');
-      setIsLoading(true);
+      if (showRefreshingState) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
-      const players = await getAllPlayersFromSupabase({ status: 'approved' });
-      console.log('📊 Players page: Fetched players from Supabase:', players?.length || 0, 'players');
-      if (players && players.length > 0) {
-        console.log('📋 Players page: Sample players:', players.slice(0, 3).map(p => ({
+      
+      // Try to fetch all players first (no status filter)
+      console.log('🔄 Fetching all players without status filter...');
+      const allPlayersData = await getAllPlayersFromSupabase();
+      console.log('📊 Players page: Fetched ALL players from Supabase:', allPlayersData?.length || 0, 'players');
+      
+      if (allPlayersData && allPlayersData.length > 0) {
+        console.log('📋 Players page: Sample of ALL players:', allPlayersData.slice(0, 3).map(p => ({
           id: p.id,
           name: p.name,
           email: p.email,
           status: p.status,
           rating: p.rating
         })));
+        
+        // Filter only approved players for display
+        const approvedPlayers = allPlayersData.filter(player => player.status === 'approved');
+        console.log('📋 Players page: Approved players:', approvedPlayers.length, 'out of', allPlayersData.length);
+        
+        setAllPlayers(approvedPlayers);
+        setFilteredPlayers(approvedPlayers);
+      } else {
+        console.log('⚠️ No players found in database');
+        setAllPlayers([]);
+        setFilteredPlayers([]);
       }
-      setAllPlayers(players);
-      setFilteredPlayers(players);
     } catch (error) {
       console.error('❌ Players page: Error fetching players:', error);
-      setError("Failed to load players data");
+      setError(error instanceof Error ? error.message : "Failed to load players data");
       setAllPlayers([]);
       setFilteredPlayers([]);
       toast({
@@ -51,12 +70,16 @@ const Players = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchPlayers();
-    const interval = setInterval(fetchPlayers, 10000);
+    
+    // Set up an interval to refresh data every 30 seconds
+    const interval = setInterval(() => fetchPlayers(true), 30000);
+    
     return () => clearInterval(interval);
   }, [toast]);
 
@@ -79,7 +102,7 @@ const Players = () => {
   }, [allPlayers, searchQuery, selectedState, selectedCity]);
 
   const handleRefresh = () => {
-    fetchPlayers();
+    fetchPlayers(true);
   };
 
   const handleStateChange = (value: string) => {
@@ -136,6 +159,16 @@ const Players = () => {
             
             <div className="flex gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+              <Button
                 variant={viewMode === 'table' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setViewMode('table')}
@@ -183,12 +216,9 @@ const Players = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-4 text-center">
               {error}
             </p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-nigeria-green text-white rounded hover:bg-nigeria-green-dark transition-colors"
-            >
+            <Button onClick={handleRefresh} className="bg-nigeria-green hover:bg-nigeria-green-dark">
               Try Again
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="mt-6">
@@ -211,12 +241,16 @@ const Players = () => {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                     {!Array.isArray(allPlayers) || allPlayers.length === 0 ? "No Players Found" : "No Players Match Your Filters"}
                   </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
                     {!Array.isArray(allPlayers) || allPlayers.length === 0 
                       ? "No players have been registered in the system yet. Rating Officers can upload players via their dashboard."
                       : "Try adjusting your search criteria to find more players."
                     }
                   </p>
+                  <Button onClick={handleRefresh} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh Players
+                  </Button>
                   <div className="mt-4 text-xs text-gray-400">
                     Debug: Check console for detailed player data information
                   </div>
