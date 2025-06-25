@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Tournament, Player } from "@/lib/mockData";
 import { User } from '@/types/userTypes';
 import { useDashboardStorage } from "./useDashboardStorage";
-import { getFromStorageSync } from '@/utils/storageUtils';
+import { getFromStorageSync } from '../../utils/storageUtils';
 import { syncPlayersToLocalStorage } from '@/services/player/playerCoreService';
 
 export interface DashboardResult {
@@ -43,88 +43,77 @@ export const useOfficerDashboardData = (): DashboardResult => {
   // Filter players by status
   const pendingPlayers = players.filter(p => p.status === "pending");
 
-  // Load players and organizers from storage with error handling
-  useEffect(() => {
-    console.log('📥 Loading initial data from storage...');
-    const loadData = async () => {
-      try {
-        // First sync players from Supabase to localStorage
-        await syncPlayersToLocalStorage();
-        
-        // Load players from storage
-        const storedPlayers = getFromStorageSync('players', []);
-        console.log('📊 Loaded players from storage:', storedPlayers.length);
-        setPlayers(Array.isArray(storedPlayers) ? storedPlayers : []);
-
-        // Load organizers from storage
-        const organizers = getFromStorageSync('users', []);
-        console.log('📊 Loaded organizers from storage:', organizers.length);
-        const pending = organizers.filter((user: User) => 
-          user.role === 'tournament_organizer' && user.status === 'pending'
-        );
-        setPendingOrganizers(pending);
-        console.log('📊 Pending organizers found:', pending.length);
-      } catch (error) {
-        console.error('❌ Error loading dashboard data:', error);
-        setPlayers([]);
-        setPendingOrganizers([]);
+  // Consolidated data loading and refresh logic
+  const loadDashboardData = async (isInitialLoad = false) => {
+    try {
+      if (isInitialLoad) {
+        console.log('📥 Loading initial data from storage...');
+      } else {
+        console.log('🔄 Refreshing dashboard data...');
+        setIsLoading(true);
       }
-    };
+      
+      setHasError(false);
+      setErrorMessage(null);
 
-    loadData();
+      // Add timeout to prevent getting stuck in loading state
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Data loading timeout')), 10000); // 10 second timeout
+      });
+
+      // Sync players from Supabase to localStorage with timeout
+      await Promise.race([
+        syncPlayersToLocalStorage(),
+        timeoutPromise
+      ]);
+
+      // Load players from storage
+      const currentPlayers = getFromStorageSync('players', []);
+      console.log('📊 Loaded players from storage:', currentPlayers.length);
+      setPlayers(Array.isArray(currentPlayers) ? currentPlayers : []);
+
+      // Load organizers from storage
+      const organizers = getFromStorageSync('users', []);
+      console.log('📊 Loaded organizers from storage:', organizers.length);
+      const pending = organizers.filter((user: User) => 
+        user.role === 'tournament_organizer' && user.status === 'pending'
+      );
+      setPendingOrganizers(pending);
+      console.log('📊 Pending organizers found:', pending.length);
+
+      // Refresh tournaments from storage
+      const currentTournaments = getFromStorageSync('tournaments', []);
+      console.log('📊 Refreshed tournaments:', currentTournaments.length);
+      updateTournaments(currentTournaments);
+
+      console.log("✅ Dashboard data loaded successfully:", {
+        players: currentPlayers.length,
+        tournaments: currentTournaments.length,
+        pendingOrganizers: pending.length
+      });
+
+    } catch (error) {
+      console.error('❌ Error loading dashboard data:', error);
+      setHasError(true);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to load dashboard data');
+      setPlayers([]);
+      setPendingOrganizers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial data load
+  useEffect(() => {
+    loadDashboardData(true);
   }, []);
 
   // Set up real-time data refresh
   useEffect(() => {
     console.log('🔄 Setting up data refresh...');
-    const refreshData = async () => {
-      try {
-        console.log('🔄 Refreshing dashboard data...');
-        setIsLoading(true);
-        setHasError(false);
-        setErrorMessage(null);
-
-        // Sync players from Supabase to localStorage
-        await syncPlayersToLocalStorage();
-
-        // Refresh players from storage
-        const currentPlayers = getFromStorageSync('players', []);
-        console.log('📊 Refreshed players:', currentPlayers.length);
-        setPlayers(Array.isArray(currentPlayers) ? currentPlayers : []);
-
-        // Refresh tournaments from storage
-        const currentTournaments = getFromStorageSync('tournaments', []);
-        console.log('📊 Refreshed tournaments:', currentTournaments.length);
-        updateTournaments(currentTournaments);
-
-        // Refresh organizers
-        const organizers = getFromStorageSync('users', []);
-        const pending = organizers.filter((user: User) => 
-          user.role === 'tournament_organizer' && user.status === 'pending'
-        );
-        setPendingOrganizers(pending);
-        console.log('📊 Refreshed pending organizers:', pending.length);
-
-        console.log("🔄 Dashboard data refreshed successfully:", {
-          players: currentPlayers.length,
-          tournaments: currentTournaments.length,
-          pendingOrganizers: pending.length
-        });
-
-      } catch (error) {
-        console.error('❌ Error refreshing dashboard data:', error);
-        setHasError(true);
-        setErrorMessage('Failed to refresh dashboard data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Initial load
-    refreshData();
-
+    
     // Set up interval for real-time updates
-    const interval = setInterval(refreshData, 5000);
+    const interval = setInterval(() => loadDashboardData(false), 5000);
 
     return () => {
       clearInterval(interval);
@@ -135,39 +124,8 @@ export const useOfficerDashboardData = (): DashboardResult => {
   }, [updateTournaments]);
 
   const refreshData = async () => {
-    try {
-      console.log('🔄 Manual refresh triggered');
-      setIsLoading(true);
-      setHasError(false);
-      setErrorMessage(null);
-
-      // Sync players from Supabase to localStorage
-      await syncPlayersToLocalStorage();
-
-      // Refresh players from storage
-      const currentPlayers = getFromStorageSync('players', []);
-      setPlayers(Array.isArray(currentPlayers) ? currentPlayers : []);
-
-      // Refresh tournaments from storage
-      const currentTournaments = getFromStorageSync('tournaments', []);
-      updateTournaments(currentTournaments);
-
-      // Refresh organizers
-      const organizers = getFromStorageSync('users', []);
-      const pending = organizers.filter((user: User) => 
-        user.role === 'tournament_organizer' && user.status === 'pending'
-      );
-      setPendingOrganizers(pending);
-
-      console.log("🔄 Manual dashboard refresh completed");
-
-    } catch (error) {
-      console.error('❌ Error in manual refresh:', error);
-      setHasError(true);
-      setErrorMessage('Failed to refresh data');
-    } finally {
-      setIsLoading(false);
-    }
+    console.log('🔄 Manual refresh triggered');
+    await loadDashboardData(false);
   };
 
   const result = {
