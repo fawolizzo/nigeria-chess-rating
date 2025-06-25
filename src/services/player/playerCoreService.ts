@@ -1,5 +1,6 @@
 import { Player } from "@/lib/mockData";
 import { supabase } from "@/integrations/supabase/client";
+import { saveToStorageSync, getFromStorageSync } from "@/utils/storageUtils";
 
 export const createPlayer = async (playerData: Partial<Player>): Promise<Player> => {
   if (!playerData.name || !playerData.email) {
@@ -28,7 +29,19 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     console.error("❌ Error creating player in Supabase:", error);
     throw new Error(error.message);
   }
-  return data as Player;
+  const createdPlayer = data as Player;
+  
+  // Also save to localStorage for RO dashboard compatibility
+  try {
+    const existingPlayers = getFromStorageSync('players', []);
+    const updatedPlayers = Array.isArray(existingPlayers) ? [...existingPlayers, createdPlayer] : [createdPlayer];
+    saveToStorageSync('players', updatedPlayers);
+    console.log('✅ Player saved to both Supabase and localStorage:', createdPlayer.name);
+  } catch (localError) {
+    console.error('⚠️ Error saving to localStorage (continuing with Supabase):', localError);
+  }
+  
+  return createdPlayer;
 };
 
 export const updatePlayerInSupabase = async (id: string, updates: Partial<Player>): Promise<Player | null> => {
@@ -42,7 +55,23 @@ export const updatePlayerInSupabase = async (id: string, updates: Partial<Player
     console.error("❌ Error updating player in Supabase:", error);
     return null;
   }
-  return data as Player;
+  const updatedPlayer = data as Player;
+  
+  // Also update localStorage for RO dashboard compatibility
+  try {
+    const existingPlayers = getFromStorageSync('players', []);
+    if (Array.isArray(existingPlayers)) {
+      const updatedPlayers = existingPlayers.map(player => 
+        player.id === id ? { ...player, ...updates } : player
+      );
+      saveToStorageSync('players', updatedPlayers);
+      console.log('✅ Player updated in both Supabase and localStorage:', updatedPlayer.name);
+    }
+  } catch (localError) {
+    console.error('⚠️ Error updating localStorage (continuing with Supabase):', localError);
+  }
+  
+  return updatedPlayer;
 };
 
 export const getPlayerFromSupabase = async (id: string): Promise<Player | null> => {
@@ -56,4 +85,25 @@ export const getPlayerFromSupabase = async (id: string): Promise<Player | null> 
     return null;
   }
   return data as Player;
+};
+
+// New function to sync players between Supabase and localStorage
+export const syncPlayersToLocalStorage = async (): Promise<void> => {
+  try {
+    const { data, error } = await supabase
+      .from('players')
+      .select('*');
+      
+    if (error) {
+      console.error("❌ Error fetching players from Supabase for sync:", error);
+      return;
+    }
+    
+    if (Array.isArray(data)) {
+      saveToStorageSync('players', data);
+      console.log('✅ Synced', data.length, 'players from Supabase to localStorage');
+    }
+  } catch (error) {
+    console.error("❌ Error syncing players to localStorage:", error);
+  }
 };

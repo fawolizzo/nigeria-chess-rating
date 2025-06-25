@@ -37,7 +37,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
     city: "",
     gender: "M" as "M" | "F",
     fideId: "",
-    title: "",
+    title: "" as "" | "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM",
   });
 
   // Load players from Supabase
@@ -88,7 +88,13 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       return;
     }
     try {
-      await createPlayer({ ...newPlayer });
+      // Prepare player data, filtering out empty title
+      const playerData = {
+        ...newPlayer,
+        title: newPlayer.title === "" ? undefined : newPlayer.title
+      };
+      
+      await createPlayer(playerData);
       setNewPlayer({
         name: "",
         email: "",
@@ -97,7 +103,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
         city: "",
         gender: "M",
         fideId: "",
-        title: "",
+        title: "" as "" | "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM",
       });
       setIsCreatePlayerOpen(false);
       onPlayerApproval();
@@ -122,11 +128,21 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
           await createPlayer(playerData);
           addedCount++;
         } catch (error) {
+          console.error('Error creating player:', error);
           // Optionally handle error for each player
         }
       }
     }
     setIsUploadPlayersOpen(false);
+    
+    // Refresh the player list after import
+    try {
+      const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
+      setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
+    } catch (error) {
+      console.error('Error refreshing players after import:', error);
+    }
+    
     onPlayerApproval();
     toast({
       title: "Players Imported",
@@ -255,7 +271,13 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
 
                 <div>
                   <Label htmlFor="title">Title</Label>
-                  <Select value={newPlayer.title} onValueChange={(value) => setNewPlayer({ ...newPlayer, title: value })}>
+                  <Select 
+                    value={newPlayer.title} 
+                    onValueChange={(value: string) => setNewPlayer({ 
+                      ...newPlayer, 
+                      title: value === "no-title" ? "" : value as "" | "GM" | "IM" | "FM" | "CM" | "WGM" | "WIM" | "WFM" | "WCM"
+                    })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select title (optional)" />
                     </SelectTrigger>

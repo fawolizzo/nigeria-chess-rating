@@ -1,8 +1,10 @@
 import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Trophy, UserCheck, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Trophy, UserCheck, Upload, RefreshCw } from "lucide-react";
 import { useOfficerDashboardData } from "@/hooks/dashboard/useOfficerDashboardData";
+import { syncPlayersToLocalStorage } from "@/services/player/playerCoreService";
 import PendingTournamentApprovals from "./PendingTournamentApprovals";
 import ApprovedTournaments from "./ApprovedTournaments";
 import PlayerManagement from "./PlayerManagement";
@@ -36,6 +38,16 @@ const NewOfficerDashboard = () => {
   const handleRefresh = () => {
     console.log('🔄 Manual refresh triggered');
     refreshData();
+  };
+
+  const handleSyncPlayers = async () => {
+    console.log('🔄 Manual player sync triggered');
+    try {
+      await syncPlayersToLocalStorage();
+      handleRefresh(); // Refresh the dashboard data
+    } catch (error) {
+      console.error('❌ Error syncing players:', error);
+    }
   };
 
   console.log('🎯 NewOfficerDashboard rendering with state:', {
@@ -87,6 +99,24 @@ const NewOfficerDashboard = () => {
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Manage tournaments, players, and organizer approvals
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSyncPlayers}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Sync Players
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh All
+          </Button>
         </div>
       </div>
 

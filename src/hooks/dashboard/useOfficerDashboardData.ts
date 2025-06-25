@@ -3,6 +3,7 @@ import { Tournament, Player } from "@/lib/mockData";
 import { User } from '@/types/userTypes';
 import { useDashboardStorage } from "./useDashboardStorage";
 import { getFromStorageSync } from '@/utils/storageUtils';
+import { syncPlayersToLocalStorage } from '@/services/player/playerCoreService';
 
 export interface DashboardResult {
   pendingTournaments: Tournament[];
@@ -45,8 +46,11 @@ export const useOfficerDashboardData = (): DashboardResult => {
   // Load players and organizers from storage with error handling
   useEffect(() => {
     console.log('📥 Loading initial data from storage...');
-    const loadData = () => {
+    const loadData = async () => {
       try {
+        // First sync players from Supabase to localStorage
+        await syncPlayersToLocalStorage();
+        
         // Load players from storage
         const storedPlayers = getFromStorageSync('players', []);
         console.log('📊 Loaded players from storage:', storedPlayers.length);
@@ -73,12 +77,15 @@ export const useOfficerDashboardData = (): DashboardResult => {
   // Set up real-time data refresh
   useEffect(() => {
     console.log('🔄 Setting up data refresh...');
-    const refreshData = () => {
+    const refreshData = async () => {
       try {
         console.log('🔄 Refreshing dashboard data...');
         setIsLoading(true);
         setHasError(false);
         setErrorMessage(null);
+
+        // Sync players from Supabase to localStorage
+        await syncPlayersToLocalStorage();
 
         // Refresh players from storage
         const currentPlayers = getFromStorageSync('players', []);
@@ -127,12 +134,15 @@ export const useOfficerDashboardData = (): DashboardResult => {
     };
   }, [updateTournaments]);
 
-  const refreshData = () => {
+  const refreshData = async () => {
     try {
       console.log('🔄 Manual refresh triggered');
       setIsLoading(true);
       setHasError(false);
       setErrorMessage(null);
+
+      // Sync players from Supabase to localStorage
+      await syncPlayersToLocalStorage();
 
       // Refresh players from storage
       const currentPlayers = getFromStorageSync('players', []);
