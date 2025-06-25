@@ -255,6 +255,16 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     console.log("📤 FileUpload: Processed players sorted by rating:", 
       sortedPlayers.map(p => `${p.name}: ${p.rating}`));
     
+    console.log("📋 FileUpload: Full player data being passed to import:", 
+      sortedPlayers.map(p => ({
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        status: p.status,
+        rating: p.rating
+      }))
+    );
+    
     const formattedPlayers = sortedPlayers.map(player => ({
       id: player.id,
       name: player.name,
@@ -272,6 +282,7 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     }
     
     if (onPlayersImported) {
+      console.log("🚀 FileUpload: Calling onPlayersImported with", sortedPlayers.length, "players");
       onPlayersImported(sortedPlayers);
     }
     

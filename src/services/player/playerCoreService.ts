@@ -3,9 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { saveToStorageSync, getFromStorageSync } from "@/utils/storageUtils";
 
 export const createPlayer = async (playerData: Partial<Player>): Promise<Player> => {
+  console.log('🔄 createPlayer called with data:', {
+    name: playerData.name,
+    email: playerData.email,
+    status: playerData.status,
+    rating: playerData.rating
+  });
+  
   if (!playerData.name || !playerData.email) {
-    throw new Error("Player name and email are required");
+    const error = "Player name and email are required";
+    console.error('❌ createPlayer validation failed:', error);
+    throw new Error(error);
   }
+  
   // Map to Supabase schema if needed (e.g., snake_case)
   const supabasePlayer = {
     ...playerData,
@@ -20,16 +30,22 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     gender: playerData.gender || "M",
     country: playerData.country || "Nigeria"
   };
+  
+  console.log('📤 createPlayer: Sending to Supabase:', supabasePlayer);
+  
   const { data, error } = await supabase
     .from('players')
     .insert([supabasePlayer])
     .select()
     .single();
+    
   if (error) {
     console.error("❌ Error creating player in Supabase:", error);
     throw new Error(error.message);
   }
+  
   const createdPlayer = data as Player;
+  console.log('✅ createPlayer: Successfully created in Supabase:', createdPlayer.name);
   
   // Also save to localStorage for RO dashboard compatibility
   try {

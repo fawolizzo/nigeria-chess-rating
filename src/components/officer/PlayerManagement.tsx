@@ -121,33 +121,67 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   };
 
   const handlePlayersImported = async (importedPlayers: Partial<Player>[]) => {
+    console.log('🔄 PlayerManagement: Starting bulk import of', importedPlayers.length, 'players');
+    
     let addedCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+    
     for (const playerData of importedPlayers) {
+      console.log('📝 Processing player:', playerData.name, playerData.email);
+      
       if (playerData.name && playerData.email) {
         try {
+          console.log('✅ Creating player:', playerData.name);
           await createPlayer(playerData);
           addedCount++;
+          console.log('✅ Successfully created player:', playerData.name);
         } catch (error) {
-          console.error('Error creating player:', error);
-          // Optionally handle error for each player
+          errorCount++;
+          const errorMsg = `Failed to create player ${playerData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          console.error('❌ Error creating player:', errorMsg);
+          errors.push(errorMsg);
         }
+      } else {
+        console.warn('⚠️ Skipping player with missing name or email:', playerData);
       }
     }
-    setIsUploadPlayersOpen(false);
+    
+    console.log('📊 Import summary:', { addedCount, errorCount, total: importedPlayers.length });
+    
+    // Don't close modal immediately - let user see the results
+    // setIsUploadPlayersOpen(false);
     
     // Refresh the player list after import
     try {
+      console.log('🔄 Refreshing player list after import...');
       const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
       setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
+      console.log('✅ Player list refreshed:', fetchedPlayers.length, 'players');
     } catch (error) {
-      console.error('Error refreshing players after import:', error);
+      console.error('❌ Error refreshing players after import:', error);
     }
     
     onPlayerApproval();
-    toast({
-      title: "Players Imported",
-      description: `Successfully imported ${addedCount} players`,
-    });
+    
+    // Show detailed results
+    if (errorCount > 0) {
+      toast({
+        title: "Import Completed with Errors",
+        description: `Imported ${addedCount} players, ${errorCount} failed. Check console for details.`,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Players Imported Successfully",
+        description: `Successfully imported ${addedCount} players`,
+      });
+    }
+    
+    // Close modal after showing results
+    setTimeout(() => {
+      setIsUploadPlayersOpen(false);
+    }, 2000);
   };
 
   const filteredPlayers = (Array.isArray(players) ? players : []).filter(player => {
