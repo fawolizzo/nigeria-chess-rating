@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -14,21 +13,50 @@ const NewOrganizerDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
 
-  // Filter tournaments by status - fix the status comparison
+  const getUpcomingTournaments = () => {
+    return Array.isArray(tournaments) 
+      ? tournaments.filter(t => t.status === "approved" && new Date(t.start_date) > new Date())
+      : [];
+  };
+  
+  const getPendingTournaments = () => {
+    return Array.isArray(tournaments) 
+      ? tournaments.filter(t => t.status === "pending")
+      : [];
+  };
+  
+  const getOngoingTournaments = () => {
+    return Array.isArray(tournaments) 
+      ? tournaments.filter(t => t.status === "ongoing")
+      : [];
+  };
+  
+  const getCompletedTournaments = () => {
+    return Array.isArray(tournaments) 
+      ? tournaments.filter(t => t.status === "completed")
+      : [];
+  };
+  
+  const getRejectedTournaments = () => {
+    return Array.isArray(tournaments) 
+      ? tournaments.filter(t => t.status === "rejected")
+      : [];
+  };
+
   const filterTournamentsByStatus = (status: string): Tournament[] => {
     if (!tournaments) return [];
     
     switch (status) {
       case "upcoming":
-        return tournaments.filter(t => t.status === "approved" && new Date(t.start_date) > new Date());
+        return getUpcomingTournaments();
       case "pending":
-        return tournaments.filter(t => t.status === "pending");
+        return getPendingTournaments();
       case "ongoing":
-        return tournaments.filter(t => t.status === "ongoing");
+        return getOngoingTournaments();
       case "completed":
-        return tournaments.filter(t => t.status === "completed");
+        return getCompletedTournaments();
       case "rejected":
-        return tournaments.filter(t => t.status === "rejected");
+        return getRejectedTournaments();
       default:
         return tournaments;
     }
