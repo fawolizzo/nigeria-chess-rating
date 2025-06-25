@@ -16,6 +16,24 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     throw new Error(error);
   }
   
+  // Test Supabase connection first
+  try {
+    console.log('🔍 Testing Supabase connection...');
+    const { data: testData, error: testError } = await supabase
+      .from('players')
+      .select('count')
+      .limit(1);
+    
+    if (testError) {
+      console.error('❌ Supabase connection test failed:', testError);
+      throw new Error(`Supabase connection failed: ${testError.message}`);
+    }
+    console.log('✅ Supabase connection test successful');
+  } catch (connectionError) {
+    console.error('❌ Supabase connection error:', connectionError);
+    throw new Error(`Database connection failed: ${connectionError instanceof Error ? connectionError.message : 'Unknown error'}`);
+  }
+  
   // Map to Supabase schema if needed (e.g., snake_case)
   const supabasePlayer = {
     ...playerData,
@@ -41,7 +59,13 @@ export const createPlayer = async (playerData: Partial<Player>): Promise<Player>
     
   if (error) {
     console.error("❌ Error creating player in Supabase:", error);
-    throw new Error(error.message);
+    console.error("❌ Error details:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+    throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
   }
   
   const createdPlayer = data as Player;

@@ -8,6 +8,24 @@ export const getAllPlayersFromSupabase = async (filters: {
 } = {}): Promise<Player[]> => {
   console.log('🔄 getAllPlayersFromSupabase called with filters:', filters);
   
+  // Test connection first
+  try {
+    console.log('🔍 Testing Supabase read connection...');
+    const { data: testData, error: testError } = await supabase
+      .from('players')
+      .select('count')
+      .limit(1);
+    
+    if (testError) {
+      console.error('❌ Supabase read connection test failed:', testError);
+      throw new Error(`Supabase connection failed: ${testError.message}`);
+    }
+    console.log('✅ Supabase read connection test successful');
+  } catch (connectionError) {
+    console.error('❌ Supabase read connection error:', connectionError);
+    throw new Error(`Database connection failed: ${connectionError instanceof Error ? connectionError.message : 'Unknown error'}`);
+  }
+  
   let query = supabase.from('players').select('*');
 
   if (filters.status && filters.status !== 'all') {
@@ -25,11 +43,23 @@ export const getAllPlayersFromSupabase = async (filters: {
   console.log('📊 Supabase query result:', {
     dataLength: data?.length || 0,
     error: error?.message || 'none',
+    errorCode: error?.code || 'none',
     filters
   });
   
-  if (error || !Array.isArray(data)) {
+  if (error) {
     console.error("❌ Error fetching players from Supabase:", error);
+    console.error("❌ Error details:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+    throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+  }
+  
+  if (!Array.isArray(data)) {
+    console.error("❌ Data is not an array:", typeof data, data);
     return [];
   }
   
