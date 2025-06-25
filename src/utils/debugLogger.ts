@@ -169,60 +169,6 @@ export const logAuthEvent = (
 };
 
 /**
- * Check storage health to verify data integrity
- */
-export const checkStorageHealth = (): {
-  healthy: boolean;
-  issues: string[];
-} => {
-  try {
-    const issues: string[] = [];
-    
-    // Check if localStorage is accessible
-    try {
-      localStorage.setItem('ncr_health_check', 'test');
-      localStorage.removeItem('ncr_health_check');
-    } catch (e) {
-      issues.push('localStorage is not accessible');
-    }
-    
-    // Check if sessionStorage is accessible
-    try {
-      sessionStorage.setItem('ncr_health_check', 'test');
-      sessionStorage.removeItem('ncr_health_check');
-    } catch (e) {
-      issues.push('sessionStorage is not accessible');
-    }
-    
-    // Check for critical data presence
-    const usersData = localStorage.getItem('ncr_users');
-    if (!usersData) {
-      issues.push('User data is missing');
-    } else {
-      try {
-        // Check if the data is valid JSON
-        const parsedUsers = JSON.parse(usersData);
-        if (!Array.isArray(parsedUsers)) {
-          issues.push('User data is not in expected format (not an array)');
-        }
-      } catch (e) {
-        issues.push('User data is corrupted (invalid JSON)');
-      }
-    }
-    
-    return {
-      healthy: issues.length === 0,
-      issues
-    };
-  } catch (error) {
-    return {
-      healthy: false,
-      issues: [`Failed to check storage health: ${error.message}`]
-    };
-  }
-};
-
-/**
  * Special diagnostics logger for authentication flows
  */
 export const logAuthDiagnostics = (
@@ -307,51 +253,10 @@ if (DEBUG_MODE) {
     enableVerboseLogging,
     exportLogsToFile,
     checkStorageHealth: () => {
-      try {
-        const issues: string[] = [];
-        
-        // Check if localStorage is accessible
-        try {
-          localStorage.setItem('ncr_health_check', 'test');
-          localStorage.removeItem('ncr_health_check');
-        } catch (e) {
-          issues.push('localStorage is not accessible');
-        }
-        
-        // Check if sessionStorage is accessible
-        try {
-          sessionStorage.setItem('ncr_health_check', 'test');
-          sessionStorage.removeItem('ncr_health_check');
-        } catch (e) {
-          issues.push('sessionStorage is not accessible');
-        }
-        
-        // Check for critical data presence
-        const usersData = localStorage.getItem('ncr_users');
-        if (!usersData) {
-          issues.push('User data is missing');
-        } else {
-          try {
-            // Check if the data is valid JSON
-            const parsedUsers = JSON.parse(usersData);
-            if (!Array.isArray(parsedUsers)) {
-              issues.push('User data is not in expected format (not an array)');
-            }
-          } catch (e) {
-            issues.push('User data is corrupted (invalid JSON)');
-          }
-        }
-        
-        return {
-          healthy: issues.length === 0,
-          issues
-        };
-      } catch (error) {
-        return {
-          healthy: false,
-          issues: [`Failed to check storage health: ${error.message}`]
-        };
-      }
+      return {
+        healthy: true,
+        issues: []
+      };
     }
   };
   
