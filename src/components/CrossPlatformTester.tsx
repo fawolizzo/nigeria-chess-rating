@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -8,12 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
   runStorageDiagnostics, 
-  detectPlatform 
-} from "@/utils/storageSync";
-import {
+  detectPlatform,
   checkCrossPlatformCompatibility,
   forceSyncAllStorage
-} from "@/utils/storageUtils";
+} from "@/utils/storageSync";
 import { LogLevel, logMessage } from '@/utils/debugLogger';
 import { SyncEventType } from '@/types/userTypes';
 import { useUser } from '@/contexts/UserContext';

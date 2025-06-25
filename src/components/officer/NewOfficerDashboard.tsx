@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Trophy, UserCheck, Upload } from "lucide-react";
@@ -21,11 +20,32 @@ const NewOfficerDashboard = () => {
     refreshData
   } = useOfficerDashboardData();
 
+  // Add debugging
+  useEffect(() => {
+    console.log('🔍 NewOfficerDashboard Debug Info:', {
+      isLoading,
+      hasError,
+      errorMessage,
+      pendingTournaments: pendingTournaments.length,
+      completedTournaments: completedTournaments.length,
+      pendingPlayers: pendingPlayers.length,
+      pendingOrganizers: pendingOrganizers.length
+    });
+  }, [isLoading, hasError, errorMessage, pendingTournaments, completedTournaments, pendingPlayers, pendingOrganizers]);
+
   const handleRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
     refreshData();
   };
 
+  console.log('🎯 NewOfficerDashboard rendering with state:', {
+    isLoading,
+    hasError,
+    errorMessage
+  });
+
   if (isLoading) {
+    console.log('⏳ Showing loading state');
     return (
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-6">
@@ -41,6 +61,7 @@ const NewOfficerDashboard = () => {
   }
 
   if (hasError) {
+    console.log('❌ Showing error state:', errorMessage);
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
@@ -57,6 +78,7 @@ const NewOfficerDashboard = () => {
     );
   }
 
+  console.log('✅ Rendering main dashboard content');
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center justify-between">
