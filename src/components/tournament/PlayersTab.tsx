@@ -6,12 +6,13 @@ import { Player } from "@/lib/mockData";
 import MultiSelectPlayers from "../MultiSelectPlayers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+// Props interface for PlayersTab
 export interface PlayersTabProps {
   tournamentId: string;
   tournamentStatus: "pending" | "approved" | "rejected" | "upcoming" | "ongoing" | "completed" | "processed";
-  registeredPlayers: Player[];
-  allPlayers: Player[];
-  playerIds: string[];
+  registeredPlayers?: Player[];
+  allPlayers?: Player[];
+  playerIds?: string[];
   onCreatePlayer: () => void;
   onAddPlayers: (selectedPlayers: Player[]) => void;
   onRemovePlayer: (playerId: string) => void;
@@ -23,9 +24,9 @@ export interface PlayersTabProps {
 const PlayersTab = ({
   tournamentId,
   tournamentStatus,
-  registeredPlayers,
-  allPlayers,
-  playerIds,
+  registeredPlayers = [],
+  allPlayers = [],
+  playerIds = [],
   onCreatePlayer,
   onAddPlayers,
   onRemovePlayer,
@@ -55,8 +56,8 @@ const PlayersTab = ({
       })
     : [];
   
-  const handlePlayersSelected = async (selectedPlayers: Player[]) => {
-    await onAddPlayers(selectedPlayers);
+  const handlePlayersSelected = (selectedPlayers: Player[]) => {
+    onAddPlayers(selectedPlayers);
   };
   
   const canAddPlayers = tournamentStatus === "upcoming";

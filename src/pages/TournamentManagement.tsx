@@ -25,6 +25,7 @@ export default function TournamentManagement() {
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const {
     generatePairings,
@@ -294,11 +295,20 @@ export default function TournamentManagement() {
 
           <TabsContent value="players">
             <PlayersTab
-              tournament={tournament}
-              onAddPlayer={handleAddPlayer}
-              onRemovePlayer={handleRemovePlayer}
-              isOrganizer={isOrganizer}
+              tournamentId={tournament.id}
+              tournamentStatus={tournament.status}
+              registeredPlayers={Array.isArray(tournament.players) ? tournament.players : []}
+              allPlayers={Array.isArray(tournament.players) ? tournament.players : []}
+              playerIds={Array.isArray(tournament.players) ? tournament.players.map(p => p.id) : []}
+              onCreatePlayer={() => {}}
+              onAddPlayers={(players) => players.forEach(handleAddPlayer)}
+              onRemovePlayer={(playerId) => {
+                const player = (Array.isArray(tournament.players) ? tournament.players : []).find(p => p.id === playerId);
+                if (player) handleRemovePlayer(player);
+              }}
               isProcessing={isProcessing}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
             />
           </TabsContent>
 
