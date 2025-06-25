@@ -6,6 +6,8 @@ export const getAllPlayersFromSupabase = async (filters: {
   city?: string;
   status?: string;
 } = {}): Promise<Player[]> => {
+  console.log('🔄 getAllPlayersFromSupabase called with filters:', filters);
+  
   let query = supabase.from('players').select('*');
 
   if (filters.status && filters.status !== 'all') {
@@ -19,12 +21,23 @@ export const getAllPlayersFromSupabase = async (filters: {
   }
 
   const { data, error } = await query;
+  
+  console.log('📊 Supabase query result:', {
+    dataLength: data?.length || 0,
+    error: error?.message || 'none',
+    filters
+  });
+  
   if (error || !Array.isArray(data)) {
     console.error("❌ Error fetching players from Supabase:", error);
     return [];
   }
+  
   // Optionally sort by rating
-  return data.sort((a, b) => (b.rating || 800) - (a.rating || 800));
+  const sortedData = (data as Player[]).sort((a, b) => (b.rating || 800) - (a.rating || 800));
+  console.log('✅ Returning', sortedData.length, 'players from Supabase');
+  
+  return sortedData as Player[];
 };
 
 export const getAllUsers = async (): Promise<Player[]> => {

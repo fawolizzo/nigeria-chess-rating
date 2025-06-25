@@ -23,12 +23,24 @@ const Players = () => {
 
   const fetchPlayers = async () => {
     try {
+      console.log('🔄 Players page: Starting to fetch players...');
       setIsLoading(true);
       setError(null);
       const players = await getAllPlayersFromSupabase({ status: 'approved' });
+      console.log('📊 Players page: Fetched players from Supabase:', players?.length || 0, 'players');
+      if (players && players.length > 0) {
+        console.log('📋 Players page: Sample players:', players.slice(0, 3).map(p => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          status: p.status,
+          rating: p.rating
+        })));
+      }
       setAllPlayers(players);
       setFilteredPlayers(players);
     } catch (error) {
+      console.error('❌ Players page: Error fetching players:', error);
       setError("Failed to load players data");
       setAllPlayers([]);
       setFilteredPlayers([]);
