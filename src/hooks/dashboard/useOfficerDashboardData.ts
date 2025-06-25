@@ -48,9 +48,10 @@ export const useOfficerDashboardData = (): DashboardResult => {
     try {
       if (isInitialLoad) {
         console.log('📥 Loading initial data from storage...');
+        setIsLoading(true);
       } else {
         console.log('🔄 Refreshing dashboard data...');
-        setIsLoading(true);
+        // Don't set isLoading to true during refresh to prevent blinking
       }
       
       setHasError(false);
@@ -99,7 +100,9 @@ export const useOfficerDashboardData = (): DashboardResult => {
       setPlayers([]);
       setPendingOrganizers([]);
     } finally {
-      setIsLoading(false);
+      if (isInitialLoad) {
+        setIsLoading(false);
+      }
     }
   };
 

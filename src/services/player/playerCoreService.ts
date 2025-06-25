@@ -90,6 +90,7 @@ export const getPlayerFromSupabase = async (id: string): Promise<Player | null> 
 // New function to sync players between Supabase and localStorage
 export const syncPlayersToLocalStorage = async (): Promise<void> => {
   try {
+    console.log('🔄 Starting player sync from Supabase to localStorage...');
     const { data, error } = await supabase
       .from('players')
       .select('*');
@@ -99,9 +100,23 @@ export const syncPlayersToLocalStorage = async (): Promise<void> => {
       return;
     }
     
+    console.log('📊 Fetched players from Supabase:', data?.length || 0, 'players');
+    
     if (Array.isArray(data)) {
       saveToStorageSync('players', data);
       console.log('✅ Synced', data.length, 'players from Supabase to localStorage');
+      
+      // Debug: Show some player details
+      if (data.length > 0) {
+        console.log('📋 Sample players synced:', data.slice(0, 3).map(p => ({
+          id: p.id,
+          name: p.name,
+          email: p.email,
+          status: p.status
+        })));
+      }
+    } else {
+      console.log('⚠️ No players data from Supabase or data is not an array');
     }
   } catch (error) {
     console.error("❌ Error syncing players to localStorage:", error);

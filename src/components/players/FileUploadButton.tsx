@@ -120,15 +120,18 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       
       const ncrId = generateNcrId();
       
+      // Generate a default email if none is provided (required by createPlayer)
+      const defaultEmail = `${playerName.toString().trim().toLowerCase().replace(/\s+/g, '.')}@ncr.temp`;
+      
       const player: Partial<Player> = {
         id: ncrId,
         name: playerName.toString().trim(),
+        email: defaultEmail, // Use default email instead of empty string
         state: '', // Will be updated manually
         gender: 'M', // Default, will be updated manually
         city: '',
         country: 'Nigeria',
         phone: '',
-        email: '',
         gamesPlayed: 31,
         status: 'approved',
         tournamentResults: []
