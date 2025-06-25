@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,21 +36,24 @@ const PlayersTab = ({
   const [isSelectPlayersOpen, setIsSelectPlayersOpen] = React.useState(false);
   
   // Check if there are pending players
-  const hasPendingPlayers = registeredPlayers.some(player => player.status === 'pending');
+  const hasPendingPlayers = Array.isArray(registeredPlayers)
+    ? registeredPlayers.some(player => player.status === 'pending')
+    : false;
   
   // Filter players based on search query
-  const filteredPlayers = registeredPlayers.filter(player => {
-    if (!searchQuery) return true;
-    
-    const query = searchQuery.toLowerCase();
-    return (
-      player.name.toLowerCase().includes(query) ||
-      (player.title && player.title.toLowerCase().includes(query)) ||
-      String(player.rating).includes(query) ||
-      (player.country && player.country.toLowerCase().includes(query)) ||
-      (player.state && player.state.toLowerCase().includes(query))
-    );
-  });
+  const filteredPlayers = Array.isArray(registeredPlayers)
+    ? registeredPlayers.filter(player => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return (
+          player.name.toLowerCase().includes(query) ||
+          (player.title && player.title.toLowerCase().includes(query)) ||
+          String(player.rating).includes(query) ||
+          (player.country && player.country.toLowerCase().includes(query)) ||
+          (player.state && player.state.toLowerCase().includes(query))
+        );
+      })
+    : [];
   
   const handlePlayersSelected = async (selectedPlayers: Player[]) => {
     await onAddPlayers(selectedPlayers);

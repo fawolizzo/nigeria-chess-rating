@@ -189,32 +189,34 @@ const LoginSystemDiagnostic: React.FC = () => {
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-3 text-xs">
-              {users
-                .filter(user => user.role === "rating_officer")
-                .sort((a, b) => new Date(b.registrationDate).getTime() - new Date(a.registrationDate).getTime())
-                .map(officer => (
-                  <div key={officer.id} className="border rounded-md p-2 dark:border-gray-700">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium text-sm">{officer.fullName}</div>
-                        <div className="text-gray-500 dark:text-gray-400">{officer.email}</div>
-                        <div className="text-gray-500 dark:text-gray-400">{officer.state}</div>
+              {Array.isArray(users)
+                ? users
+                    .filter(user => user.role === "rating_officer")
+                    .sort((a, b) => new Date(b.registrationDate).getTime() - new Date(a.registrationDate).getTime())
+                    .map(officer => (
+                      <div key={officer.id} className="border rounded-md p-2 dark:border-gray-700">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-medium text-sm">{officer.fullName}</div>
+                            <div className="text-gray-500 dark:text-gray-400">{officer.email}</div>
+                            <div className="text-gray-500 dark:text-gray-400">{officer.state}</div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              officer.status === 'approved' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                            }`}>
+                              {officer.status}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400 mt-1">
+                              {new Date(officer.registrationDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          officer.status === 'approved' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-                        }`}>
-                          {officer.status}
-                        </span>
-                        <span className="text-gray-500 dark:text-gray-400 mt-1">
-                          {new Date(officer.registrationDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    ))
+                : null}
               
               {users.filter(user => user.role === "rating_officer").length === 0 && (
                 <div className="text-center text-gray-500 dark:text-gray-400 py-2">

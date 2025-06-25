@@ -50,17 +50,17 @@ const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
           }
         }
 
-        const filteredPlayers = playersToUse.filter(player => {
-          // Filter by status
-          const statusMatch = includePendingPlayers ? 
-            (player.status === "approved" || player.status === "pending") : 
-            player.status === "approved";
-          
-          // Filter out excluded IDs
-          const notExcluded = !combinedExcludeIds.includes(player.id);
-          
-          return statusMatch && notExcluded;
-        });
+        const filteredPlayers = Array.isArray(playersToUse)
+          ? playersToUse.filter(player => {
+              // Filter by status
+              const statusMatch = includePendingPlayers ? 
+                (player.status === "approved" || player.status === "pending") : 
+                player.status === "approved";
+              // Filter out excluded IDs
+              const notExcluded = !combinedExcludeIds.includes(player.id);
+              return statusMatch && notExcluded;
+            })
+          : [];
         setPlayers(filteredPlayers);
       } catch (error) {
         console.error('Error loading players:', error);
@@ -74,10 +74,12 @@ const MultiSelectPlayers: React.FC<MultiSelectPlayersProps> = ({
     }
   }, [isOpen, combinedExcludeIds, includePendingPlayers, allPlayers]);
 
-  const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    player.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPlayers = Array.isArray(players)
+    ? players.filter(player =>
+        player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        player.email.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   const handlePlayerToggle = (player: Player) => {
     setSelectedPlayers(prev => {

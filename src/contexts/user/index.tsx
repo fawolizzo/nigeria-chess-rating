@@ -27,8 +27,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     const initialize = async () => {
       try {
         setIsLoading(true);
-        const { default: createInitialRatingOfficerIfNeeded } = await import('@/utils/createInitialRatingOfficer');
-        await createInitialRatingOfficerIfNeeded();
+        // const { default: createInitialRatingOfficerIfNeeded } = await import('@/utils/createInitialRatingOfficer');
+        // await createInitialRatingOfficerIfNeeded();
         // TODO: Fetch users and currentUser from Supabase and set state here
       } catch (error) {
         logMessage(LogLevel.ERROR, 'UserContext', 'Error initializing user data:', error);

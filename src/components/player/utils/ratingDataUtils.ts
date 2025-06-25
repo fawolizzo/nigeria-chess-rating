@@ -1,4 +1,3 @@
-
 import { Player, RatingHistoryEntry, TournamentResult } from "@/lib/mockData";
 
 export const prepareRatingHistory = (
@@ -79,10 +78,11 @@ export const getTournamentResults = (
   format: "classical" | "rapid" | "blitz"
 ) => {
   const results = player.tournamentResults || [];
-  
-  return results.filter(result => {
-    if (format === "rapid") return result.format === "rapid";
-    if (format === "blitz") return result.format === "blitz";
-    return result.format === "classical" || !result.format;
-  });
+  return Array.isArray(results)
+    ? results.filter(result => {
+        if (format === "rapid") return result.format === "rapid";
+        if (format === "blitz") return result.format === "blitz";
+        return result.format === "classical" || !result.format;
+      })
+    : [];
 };

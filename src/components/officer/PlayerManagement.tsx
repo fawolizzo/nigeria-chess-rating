@@ -309,73 +309,75 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
 
       {/* Players List */}
       <div className="space-y-4">
-        {filteredPlayers.length === 0 ? (
+        {Array.isArray(filteredPlayers) && filteredPlayers.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center text-gray-500">
               No players found
             </CardContent>
           </Card>
         ) : (
-          filteredPlayers.map((player) => (
-            <Card key={`player-${player.id}`} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-medium">{player.name}</h3>
-                      <Badge variant={
-                        player.status === "approved" ? "default" :
-                        player.status === "pending" ? "secondary" : "destructive"
-                      }>
-                        {player.status}
-                      </Badge>
-                      {player.title && (
-                        <Badge variant="outline">{player.title}</Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>Email: {player.email}</p>
-                      {player.phone && <p>Phone: {player.phone}</p>}
-                      {player.state && <p>Location: {player.city}, {player.state}</p>}
-                      {player.fideId && <p>FIDE ID: {player.fideId}</p>}
-                      {player.rating && <p>Rating: {player.rating}</p>}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingPlayer(player)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    
-                    {player.status === "pending" && (
-                      <>
+          Array.isArray(filteredPlayers)
+            ? filteredPlayers.map((player) => (
+                <Card key={`player-${player.id}`} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-medium">{player.name}</h3>
+                          <Badge variant={
+                            player.status === "approved" ? "default" :
+                            player.status === "pending" ? "secondary" : "destructive"
+                          }>
+                            {player.status}
+                          </Badge>
+                          {player.title && (
+                            <Badge variant="outline">{player.title}</Badge>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>Email: {player.email}</p>
+                          {player.phone && <p>Phone: {player.phone}</p>}
+                          {player.state && <p>Location: {player.city}, {player.state}</p>}
+                          {player.fideId && <p>FIDE ID: {player.fideId}</p>}
+                          {player.rating && <p>Rating: {player.rating}</p>}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
                         <Button
+                          variant="outline"
                           size="sm"
-                          onClick={() => handleApproval(player.id, "approved")}
-                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => setEditingPlayer(player)}
                         >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
+                          <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleApproval(player.id, "rejected")}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                        
+                        {player.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproval(player.id, "approved")}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleApproval(player.id, "rejected")}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            : null
         )}
       </div>
 
