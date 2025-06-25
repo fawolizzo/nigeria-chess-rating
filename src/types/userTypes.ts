@@ -1,4 +1,3 @@
-
 /**
  * Types definitions for user-related functionality
  */
@@ -42,16 +41,6 @@ export interface TimestampedData<T> {
   platform?: string; // Add platform field
   version: number; // To track data versions for conflict resolution
 }
-
-// Storage keys constants
-export const STORAGE_KEY_USERS = 'ncr_users';
-export const STORAGE_KEY_CURRENT_USER = 'ncr_current_user';
-export const STORAGE_KEY_SYNC_VERSION = 'ncr_sync_version';
-export const STORAGE_KEY_DEVICE_ID = 'ncr_device_id';
-export const STORAGE_KEY_LAST_SYNC = 'ncr_last_sync';
-export const STORAGE_KEY_RESET_FLAG = 'ncr_system_reset';
-export const STORAGE_KEY_GLOBAL_RESET = 'ncr_global_reset_timestamp';
-export const STORAGE_KEY_DEVICE_RESET_PROCESSED = 'ncr_device_reset_processed';
 
 // Sync events enum
 export enum SyncEventType {

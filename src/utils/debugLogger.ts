@@ -190,24 +190,12 @@ export const logAuthDiagnostics = (
 /**
  * Get all stored logs
  */
-export const getAllLogs = (): any[] => {
-  try {
-    return JSON.parse(sessionStorage.getItem('ncr_debug_logs') || '[]');
-  } catch (e) {
-    return [];
-  }
-};
+export const getAllLogs = (): any[] => [];
 
 /**
  * Clear all stored logs
  */
-export const clearLogs = (): void => {
-  try {
-    sessionStorage.removeItem('ncr_debug_logs');
-  } catch (e) {
-    // Silent fail
-  }
-};
+export const clearLogs = (): void => {};
 
 /**
  * Enable verbose logging
