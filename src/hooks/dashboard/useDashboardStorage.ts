@@ -7,20 +7,37 @@ export const useDashboardStorage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Data is now managed via Supabase. This hook is deprecated for data loading.
-    setIsLoading(false);
+    const loadData = async () => {
+      try {
+        // Load tournaments from localStorage (legacy)
+        const storedTournaments = localStorage.getItem('tournaments');
+        if (storedTournaments) {
+          const parsedTournaments = JSON.parse(storedTournaments);
+          const formattedTournaments = parsedTournaments.map((tournament: any) => ({
+            ...tournament,
+            startDate: tournament.startDate || new Date().toISOString().split('T')[0],
+            endDate: tournament.endDate || new Date().toISOString().split('T')[0],
+            created_at: tournament.created_at || new Date().toISOString(),
+          }));
+          setTournaments(formattedTournaments);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
   }, []);
 
   const updateTournaments = (newTournaments: Tournament[]) => {
-    // This function no longer saves to localStorage.
-    // Updates should be handled via Supabase services.
     setTournaments(newTournaments);
-    console.warn("useDashboardStorage.updateTournaments called, but localStorage persistence is removed. Ensure data is saved to Supabase.");
+    localStorage.setItem('tournaments', JSON.stringify(newTournaments));
   };
 
   return {
-    tournaments, // Will be an empty array initially
+    tournaments,
     isLoading,
-    updateTournaments, // Still provided for compatibility, but won't save to localStorage
+    updateTournaments,
   };
 };
