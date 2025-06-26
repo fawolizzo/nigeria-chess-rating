@@ -82,17 +82,14 @@ export const useOfficerDashboardData = (): DashboardResult => {
       setPendingOrganizers(pending);
       console.log('📊 Pending organizers found:', pending.length);
 
-      // Tournaments are now handled by useDashboardStorage, which is being refactored
-      // to move away from localStorage. For now, we rely on its state.
-      // The `updateTournaments` call below might be based on an empty or Supabase-loaded array
-      // depending on future changes to useDashboardStorage or if it's updated externally.
-      // const currentTournaments = getFromStorageSync('tournaments', []); // Removed direct localStorage access
-      // console.log('📊 Refreshed tournaments (from useDashboardStorage):', tournaments.length);
-      // updateTournaments(tournaments); // updateTournaments will use the current state from useDashboardStorage
+      // Refresh tournaments from storage
+      const currentTournaments = getFromStorageSync('tournaments', []);
+      console.log('📊 Refreshed tournaments:', currentTournaments.length);
+      updateTournaments(currentTournaments);
 
       console.log("✅ Dashboard data loaded successfully:", {
         players: currentPlayers.length,
-        tournaments: tournaments.length, // Use tournaments state from useDashboardStorage
+        tournaments: currentTournaments.length,
         pendingOrganizers: pending.length
       });
 

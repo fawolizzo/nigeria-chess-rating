@@ -123,32 +123,51 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   const handlePlayersImported = async (importedPlayers: Partial<Player>[]) => {
     let addedCount = 0;
     let errorCount = 0;
-    const errors: string[] = [];
+    const individualErrors: string[] = []; // Renamed to avoid conflict
+
+    console.log(`[PlayerManagement] Starting import of ${importedPlayers.length} players.`);
 
     try {
-      for (const playerData of importedPlayers) {
+      for (let i = 0; i < importedPlayers.length; i++) {
+        const playerData = importedPlayers[i];
+        console.log(`[PlayerManagement] Processing player ${i + 1}/${importedPlayers.length}: ${playerData.name}`);
         if (playerData.name && playerData.email) {
           try {
             await createPlayer(playerData);
             addedCount++;
+            console.log(`[PlayerManagement] Successfully created player ${playerData.name}`);
           } catch (error) {
             errorCount++;
-            errors.push(`Failed to create player ${playerData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            console.error(`Failed to create player ${playerData.name}:`, error); // Log individual errors
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            individualErrors.push(`Failed to create player ${playerData.name}: ${errorMessage}`);
+            console.error(`[PlayerManagement] Error creating player ${playerData.name}:`, error);
           }
+        } else {
+          errorCount++;
+          const missingInfo = `${!playerData.name ? 'Name missing' : ''} ${!playerData.email ? 'Email missing' : ''}`.trim();
+          individualErrors.push(`Skipped player due to missing data (${missingInfo}): ${playerData.name || 'N/A'}`);
+          console.warn(`[PlayerManagement] Skipped player due to missing data:`, playerData);
         }
       }
 
-      // Always refresh the player list
+      console.log(`[PlayerManagement] Import loop finished. Added: ${addedCount}, Errors: ${errorCount}`);
+
+      // Always attempt to refresh the player list
       try {
+        console.log("[PlayerManagement] Refreshing player list...");
         const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
         setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
-      } catch (error) {
-        console.error('Error refreshing players after import:', error);
-        // Optionally handle refresh error with a toast, but don't let it block UI updates
+        console.log("[PlayerManagement] Player list refreshed.");
+      } catch (refreshError) {
+        console.error("[PlayerManagement] Error refreshing player list after import:", refreshError);
+        toast({
+          title: "Refresh Error",
+          description: "Players might have been imported, but the list could not be refreshed automatically.",
+          variant: "destructive",
+        });
       }
 
-      onPlayerApproval(); // This callback might trigger further UI updates or data fetching
+      onPlayerApproval(); // Callback for when any approval-related action finishes
 
       if (addedCount > 0 && errorCount === 0) {
         toast({
@@ -158,25 +177,34 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
       } else if (addedCount > 0 && errorCount > 0) {
         toast({
           title: "Import Completed with Some Errors",
-          description: `Imported ${addedCount} players, ${errorCount} failed. Check console for details.`,
-          variant: "destructive"
+          description: `Imported ${addedCount} players. ${errorCount} failed. Check console for details. Errors: ${individualErrors.join(', ')}`,
+          variant: "destructive",
+          duration: 10000 // Longer duration for error messages with details
         });
-      } else {
+      } else if (errorCount > 0 && addedCount === 0) {
         toast({
           title: "Import Failed",
-          description: "No players were imported. This could be due to issues with the file data or network problems. Please check your file and try again.",
-          variant: "destructive"
+          description: `No players were imported. ${errorCount} error(s) occurred. Check console. Errors: ${individualErrors.join(', ')}`,
+          variant: "destructive",
+          duration: 10000
+        });
+      } else { // No players in file or all skipped due to missing data before createPlayer attempt
+         toast({
+          title: "Nothing to Import",
+          description: "No players were found in the file, or all entries had missing critical data (name/email).",
+          variant: "default"
         });
       }
-    } catch (e) {
-      // Catch any unexpected errors during the import process itself
-      console.error("Unexpected error during player import handling:", e);
+    } catch (overallError) {
+      // Catch any unexpected errors during the import process orchestration
+      console.error("[PlayerManagement] Overall error during player import handling:", overallError);
       toast({
-        title: "Import Error",
-        description: "An unexpected error occurred during the import process.",
+        title: "Critical Import Error",
+        description: "An unexpected critical error occurred during the import. Some players may not have been processed.",
         variant: "destructive",
       });
     } finally {
+      console.log("[PlayerManagement] Closing upload dialog.");
       setIsUploadPlayersOpen(false); // Ensure the dialog is always closed
     }
   };

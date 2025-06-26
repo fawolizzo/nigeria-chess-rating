@@ -20,17 +20,17 @@ export const loginUser = async (
     setIsLoading(true);
     let loginEmail = email;
     let password = authValue;
-    // For tournament organizers, if the email is the default or empty, use default credentials
-    if (role === 'tournament_organizer' && (email === DEFAULT_TOURNAMENT_ORGANIZER_EMAIL || email.trim() === '')) {
+    if (role === 'rating_officer') {
+      loginEmail = DEFAULT_RATING_OFFICER_EMAIL;
+      password = DEFAULT_ACCESS_CODE;
+    } else if (role === 'tournament_organizer' && (email === DEFAULT_TOURNAMENT_ORGANIZER_EMAIL || email.trim() === '')) {
       loginEmail = DEFAULT_TOURNAMENT_ORGANIZER_EMAIL;
       password = DEFAULT_TOURNAMENT_ORGANIZER_PASSWORD;
     }
     // Authenticate with Supabase
-    // For rating officers, the `authValue` is the access code, which is used as the password.
-    // For tournament organizers, `authValue` is the password.
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginEmail, // Use the provided email for rating officers
-      password: password // Use the provided access code (authValue) as password for rating officers
+      email: loginEmail,
+      password
     });
     if (error) {
       logMessage(LogLevel.ERROR, 'LoginOperations', 'Login error:', error);
