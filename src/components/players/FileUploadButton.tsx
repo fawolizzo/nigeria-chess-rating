@@ -148,15 +148,21 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         }
         
         // Handle FIDE ID - if there's a FIDE ID in the file, use it; otherwise use the generated NCR ID
-        if (fideIdIndex !== -1 && row[fideIdIndex]) {
-          const fideIdValue = row[fideIdIndex].toString().trim();
-          if (fideIdValue && fideIdValue !== '') {
+        if (fideIdIndex !== -1 && row[fideIdIndex] != null) { // Check for null or undefined
+          let fideIdValue = String(row[fideIdIndex]).trim();
+          // Basic sanitization: if it looks like an Excel error or is empty, or potentially harmful, discard it.
+          if (fideIdValue && fideIdValue !== '' && !fideIdValue.startsWith('#') && !fideIdValue.startsWith('=')) {
             player.fideId = fideIdValue; // Use actual FIDE ID from file
+            console.log(`[FileUploadButton] Using FIDE ID from file for ${playerName}: ${fideIdValue}`);
           } else {
+            if (fideIdValue) { // Log if we discarded a problematic value
+              console.warn(`[FileUploadButton] Discarded problematic FIDE ID value for ${playerName}: '${fideIdValue}'. Using generated NCR ID.`);
+            }
             player.fideId = ncrId; // Use generated NCR ID as fallback
           }
         } else {
           player.fideId = ncrId; // Use generated NCR ID when no FIDE ID in file
+          console.log(`[FileUploadButton] No FIDE ID in file for ${playerName}. Using generated NCR ID: ${ncrId}`);
         }
         
         // Handle classical rating with +100 bonus for FIDE players
