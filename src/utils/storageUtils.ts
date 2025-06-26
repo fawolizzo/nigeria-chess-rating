@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 // Storage keys for different data types
+export const STORAGE_KEY_USERS = 'ncr_users';
 export const STORAGE_KEYS = {
   USERS: 'ncr_users',
   CURRENT_USER: 'ncr_current_user',
@@ -78,37 +79,6 @@ export const saveToStorageSync = <T>(
     return true;
   } catch (error) {
     logMessage(LogLevel.ERROR, 'StorageUtils', `Error saving data for key ${key}:`, error);
-    return false;
-  }
-};
-
-/**
- * Check cross-platform compatibility (placeholder for backward compatibility)
- */
-export const checkCrossPlatformCompatibility = async (): Promise<boolean> => {
-  try {
-    // Basic compatibility check
-    const testData = { test: true };
-    localStorage.setItem('ncr_compatibility_test', JSON.stringify(testData));
-    const retrieved = localStorage.getItem('ncr_compatibility_test');
-    localStorage.removeItem('ncr_compatibility_test');
-    return retrieved === JSON.stringify(testData);
-  } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageUtils', 'Cross-platform compatibility check failed:', error);
-    return false;
-  }
-};
-
-/**
- * Force sync all storage (placeholder for backward compatibility)
- */
-export const forceSyncAllStorage = async (keys?: string[]): Promise<boolean> => {
-  try {
-    logMessage(LogLevel.INFO, 'StorageUtils', 'Force sync all storage called', { keys });
-    // For now, just return success since we're using localStorage
-    return true;
-  } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageUtils', 'Force sync all storage failed:', error);
     return false;
   }
 }; 

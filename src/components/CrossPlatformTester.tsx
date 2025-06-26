@@ -49,7 +49,7 @@ const CrossPlatformTester: React.FC = () => {
     try {
       const platform = detectPlatform();
       const storageStats = runStorageDiagnostics();
-      const compatibility = checkCrossPlatformCompatibility();
+      const compatibility = await checkCrossPlatformCompatibility();
       
       const diagnosticResults: DiagnosticResults = {
         platform,

@@ -4,30 +4,72 @@ import { SyncEventType } from '@/types/userTypes';
 /**
  * Detect the current platform
  */
-export const detectPlatform = (): string => {
+export const detectPlatform = (): { type: string; details?: string; isMobile: boolean; isTablet: boolean; isDesktop: boolean; userAgent: string } => {
   try {
     if (typeof window === 'undefined') {
-      return 'server';
+      return {
+        type: 'server',
+        details: 'Server-side rendering',
+        isMobile: false,
+        isTablet: false,
+        isDesktop: false,
+        userAgent: 'server'
+      };
     }
     
     const userAgent = navigator.userAgent.toLowerCase();
+    let type = 'web';
+    let details = 'Generic web browser';
+    let isMobile = false;
+    let isTablet = false;
+    let isDesktop = false;
     
     if (userAgent.includes('android')) {
-      return 'android';
+      type = 'mobile';
+      details = 'Android device';
+      isMobile = true;
     } else if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
-      return 'ios';
+      if (userAgent.includes('ipad')) {
+        type = 'tablet';
+        details = 'iPad';
+        isTablet = true;
+      } else {
+        type = 'mobile';
+        details = 'iPhone/iPod';
+        isMobile = true;
+      }
     } else if (userAgent.includes('windows')) {
-      return 'windows';
+      type = 'desktop';
+      details = 'Windows';
+      isDesktop = true;
     } else if (userAgent.includes('mac')) {
-      return 'macos';
+      type = 'desktop';
+      details = 'macOS';
+      isDesktop = true;
     } else if (userAgent.includes('linux')) {
-      return 'linux';
-    } else {
-      return 'web';
+      type = 'desktop';
+      details = 'Linux';
+      isDesktop = true;
     }
+    
+    return {
+      type,
+      details,
+      isMobile,
+      isTablet,
+      isDesktop,
+      userAgent: navigator.userAgent
+    };
   } catch (error) {
     logMessage(LogLevel.ERROR, 'StorageSync', 'Error detecting platform:', error);
-    return 'unknown';
+    return {
+      type: 'unknown',
+      details: 'Unknown platform',
+      isMobile: false,
+      isTablet: false,
+      isDesktop: false,
+      userAgent: 'unknown'
+    };
   }
 };
 
@@ -46,17 +88,63 @@ export const sendSyncEvent = (eventType: SyncEventType, data?: any): void => {
 /**
  * Check cross-platform compatibility (placeholder for backward compatibility)
  */
-export const checkCrossPlatformCompatibility = async (): Promise<boolean> => {
+export const checkCrossPlatformCompatibility = async (): Promise<{
+  storageAvailable: boolean;
+  sessionStorageAvailable: boolean;
+  broadcastChannelSupport: boolean;
+  indexedDBSupport: boolean;
+  serviceWorkerSupport: boolean;
+}> => {
   try {
-    // Basic compatibility check
-    const testData = { test: true };
-    localStorage.setItem('ncr_compatibility_test', JSON.stringify(testData));
-    const retrieved = localStorage.getItem('ncr_compatibility_test');
-    localStorage.removeItem('ncr_compatibility_test');
-    return retrieved === JSON.stringify(testData);
+    // Check localStorage
+    const storageAvailable = (() => {
+      try {
+        const test = '__storage_test__';
+        localStorage.setItem(test, test);
+        localStorage.removeItem(test);
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
+    // Check sessionStorage
+    const sessionStorageAvailable = (() => {
+      try {
+        const test = '__session_storage_test__';
+        sessionStorage.setItem(test, test);
+        sessionStorage.removeItem(test);
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
+    // Check BroadcastChannel API
+    const broadcastChannelSupport = typeof BroadcastChannel !== 'undefined';
+
+    // Check IndexedDB
+    const indexedDBSupport = typeof indexedDB !== 'undefined';
+
+    // Check Service Worker
+    const serviceWorkerSupport = 'serviceWorker' in navigator;
+
+    return {
+      storageAvailable,
+      sessionStorageAvailable,
+      broadcastChannelSupport,
+      indexedDBSupport,
+      serviceWorkerSupport
+    };
   } catch (error) {
     logMessage(LogLevel.ERROR, 'StorageSync', 'Cross-platform compatibility check failed:', error);
-    return false;
+    return {
+      storageAvailable: false,
+      sessionStorageAvailable: false,
+      broadcastChannelSupport: false,
+      indexedDBSupport: false,
+      serviceWorkerSupport: false
+    };
   }
 };
 

@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { forceSyncAllStorage } from '@/utils/storageUtils';
+import { forceSyncAllStorage } from '@/utils/storageSync';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { withTimeout } from '@/utils/monitorSync';
-import { STORAGE_KEY_USERS } from '@/types/userTypes';
+import { STORAGE_KEY_USERS } from '@/utils/storageUtils';
 
 interface UseSilentSyncOptions {
   syncOnMount?: boolean;

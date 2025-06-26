@@ -1,4 +1,3 @@
-
 import { User, SyncEventType } from '@/types/userTypes';
 import { sendSyncEvent } from '@/utils/storageSync';
 import { logUserEvent } from '@/utils/debugLogger';
@@ -6,7 +5,7 @@ import { sendEmailToUser } from './emailOperations';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { detectPlatform } from '@/utils/storageSync';
 import { saveToStorage } from '@/utils/storageUtils';
-import { STORAGE_KEYS } from '../userContextTypes';
+import { STORAGE_KEYS } from '@/utils/storageUtils';
 
 /**
  * Handle user approval operations

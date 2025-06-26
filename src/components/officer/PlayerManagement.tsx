@@ -121,52 +121,96 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({ onPlayerApproval })
   };
 
   const handlePlayersImported = async (importedPlayers: Partial<Player>[]) => {
+    console.log('🚀 PlayerManagement: handlePlayersImported called with', importedPlayers.length, 'players');
+    
+    if (!importedPlayers || importedPlayers.length === 0) {
+      console.error('❌ PlayerManagement: No players provided to import');
+      toast({
+        title: "Import Failed",
+        description: "No players were provided for import.",
+        variant: "destructive"
+      });
+      setIsUploadPlayersOpen(false);
+      return;
+    }
+
     let addedCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
 
-    for (const playerData of importedPlayers) {
+    // Show initial processing toast
+    toast({
+      title: "Processing Upload",
+      description: `Processing ${importedPlayers.length} players...`,
+    });
+
+    for (let i = 0; i < importedPlayers.length; i++) {
+      const playerData = importedPlayers[i];
+      console.log(`🔄 PlayerManagement: Processing player ${i + 1}/${importedPlayers.length}:`, playerData.name);
+      
       if (playerData.name && playerData.email) {
         try {
           await createPlayer(playerData);
           addedCount++;
+          console.log(`✅ PlayerManagement: Successfully created player ${playerData.name}`);
         } catch (error) {
           errorCount++;
-          errors.push(`Failed to create player ${playerData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          const errorMsg = `Failed to create player ${playerData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          errors.push(errorMsg);
+          console.error(`❌ PlayerManagement: ${errorMsg}`);
         }
+      } else {
+        errorCount++;
+        const errorMsg = `Player ${playerData.name || 'Unknown'} missing required fields (name or email)`;
+        errors.push(errorMsg);
+        console.error(`❌ PlayerManagement: ${errorMsg}`);
       }
     }
 
-    // Always refresh the player list
+    console.log(`📊 PlayerManagement: Import completed. Added: ${addedCount}, Errors: ${errorCount}`);
+
+    // Always refresh the player list immediately
     try {
+      console.log('🔄 PlayerManagement: Refreshing player list...');
       const fetchedPlayers = await getAllPlayersFromSupabase({ status: selectedStatus });
       setPlayers(Array.isArray(fetchedPlayers) ? fetchedPlayers : []);
+      console.log('✅ PlayerManagement: Player list refreshed successfully');
     } catch (error) {
-      // Optionally handle refresh error
+      console.error('❌ PlayerManagement: Error refreshing player list:', error);
     }
 
+    // Call the approval callback
     onPlayerApproval();
 
+    // Close modal immediately
+    setIsUploadPlayersOpen(false);
+    console.log('✅ PlayerManagement: Modal closed');
+
+    // Show appropriate toast message
     if (addedCount > 0 && errorCount === 0) {
       toast({
-        title: "Players Imported Successfully",
+        title: "✅ Upload Successful",
         description: `Successfully imported ${addedCount} players.`,
       });
-      setIsUploadPlayersOpen(false); // Close immediately on full success
+      console.log('✅ PlayerManagement: Success toast shown');
     } else if (addedCount > 0 && errorCount > 0) {
       toast({
-        title: "Import Completed with Some Errors",
+        title: "⚠️ Partial Success",
         description: `Imported ${addedCount} players, ${errorCount} failed. Check console for details.`,
         variant: "destructive"
       });
-      setIsUploadPlayersOpen(false); // Close even on partial success
+      console.log('⚠️ PlayerManagement: Partial success toast shown');
+      // Log all errors for debugging
+      errors.forEach(error => console.error('❌ PlayerManagement: Import error:', error));
     } else {
       toast({
-        title: "Import Failed",
+        title: "❌ Upload Failed",
         description: "No players were imported. Please check your file and try again.",
         variant: "destructive"
       });
-      setIsUploadPlayersOpen(false); // Close on total failure
+      console.log('❌ PlayerManagement: Failure toast shown');
+      // Log all errors for debugging
+      errors.forEach(error => console.error('❌ PlayerManagement: Import error:', error));
     }
   };
 

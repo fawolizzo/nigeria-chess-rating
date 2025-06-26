@@ -259,6 +259,12 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
       
       if (onPlayersImported) {
         console.log("🚀 FileUpload: Calling onPlayersImported with", sortedPlayers.length, "players");
+        console.log("📋 FileUpload: First few players being sent:", sortedPlayers.slice(0, 3).map(p => ({
+          name: p.name,
+          email: p.email,
+          rating: p.rating,
+          fideId: p.fideId
+        })));
         onPlayersImported(sortedPlayers);
       }
       
@@ -322,7 +328,14 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
             asChild
           >
             <span>
-              {isLoading ? "Processing..." : buttonText}
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                buttonText
+              )}
             </span>
           </Button>
         </label>

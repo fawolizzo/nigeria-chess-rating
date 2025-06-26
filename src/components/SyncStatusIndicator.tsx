@@ -1,9 +1,8 @@
-
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import useSilentSync from '@/hooks/useSilentSync';
 import { Button } from '@/components/ui/button';
-import { STORAGE_KEY_USERS } from '@/types/userTypes';
+import { STORAGE_KEY_USERS } from '@/utils/storageUtils';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { detectPlatform } from '@/utils/storageSync';
 
