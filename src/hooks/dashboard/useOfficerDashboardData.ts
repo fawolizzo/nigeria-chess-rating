@@ -43,55 +43,117 @@ export const useOfficerDashboardData = (): DashboardResult => {
   // Filter players by status
   const pendingPlayers = players.filter(p => p.status === "pending");
 
-  // Consolidated data loading and refresh logic
+  // Consolidated data loading and refresh logic using Supabase directly
   const loadDashboardData = async (isInitialLoad = false) => {
     try {
       if (isInitialLoad) {
-        console.log('📥 Loading initial data from storage...');
+        console.log('📥 Loading initial data from Supabase...');
         setIsLoading(true);
       } else {
-        console.log('🔄 Refreshing dashboard data...');
-        // Don't set isLoading to true during refresh to prevent blinking
+        console.log('🔄 Refreshing dashboard data from Supabase...');
       }
       
       setHasError(false);
       setErrorMessage(null);
 
-      // Add timeout to prevent getting stuck in loading state
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Data loading timeout')), 10000); // 10 second timeout
-      });
+      // Import required services
+      const { getAllPlayersFromSupabase } = await import('../../services/player/playerQueryService');
+      const { supabase } = await import('../../integrations/supabase/client');
 
-      // Sync players from Supabase to localStorage with timeout
-      await Promise.race([
-        syncPlayersToLocalStorage(),
-        timeoutPromise
-      ]);
+      // Load players directly from Supabase
+      try {
+        console.log('🔄 Fetching players from Supabase...');
+        const supabasePlayers = await getAllPlayersFromSupabase();
+        console.log('📊 Loaded players from Supabase:', supabasePlayers.length);
+        setPlayers(Array.isArray(supabasePlayers) ? supabasePlayers : []);
+      } catch (playerError) {
+        console.error('❌ Error loading players from Supabase:', playerError);
+        setPlayers([]);
+      }
 
-      // Load players from storage
-      const currentPlayers = getFromStorageSync('players', []);
-      console.log('📊 Loaded players from storage:', currentPlayers.length);
-      setPlayers(Array.isArray(currentPlayers) ? currentPlayers : []);
+      // Load organizers from Supabase
+      try {
+        console.log('🔄 Fetching organizers from Supabase...');
+        const { data: organizers, error: orgError } = await supabase
+          .from('organizers')
+          .select('*');
+          
+        if (orgError) {
+          console.error('❌ Error loading organizers:', orgError);
+          setPendingOrganizers([]);
+        } else {
+          const supabaseOrganizers = Array.isArray(organizers) ? organizers : [];
+          const pending = supabaseOrganizers
+            .filter(org => org.status === 'pending')
+            .map(org => ({
+              id: org.id,
+              email: org.email,
+              fullName: org.name,
+              phoneNumber: org.phone || '',
+              state: '',
+              role: 'tournament_organizer' as const,
+              status: org.status as 'pending' | 'approved' | 'rejected',
+              registrationDate: org.created_at,
+              lastModified: Date.now()
+            }));
+          
+          console.log('📊 Pending organizers found:', pending.length);
+          setPendingOrganizers(pending);
+        }
+      } catch (orgError) {
+        console.error('❌ Error loading organizers:', orgError);
+        setPendingOrganizers([]);
+      }
 
-      // Load organizers from storage
-      const organizers = getFromStorageSync('users', []);
-      console.log('📊 Loaded organizers from storage:', organizers.length);
-      const pending = organizers.filter((user: User) => 
-        user.role === 'tournament_organizer' && user.status === 'pending'
-      );
-      setPendingOrganizers(pending);
-      console.log('📊 Pending organizers found:', pending.length);
+      // Load tournaments from Supabase
+      try {
+        console.log('🔄 Fetching tournaments from Supabase...');
+        const { data: tournaments, error: tournError } = await supabase
+          .from('tournaments')
+          .select('*');
+          
+        if (tournError) {
+          console.error('❌ Error loading tournaments:', tournError);
+          updateTournaments([]);
+        } else {
+          const supabaseTournaments = Array.isArray(tournaments) ? tournaments : [];
+          console.log('📊 Loaded tournaments from Supabase:', supabaseTournaments.length);
+          
+          // Transform to match expected Tournament interface
+          const transformedTournaments = supabaseTournaments.map(t => ({
+            id: t.id,
+            name: t.name,
+            state: t.state,
+            city: t.city,
+            location: t.location,
+            startDate: t.start_date,
+            endDate: t.end_date,
+            start_date: t.start_date, // Keep both formats for compatibility
+            end_date: t.end_date,
+            rounds: t.rounds,
+            status: t.status as "pending" | "approved" | "rejected" | "ongoing" | "completed" | "processed",
+            timeControl: t.time_control,
+            time_control: t.time_control, // Keep both formats for compatibility
+            description: t.description || '',
+            created_at: t.created_at,
+            updated_at: t.updated_at,
+            current_round: t.current_round || 1,
+            participants: t.participants || 0,
+            registration_open: t.registration_open || true,
+            organizer_id: t.organizer_id,
+            pairings: [],
+            results: [],
+            standings: []
+          }));
+          
+          updateTournaments(transformedTournaments);
+        }
+      } catch (tournError) {
+        console.error('❌ Error loading tournaments:', tournError);
+        updateTournaments([]);
+      }
 
-      // Refresh tournaments from storage
-      const currentTournaments = getFromStorageSync('tournaments', []);
-      console.log('📊 Refreshed tournaments:', currentTournaments.length);
-      updateTournaments(currentTournaments);
-
-      console.log("✅ Dashboard data loaded successfully:", {
-        players: currentPlayers.length,
-        tournaments: currentTournaments.length,
-        pendingOrganizers: pending.length
-      });
+      console.log("✅ Dashboard data loaded successfully from Supabase");
 
     } catch (error) {
       console.error('❌ Error loading dashboard data:', error);

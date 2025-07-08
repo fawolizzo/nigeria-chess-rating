@@ -58,15 +58,29 @@ const CreatePlayerDialog: React.FC<CreatePlayerDialogProps> = ({ onPlayerCreated
     setFormData(prev => ({ ...prev, status }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Convert rating string to number
+    // Convert rating string to number and map to correct fields
     const playerData = {
-      ...formData,
-      rating: parseInt(formData.rating, 10) || 800
+      name: formData.fullName,
+      email: `${formData.fullName.replace(/\s+/g, '').toLowerCase()}@ncr.temp`,
+      rating: parseInt(formData.rating, 10) || 800,
+      rapidRating: parseInt(formData.rating, 10) || 800,
+      blitzRating: parseInt(formData.rating, 10) || 800,
+      gender: formData.gender as "M" | "F",
+      state: formData.state,
+      city: formData.city,
+      status: formData.status as "pending" | "approved",
+      phone: "",
+      country: "Nigeria",
+      gamesPlayed: 31,
+      rapidGamesPlayed: 31,
+      blitzGamesPlayed: 31,
+      created_at: new Date().toISOString()
     };
 
+    console.log('🔄 CreatePlayerDialog: Submitting player data:', playerData);
     onPlayerCreated(playerData);
     setIsOpen(false);
     resetForm();
