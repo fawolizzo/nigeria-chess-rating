@@ -11,14 +11,13 @@ export const STORAGE_KEYS = {
 } as const;
 
 /**
- * Get data from Supabase storage with fallback to localStorage
+ * Get data from localStorage (synchronous version)
  */
-export const getFromStorage = async <T>(
+export const getFromStorage = <T>(
   key: string, 
   defaultValue: T
-): Promise<T> => {
+): T => {
   try {
-    // For now, fallback to localStorage since Supabase integration is incomplete
     const stored = localStorage.getItem(key);
     if (stored) {
       return JSON.parse(stored);
@@ -31,14 +30,13 @@ export const getFromStorage = async <T>(
 };
 
 /**
- * Save data to Supabase storage with fallback to localStorage
+ * Save data to localStorage (synchronous version)
  */
-export const saveToStorage = async <T>(
+export const saveToStorage = <T>(
   key: string, 
   data: T
-): Promise<boolean> => {
+): boolean => {
   try {
-    // For now, fallback to localStorage since Supabase integration is incomplete
     localStorage.setItem(key, JSON.stringify(data));
     return true;
   } catch (error) {
@@ -111,4 +109,20 @@ export const forceSyncAllStorage = async (keys?: string[]): Promise<boolean> => 
     logMessage(LogLevel.ERROR, 'StorageUtils', 'Force sync all storage failed:', error);
     return false;
   }
+};
+
+/**
+ * Sync storage utility - placeholder for backward compatibility
+ */
+export const syncStorage = async (keys: string[]): Promise<void> => {
+  logMessage(LogLevel.INFO, 'StorageUtils', 'Sync storage called', { keys });
+  // Placeholder implementation
+};
+
+/**
+ * Clear all data - placeholder for backward compatibility
+ */
+export const clearAllData = async (): Promise<void> => {
+  logMessage(LogLevel.INFO, 'StorageUtils', 'Clear all data called');
+  // Placeholder implementation
 };
