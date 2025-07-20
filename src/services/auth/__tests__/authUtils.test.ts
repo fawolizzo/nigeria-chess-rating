@@ -1,10 +1,12 @@
-
 import { normalizeCredentials } from '../authUtils';
 
 describe('authUtils', () => {
   describe('normalizeCredentials', () => {
     it('should trim and lowercase email', () => {
-      const result = normalizeCredentials('  Test@Example.com  ', 'password123');
+      const result = normalizeCredentials(
+        '  Test@Example.com  ',
+        'password123'
+      );
       expect(result.normalizedEmail).toBe('test@example.com');
     });
 

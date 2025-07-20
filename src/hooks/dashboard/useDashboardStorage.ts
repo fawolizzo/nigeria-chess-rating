@@ -13,12 +13,16 @@ export const useDashboardStorage = () => {
         const storedTournaments = localStorage.getItem('tournaments');
         if (storedTournaments) {
           const parsedTournaments = JSON.parse(storedTournaments);
-          const formattedTournaments = parsedTournaments.map((tournament: any) => ({
-            ...tournament,
-            startDate: tournament.startDate || new Date().toISOString().split('T')[0],
-            endDate: tournament.endDate || new Date().toISOString().split('T')[0],
-            created_at: tournament.created_at || new Date().toISOString(),
-          }));
+          const formattedTournaments = parsedTournaments.map(
+            (tournament: any) => ({
+              ...tournament,
+              startDate:
+                tournament.startDate || new Date().toISOString().split('T')[0],
+              endDate:
+                tournament.endDate || new Date().toISOString().split('T')[0],
+              created_at: tournament.created_at || new Date().toISOString(),
+            })
+          );
           setTournaments(formattedTournaments);
         }
       } catch (error) {

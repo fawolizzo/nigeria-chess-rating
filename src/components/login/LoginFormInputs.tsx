@@ -1,28 +1,30 @@
-
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  FormField, 
-  FormItem, 
-  FormLabel, 
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  FormField,
+  FormItem,
+  FormLabel,
   FormControl,
   FormMessage,
-  FormDescription 
-} from "@/components/ui/form";
-import { Control } from "react-hook-form";
-import { z } from "zod";
+  FormDescription,
+} from '@/components/ui/form';
+import { Control } from 'react-hook-form';
+import { z } from 'zod';
 
 // Schema for login form
 export const loginSchema = z.object({
-  email: z.string()
-    .email("Please enter a valid email address")
-    .or(z.literal("").transform(() => {
-      // For empty email, return the appropriate default based on role
-      return "ncro@ncr.com"; // Rating Officer will be handled in the form submission
-    })),
-  password: z.string().min(1, "Password or access code is required"),
-  role: z.enum(["tournament_organizer", "rating_officer"])
+  email: z
+    .string()
+    .email('Please enter a valid email address')
+    .or(
+      z.literal('').transform(() => {
+        // For empty email, return the appropriate default based on role
+        return 'ncro@ncr.com'; // Rating Officer will be handled in the form submission
+      })
+    ),
+  password: z.string().min(1, 'Password or access code is required'),
+  role: z.enum(['tournament_organizer', 'rating_officer']),
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
@@ -31,29 +33,30 @@ type LoginFormInputsProps = {
   control: Control<LoginFormData>;
   showPassword: boolean;
   togglePasswordVisibility: () => void;
-  selectedRole: "tournament_organizer" | "rating_officer";
+  selectedRole: 'tournament_organizer' | 'rating_officer';
 };
 
 const LoginFormInputs = ({
   control,
   showPassword,
   togglePasswordVisibility,
-  selectedRole
+  selectedRole,
 }: LoginFormInputsProps) => {
   // Get the appropriate label for the password field based on role
-  const passwordLabel = selectedRole === "rating_officer" 
-    ? "Access Code" 
-    : "Password";
+  const passwordLabel =
+    selectedRole === 'rating_officer' ? 'Access Code' : 'Password';
 
-  const passwordPlaceholder = selectedRole === "rating_officer"
-    ? "Enter access code (RNCR25)"
-    : "Enter your password";
+  const passwordPlaceholder =
+    selectedRole === 'rating_officer'
+      ? 'Enter access code (RNCR25)'
+      : 'Enter your password';
 
-  const emailPlaceholder = selectedRole === "rating_officer"
-    ? "ncro@ncr.com"
-    : "Enter your email address";
+  const emailPlaceholder =
+    selectedRole === 'rating_officer'
+      ? 'ncro@ncr.com'
+      : 'Enter your email address';
 
-  const emailReadOnly = selectedRole === "rating_officer";
+  const emailReadOnly = selectedRole === 'rating_officer';
 
   return (
     <>
@@ -71,13 +74,13 @@ const LoginFormInputs = ({
                   className={`pl-10 ${emailReadOnly ? 'bg-gray-100' : ''}`}
                   type="email"
                   readOnly={emailReadOnly}
-                  value={emailReadOnly ? "ncro@ncr.com" : field.value}
+                  value={emailReadOnly ? 'ncro@ncr.com' : field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                 />
               </FormControl>
             </div>
-            {selectedRole === "rating_officer" && (
+            {selectedRole === 'rating_officer' && (
               <FormDescription>
                 Fixed email for Rating Officer login
               </FormDescription>
@@ -86,7 +89,7 @@ const LoginFormInputs = ({
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={control}
         name="password"
@@ -99,7 +102,7 @@ const LoginFormInputs = ({
                 <Input
                   placeholder={passwordPlaceholder}
                   className="pl-10 pr-10"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   {...field}
                 />
               </FormControl>
@@ -118,10 +121,8 @@ const LoginFormInputs = ({
                 )}
               </Button>
             </div>
-            {selectedRole === "rating_officer" && (
-              <FormDescription>
-                Use RNCR25 as the access code
-              </FormDescription>
+            {selectedRole === 'rating_officer' && (
+              <FormDescription>Use RNCR25 as the access code</FormDescription>
             )}
             <FormMessage />
           </FormItem>

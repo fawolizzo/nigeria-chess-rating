@@ -1,13 +1,19 @@
-
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 /**
  * Creates a timeout promise that will reject after the specified time
  */
-export const createTimeoutPromise = (ms: number, operationName: string): Promise<never> => 
+export const createTimeoutPromise = (
+  ms: number,
+  operationName: string
+): Promise<never> =>
   new Promise((_, reject) => {
     setTimeout(() => {
-      logMessage(LogLevel.WARNING, 'timeoutUtils', `Operation '${operationName}' timed out after ${ms}ms`);
+      logMessage(
+        LogLevel.WARNING,
+        'timeoutUtils',
+        `Operation '${operationName}' timed out after ${ms}ms`
+      );
       reject(new Error(`Operation timed out after ${ms}ms - please try again`));
     }, ms);
   });
@@ -23,11 +29,16 @@ export const withTimeout = async <T>(
   try {
     const result = await Promise.race([
       operation(),
-      createTimeoutPromise(timeoutMs, operationName)
+      createTimeoutPromise(timeoutMs, operationName),
     ]);
     return result;
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'timeoutUtils', `Error in operation '${operationName}':`, error);
+    logMessage(
+      LogLevel.ERROR,
+      'timeoutUtils',
+      `Error in operation '${operationName}':`,
+      error
+    );
     throw error;
   }
 };

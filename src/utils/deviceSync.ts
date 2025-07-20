@@ -1,4 +1,3 @@
-
 // Re-export all device-related functionality from modularized files
 // This maintains backward compatibility while using the new refactored structure
 

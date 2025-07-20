@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Access Code Debug</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .info-box {
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 15px 0;
+      }
+      .code {
+        font-family: monospace;
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+      }
+      .test-form {
+        margin-top: 20px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 4px;
+      }
+      input {
+        padding: 8px;
+        margin: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      button {
+        padding: 10px 20px;
+        background: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #1976d2;
+      }
+      .result {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Nigeria Chess Rating - Access Code Debug</h1>
+
+      <div class="info-box">
+        <h3>Current System Configuration:</h3>
+        <p>
+          <strong>Rating Officer Email:</strong>
+          <span class="code">ncro@ncr.com</span>
+        </p>
+        <p>
+          <strong>Expected Access Code:</strong>
+          <span class="code">RNCR25</span>
+        </p>
+        <p>
+          <strong>Tournament Organizer Email:</strong>
+          <span class="code">org@ncr.com</span>
+        </p>
+        <p>
+          <strong>Tournament Organizer Password:</strong>
+          <span class="code">#organizer</span>
+        </p>
+      </div>
+
+      <div class="test-form">
+        <h3>Test Access Code:</h3>
+        <p>Enter the access code you're trying to use:</p>
+        <input type="text" id="testCode" placeholder="Enter access code" />
+        <button onclick="testAccessCode()">Test Code</button>
+        <div id="result"></div>
+      </div>
+
+      <div class="info-box">
+        <h3>Troubleshooting Steps:</h3>
+        <ol>
+          <li>
+            Make sure you're using the exact access code:
+            <span class="code">RNCR25</span>
+          </li>
+          <li>Check for any extra spaces before or after the code</li>
+          <li>Ensure caps lock is not affecting the input</li>
+          <li>
+            Try copying and pasting the code: <span class="code">RNCR25</span>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <script>
+      function testAccessCode() {
+        const inputCode = document.getElementById('testCode').value;
+        const expectedCode = 'RNCR25';
+        const resultDiv = document.getElementById('result');
+
+        if (inputCode === expectedCode) {
+          resultDiv.className = 'result success';
+          resultDiv.innerHTML =
+            '✅ Access code matches! This should work for login.';
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.innerHTML = `❌ Access code doesn't match.<br>
+                    <strong>You entered:</strong> "${inputCode}"<br>
+                    <strong>Expected:</strong> "${expectedCode}"<br>
+                    <strong>Length difference:</strong> ${inputCode.length} vs ${expectedCode.length} characters`;
+        }
+      }
+    </script>
+  </body>
+</html>

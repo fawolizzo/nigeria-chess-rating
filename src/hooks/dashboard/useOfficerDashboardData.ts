@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import { Tournament, Player } from "@/lib/mockData";
+import { useState, useEffect, useRef } from 'react';
+import { Tournament, Player } from '@/lib/mockData';
 import { User } from '@/types/userTypes';
-import { useDashboardStorage } from "./useDashboardStorage";
+import { useDashboardStorage } from './useDashboardStorage';
 import { getFromStorageSync } from '../../utils/storageUtils';
 import { syncPlayersToLocalStorage } from '@/services/player/playerCoreService';
 
@@ -18,7 +18,11 @@ export interface DashboardResult {
 }
 
 export const useOfficerDashboardData = (): DashboardResult => {
-  const { tournaments, isLoading: storageLoading, updateTournaments } = useDashboardStorage();
+  const {
+    tournaments,
+    isLoading: storageLoading,
+    updateTournaments,
+  } = useDashboardStorage();
   const [players, setPlayers] = useState<Player[]>([]);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -33,15 +37,17 @@ export const useOfficerDashboardData = (): DashboardResult => {
     hasError,
     errorMessage,
     isLoading,
-    pendingOrganizersCount: pendingOrganizers.length
+    pendingOrganizersCount: pendingOrganizers.length,
   });
 
   // Filter tournaments by status
-  const pendingTournaments = tournaments.filter(t => t.status === "pending");
-  const completedTournaments = tournaments.filter(t => t.status === "completed" || t.status === "approved");
-  
+  const pendingTournaments = tournaments.filter((t) => t.status === 'pending');
+  const completedTournaments = tournaments.filter(
+    (t) => t.status === 'completed' || t.status === 'approved'
+  );
+
   // Filter players by status
-  const pendingPlayers = players.filter(p => p.status === "pending");
+  const pendingPlayers = players.filter((p) => p.status === 'pending');
 
   // Consolidated data loading and refresh logic
   const loadDashboardData = async (isInitialLoad = false) => {
@@ -53,7 +59,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
         console.log('🔄 Refreshing dashboard data...');
         // Don't set isLoading to true during refresh to prevent blinking
       }
-      
+
       setHasError(false);
       setErrorMessage(null);
 
@@ -63,10 +69,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
       });
 
       // Sync players from Supabase to localStorage with timeout
-      await Promise.race([
-        syncPlayersToLocalStorage(),
-        timeoutPromise
-      ]);
+      await Promise.race([syncPlayersToLocalStorage(), timeoutPromise]);
 
       // Load players from storage
       const currentPlayers = getFromStorageSync('players', []);
@@ -76,8 +79,9 @@ export const useOfficerDashboardData = (): DashboardResult => {
       // Load organizers from storage
       const organizers = getFromStorageSync('users', []);
       console.log('📊 Loaded organizers from storage:', organizers.length);
-      const pending = organizers.filter((user: User) => 
-        user.role === 'tournament_organizer' && user.status === 'pending'
+      const pending = organizers.filter(
+        (user: User) =>
+          user.role === 'tournament_organizer' && user.status === 'pending'
       );
       setPendingOrganizers(pending);
       console.log('📊 Pending organizers found:', pending.length);
@@ -87,16 +91,17 @@ export const useOfficerDashboardData = (): DashboardResult => {
       console.log('📊 Refreshed tournaments:', currentTournaments.length);
       updateTournaments(currentTournaments);
 
-      console.log("✅ Dashboard data loaded successfully:", {
+      console.log('✅ Dashboard data loaded successfully:', {
         players: currentPlayers.length,
         tournaments: currentTournaments.length,
-        pendingOrganizers: pending.length
+        pendingOrganizers: pending.length,
       });
-
     } catch (error) {
       console.error('❌ Error loading dashboard data:', error);
       setHasError(true);
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to load dashboard data');
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Failed to load dashboard data'
+      );
       setPlayers([]);
       setPendingOrganizers([]);
     } finally {
@@ -114,7 +119,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
   // Set up real-time data refresh
   useEffect(() => {
     console.log('🔄 Setting up data refresh...');
-    
+
     // Set up interval for real-time updates
     const interval = setInterval(() => loadDashboardData(false), 5000);
 
@@ -140,7 +145,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
     hasError,
     errorMessage,
     refreshData,
-    dataTimeoutRef
+    dataTimeoutRef,
   };
 
   console.log('📤 useOfficerDashboardData returning:', {
@@ -149,7 +154,7 @@ export const useOfficerDashboardData = (): DashboardResult => {
     pendingPlayers: result.pendingPlayers.length,
     pendingOrganizers: result.pendingOrganizers.length,
     isLoading: result.isLoading,
-    hasError: result.hasError
+    hasError: result.hasError,
   });
 
   return result;

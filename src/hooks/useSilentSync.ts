@@ -25,7 +25,7 @@ const useSilentSync = ({
   syncTimeout = 5000,
   onSyncComplete,
   onSyncError,
-  prioritizeUserData = false
+  prioritizeUserData = false,
 }: UseSilentSyncOptions = {}) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncSuccess, setLastSyncSuccess] = useState<boolean | null>(null);
@@ -36,62 +36,92 @@ const useSilentSync = ({
   // Define sync function with built-in timeout
   const sync = useCallback(async () => {
     if (isSyncing) return false;
-    
+
     try {
       setIsSyncing(true);
-      
+
       // Determine which keys to sync
       let keysToSync = keys;
       if (prioritizeUserData && (!keys || !keys.includes(STORAGE_KEY_USERS))) {
         // If prioritizeUserData is true and STORAGE_KEY_USERS isn't already included
         keysToSync = [...(keys || []), STORAGE_KEY_USERS];
       }
-      
-      logMessage(LogLevel.INFO, 'useSilentSync', `Starting sync ${keysToSync ? `for keys: ${keysToSync.join(', ')}` : 'for all keys'}`);
-      
+
+      logMessage(
+        LogLevel.INFO,
+        'useSilentSync',
+        `Starting sync ${keysToSync ? `for keys: ${keysToSync.join(', ')}` : 'for all keys'}`
+      );
+
       // Use withTimeout with correct parameter order
       const result = await withTimeout(
-        () => keysToSync ? forceSyncAllStorage(keysToSync) : forceSyncAllStorage(),
+        () =>
+          keysToSync ? forceSyncAllStorage(keysToSync) : forceSyncAllStorage(),
         'Storage Sync',
         syncTimeout,
         () => {
-          logMessage(LogLevel.WARNING, 'useSilentSync', 'Sync operation timed out');
+          logMessage(
+            LogLevel.WARNING,
+            'useSilentSync',
+            'Sync operation timed out'
+          );
           return false;
         }
       );
-      
+
       setLastSyncSuccess(result);
       setLastSyncTime(new Date());
-      
+
       if (result) {
         setRetryCount(0);
         if (onSyncComplete) onSyncComplete();
-        logMessage(LogLevel.INFO, 'useSilentSync', 'Sync completed successfully');
+        logMessage(
+          LogLevel.INFO,
+          'useSilentSync',
+          'Sync completed successfully'
+        );
       } else if (retryCount < MAX_RETRIES) {
         // Auto-retry if sync failed
-        logMessage(LogLevel.WARNING, 'useSilentSync', `Sync failed, retrying (${retryCount + 1}/${MAX_RETRIES})`);
-        setRetryCount(prev => prev + 1);
+        logMessage(
+          LogLevel.WARNING,
+          'useSilentSync',
+          `Sync failed, retrying (${retryCount + 1}/${MAX_RETRIES})`
+        );
+        setRetryCount((prev) => prev + 1);
         // Schedule retry after a short delay
         setTimeout(() => {
           sync();
         }, 1000);
       } else {
-        logMessage(LogLevel.ERROR, 'useSilentSync', `Sync failed after ${MAX_RETRIES} retries`);
-        if (onSyncError) onSyncError(new Error('Sync failed after multiple attempts'));
+        logMessage(
+          LogLevel.ERROR,
+          'useSilentSync',
+          `Sync failed after ${MAX_RETRIES} retries`
+        );
+        if (onSyncError)
+          onSyncError(new Error('Sync failed after multiple attempts'));
       }
-      
+
       return result;
     } catch (error) {
       setLastSyncSuccess(false);
       setLastSyncTime(new Date());
       logMessage(LogLevel.ERROR, 'useSilentSync', 'Sync error:', error);
-      
+
       if (onSyncError) onSyncError(error);
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, [isSyncing, keys, onSyncComplete, onSyncError, retryCount, syncTimeout, prioritizeUserData]);
+  }, [
+    isSyncing,
+    keys,
+    onSyncComplete,
+    onSyncError,
+    retryCount,
+    syncTimeout,
+    prioritizeUserData,
+  ]);
 
   // Add a forceSync function that prioritizes user data
   const forceSync = useCallback(async () => {
@@ -100,39 +130,51 @@ const useSilentSync = ({
     if (!userDataKeys.includes(STORAGE_KEY_USERS)) {
       userDataKeys.push(STORAGE_KEY_USERS);
     }
-    
+
     setIsSyncing(true);
     try {
-      logMessage(LogLevel.INFO, 'useSilentSync', 'Force syncing with priority on user data');
-      
+      logMessage(
+        LogLevel.INFO,
+        'useSilentSync',
+        'Force syncing with priority on user data'
+      );
+
       // Use withTimeout with correct parameter order
       const result = await withTimeout(
         () => forceSyncAllStorage(userDataKeys),
         'Force Storage Sync',
         syncTimeout,
         () => {
-          logMessage(LogLevel.WARNING, 'useSilentSync', 'Force sync operation timed out');
+          logMessage(
+            LogLevel.WARNING,
+            'useSilentSync',
+            'Force sync operation timed out'
+          );
           return false;
         }
       );
-      
+
       setLastSyncSuccess(result);
       setLastSyncTime(new Date());
-      
+
       if (result) {
         if (onSyncComplete) onSyncComplete();
-        logMessage(LogLevel.INFO, 'useSilentSync', 'Force sync completed successfully');
+        logMessage(
+          LogLevel.INFO,
+          'useSilentSync',
+          'Force sync completed successfully'
+        );
       } else {
         if (onSyncError) onSyncError(new Error('Force sync failed'));
         logMessage(LogLevel.ERROR, 'useSilentSync', 'Force sync failed');
       }
-      
+
       return result;
     } catch (error) {
       setLastSyncSuccess(false);
       setLastSyncTime(new Date());
       logMessage(LogLevel.ERROR, 'useSilentSync', 'Force sync error:', error);
-      
+
       if (onSyncError) onSyncError(error);
       return false;
     } finally {
@@ -143,7 +185,7 @@ const useSilentSync = ({
   // Initial sync on mount
   useEffect(() => {
     let isMounted = true;
-    
+
     if (syncOnMount) {
       // Slight delay to allow component to mount fully
       const timeoutId = setTimeout(() => {
@@ -151,13 +193,13 @@ const useSilentSync = ({
           sync();
         }
       }, 200);
-      
+
       return () => {
         isMounted = false;
         clearTimeout(timeoutId);
       };
     }
-    
+
     return () => {
       isMounted = false;
     };
@@ -166,11 +208,11 @@ const useSilentSync = ({
   // Set up sync interval if specified
   useEffect(() => {
     if (!syncInterval) return;
-    
+
     const intervalId = setInterval(() => {
       sync();
     }, syncInterval);
-    
+
     return () => {
       clearInterval(intervalId);
     };
@@ -181,7 +223,7 @@ const useSilentSync = ({
     forceSync,
     isSyncing,
     lastSyncSuccess,
-    lastSyncTime
+    lastSyncTime,
   };
 };
 

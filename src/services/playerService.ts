@@ -1,3 +1,2 @@
-
 // Re-export everything from the new modular structure for backward compatibility
-export * from "./player";
+export * from './player';

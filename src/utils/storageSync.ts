@@ -4,7 +4,14 @@ import { SyncEventType } from '@/types/userTypes';
 /**
  * Detect the current platform
  */
-export const detectPlatform = (): { type: string; details?: string; isMobile: boolean; isTablet: boolean; isDesktop: boolean; userAgent: string } => {
+export const detectPlatform = (): {
+  type: string;
+  details?: string;
+  isMobile: boolean;
+  isTablet: boolean;
+  isDesktop: boolean;
+  userAgent: string;
+} => {
   try {
     if (typeof window === 'undefined') {
       return {
@@ -13,22 +20,26 @@ export const detectPlatform = (): { type: string; details?: string; isMobile: bo
         isMobile: false,
         isTablet: false,
         isDesktop: false,
-        userAgent: 'server'
+        userAgent: 'server',
       };
     }
-    
+
     const userAgent = navigator.userAgent.toLowerCase();
     let type = 'web';
     let details = 'Generic web browser';
     let isMobile = false;
     let isTablet = false;
     let isDesktop = false;
-    
+
     if (userAgent.includes('android')) {
       type = 'mobile';
       details = 'Android device';
       isMobile = true;
-    } else if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) {
+    } else if (
+      userAgent.includes('iphone') ||
+      userAgent.includes('ipad') ||
+      userAgent.includes('ipod')
+    ) {
       if (userAgent.includes('ipad')) {
         type = 'tablet';
         details = 'iPad';
@@ -51,24 +62,29 @@ export const detectPlatform = (): { type: string; details?: string; isMobile: bo
       details = 'Linux';
       isDesktop = true;
     }
-    
+
     return {
       type,
       details,
       isMobile,
       isTablet,
       isDesktop,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
     };
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Error detecting platform:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Error detecting platform:',
+      error
+    );
     return {
       type: 'unknown',
       details: 'Unknown platform',
       isMobile: false,
       isTablet: false,
       isDesktop: false,
-      userAgent: 'unknown'
+      userAgent: 'unknown',
     };
   }
 };
@@ -78,10 +94,20 @@ export const detectPlatform = (): { type: string; details?: string; isMobile: bo
  */
 export const sendSyncEvent = (eventType: SyncEventType, data?: any): void => {
   try {
-    logMessage(LogLevel.INFO, 'StorageSync', `Sending sync event: ${eventType}`, data);
+    logMessage(
+      LogLevel.INFO,
+      'StorageSync',
+      `Sending sync event: ${eventType}`,
+      data
+    );
     // For now, just log the event since we're using localStorage
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Error sending sync event:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Error sending sync event:',
+      error
+    );
   }
 };
 
@@ -134,16 +160,21 @@ export const checkCrossPlatformCompatibility = async (): Promise<{
       sessionStorageAvailable,
       broadcastChannelSupport,
       indexedDBSupport,
-      serviceWorkerSupport
+      serviceWorkerSupport,
     };
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Cross-platform compatibility check failed:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Cross-platform compatibility check failed:',
+      error
+    );
     return {
       storageAvailable: false,
       sessionStorageAvailable: false,
       broadcastChannelSupport: false,
       indexedDBSupport: false,
-      serviceWorkerSupport: false
+      serviceWorkerSupport: false,
     };
   }
 };
@@ -151,13 +182,22 @@ export const checkCrossPlatformCompatibility = async (): Promise<{
 /**
  * Force sync all storage (placeholder for backward compatibility)
  */
-export const forceSyncAllStorage = async (keys?: string[]): Promise<boolean> => {
+export const forceSyncAllStorage = async (
+  keys?: string[]
+): Promise<boolean> => {
   try {
-    logMessage(LogLevel.INFO, 'StorageSync', 'Force sync all storage called', { keys });
+    logMessage(LogLevel.INFO, 'StorageSync', 'Force sync all storage called', {
+      keys,
+    });
     // For now, just return success since we're using localStorage
     return true;
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Force sync all storage failed:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Force sync all storage failed:',
+      error
+    );
     return false;
   }
 };
@@ -171,25 +211,35 @@ export const runStorageDiagnostics = () => {
     const storageAvailable = isStorageAvailable();
     const usage = getStorageUsage();
     const deviceInfo = getDeviceInfo();
-    
+
     // Check specific storage keys
-    const storageKeys = ['ncr_users', 'ncr_players', 'ncr_tournaments', 'ncr_current_user'];
-    const keyStatus = storageKeys.map(key => ({
+    const storageKeys = [
+      'ncr_users',
+      'ncr_players',
+      'ncr_tournaments',
+      'ncr_current_user',
+    ];
+    const keyStatus = storageKeys.map((key) => ({
       key,
       exists: localStorage.getItem(key) !== null,
-      size: localStorage.getItem(key)?.length || 0
+      size: localStorage.getItem(key)?.length || 0,
     }));
-    
+
     return {
       platform,
       storageAvailable,
       usage,
       deviceInfo,
       keyStatus,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Error running storage diagnostics:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Error running storage diagnostics:',
+      error
+    );
     return {
       platform: 'unknown',
       storageAvailable: false,
@@ -197,7 +247,7 @@ export const runStorageDiagnostics = () => {
       deviceInfo: { platform: 'unknown' },
       keyStatus: [],
       timestamp: Date.now(),
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };
@@ -214,10 +264,15 @@ export const getDeviceInfo = () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       screenSize: `${screen.width}x${screen.height}`,
       colorDepth: screen.colorDepth,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Error getting device info:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Error getting device info:',
+      error
+    );
     return {
       platform: 'unknown',
       userAgent: 'unknown',
@@ -225,7 +280,7 @@ export const getDeviceInfo = () => {
       timezone: 'unknown',
       screenSize: 'unknown',
       colorDepth: 0,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 };
@@ -247,7 +302,11 @@ export const isStorageAvailable = (): boolean => {
 /**
  * Get storage usage information
  */
-export const getStorageUsage = (): { used: number; available: number; total: number } => {
+export const getStorageUsage = (): {
+  used: number;
+  available: number;
+  total: number;
+} => {
   try {
     let used = 0;
     for (let key in localStorage) {
@@ -255,14 +314,19 @@ export const getStorageUsage = (): { used: number; available: number; total: num
         used += localStorage[key].length + key.length;
       }
     }
-    
+
     // Estimate available storage (this is approximate)
     const total = 5 * 1024 * 1024; // 5MB typical localStorage limit
     const available = total - used;
-    
+
     return { used, available, total };
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'StorageSync', 'Error getting storage usage:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'StorageSync',
+      'Error getting storage usage:',
+      error
+    );
     return { used: 0, available: 0, total: 0 };
   }
-}; 
+};

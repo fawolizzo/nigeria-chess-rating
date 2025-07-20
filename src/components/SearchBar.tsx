@@ -1,24 +1,29 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, X } from "lucide-react";
-import { Player } from "@/lib/mockData"; // Import only the type
-import { getAllPlayersFromSupabase } from "@/services/playerService";
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, X } from 'lucide-react';
+import { Player } from '@/lib/mockData'; // Import only the type
+import { getAllPlayersFromSupabase } from '@/services/playerService';
 
 interface SearchBarProps {
   onSearch?: (query: string) => void;
   value?: string;
   onChange?: (value: string) => void;
-  placeholder?: string; 
+  placeholder?: string;
 }
 
-const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }: SearchBarProps) => {
+const SearchBar = ({
+  onSearch,
+  value,
+  onChange,
+  placeholder = 'Search players',
+}: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(value || "");
+  const [searchQuery, setSearchQuery] = useState(value || '');
   const [searchResults, setSearchResults] = useState<Player[]>([]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  
+
   // Fetch all players when the search bar is opened
   useEffect(() => {
     if (isOpen) {
@@ -46,11 +51,14 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
   useEffect(() => {
     if (searchQuery.length >= 2 && allPlayers.length > 0) {
       const query = searchQuery.toLowerCase();
-      const results = allPlayers.filter(
-        player =>
-          player.name.toLowerCase().includes(query) ||
-          (player.title?.toLowerCase().includes(query) || false)
-      ).slice(0, 5);
+      const results = allPlayers
+        .filter(
+          (player) =>
+            player.name.toLowerCase().includes(query) ||
+            player.title?.toLowerCase().includes(query) ||
+            false
+        )
+        .slice(0, 5);
       setSearchResults(results);
     } else {
       setSearchResults([]);
@@ -59,7 +67,7 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
     if (onSearch) {
       onSearch(searchQuery);
     }
-    
+
     // Call onChange prop if provided
     if (onChange && value !== searchQuery) {
       onChange(searchQuery);
@@ -72,11 +80,11 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
 
   const handleCloseClick = () => {
     setIsOpen(false);
-    setSearchQuery("");
+    setSearchQuery('');
     setSearchResults([]);
-    
+
     if (onChange) {
-      onChange("");
+      onChange('');
     }
   };
 
@@ -133,7 +141,7 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
                 </button>
               </div>
             </form>
-            
+
             {searchResults.length > 0 && (
               <div className="max-h-60 overflow-y-auto py-1">
                 <div className="py-1">
@@ -163,7 +171,7 @@ const SearchBar = ({ onSearch, value, onChange, placeholder = "Search players" }
                 </div>
               </div>
             )}
-            
+
             {searchQuery.length >= 2 && searchResults.length === 0 && (
               <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 No players found matching "{searchQuery}"

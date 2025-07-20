@@ -1,4 +1,3 @@
-
 import { sendEmail } from '@/services/emailService';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
@@ -13,7 +12,12 @@ export const sendEmailToUser = async (
   try {
     return await sendEmail(to, subject, html);
   } catch (error) {
-    logMessage(LogLevel.ERROR, 'EmailOperations', `Failed to send email to ${to}:`, error);
+    logMessage(
+      LogLevel.ERROR,
+      'EmailOperations',
+      `Failed to send email to ${to}:`,
+      error
+    );
     return false;
   }
 };

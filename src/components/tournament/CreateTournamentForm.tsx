@@ -1,8 +1,7 @@
-
-import React from "react";
-import Navbar from "@/components/Navbar";
-import CreateTournamentFormUI from "./form/CreateTournamentFormUI";
-import { useCreateTournamentForm } from "@/hooks/useCreateTournamentForm";
+import React from 'react';
+import Navbar from '@/components/Navbar';
+import CreateTournamentFormUI from './form/CreateTournamentFormUI';
+import { useCreateTournamentForm } from '@/hooks/useCreateTournamentForm';
 
 const CreateTournamentForm = () => {
   const formData = useCreateTournamentForm();

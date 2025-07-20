@@ -1,10 +1,9 @@
-
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Player } from "@/lib/mockData";
-import { User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Player } from '@/lib/mockData';
+import { User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface PlayerCardProps {
   player: Player;
@@ -12,7 +11,7 @@ interface PlayerCardProps {
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
   const navigate = useNavigate();
-  
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -31,7 +30,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
   };
 
   return (
-    <Card 
+    <Card
       className="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
       onClick={handleCardClick}
     >
@@ -42,12 +41,14 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
               <User className="w-6 h-6 text-white" />
             </div>
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
                 {player.title && (
-                  <span className="text-amber-600 text-sm mr-1">{player.title}</span>
+                  <span className="text-amber-600 text-sm mr-1">
+                    {player.title}
+                  </span>
                 )}
                 {player.name}
               </h3>
@@ -55,7 +56,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                 {player.status || 'approved'}
               </Badge>
             </div>
-            
+
             <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center justify-between">
                 <span>Rating:</span>
@@ -63,23 +64,16 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player }) => {
                   {player.rating}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span>Games Played:</span>
                 <span>{player.gamesPlayed}</span>
               </div>
-              
+
               {player.state && (
                 <div className="flex items-center justify-between">
                   <span>State:</span>
                   <span>{player.state}</span>
-                </div>
-              )}
-              
-              {player.city && (
-                <div className="flex items-center justify-between">
-                  <span>City:</span>
-                  <span>{player.city}</span>
                 </div>
               )}
             </div>

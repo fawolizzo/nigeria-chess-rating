@@ -1,11 +1,10 @@
-
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Clock, Users } from "lucide-react";
-import { format, isValid } from "date-fns";
-import { formatDate } from "@/utils/dateUtils";
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, MapPin, Clock, Users } from 'lucide-react';
+import { format, isValid } from 'date-fns';
+import { formatDate } from '@/utils/dateUtils';
 
 interface TournamentDashboardCardProps {
   tournament: any;
@@ -13,17 +12,17 @@ interface TournamentDashboardCardProps {
   onManage: (id: string) => void;
 }
 
-export function TournamentDashboardCard({ 
-  tournament, 
-  onViewDetails, 
-  onManage 
+export function TournamentDashboardCard({
+  tournament,
+  onViewDetails,
+  onManage,
 }: TournamentDashboardCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   // Use the correct date field based on API response format
   const startDate = tournament.start_date || tournament.startDate;
   const endDate = tournament.end_date || tournament.endDate;
-  
+
   // Status badge color mapping
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -41,9 +40,9 @@ export function TournamentDashboardCard({
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
-  
+
   return (
-    <Card 
+    <Card
       className={`transition-all duration-200 ${
         isHovered ? 'shadow-md border-gray-300' : ''
       }`}
@@ -54,14 +53,17 @@ export function TournamentDashboardCard({
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-lg font-semibold">{tournament.name}</h3>
           <Badge className={`${getStatusClass(tournament.status)}`}>
-            {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
+            {tournament.status.charAt(0).toUpperCase() +
+              tournament.status.slice(1)}
           </Badge>
         </div>
-        
+
         <div className="space-y-2 mb-4 text-sm text-gray-600">
           <div className="flex items-center">
             <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-            <span>{formatDate(startDate)} - {formatDate(endDate)}</span>
+            <span>
+              {formatDate(startDate)} - {formatDate(endDate)}
+            </span>
           </div>
           <div className="flex items-center">
             <MapPin className="h-4 w-4 mr-2 text-gray-500" />
@@ -78,7 +80,7 @@ export function TournamentDashboardCard({
             <span>{tournament.rounds} rounds</span>
           </div>
         </div>
-        
+
         <div className="flex space-x-2 mt-4">
           <Button
             variant="outline"

@@ -1,9 +1,13 @@
-
-import React from "react";
-import { RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatDistanceToNow } from "date-fns";
+import React from 'react';
+import { RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { formatDistanceToNow } from 'date-fns';
 
 interface SyncStatusIndicatorProps {
   isSyncing: boolean;
@@ -18,7 +22,7 @@ export function SyncStatusIndicator({
   lastSyncTime,
   syncStatus,
   syncError,
-  onSync
+  onSync,
 }: SyncStatusIndicatorProps) {
   return (
     <div className="flex items-center gap-2 text-xs">
@@ -67,7 +71,9 @@ export function SyncStatusIndicator({
         onClick={onSync}
         disabled={isSyncing}
       >
-        <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+        <RefreshCw
+          className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`}
+        />
         {isSyncing ? 'Syncing...' : 'Refresh'}
       </Button>
     </div>

@@ -5,7 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from '@/components/ui/table';
 import { Tournament } from '@/lib/mockData';
 import { calculatePostRoundRatings } from '@/lib/ratingCalculation';
 
@@ -22,13 +22,18 @@ interface ProcessedTournamentDetailsProps {
   tournament: Tournament;
 }
 
-const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({ tournament }) => {
+const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({
+  tournament,
+}) => {
   // Placeholder data for demonstration
-  const results = calculatePostRoundRatings([
-    { id: '1', name: 'Player A', rating: 1200 },
-    { id: '2', name: 'Player B', rating: 1500 },
-    { id: '3', name: 'Player C', rating: 1300 },
-  ], []);
+  const results = calculatePostRoundRatings(
+    [
+      { id: '1', name: 'Player A', rating: 1200 },
+      { id: '2', name: 'Player B', rating: 1500 },
+      { id: '3', name: 'Player C', rating: 1300 },
+    ],
+    []
+  );
 
   return (
     <Card>
@@ -56,15 +61,25 @@ const ProcessedTournamentDetails: React.FC<ProcessedTournamentDetailsProps> = ({
               <TableRow key={result.playerId}>
                 <TableCell className="font-medium">{result.playerId}</TableCell>
                 <TableCell>
-                  <span className={result.ratingChange > 0 ? "text-green-500" : "text-red-500"}>
-                    {result.ratingChange > 0 ? "+" : ""}{result.ratingChange}
+                  <span
+                    className={
+                      result.ratingChange > 0
+                        ? 'text-green-500'
+                        : 'text-red-500'
+                    }
+                  >
+                    {result.ratingChange > 0 ? '+' : ''}
+                    {result.ratingChange}
                   </span>
                 </TableCell>
                 <TableCell className="font-mono text-right">
                   {(result as any).initialRating || result.rating || 'N/A'}
                 </TableCell>
                 <TableCell className="font-mono text-right">
-                  {(result as any).finalRating || (result.rating ? result.rating + result.ratingChange : 'N/A')}
+                  {(result as any).finalRating ||
+                    (result.rating
+                      ? result.rating + result.ratingChange
+                      : 'N/A')}
                 </TableCell>
               </TableRow>
             ))}

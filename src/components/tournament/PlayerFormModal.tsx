@@ -1,17 +1,23 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
-import { Player } from "@/lib/mockData";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
+import { Player } from '@/lib/mockData';
 
 interface PlayerFormModalProps {
   isOpen: boolean;
@@ -24,31 +30,33 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
   isOpen,
   onOpenChange,
   onCreate,
-  isProcessing
+  isProcessing,
 }) => {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    gender: "M",
-    state: "",
-    city: "",
+    name: '',
+    email: '',
+    phone: '',
+    gender: 'M',
+    state: '',
+    city: '',
     rating: 1200,
     rapidRating: 1200,
-    blitzRating: 1200
+    blitzRating: 1200,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const createPlayer = async () => {
     if (!formData.name || !formData.email) {
       toast({
-        title: "Error",
-        description: "Name and email are required.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Name and email are required.',
+        variant: 'destructive',
       });
       return;
     }
@@ -57,50 +65,56 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
-      gender: formData.gender as "M" | "F",
+      gender: formData.gender as 'M' | 'F',
       state: formData.state,
       city: formData.city,
       rating: formData.rating,
       rapidRating: formData.rapidRating,
       blitzRating: formData.blitzRating,
-      status: "approved",
+      status: 'approved',
       gamesPlayed: 0,
       rapidGamesPlayed: 0,
       blitzGamesPlayed: 0,
       created_at: new Date().toISOString(),
-      ratingHistory: [{
-        date: new Date().toISOString(),
-        rating: formData.rating,
-        change: 0,
-        reason: "Initial rating"
-      }],
-      rapidRatingHistory: [{
-        date: new Date().toISOString(),
-        rating: formData.rapidRating,
-        change: 0,
-        reason: "Initial rapid rating"
-      }],
-      blitzRatingHistory: [{
-        date: new Date().toISOString(),
-        rating: formData.blitzRating,
-        change: 0,
-        reason: "Initial blitz rating"
-      }],
-      tournamentResults: []
+      ratingHistory: [
+        {
+          date: new Date().toISOString(),
+          rating: formData.rating,
+          change: 0,
+          reason: 'Initial rating',
+        },
+      ],
+      rapidRatingHistory: [
+        {
+          date: new Date().toISOString(),
+          rating: formData.rapidRating,
+          change: 0,
+          reason: 'Initial rapid rating',
+        },
+      ],
+      blitzRatingHistory: [
+        {
+          date: new Date().toISOString(),
+          rating: formData.blitzRating,
+          change: 0,
+          reason: 'Initial blitz rating',
+        },
+      ],
+      tournamentResults: [],
     };
 
     try {
       onCreate(newPlayer);
       onOpenChange(false);
       toast({
-        title: "Player Created",
-        description: "New player has been added successfully."
+        title: 'Player Created',
+        description: 'New player has been added successfully.',
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create player.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to create player.',
+        variant: 'destructive',
       });
     }
   };
@@ -156,7 +170,12 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
             <Label htmlFor="gender" className="text-right">
               Gender
             </Label>
-            <Select value={formData.gender} onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+            <Select
+              value={formData.gender}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, gender: value }))
+              }
+            >
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
@@ -199,7 +218,12 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
               id="rating"
               name="rating"
               value={formData.rating}
-              onChange={(e) => setFormData(prev => ({ ...prev, rating: parseInt(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  rating: parseInt(e.target.value),
+                }))
+              }
               className="col-span-3"
             />
           </div>
@@ -212,7 +236,12 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
               id="rapidRating"
               name="rapidRating"
               value={formData.rapidRating}
-              onChange={(e) => setFormData(prev => ({ ...prev, rapidRating: parseInt(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  rapidRating: parseInt(e.target.value),
+                }))
+              }
               className="col-span-3"
             />
           </div>
@@ -225,7 +254,12 @@ const PlayerFormModal: React.FC<PlayerFormModalProps> = ({
               id="blitzRating"
               name="blitzRating"
               value={formData.blitzRating}
-              onChange={(e) => setFormData(prev => ({ ...prev, blitzRating: parseInt(e.target.value) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  blitzRating: parseInt(e.target.value),
+                }))
+              }
               className="col-span-3"
             />
           </div>

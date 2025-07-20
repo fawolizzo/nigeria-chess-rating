@@ -1,6 +1,5 @@
-
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type LoginButtonProps = {
   isLoading: boolean;
@@ -19,7 +18,7 @@ const LoginButton = ({ isLoading }: LoginButtonProps) => {
           Signing In...
         </>
       ) : (
-        "Sign In"
+        'Sign In'
       )}
     </Button>
   );

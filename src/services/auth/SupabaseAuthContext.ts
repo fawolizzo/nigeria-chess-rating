@@ -1,4 +1,3 @@
-
 import { createContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 

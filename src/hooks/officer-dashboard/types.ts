@@ -1,5 +1,5 @@
-import { Tournament } from "@/types/tournamentTypes";
-import { User } from "@/types/userTypes";
+import { Tournament } from '@/types/tournamentTypes';
+import { User } from '@/types/userTypes';
 
 export interface DashboardContextType {
   pendingTournaments: Tournament[];

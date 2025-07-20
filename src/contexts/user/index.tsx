@@ -1,15 +1,24 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import { User, UserContextType, SyncEventType } from '@/types/userTypes';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { sendEmail } from '@/services/emailService';
-import { 
-  loginUser, 
-  registerUser, 
-  approveUserOperation, 
-  rejectUserOperation, 
-  getRatingOfficerEmailsOperation 
+import {
+  loginUser,
+  registerUser,
+  approveUserOperation,
+  rejectUserOperation,
+  getRatingOfficerEmailsOperation,
 } from './userAuthOperations';
-import { forceSyncUserData, refreshUserData as refreshUserDataOp } from './userDataOperations';
+import {
+  forceSyncUserData,
+  refreshUserData as refreshUserDataOp,
+} from './userDataOperations';
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
@@ -30,8 +39,16 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         // const { default: createInitialRatingOfficerIfNeeded } = await import('@/utils/createInitialRatingOfficer');
         // await createInitialRatingOfficerIfNeeded();
         // TODO: Fetch users and currentUser from Supabase and set state here
+
+        // For now, just set loading to false so the app can render
+        console.log('UserContext initialized - no user data loaded yet');
       } catch (error) {
-        logMessage(LogLevel.ERROR, 'UserContext', 'Error initializing user data:', error);
+        logMessage(
+          LogLevel.ERROR,
+          'UserContext',
+          'Error initializing user data:',
+          error
+        );
       } finally {
         setIsLoading(false);
       }
@@ -41,9 +58,21 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
   // TODO: Implement Supabase-based login, register, approve, reject, and user fetching logic
 
-  const login = async (email: string, authValue: string, role: 'tournament_organizer' | 'rating_officer'): Promise<boolean> => {
+  const login = async (
+    email: string,
+    authValue: string,
+    role: 'tournament_organizer' | 'rating_officer'
+  ): Promise<boolean> => {
     // Replace with Supabase-based login logic
-    return loginUser(email, authValue, role, setUsers, setCurrentUser, setIsLoading, async () => true);
+    return loginUser(
+      email,
+      authValue,
+      role,
+      setUsers,
+      setCurrentUser,
+      setIsLoading,
+      async () => true
+    );
   };
 
   const logout = () => {
@@ -51,9 +80,19 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     // Optionally, sign out from Supabase
   };
 
-  const register = async (userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }): Promise<boolean> => {
+  const register = async (
+    userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & {
+      status?: 'pending' | 'approved' | 'rejected';
+    }
+  ): Promise<boolean> => {
     // Replace with Supabase-based registration logic
-    return registerUser(userData, setUsers, setIsLoading, async () => true, getRatingOfficerEmails);
+    return registerUser(
+      userData,
+      setUsers,
+      setIsLoading,
+      async () => true,
+      getRatingOfficerEmails
+    );
   };
 
   const approveUser = (userId: string) => {
@@ -91,13 +130,11 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     getRatingOfficerEmails,
     refreshUserData,
     forceSync,
-    clearAllData: async () => true // No-op for now
+    clearAllData: async () => true, // No-op for now
   };
 
   return (
-    <UserContext.Provider value={contextValue}>
-      {children}
-    </UserContext.Provider>
+    <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
   );
 };
 

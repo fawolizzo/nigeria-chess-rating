@@ -1,10 +1,9 @@
-
-import React from "react";
-import OrganizerDashboardSkeleton from "@/components/organizer/OrganizerDashboardSkeleton";
-import Navbar from "@/components/Navbar";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCcw, LogOut } from "lucide-react";
+import React from 'react';
+import OrganizerDashboardSkeleton from '@/components/organizer/OrganizerDashboardSkeleton';
+import Navbar from '@/components/Navbar';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, RefreshCcw, LogOut } from 'lucide-react';
 
 export function OrganizerDashboardLoader({
   isLoading,
@@ -23,10 +22,12 @@ export function OrganizerDashboardLoader({
 }) {
   // Show skeleton loader when loading
   if (isLoading) {
-    return <OrganizerDashboardSkeleton 
-      loadingStage={loadingStage || 'loading'} 
-      onManualReload={onRetry} 
-    />;
+    return (
+      <OrganizerDashboardSkeleton
+        loadingStage={loadingStage || 'loading'}
+        onManualReload={onRetry}
+      />
+    );
   }
 
   // Show error UI if there's an error or timeout
@@ -38,26 +39,30 @@ export function OrganizerDashboardLoader({
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>
-              {hasTimedOut ? "Loading Timeout" : "Loading Error"}
+              {hasTimedOut ? 'Loading Timeout' : 'Loading Error'}
             </AlertTitle>
             <AlertDescription>
-              {loadError || "We couldn't load your tournament data. This might be due to network issues or server problems."}
+              {loadError ||
+                "We couldn't load your tournament data. This might be due to network issues or server problems."}
             </AlertDescription>
           </Alert>
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6 text-center">
-            <h2 className="text-xl font-semibold mb-4">Unable to load your tournaments</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Unable to load your tournaments
+            </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              We're having trouble loading your tournament information. Please try again or contact support if the problem persists.
+              We're having trouble loading your tournament information. Please
+              try again or contact support if the problem persists.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button 
+              <Button
                 onClick={onRetry}
                 className="bg-nigeria-green hover:bg-nigeria-green-dark text-white flex items-center gap-2"
               >
                 <RefreshCcw className="h-4 w-4" />
                 Retry Loading
               </Button>
-              <Button 
+              <Button
                 onClick={onLogout}
                 variant="outline"
                 className="flex items-center gap-2"

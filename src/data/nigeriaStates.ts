@@ -1,5 +1,8 @@
-
-import { nigerianStates as statesData, NIGERIA_STATES, getAllStates } from "@/lib/nigerianStates";
+import {
+  nigerianStates as statesData,
+  NIGERIA_STATES,
+  getAllStates,
+} from '@/lib/nigerianStates';
 
 export const nigerianStatesArray = NIGERIA_STATES;
 
@@ -13,14 +16,15 @@ export { getAllStates };
 export const citiesByState: Record<string, string[]> = {};
 
 // Populate citiesByState from the nigerianStates data
-statesData.forEach(state => {
+statesData.forEach((state) => {
   // Map "Federal Capital Territory" to "FCT" for consistency
-  const stateName = state.name === "Federal Capital Territory" ? "FCT" : state.name;
+  const stateName =
+    state.name === 'Federal Capital Territory' ? 'FCT' : state.name;
   citiesByState[stateName] = state.cities;
 });
 
 // Also add direct state name mappings for flexibility
-statesData.forEach(state => {
+statesData.forEach((state) => {
   citiesByState[state.name] = state.cities;
 });
 

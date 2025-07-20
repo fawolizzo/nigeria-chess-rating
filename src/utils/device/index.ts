@@ -1,4 +1,3 @@
-
 // Global window extensions for device sync functionality
 declare global {
   interface Window {

@@ -1,7 +1,6 @@
-
-import { useState, useEffect } from "react";
-import { Player } from "@/lib/mockData";
-import { getPlayerByIdFromSupabase } from "@/services/playerService";
+import { useState, useEffect } from 'react';
+import { Player } from '@/lib/mockData';
+import { getPlayerByIdFromSupabase } from '@/services/playerService';
 
 export const usePlayerProfile = (playerId: string | undefined) => {
   const [player, setPlayer] = useState<Player | null>(null);
@@ -12,34 +11,34 @@ export const usePlayerProfile = (playerId: string | undefined) => {
     const fetchPlayer = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         if (!playerId) {
           setPlayer(null);
           return;
         }
-        
-        console.log("🔍 Fetching player profile for ID:", playerId);
+
+        console.log('🔍 Fetching player profile for ID:', playerId);
         const fetchedPlayer = await getPlayerByIdFromSupabase(playerId);
-        
+
         if (fetchedPlayer) {
-          console.log("✅ Player profile loaded:", fetchedPlayer.name);
+          console.log('✅ Player profile loaded:', fetchedPlayer.name);
           setPlayer(fetchedPlayer);
         } else {
-          console.log("❌ Player not found for ID:", playerId);
-          setError("Player not found");
+          console.log('❌ Player not found for ID:', playerId);
+          setError('Player not found');
         }
       } catch (err) {
-        console.error("💥 Error fetching player:", err);
-        setError("Failed to load player data");
+        console.error('💥 Error fetching player:', err);
+        setError('Failed to load player data');
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchPlayer();
   }, [playerId]);
-  
+
   return { player, loading, error };
 };
 

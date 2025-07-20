@@ -1,4 +1,3 @@
-
 /// <reference types="vite/client" />
 
 // Declare global window properties for our app

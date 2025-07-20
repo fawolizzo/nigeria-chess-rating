@@ -1,23 +1,23 @@
-
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tournament } from "@/lib/mockData";
-import { Calendar, MapPin, Users, Trophy, Clock, FileText } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import TournamentRatingDialog from "./TournamentRatingDialog";
-import GenerateReportDialog from "../GenerateReportDialog";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tournament } from '@/lib/mockData';
+import { Calendar, MapPin, Users, Trophy, Clock, FileText } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import TournamentRatingDialog from './TournamentRatingDialog';
+import GenerateReportDialog from '../GenerateReportDialog';
 
 interface ApprovedTournamentsProps {
   completedTournaments: Tournament[];
   onTournamentProcessed: () => void;
 }
 
-const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({ 
-  completedTournaments, 
-  onTournamentProcessed 
+const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
+  completedTournaments,
+  onTournamentProcessed,
 }) => {
-  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [selectedTournament, setSelectedTournament] =
+    useState<Tournament | null>(null);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -31,17 +31,31 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
     setSelectedTournament(null);
     onTournamentProcessed();
     toast({
-      title: "Ratings Processed",
-      description: "Tournament ratings have been successfully processed.",
+      title: 'Ratings Processed',
+      description: 'Tournament ratings have been successfully processed.',
     });
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed":
-        return <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">Completed</Badge>;
-      case "processed":
-        return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Processed</Badge>;
+      case 'completed':
+        return (
+          <Badge
+            variant="outline"
+            className="bg-orange-50 text-orange-600 border-orange-200"
+          >
+            Completed
+          </Badge>
+        );
+      case 'processed':
+        return (
+          <Badge
+            variant="outline"
+            className="bg-green-50 text-green-600 border-green-200"
+          >
+            Processed
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -51,7 +65,9 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
     return (
       <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-md">
         <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tournaments yet</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          No tournaments yet
+        </h3>
         <p className="text-gray-500 dark:text-gray-400">
           Completed tournaments will appear here for rating processing.
         </p>
@@ -62,19 +78,26 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold mb-4">Tournament Management</h2>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {completedTournaments.map((tournament) => (
-          <div key={tournament.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+          <div
+            key={tournament.id}
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4"
+          >
             <div className="flex justify-between items-start mb-3">
-              <h3 className="font-medium text-gray-900 dark:text-white">{tournament.name}</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                {tournament.name}
+              </h3>
               {getStatusBadge(tournament.status)}
             </div>
-            
+
             <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2" />
-                <span>{tournament.start_date} - {tournament.end_date}</span>
+                <span>
+                  {tournament.start_date} - {tournament.end_date}
+                </span>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />
@@ -95,7 +118,7 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
             </div>
 
             <div className="flex gap-2">
-              {tournament.status === "completed" && (
+              {tournament.status === 'completed' && (
                 <Button
                   size="sm"
                   onClick={() => handleProcessRatings(tournament)}
@@ -104,10 +127,10 @@ const ApprovedTournaments: React.FC<ApprovedTournamentsProps> = ({
                   Process Ratings
                 </Button>
               )}
-              
-              <GenerateReportDialog 
-                tournament={tournament} 
-                players={tournament.players || []} 
+
+              <GenerateReportDialog
+                tournament={tournament}
+                players={tournament.players || []}
               />
             </div>
           </div>

@@ -1,6 +1,5 @@
-
-import React from "react";
-import { Player } from "@/lib/mockData";
+import React from 'react';
+import { Player } from '@/lib/mockData';
 
 export interface StandingsTableProps {
   players: Player[];
@@ -28,7 +27,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ players }) => {
         </thead>
         <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
           {players.map((player, index) => (
-            <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            <tr
+              key={player.id}
+              className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
+            >
               <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                 {index + 1}
               </td>

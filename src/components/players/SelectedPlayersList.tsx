@@ -1,9 +1,8 @@
-
-import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Player } from "@/lib/mockData";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Player } from '@/lib/mockData';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SelectedPlayersListProps {
   selectedPlayers: Player[];
@@ -20,20 +19,29 @@ export const SelectedPlayersList = ({
 
   return (
     <div className="mb-4">
-      <div className="text-sm font-medium mb-2">Selected Players ({selectedPlayers.length})</div>
+      <div className="text-sm font-medium mb-2">
+        Selected Players ({selectedPlayers.length})
+      </div>
       {/* Add ScrollArea for selected players with fixed height to prevent pushing buttons off-screen */}
-      <ScrollArea className={`${selectedPlayers.length > 5 ? 'h-32' : ''} max-h-32`}>
+      <ScrollArea
+        className={`${selectedPlayers.length > 5 ? 'h-32' : ''} max-h-32`}
+      >
         <div className="flex flex-wrap gap-2">
-          {selectedPlayers.map(player => (
-            <Badge 
-              key={player.id} 
+          {selectedPlayers.map((player) => (
+            <Badge
+              key={player.id}
               variant="secondary"
               className={`flex items-center gap-1 py-1 ${
-                player.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800' : ''
+                player.status === 'pending'
+                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
+                  : ''
               }`}
             >
-              {player.title && `${player.title} `}{player.name}
-              {player.status === 'pending' && <span className="text-xs ml-1">(Pending)</span>}
+              {player.title && `${player.title} `}
+              {player.name}
+              {player.status === 'pending' && (
+                <span className="text-xs ml-1">(Pending)</span>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

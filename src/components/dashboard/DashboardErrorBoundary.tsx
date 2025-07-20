@@ -1,4 +1,3 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { Button } from '@/components/ui/button';
@@ -32,17 +31,17 @@ export class DashboardErrorBoundary extends Component<Props, State> {
       error: error.toString(),
       componentStack: errorInfo.componentStack,
     });
-    
+
     this.setState({ error, errorInfo });
   }
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    
+
     if (this.props.onReset) {
       this.props.onReset();
     }
-    
+
     // Add a short delay to ensure state is reset before trying to render again
     setTimeout(() => {
       this.forceUpdate();
@@ -61,19 +60,21 @@ export class DashboardErrorBoundary extends Component<Props, State> {
             <div className="bg-red-50 dark:bg-red-950/20 w-16 h-16 flex items-center justify-center rounded-full">
               <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400" />
             </div>
-            
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Dashboard Error</h2>
-            
+
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              Dashboard Error
+            </h2>
+
             <p className="text-gray-600 dark:text-gray-400 mb-2">
               There was a problem loading the dashboard. Please try again.
             </p>
-            
+
             <div className="max-w-md mx-auto overflow-auto max-h-32 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs text-left text-gray-700 dark:text-gray-300">
               {this.state.error?.toString()}
             </div>
-            
-            <Button 
-              onClick={this.handleReset} 
+
+            <Button
+              onClick={this.handleReset}
               className="mt-4"
               variant="default"
             >

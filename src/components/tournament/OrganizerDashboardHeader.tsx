@@ -1,6 +1,5 @@
-
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 interface OrganizerDashboardHeaderProps {
   userName?: string;
@@ -9,7 +8,7 @@ interface OrganizerDashboardHeaderProps {
 
 export function OrganizerDashboardHeader({
   userName,
-  onCreateTournament
+  onCreateTournament,
 }: OrganizerDashboardHeaderProps) {
   return (
     <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
@@ -21,8 +20,8 @@ export function OrganizerDashboardHeader({
           Manage your tournaments and submissions
         </p>
       </div>
-      
-      <Button 
+
+      <Button
         onClick={onCreateTournament}
         className="mt-4 sm:mt-0 bg-nigeria-green hover:bg-nigeria-green-dark text-white"
       >

@@ -1,23 +1,28 @@
-
-import React from "react";
-import { Control, FormState } from "react-hook-form";
+import React from 'react';
+import { Control, FormState } from 'react-hook-form';
 import {
   FormField,
   FormItem,
   FormLabel,
   FormControl,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import StateSelector from "@/components/selectors/StateSelector";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import StateSelector from '@/components/selectors/StateSelector';
 
 interface PlayerFormFieldsProps {
   control: Control<any>;
   formState: FormState<any>;
 }
 
-const chessTitles = ["CM", "FM", "IM", "GM", "WCM", "WFM", "WIM", "WGM"];
+const chessTitles = ['CM', 'FM', 'IM', 'GM', 'WCM', 'WFM', 'WIM', 'WGM'];
 
 const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
   return (
@@ -35,7 +40,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
           </FormItem>
         )}
       />
-      
+
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
@@ -43,8 +48,8 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Title (Optional)</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
+              <Select
+                onValueChange={field.onChange}
                 defaultValue={field.value}
                 value={field.value}
               >
@@ -54,9 +59,13 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem key="none" value="none">None</SelectItem>
-                  {chessTitles.map(title => (
-                    <SelectItem key={title} value={title}>{title}</SelectItem>
+                  <SelectItem key="none" value="none">
+                    None
+                  </SelectItem>
+                  {chessTitles.map((title) => (
+                    <SelectItem key={title} value={title}>
+                      {title}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -64,15 +73,15 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={control}
           name="gender"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Gender</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
+              <Select
+                onValueChange={field.onChange}
                 defaultValue={field.value}
                 value={field.value}
               >
@@ -91,7 +100,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
           )}
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
@@ -106,7 +115,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={control}
           name="gamesPlayed"
@@ -114,14 +123,16 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             <FormItem>
               <FormLabel>Games Played (Classical)</FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
+                <Input
+                  type="number"
                   min={0}
-                  placeholder="Number of games" 
+                  placeholder="Number of games"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    const value = e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined;
                     field.onChange(value);
                   }}
                 />
@@ -131,7 +142,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
           )}
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
@@ -140,14 +151,16 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             <FormItem>
               <FormLabel>Rapid Rating (Optional)</FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
-                  min={800} 
-                  placeholder="Rapid rating" 
+                <Input
+                  type="number"
+                  min={800}
+                  placeholder="Rapid rating"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    const value = e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined;
                     field.onChange(value);
                   }}
                 />
@@ -156,7 +169,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={control}
           name="rapidGamesPlayed"
@@ -164,14 +177,16 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             <FormItem>
               <FormLabel>Games Played (Rapid)</FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
+                <Input
+                  type="number"
                   min={0}
-                  placeholder="Number of games" 
+                  placeholder="Number of games"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    const value = e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined;
                     field.onChange(value);
                   }}
                 />
@@ -181,7 +196,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
           )}
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
@@ -190,14 +205,16 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             <FormItem>
               <FormLabel>Blitz Rating (Optional)</FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
-                  min={800} 
-                  placeholder="Blitz rating" 
+                <Input
+                  type="number"
+                  min={800}
+                  placeholder="Blitz rating"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    const value = e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined;
                     field.onChange(value);
                   }}
                 />
@@ -206,7 +223,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={control}
           name="blitzGamesPlayed"
@@ -214,14 +231,16 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             <FormItem>
               <FormLabel>Games Played (Blitz)</FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
+                <Input
+                  type="number"
                   min={0}
-                  placeholder="Number of games" 
+                  placeholder="Number of games"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    const value = e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined;
                     field.onChange(value);
                   }}
                 />
@@ -231,7 +250,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
           )}
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
@@ -240,13 +259,15 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             <FormItem>
               <FormLabel>Birth Year (Optional)</FormLabel>
               <FormControl>
-                <Input 
-                  type="number" 
-                  placeholder="YYYY" 
+                <Input
+                  type="number"
+                  placeholder="YYYY"
                   {...field}
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    const value = e.target.value
+                      ? parseInt(e.target.value)
+                      : undefined;
                     field.onChange(value);
                   }}
                 />
@@ -255,7 +276,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={control}
           name="state"
@@ -264,7 +285,7 @@ const PlayerFormFields: React.FC<PlayerFormFieldsProps> = ({ control }) => {
               <FormLabel>State (Optional)</FormLabel>
               <FormControl>
                 <StateSelector
-                  value={field.value || ""}
+                  value={field.value || ''}
                   onValueChange={field.onChange}
                 />
               </FormControl>

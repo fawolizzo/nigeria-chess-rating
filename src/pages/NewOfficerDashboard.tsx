@@ -1,7 +1,6 @@
-
-import React from "react";
-import Navbar from "@/components/Navbar";
-import NewOfficerDashboard from "@/components/officer/NewOfficerDashboard";
+import React from 'react';
+import Navbar from '@/components/Navbar';
+import NewOfficerDashboard from '@/components/officer/NewOfficerDashboard';
 
 export default function NewOfficerDashboardPage() {
   return (

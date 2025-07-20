@@ -1,10 +1,18 @@
-
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Users, Calendar, Trophy, User, Settings } from "lucide-react";
-import { useUser } from "@/contexts/UserContext";
-import Logo from "./Logo";
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  Menu,
+  X,
+  Home,
+  Users,
+  Calendar,
+  Trophy,
+  User,
+  Settings,
+} from 'lucide-react';
+import { useUser } from '@/contexts/UserContext';
+import Logo from './Logo';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,10 +22,10 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: "/", label: "Home", icon: Home },
-    { path: "/players", label: "Players", icon: Users },
-    { path: "/tournaments", label: "Tournaments", icon: Calendar },
-    { path: "/about", label: "About", icon: Trophy },
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/players', label: 'Players', icon: Users },
+    { path: '/tournaments', label: 'Tournaments', icon: Calendar },
+    { path: '/about', label: 'About', icon: Trophy },
   ];
 
   const handleLogout = () => {
@@ -44,8 +52,8 @@ const Navbar = () => {
                   to={item.path}
                   className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive(item.path)
-                      ? "text-nigeria-green bg-nigeria-green/10"
-                      : "text-gray-600 dark:text-gray-300 hover:text-nigeria-green hover:bg-nigeria-green/5"
+                      ? 'text-nigeria-green bg-nigeria-green/10'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-nigeria-green hover:bg-nigeria-green/5'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -60,14 +68,15 @@ const Navbar = () => {
             {currentUser ? (
               <div className="flex items-center space-x-4">
                 {/* Role-based dashboard links */}
-                {currentUser.role === 'tournament_organizer' && currentUser.status === 'approved' && (
-                  <Link to="/organizer-dashboard">
-                    <Button variant="outline" size="sm">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </Button>
-                  </Link>
-                )}
+                {currentUser.role === 'tournament_organizer' &&
+                  currentUser.status === 'approved' && (
+                    <Link to="/organizer-dashboard">
+                      <Button variant="outline" size="sm">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                  )}
                 {currentUser.role === 'rating_officer' && (
                   <Link to="/officer-dashboard">
                     <Button variant="outline" size="sm">
@@ -76,7 +85,7 @@ const Navbar = () => {
                     </Button>
                   </Link>
                 )}
-                
+
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600 dark:text-gray-300">
                     {currentUser.fullName || currentUser.email}
@@ -89,10 +98,15 @@ const Navbar = () => {
             ) : (
               <div className="flex items-center space-x-2">
                 <Link to="/login">
-                  <Button variant="ghost" size="sm">Login</Button>
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
                 </Link>
                 <Link to="/register">
-                  <Button size="sm" className="bg-nigeria-green hover:bg-nigeria-green-dark">
+                  <Button
+                    size="sm"
+                    className="bg-nigeria-green hover:bg-nigeria-green-dark"
+                  >
                     Register
                   </Button>
                 </Link>
@@ -108,7 +122,11 @@ const Navbar = () => {
               onClick={() => setIsOpen(!isOpen)}
               className="p-2"
             >
-              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
           </div>
         </div>
@@ -126,8 +144,8 @@ const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive(item.path)
-                        ? "text-nigeria-green bg-nigeria-green/10"
-                        : "text-gray-600 dark:text-gray-300 hover:text-nigeria-green hover:bg-nigeria-green/5"
+                        ? 'text-nigeria-green bg-nigeria-green/10'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-nigeria-green hover:bg-nigeria-green/5'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -135,32 +153,52 @@ const Navbar = () => {
                   </Link>
                 );
               })}
-              
+
               {currentUser ? (
                 <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-800">
                   {/* Role-based dashboard links */}
-                  {currentUser.role === 'tournament_organizer' && currentUser.status === 'approved' && (
-                    <Link to="/organizer-dashboard" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" size="sm" className="w-full justify-start">
-                        <Settings className="h-4 w-4 mr-2" />
-                        Dashboard
-                      </Button>
-                    </Link>
-                  )}
+                  {currentUser.role === 'tournament_organizer' &&
+                    currentUser.status === 'approved' && (
+                      <Link
+                        to="/organizer-dashboard"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Button>
+                      </Link>
+                    )}
                   {currentUser.role === 'rating_officer' && (
-                    <Link to="/officer-dashboard" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Link
+                      to="/officer-dashboard"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
                         <Settings className="h-4 w-4 mr-2" />
                         Dashboard
                       </Button>
                     </Link>
                   )}
-                  
+
                   <div className="flex flex-col space-y-2">
                     <span className="text-sm text-gray-600 dark:text-gray-300 px-3">
                       Logged in as: {currentUser.fullName || currentUser.email}
                     </span>
-                    <Button variant="ghost" size="sm" onClick={handleLogout} className="justify-start">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="justify-start"
+                    >
                       Logout
                     </Button>
                   </div>
@@ -168,12 +206,19 @@ const Navbar = () => {
               ) : (
                 <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-800">
                   <Link to="/login" onClick={() => setIsOpen(false)}>
-                    <Button variant="ghost" size="sm" className="w-full justify-start">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                    >
                       Login
                     </Button>
                   </Link>
                   <Link to="/register" onClick={() => setIsOpen(false)}>
-                    <Button size="sm" className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark">
+                    <Button
+                      size="sm"
+                      className="w-full justify-start bg-nigeria-green hover:bg-nigeria-green-dark"
+                    >
                       Register
                     </Button>
                   </Link>

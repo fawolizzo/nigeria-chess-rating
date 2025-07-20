@@ -57,7 +57,9 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
   }
 
   /* Custom animation class for slower pulse effect */
@@ -66,7 +68,8 @@
   }
 
   @keyframes pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -80,16 +83,16 @@
   .nigeria-button {
     @apply bg-nigeria-green text-white hover:bg-nigeria-green-dark transition-colors shadow-sm;
   }
-  
+
   /* Enhanced card styles */
   .nigeria-card {
     @apply border-nigeria-green/30 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300;
   }
-  
+
   .nigeria-card-header {
     @apply bg-gradient-to-r from-nigeria-green/10 to-transparent;
   }
-  
+
   /* Enhanced input styles */
   .nigeria-input {
     @apply border-nigeria-green/30 focus:border-nigeria-green focus:ring-nigeria-green/20 transition-all duration-200;
@@ -99,7 +102,7 @@
   .nigeria-tab {
     @apply text-gray-600 hover:text-nigeria-green data-[state=active]:text-nigeria-green data-[state=active]:border-b-2 data-[state=active]:border-nigeria-green transition-colors;
   }
-  
+
   /* Enhanced badge styles */
   .nigeria-badge {
     @apply bg-nigeria-green/10 text-nigeria-green-dark border border-nigeria-green/20 rounded-full px-2 py-0.5 text-xs font-medium;
@@ -109,25 +112,25 @@
   .nigeria-section {
     @apply border border-nigeria-green/10 rounded-lg p-6 bg-white dark:bg-gray-900 shadow-sm;
   }
-  
+
   /* Enhanced heading styles */
   .nigeria-heading {
     @apply text-nigeria-green dark:text-nigeria-green-light font-bold;
   }
-  
+
   /* Enhanced table styles */
   .nigeria-table {
     @apply w-full border-collapse;
   }
-  
+
   .nigeria-table th {
     @apply bg-nigeria-green/5 text-nigeria-green-dark dark:text-nigeria-green-light border-b border-nigeria-green/20 px-4 py-2 text-left;
   }
-  
+
   .nigeria-table td {
     @apply border-b border-nigeria-green/10 px-4 py-2;
   }
-  
+
   .nigeria-table tr:hover {
     @apply bg-nigeria-green/5;
   }
@@ -141,13 +144,17 @@
 
 .chessboard-pattern-bg {
   background-color: rgba(255, 255, 255, 0.6);
-  background-image: 
-    linear-gradient(45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%), 
-    linear-gradient(-45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%), 
-    linear-gradient(45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%), 
+  background-image:
+    linear-gradient(45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(0, 135, 81, 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%),
     linear-gradient(-45deg, transparent 75%, rgba(0, 135, 81, 0.05) 75%);
   background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0px;
 }
 
 /* Nigerian flag-inspired gradients */
@@ -156,11 +163,19 @@
 }
 
 .nigeria-gradient-soft {
-  background: linear-gradient(135deg, rgba(0, 135, 81, 0.7) 0%, rgba(255, 203, 5, 0.7) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 135, 81, 0.7) 0%,
+    rgba(255, 203, 5, 0.7) 100%
+  );
 }
 
 .nigeria-gradient-subtle {
-  background: linear-gradient(135deg, rgba(0, 135, 81, 0.1) 0%, rgba(255, 203, 5, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 135, 81, 0.1) 0%,
+    rgba(255, 203, 5, 0.1) 100%
+  );
 }
 
 .hero-pattern {
@@ -176,19 +191,19 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   .mobile-card {
     @apply border rounded-md p-4 mb-4;
   }
-  
+
   .mobile-card-header {
     @apply flex justify-between items-center mb-2;
   }
-  
+
   .mobile-card-content {
     @apply text-sm space-y-2;
   }
-  
+
   .mobile-card-footer {
     @apply mt-3 pt-2 border-t flex justify-end gap-2;
   }
@@ -196,16 +211,20 @@
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(20px);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0);
   }
@@ -221,7 +240,7 @@
 
 /* Chess piece icon styles */
 .chess-icon {
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.1));
 }
 
 /* Footer styles */

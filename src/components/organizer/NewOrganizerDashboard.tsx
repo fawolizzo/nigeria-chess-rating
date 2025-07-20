@@ -1,64 +1,77 @@
-import React, { useState, useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
-import { useNavigate } from "react-router-dom";
-import { useTournamentManager } from "@/hooks/useTournamentManager";
-import { Tournament, TournamentFormData } from "@/types/tournamentTypes";
-import { OrganizerTabsWrapper } from "./dashboard/OrganizerTabsWrapper";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
+import React, { useState, useEffect } from 'react';
+import { useUser } from '@/contexts/UserContext';
+import { useNavigate } from 'react-router-dom';
+import { useTournamentManager } from '@/hooks/useTournamentManager';
+import { Tournament, TournamentFormData } from '@/types/tournamentTypes';
+import { OrganizerTabsWrapper } from './dashboard/OrganizerTabsWrapper';
+import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 const NewOrganizerDashboard: React.FC = () => {
   const { currentUser } = useUser();
   const navigate = useNavigate();
-  const { tournaments, createTournament, isLoading, loadError } = useTournamentManager();
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const { tournaments, createTournament, isLoading, loadError } =
+    useTournamentManager();
+  const [activeTab, setActiveTab] = useState('approved');
   const [isCreateTournamentOpen, setIsCreateTournamentOpen] = useState(false);
 
   const getUpcomingTournaments = () => {
-    return Array.isArray(tournaments) 
-      ? tournaments.filter(t => t.status === "approved" && new Date(t.start_date) > new Date())
+    return Array.isArray(tournaments)
+      ? tournaments.filter(
+          (t) => t.status === 'approved' && new Date(t.start_date) > new Date()
+        )
       : [];
   };
-  
+
   const getPendingTournaments = () => {
-    return Array.isArray(tournaments) 
-      ? tournaments.filter(t => t.status === "pending")
+    return Array.isArray(tournaments)
+      ? tournaments.filter((t) => t.status === 'pending')
       : [];
   };
-  
+
   const getOngoingTournaments = () => {
-    return Array.isArray(tournaments) 
-      ? tournaments.filter(t => t.status === "ongoing")
+    return Array.isArray(tournaments)
+      ? tournaments.filter((t) => t.status === 'ongoing')
       : [];
   };
-  
+
   const getCompletedTournaments = () => {
-    return Array.isArray(tournaments) 
-      ? tournaments.filter(t => t.status === "completed")
+    return Array.isArray(tournaments)
+      ? tournaments.filter((t) => t.status === 'completed')
       : [];
   };
-  
+
   const getRejectedTournaments = () => {
-    return Array.isArray(tournaments) 
-      ? tournaments.filter(t => t.status === "rejected")
+    return Array.isArray(tournaments)
+      ? tournaments.filter((t) => t.status === 'rejected')
+      : [];
+  };
+
+  const getApprovedTournaments = () => {
+    return Array.isArray(tournaments)
+      ? tournaments.filter((t) => t.status === 'approved')
+      : [];
+  };
+
+  const getProcessedTournaments = () => {
+    return Array.isArray(tournaments)
+      ? tournaments.filter((t) => t.status === 'processed')
       : [];
   };
 
   const filterTournamentsByStatus = (status: string): Tournament[] => {
     if (!tournaments) return [];
-    
+
     switch (status) {
-      case "upcoming":
-        return getUpcomingTournaments();
-      case "pending":
-        return getPendingTournaments();
-      case "ongoing":
+      case 'approved':
+        return getApprovedTournaments();
+      case 'ongoing':
         return getOngoingTournaments();
-      case "completed":
+      case 'completed':
         return getCompletedTournaments();
-      case "rejected":
-        return getRejectedTournaments();
+      case 'processed':
+        return getProcessedTournaments();
       default:
-        return tournaments;
+        return tournaments.filter((t) => t.status === status);
     }
   };
 
@@ -74,11 +87,11 @@ const NewOrganizerDashboard: React.FC = () => {
     navigate(`/tournament-management/${id}`);
   };
 
-  const handleCreateTournament = (
-    data: TournamentFormData, 
-    customTimeControl: string, 
+  const handleCreateTournament = async (
+    data: TournamentFormData,
+    customTimeControl: string,
     isCustomTimeControl: boolean
-  ): boolean => {
+  ): Promise<boolean> => {
     try {
       // Add default values for missing properties
       const tournamentData = {
@@ -86,11 +99,22 @@ const NewOrganizerDashboard: React.FC = () => {
         registrationOpen: data.registrationOpen ?? true,
       };
 
-      createTournament(tournamentData, customTimeControl, isCustomTimeControl);
-      setIsCreateTournamentOpen(false);
-      return true;
+      const success = await createTournament(
+        tournamentData,
+        customTimeControl,
+        isCustomTimeControl
+      );
+      if (success) {
+        setIsCreateTournamentOpen(false);
+      }
+      return success;
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'NewOrganizerDashboard', 'Error creating tournament:', error);
+      logMessage(
+        LogLevel.ERROR,
+        'NewOrganizerDashboard',
+        'Error creating tournament:',
+        error
+      );
       return false;
     }
   };
@@ -100,7 +124,9 @@ const NewOrganizerDashboard: React.FC = () => {
   }
 
   if (loadError) {
-    return <div className="p-4 text-center text-red-600">Error: {loadError}</div>;
+    return (
+      <div className="p-4 text-center text-red-600">Error: {loadError}</div>
+    );
   }
 
   return (

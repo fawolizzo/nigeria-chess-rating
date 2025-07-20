@@ -1,4 +1,3 @@
-
 // Add this window extension to TypeScript
 declare global {
   interface Window {
@@ -24,12 +23,12 @@ export const sendSyncEvent = (type: string, key?: string, data?: any): void => {
         type,
         key,
         data,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       channel.close();
       console.log(`Sync event sent: ${type} for key ${key}`);
     }
-    
+
     // Also trigger a storage event for older browsers
     if (key && typeof localStorage !== 'undefined') {
       const tempKey = `__sync_${Math.random()}`;
@@ -37,7 +36,7 @@ export const sendSyncEvent = (type: string, key?: string, data?: any): void => {
       localStorage.removeItem(tempKey);
     }
   } catch (error) {
-    console.error("Error sending sync event:", error);
+    console.error('Error sending sync event:', error);
   }
 };
 
@@ -49,9 +48,9 @@ window.sendSyncEvent = sendSyncEvent;
  */
 export const requestDataSync = (): void => {
   try {
-    console.log("[syncEvents] Requesting data sync from other tabs/devices");
+    console.log('[syncEvents] Requesting data sync from other tabs/devices');
     sendSyncEvent(SyncEventType.SYNC_REQUEST);
   } catch (error) {
-    console.error("[syncEvents] Error requesting data sync:", error);
+    console.error('[syncEvents] Error requesting data sync:', error);
   }
 };

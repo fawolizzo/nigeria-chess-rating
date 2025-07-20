@@ -1,15 +1,20 @@
-
-import React from "react";
-import { UseFormReturn } from "react-hook-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Trophy, Clock } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TournamentBasicDetails } from "./TournamentBasicDetails";
-import TournamentLocationFields from "./TournamentLocationFields";
-import TournamentDateSelection from "./TournamentDateSelection";
-import { TournamentConfigFields } from "./TournamentConfigFields";
+import React from 'react';
+import { UseFormReturn } from 'react-hook-form';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Form } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Calendar, MapPin, Trophy, Clock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { TournamentBasicDetails } from './TournamentBasicDetails';
+import TournamentLocationFields from './TournamentLocationFields';
+import TournamentDateSelection from './TournamentDateSelection';
+import { TournamentConfigFields } from './TournamentConfigFields';
 
 interface CreateTournamentFormUIProps {
   form: UseFormReturn<any>;
@@ -109,7 +114,7 @@ const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <TournamentConfigFields 
+              <TournamentConfigFields
                 form={form}
                 isCustomTimeControl={isCustomTimeControl}
                 validateCustomTimeControl={validateCustomTimeControl}
@@ -139,7 +144,7 @@ const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
               disabled={isSubmitting}
               className="bg-nigeria-green hover:bg-nigeria-green-dark"
             >
-              {isSubmitting ? "Creating..." : "Create Tournament"}
+              {isSubmitting ? 'Creating...' : 'Create Tournament'}
             </Button>
           </div>
         </form>

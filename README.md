@@ -1,4 +1,3 @@
-
 # Nigerian Chess Rating System
 
 ## Project info

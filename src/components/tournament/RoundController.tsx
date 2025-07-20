@@ -1,8 +1,7 @@
-
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, SkipForward, Trophy } from "lucide-react";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Play, SkipForward, Trophy } from 'lucide-react';
 
 export interface RoundControllerProps {
   tournamentId: string;
@@ -21,7 +20,7 @@ const RoundController: React.FC<RoundControllerProps> = ({
   onGeneratePairings,
   onNextRound,
   isOrganizer,
-  isProcessing
+  isProcessing,
 }) => {
   return (
     <Card>
@@ -36,23 +35,20 @@ const RoundController: React.FC<RoundControllerProps> = ({
           <p className="text-gray-600 dark:text-gray-400">
             Manage the current round and generate pairings for the next round.
           </p>
-          
+
           {isOrganizer && (
             <div className="flex gap-2">
-              <Button 
-                onClick={onGeneratePairings} 
+              <Button
+                onClick={onGeneratePairings}
                 disabled={isProcessing}
                 variant="outline"
               >
                 <Play className="h-4 w-4 mr-2" />
                 Generate Pairings
               </Button>
-              
+
               {currentRound < totalRounds && (
-                <Button 
-                  onClick={onNextRound} 
-                  disabled={isProcessing}
-                >
+                <Button onClick={onNextRound} disabled={isProcessing}>
                   <SkipForward className="h-4 w-4 mr-2" />
                   Next Round
                 </Button>

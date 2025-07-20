@@ -16,7 +16,7 @@ export enum LogLevel {
   AUTH = 'AUTH',
   API = 'API',
   USER = 'USER', // Added USER level for user management logging
-  DIAGNOSTICS = 'DIAGNOSTICS' // Special level for enhanced diagnostics
+  DIAGNOSTICS = 'DIAGNOSTICS', // Special level for enhanced diagnostics
 }
 
 // Colors for console logs
@@ -28,7 +28,7 @@ const LOG_COLORS = {
   [LogLevel.AUTH]: 'color: #9C27B0',
   [LogLevel.API]: 'color: #00BCD4',
   [LogLevel.USER]: 'color: #3F51B5', // Blue-purple for user management
-  [LogLevel.DIAGNOSTICS]: 'color: #E91E63' // Pink for diagnostics
+  [LogLevel.DIAGNOSTICS]: 'color: #E91E63', // Pink for diagnostics
 };
 
 /**
@@ -61,23 +61,36 @@ export const logMessage = (
 
   // Always log to console
   if (data !== undefined) {
-    console.log(`%c${prefix} ${message}`, LOG_COLORS[level] || 'color: inherit', data);
+    console.log(
+      `%c${prefix} ${message}`,
+      LOG_COLORS[level] || 'color: inherit',
+      data
+    );
   } else {
-    console.log(`%c${prefix} ${message}`, LOG_COLORS[level] || 'color: inherit');
+    console.log(
+      `%c${prefix} ${message}`,
+      LOG_COLORS[level] || 'color: inherit'
+    );
   }
 
   // Store logs in session for debugging
-  if (VERBOSE_LOGGING || level === LogLevel.DIAGNOSTICS || level === LogLevel.ERROR) {
+  if (
+    VERBOSE_LOGGING ||
+    level === LogLevel.DIAGNOSTICS ||
+    level === LogLevel.ERROR
+  ) {
     try {
-      const existingLogs = JSON.parse(sessionStorage.getItem('ncr_debug_logs') || '[]');
+      const existingLogs = JSON.parse(
+        sessionStorage.getItem('ncr_debug_logs') || '[]'
+      );
       existingLogs.push({
         timestamp,
         level,
         module,
         message,
-        data: data ? formatData(data) : undefined
+        data: data ? formatData(data) : undefined,
       });
-      
+
       // Keep only the last 1000 logs
       const trimmedLogs = existingLogs.slice(-1000);
       sessionStorage.setItem('ncr_debug_logs', JSON.stringify(trimmedLogs));
@@ -95,12 +108,7 @@ export const logApiRequest = (
   method: string,
   requestData?: any
 ): void => {
-  logMessage(
-    LogLevel.API,
-    'ApiRequest',
-    `${method} ${endpoint}`,
-    requestData
-  );
+  logMessage(LogLevel.API, 'ApiRequest', `${method} ${endpoint}`, requestData);
 };
 
 /**
@@ -128,12 +136,7 @@ export const logSyncEvent = (
   source: string,
   details?: any
 ): void => {
-  logMessage(
-    LogLevel.SYNC, 
-    'SyncEvent',
-    `${action} from ${source}`,
-    details
-  );
+  logMessage(LogLevel.SYNC, 'SyncEvent', `${action} from ${source}`, details);
 };
 
 /**
@@ -182,7 +185,7 @@ export const logAuthDiagnostics = (
     `${action} in ${component}`,
     {
       ...details,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
   );
 };
@@ -202,7 +205,10 @@ export const clearLogs = (): void => {};
  */
 export const enableVerboseLogging = (enable: boolean = true): void => {
   (window as any).NCR_VERBOSE_LOGGING = enable;
-  console.log(`%c[Logger] Verbose logging ${enable ? 'enabled' : 'disabled'}`, 'color: #2196F3');
+  console.log(
+    `%c[Logger] Verbose logging ${enable ? 'enabled' : 'disabled'}`,
+    'color: #2196F3'
+  );
 };
 
 // Add a global function to export all logged data as a text file
@@ -217,7 +223,7 @@ export const exportLogsToFile = () => {
     const logsText = JSON.stringify(logs, null, 2);
     const blob = new Blob([logsText], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `ncr-debug-logs-${new Date().toISOString().replace(/:/g, '-')}.json`;
@@ -225,7 +231,7 @@ export const exportLogsToFile = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     console.log('%c[Logger] Logs exported successfully', 'color: #4CAF50');
   } catch (e) {
     console.error('%c[Logger] Error exporting logs', 'color: #F44336', e);
@@ -243,11 +249,17 @@ if (DEBUG_MODE) {
     checkStorageHealth: () => {
       return {
         healthy: true,
-        issues: []
+        issues: [],
       };
-    }
+    },
   };
-  
-  console.log('%c[NCR Debug Logger] Initialized with ENHANCED DIAGNOSTICS. Access utilities via window.ncrDebug', 'color: #2196F3; font-weight: bold;');
-  console.log('%c[NCR Debug Logger] Use window.ncrDebug.exportLogsToFile() to save all logs to a file', 'color: #2196F3');
+
+  console.log(
+    '%c[NCR Debug Logger] Initialized with ENHANCED DIAGNOSTICS. Access utilities via window.ncrDebug',
+    'color: #2196F3; font-weight: bold;'
+  );
+  console.log(
+    '%c[NCR Debug Logger] Use window.ncrDebug.exportLogsToFile() to save all logs to a file',
+    'color: #2196F3'
+  );
 }

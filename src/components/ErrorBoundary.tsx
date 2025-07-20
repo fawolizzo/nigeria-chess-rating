@@ -1,6 +1,5 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { logMessage, LogLevel } from "@/utils/debugLogger";
+import { logMessage, LogLevel } from '@/utils/debugLogger';
 
 interface Props {
   children: ReactNode;
@@ -19,7 +18,7 @@ class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
-    errorInfo: null
+    errorInfo: null,
   };
 
   public static getDerivedStateFromError(error: Error): Partial<State> {
@@ -27,11 +26,11 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-    logMessage(LogLevel.ERROR, "ErrorBoundary", "Uncaught component error:", {
+    console.error('Uncaught error:', error, errorInfo);
+    logMessage(LogLevel.ERROR, 'ErrorBoundary', 'Uncaught component error:', {
       error: error.message,
       stack: error.stack,
-      componentStack: errorInfo.componentStack
+      componentStack: errorInfo.componentStack,
     });
 
     // Call onError callback if provided
@@ -48,7 +47,7 @@ class ErrorBoundary extends Component<Props, State> {
       this.setState({
         hasError: false,
         error: null,
-        errorInfo: null
+        errorInfo: null,
       });
     }
   }
@@ -58,7 +57,7 @@ class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
-      
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
@@ -71,7 +70,9 @@ class ErrorBoundary extends Component<Props, State> {
               </pre>
               {this.state.errorInfo && (
                 <details className="mt-2">
-                  <summary className="text-sm font-medium cursor-pointer text-blue-600">View component stack</summary>
+                  <summary className="text-sm font-medium cursor-pointer text-blue-600">
+                    View component stack
+                  </summary>
                   <pre className="mt-2 text-xs overflow-auto text-gray-700 max-h-60">
                     {this.state.errorInfo.componentStack}
                   </pre>
@@ -79,7 +80,8 @@ class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
             <p className="mb-4">
-              Try refreshing the page or contact support if the problem persists.
+              Try refreshing the page or contact support if the problem
+              persists.
             </p>
             <button
               onClick={() => window.location.reload()}

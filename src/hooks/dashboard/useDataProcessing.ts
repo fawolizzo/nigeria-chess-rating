@@ -1,9 +1,8 @@
+import { useCallback } from 'react';
+import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { Tournament } from '@/lib/mockData';
 
-import { useCallback } from "react";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { Tournament } from "@/lib/mockData";
-
-import { Player, User } from "@/lib/mockData"; // Import Player and User types
+import { Player, User } from '@/lib/mockData'; // Import Player and User types
 
 /**
  * Hook for processing dashboard data
@@ -14,25 +13,34 @@ export function useDataProcessing() {
    */
   const processTournaments = useCallback((allTournaments: Tournament[]) => {
     try {
-      const pending = Array.isArray(allTournaments) 
-        ? allTournaments.filter(t => t && t.status === "pending") 
+      const pending = Array.isArray(allTournaments)
+        ? allTournaments.filter((t) => t && t.status === 'pending')
         : [];
-      
-      const completed = Array.isArray(allTournaments) 
-        ? allTournaments.filter(t => t && t.status === "completed") 
+
+      const completed = Array.isArray(allTournaments)
+        ? allTournaments.filter((t) => t && t.status === 'completed')
         : [];
-      
-      logMessage(LogLevel.INFO, 'useDataProcessing', `Processed tournaments: ${pending.length} pending, ${completed.length} completed`);
-      
-      return { 
-        pendingTournaments: pending, 
-        completedTournaments: completed 
+
+      logMessage(
+        LogLevel.INFO,
+        'useDataProcessing',
+        `Processed tournaments: ${pending.length} pending, ${completed.length} completed`
+      );
+
+      return {
+        pendingTournaments: pending,
+        completedTournaments: completed,
       };
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'useDataProcessing', 'Error processing tournaments:', error);
-      return { 
-        pendingTournaments: [], 
-        completedTournaments: [] 
+      logMessage(
+        LogLevel.ERROR,
+        'useDataProcessing',
+        'Error processing tournaments:',
+        error
+      );
+      return {
+        pendingTournaments: [],
+        completedTournaments: [],
       };
     }
   }, []);
@@ -40,15 +48,21 @@ export function useDataProcessing() {
   /**
    * Process and filter pending players
    */
-  const processPendingPlayers = useCallback((allPlayers: Player[]) => { // Changed any[] to Player[]
+  const processPendingPlayers = useCallback((allPlayers: Player[]) => {
+    // Changed any[] to Player[]
     try {
-      const pendingPlayers = Array.isArray(allPlayers) 
-        ? allPlayers.filter(p => p && p.status === "pending") 
+      const pendingPlayers = Array.isArray(allPlayers)
+        ? allPlayers.filter((p) => p && p.status === 'pending')
         : [];
-      
+
       return { pendingPlayers };
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'useDataProcessing', 'Error processing players:', error);
+      logMessage(
+        LogLevel.ERROR,
+        'useDataProcessing',
+        'Error processing players:',
+        error
+      );
       return { pendingPlayers: [] };
     }
   }, []);
@@ -56,15 +70,26 @@ export function useDataProcessing() {
   /**
    * Process and filter pending organizers
    */
-  const processPendingOrganizers = useCallback((allUsers: User[]) => { // Changed any[] to User[]
+  const processPendingOrganizers = useCallback((allUsers: User[]) => {
+    // Changed any[] to User[]
     try {
-      const pendingOrganizers = Array.isArray(allUsers) 
-        ? allUsers.filter(user => user && user.role === "tournament_organizer" && user.status === "pending")
+      const pendingOrganizers = Array.isArray(allUsers)
+        ? allUsers.filter(
+            (user) =>
+              user &&
+              user.role === 'tournament_organizer' &&
+              user.status === 'pending'
+          )
         : [];
-      
+
       return { pendingOrganizers };
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'useDataProcessing', 'Error processing organizers:', error);
+      logMessage(
+        LogLevel.ERROR,
+        'useDataProcessing',
+        'Error processing organizers:',
+        error
+      );
       return { pendingOrganizers: [] };
     }
   }, []);
@@ -72,6 +97,6 @@ export function useDataProcessing() {
   return {
     processTournaments,
     processPendingPlayers,
-    processPendingOrganizers
+    processPendingOrganizers,
   };
 }

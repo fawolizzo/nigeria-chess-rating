@@ -1,13 +1,14 @@
-
-import React from "react";
-import { Player } from "@/lib/mockData";
-import { Check } from "lucide-react";
+import React from 'react';
+import { Player } from '@/lib/mockData';
+import { Check } from 'lucide-react';
 
 interface NewPlayerProfileHeaderProps {
   player: Player;
 }
 
-const NewPlayerProfileHeader: React.FC<NewPlayerProfileHeaderProps> = ({ player }) => {
+const NewPlayerProfileHeader: React.FC<NewPlayerProfileHeaderProps> = ({
+  player,
+}) => {
   // Check if player has verified title
   const isTitleVerified = player.titleVerified && player.title;
 
@@ -23,12 +24,9 @@ const NewPlayerProfileHeader: React.FC<NewPlayerProfileHeaderProps> = ({ player 
               </div>
             )}
           </div>
-          
+
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              {player.title && (
-                <span className="text-gold-dark dark:text-gold-light mr-2">{player.title}</span>
-              )}
               {player.name}
               {isTitleVerified && (
                 <span className="inline-flex items-center justify-center bg-blue-500 rounded-full w-6 h-6">
@@ -37,11 +35,13 @@ const NewPlayerProfileHeader: React.FC<NewPlayerProfileHeaderProps> = ({ player 
               )}
             </h1>
             <div className="flex flex-wrap items-center text-gray-500 dark:text-gray-400 mt-1 gap-x-2">
-              <span className="font-medium text-nigeria-green dark:text-nigeria-green-light">Rating: {player.rating}</span>
+              <span className="font-medium text-nigeria-green dark:text-nigeria-green-light">
+                Rating: {player.rating}
+              </span>
               <span className="hidden sm:inline">•</span>
-              <span>ID: {player.id}</span>
+              <span>ID: {player.fideId || player.id}</span>
               <span className="hidden sm:inline">•</span>
-              <span>{player.country || "Nigeria"}</span>
+              <span>{player.country || 'Nigeria'}</span>
               {player.state && (
                 <>
                   <span className="hidden sm:inline">•</span>

@@ -12,64 +12,75 @@ interface SyncStatusIndicatorProps {
   forceShow?: boolean;
 }
 
-const SyncStatusIndicator = ({ 
+const SyncStatusIndicator = ({
   onSyncComplete,
   prioritizeUserData = true,
-  forceShow = false
+  forceShow = false,
 }: SyncStatusIndicatorProps) => {
   const [showStatus, setShowStatus] = useState(false);
-  const [showStatusTimeout, setShowStatusTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showStatusTimeout, setShowStatusTimeout] =
+    useState<NodeJS.Timeout | null>(null);
   const platform = detectPlatform();
-  
+
   // IMPORTANT: Always hide in production environments regardless of forceShow parameter
   // This ensures sync indicators are never visible to end users
   const isProduction = import.meta.env.PROD;
-  
+
   // If in production, don't render anything at all
   if (isProduction) {
     return null;
   }
-  
+
   // Always prioritize user data during sync to ensure login credentials are available
-  const { sync, forceSync, isSyncing, lastSyncSuccess, lastSyncTime } = useSilentSync({
-    syncOnMount: true,
-    keys: prioritizeUserData ? [STORAGE_KEY_USERS] : undefined,
-    syncInterval: null,
-    prioritizeUserData,
-    onSyncComplete: () => {
-      if (onSyncComplete) onSyncComplete();
-      
-      setShowStatus(true);
-      
-      // Hide the status after a delay
-      if (showStatusTimeout) {
-        clearTimeout(showStatusTimeout);
-      }
-      
-      const timeoutId = setTimeout(() => {
-        setShowStatus(false);
-      }, 3000);
-      
-      setShowStatusTimeout(timeoutId);
-      
-      logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Sync completed successfully on ${platform.type}${prioritizeUserData ? ' with user data prioritized' : ''}`);
-    },
-    onSyncError: (error) => {
-      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', `Sync error on ${platform.type}:`, error);
-      setShowStatus(true);
-      
-      if (showStatusTimeout) {
-        clearTimeout(showStatusTimeout);
-      }
-      
-      const timeoutId = setTimeout(() => {
-        setShowStatus(false);
-      }, 5000);
-      
-      setShowStatusTimeout(timeoutId);
-    }
-  });
-  
+  const { sync, forceSync, isSyncing, lastSyncSuccess, lastSyncTime } =
+    useSilentSync({
+      syncOnMount: true,
+      keys: prioritizeUserData ? [STORAGE_KEY_USERS] : undefined,
+      syncInterval: null,
+      prioritizeUserData,
+      onSyncComplete: () => {
+        if (onSyncComplete) onSyncComplete();
+
+        setShowStatus(true);
+
+        // Hide the status after a delay
+        if (showStatusTimeout) {
+          clearTimeout(showStatusTimeout);
+        }
+
+        const timeoutId = setTimeout(() => {
+          setShowStatus(false);
+        }, 3000);
+
+        setShowStatusTimeout(timeoutId);
+
+        logMessage(
+          LogLevel.INFO,
+          'SyncStatusIndicator',
+          `Sync completed successfully on ${platform.type}${prioritizeUserData ? ' with user data prioritized' : ''}`
+        );
+      },
+      onSyncError: (error) => {
+        logMessage(
+          LogLevel.ERROR,
+          'SyncStatusIndicator',
+          `Sync error on ${platform.type}:`,
+          error
+        );
+        setShowStatus(true);
+
+        if (showStatusTimeout) {
+          clearTimeout(showStatusTimeout);
+        }
+
+        const timeoutId = setTimeout(() => {
+          setShowStatus(false);
+        }, 5000);
+
+        setShowStatusTimeout(timeoutId);
+      },
+    });
+
   // Clean up timeout on unmount
   useEffect(() => {
     return () => {
@@ -78,26 +89,35 @@ const SyncStatusIndicator = ({
       }
     };
   }, [showStatusTimeout]);
-  
+
   const handleManualSync = async () => {
     try {
       setShowStatus(true);
-      
-      logMessage(LogLevel.INFO, 'SyncStatusIndicator', `Manual sync initiated with user data prioritized on ${platform.type}`);
+
+      logMessage(
+        LogLevel.INFO,
+        'SyncStatusIndicator',
+        `Manual sync initiated with user data prioritized on ${platform.type}`
+      );
       await forceSync();
-      
+
       // Status will be auto-hidden by the onSyncComplete callback
     } catch (error) {
-      logMessage(LogLevel.ERROR, 'SyncStatusIndicator', `Manual sync error on ${platform.type}:`, error);
+      logMessage(
+        LogLevel.ERROR,
+        'SyncStatusIndicator',
+        `Manual sync error on ${platform.type}:`,
+        error
+      );
     }
   };
-  
+
   const formatTime = (date: Date | null) => {
     if (!date) return 'never';
-    
+
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-  
+
   // Development-only UI for sync controls
   return (
     <div className="flex items-center justify-between text-xs">
@@ -105,12 +125,16 @@ const SyncStatusIndicator = ({
         {isSyncing ? (
           <>
             <RefreshCw className="h-3 w-3 mr-1 animate-spin text-blue-500" />
-            <span className="text-blue-500">Syncing data on {platform.type}...</span>
+            <span className="text-blue-500">
+              Syncing data on {platform.type}...
+            </span>
           </>
         ) : lastSyncSuccess ? (
           <>
             <Check className="h-3 w-3 mr-1 text-green-500" />
-            <span className="text-green-500">Data synced at {formatTime(lastSyncTime)}</span>
+            <span className="text-green-500">
+              Data synced at {formatTime(lastSyncTime)}
+            </span>
           </>
         ) : (
           <>
@@ -119,7 +143,7 @@ const SyncStatusIndicator = ({
           </>
         )}
       </div>
-      
+
       {!isSyncing && (
         <Button
           variant="ghost"
@@ -128,7 +152,9 @@ const SyncStatusIndicator = ({
           onClick={handleManualSync}
           disabled={isSyncing}
         >
-          <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`}
+          />
           {isSyncing ? 'Syncing...' : 'Sync now'}
         </Button>
       )}

@@ -1,4 +1,3 @@
-
 import { actionTypes, ToasterToast, dispatch } from './toast-state';
 
 // Counter to generate unique IDs
@@ -18,7 +17,7 @@ export type Toast = {
 };
 
 // Create a toast
-export function toast(props: Omit<ToasterToast, "id">): Toast {
+export function toast(props: Omit<ToasterToast, 'id'>): Toast {
   const id = generateId();
 
   const update = (props: ToasterToast) =>
@@ -27,7 +26,8 @@ export function toast(props: Omit<ToasterToast, "id">): Toast {
       toast: { ...props, id },
     });
 
-  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id });
+  const dismiss = () =>
+    dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id });
 
   dispatch({
     type: actionTypes.ADD_TOAST,

@@ -7,10 +7,13 @@ import { DashboardHeader } from '../DashboardHeader';
 
 test('navigates to CreateTournament page when clicking Create Tournament', async () => {
   render(
-    <MemoryRouter initialEntries={["/"]}>
+    <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<DashboardHeader organizerName="Test" />} />
-        <Route path="/tournament-management/new" element={<div>Create Tournament Page</div>} />
+        <Route
+          path="/tournament-management/new"
+          element={<div>Create Tournament Page</div>}
+        />
       </Routes>
     </MemoryRouter>
   );

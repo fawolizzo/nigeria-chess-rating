@@ -19,7 +19,7 @@ export const initializeTestData = () => {
       status: 'approved',
       registrationDate: new Date().toISOString(),
       lastModified: Date.now(),
-      accessCode: 'RNCR25'
+      accessCode: 'RNCR25',
     };
 
     // Create test tournament organizer
@@ -33,7 +33,7 @@ export const initializeTestData = () => {
       status: 'pending',
       registrationDate: new Date().toISOString(),
       lastModified: Date.now(),
-      password: 'password123'
+      password: 'password123',
     };
 
     // Create test players
@@ -61,7 +61,7 @@ export const initializeTestData = () => {
         rapidRatingHistory: [],
         blitzRatingHistory: [],
         tournamentResults: [],
-        achievements: []
+        achievements: [],
       },
       {
         id: 'player-2',
@@ -86,8 +86,8 @@ export const initializeTestData = () => {
         rapidRatingHistory: [],
         blitzRatingHistory: [],
         tournamentResults: [],
-        achievements: []
-      }
+        achievements: [],
+      },
     ];
 
     // Create test tournaments
@@ -98,7 +98,9 @@ export const initializeTestData = () => {
         organizer_id: 'org-test-1',
         status: 'pending',
         start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
         location: 'Lagos',
         city: 'Victoria Island',
         state: 'Lagos',
@@ -112,15 +114,19 @@ export const initializeTestData = () => {
         registration_open: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        description: 'Test tournament for development'
+        description: 'Test tournament for development',
       },
       {
         id: 'tournament-2',
         name: 'Test Tournament 2',
         organizer_id: 'org-test-1',
         status: 'completed',
-        start_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        end_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        start_date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        end_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
         location: 'Abuja',
         city: 'Wuse',
         state: 'Abuja',
@@ -132,10 +138,14 @@ export const initializeTestData = () => {
         pairings: [],
         results: [],
         registration_open: false,
-        created_at: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        description: 'Completed test tournament'
-      }
+        created_at: new Date(
+          Date.now() - 21 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        updated_at: new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        description: 'Completed test tournament',
+      },
     ];
 
     // Save test data to storage
@@ -164,4 +174,4 @@ if (import.meta.env.DEV) {
     console.log('🚀 Initializing test data for development...');
     initializeTestData();
   }
-} 
+}

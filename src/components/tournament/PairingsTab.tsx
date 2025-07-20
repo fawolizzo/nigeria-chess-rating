@@ -1,7 +1,6 @@
-
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Trophy, Users } from "lucide-react";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Users } from 'lucide-react';
 
 export interface PairingsTabProps {
   tournamentId: string;
@@ -18,13 +17,15 @@ const PairingsTab: React.FC<PairingsTabProps> = ({
   onRecordResult,
   onNextRound,
   isOrganizer,
-  isProcessing
+  isProcessing,
 }) => {
   return (
     <div className="space-y-6">
       <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-md">
         <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pairings yet</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          No pairings yet
+        </h3>
         <p className="text-gray-500 dark:text-gray-400 mb-4">
           Tournament pairings will appear here once generated.
         </p>

@@ -1,4 +1,3 @@
-
 // Export all authentication operations from a central file
 export * from './loginOperations';
 export * from './registerOperations';

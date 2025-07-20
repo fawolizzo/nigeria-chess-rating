@@ -1,20 +1,27 @@
-
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tournament } from "@/lib/mockData";
-import { Calendar, MapPin, Users, Trophy, Clock, CheckCircle, XCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { updateTournamentInSupabase } from "@/services/tournamentService";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tournament } from '@/lib/mockData';
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Trophy,
+  Clock,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { updateTournamentInSupabase } from '@/services/tournamentService';
 
 interface PendingTournamentApprovalsProps {
   tournaments: Tournament[];
   onApprovalUpdate: () => void;
 }
 
-const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({ 
-  tournaments, 
-  onApprovalUpdate 
+const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
+  tournaments,
+  onApprovalUpdate,
 }) => {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
@@ -22,27 +29,27 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
   const handleApproval = async (tournamentId: string, approved: boolean) => {
     if (processingIds.has(tournamentId)) return;
 
-    setProcessingIds(prev => new Set(prev).add(tournamentId));
+    setProcessingIds((prev) => new Set(prev).add(tournamentId));
 
     try {
-      const newStatus = approved ? "approved" : "rejected";
+      const newStatus = approved ? 'approved' : 'rejected';
       await updateTournamentInSupabase(tournamentId, { status: newStatus });
-      
+
       toast({
-        title: approved ? "Tournament Approved" : "Tournament Rejected",
-        description: `The tournament has been ${approved ? "approved" : "rejected"}.`,
+        title: approved ? 'Tournament Approved' : 'Tournament Rejected',
+        description: `The tournament has been ${approved ? 'approved' : 'rejected'}.`,
       });
-      
+
       onApprovalUpdate();
     } catch (error) {
-      console.error("Error updating tournament:", error);
+      console.error('Error updating tournament:', error);
       toast({
-        title: "Error",
-        description: "Failed to update tournament status. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to update tournament status. Please try again.',
+        variant: 'destructive',
       });
     } finally {
-      setProcessingIds(prev => {
+      setProcessingIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(tournamentId);
         return newSet;
@@ -54,7 +61,9 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
     return (
       <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-md">
         <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No pending tournaments</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          No pending tournaments
+        </h3>
         <p className="text-gray-500 dark:text-gray-400">
           Tournament approval requests will appear here.
         </p>
@@ -64,22 +73,34 @@ const PendingTournamentApprovals: React.FC<PendingTournamentApprovalsProps> = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-4">Pending Tournament Approvals</h2>
-      
+      <h2 className="text-xl font-semibold mb-4">
+        Pending Tournament Approvals
+      </h2>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tournaments.map((tournament) => (
-          <div key={tournament.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+          <div
+            key={tournament.id}
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4"
+          >
             <div className="flex justify-between items-start mb-3">
-              <h3 className="font-medium text-gray-900 dark:text-white">{tournament.name}</h3>
-              <Badge variant="outline" className="bg-yellow-50 text-yellow-600 border-yellow-200">
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                {tournament.name}
+              </h3>
+              <Badge
+                variant="outline"
+                className="bg-yellow-50 text-yellow-600 border-yellow-200"
+              >
                 Pending
               </Badge>
             </div>
-            
+
             <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2" />
-                <span>{tournament.start_date} - {tournament.end_date}</span>
+                <span>
+                  {tournament.start_date} - {tournament.end_date}
+                </span>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />

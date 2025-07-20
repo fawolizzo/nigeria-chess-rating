@@ -1,8 +1,7 @@
-
-import React from "react";
-import Navbar from "@/components/Navbar";
-import { OrganizerDashboardHeader } from "@/components/tournament/OrganizerDashboardHeader";
-import { OrganizerStatsGrid } from "@/components/organizer/OrganizerStatsGrid";
+import React from 'react';
+import Navbar from '@/components/Navbar';
+import { OrganizerDashboardHeader } from '@/components/tournament/OrganizerDashboardHeader';
+import { OrganizerStatsGrid } from '@/components/organizer/OrganizerStatsGrid';
 
 export function OrganizerDashboardLayout({
   currentUser,
@@ -23,7 +22,7 @@ export function OrganizerDashboardLayout({
 }) {
   // Add null check for currentUser to prevent accessing properties when it's null
   const userName = currentUser?.fullName || 'User';
-  
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />

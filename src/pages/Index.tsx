@@ -1,14 +1,28 @@
-
-import { useState, useEffect } from "react";
-import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, Trophy, Star, TrendingUp, Award, Home } from "lucide-react";
-import { Link } from "react-router-dom";
-import { getAllPlayersFromSupabase } from "@/services/playerService";
-import RankingTable from "@/components/RankingTable";
-import { Player } from "@/lib/mockData";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Trophy,
+  Star,
+  TrendingUp,
+  Award,
+  Home,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getAllPlayersFromSupabase } from '@/services/playerService';
+import RankingTable from '@/components/RankingTable';
+import { Player } from '@/lib/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Index = () => {
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
@@ -18,25 +32,30 @@ const Index = () => {
     const fetchTopPlayers = async () => {
       try {
         setIsLoadingPlayers(true);
-        console.log("🏠 Home page: Fetching top players...");
-        
+        console.log('🏠 Home page: Fetching top players...');
+
         // Get approved players from service
-        const allPlayers = await getAllPlayersFromSupabase({ status: 'approved' });
-        console.log("🏠 Fetched players:", allPlayers.length, "players");
-        console.log("📋 Players sample:", allPlayers.slice(0, 3));
-        
+        const allPlayers = await getAllPlayersFromSupabase({
+          status: 'approved',
+        });
+        console.log('🏠 Fetched players:', allPlayers.length, 'players');
+        console.log('📋 Players sample:', allPlayers.slice(0, 3));
+
         // Sort by classical rating and take top 10
-        const sortedPlayers = Array.isArray(allPlayers) 
+        const sortedPlayers = Array.isArray(allPlayers)
           ? allPlayers
-              .filter(player => player && typeof player === 'object')
+              .filter((player) => player && typeof player === 'object')
               .sort((a, b) => (b.rating || 800) - (a.rating || 800))
               .slice(0, 10)
           : [];
-        
-        console.log("🏆 Top 10 players by rating:", sortedPlayers.map(p => ({ name: p.name, rating: p.rating })));
+
+        console.log(
+          '🏆 Top 10 players by rating:',
+          sortedPlayers.map((p) => ({ name: p.name, rating: p.rating }))
+        );
         setTopPlayers(sortedPlayers);
       } catch (error) {
-        console.error("❌ Error fetching top players:", error);
+        console.error('❌ Error fetching top players:', error);
         setTopPlayers([]);
       } finally {
         setIsLoadingPlayers(false);
@@ -44,10 +63,10 @@ const Index = () => {
     };
 
     fetchTopPlayers();
-    
+
     // Set up an interval to refresh data every 10 seconds
     const interval = setInterval(fetchTopPlayers, 10000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -55,9 +74,9 @@ const Index = () => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-3">
-          <img 
-            src="/lovable-uploads/362142dd-98df-49bb-949e-58332bb00376.png" 
-            alt="Players" 
+          <img
+            src="/lovable-uploads/362142dd-98df-49bb-949e-58332bb00376.png"
+            alt="Players"
             className="w-8 h-8"
           />
           <div>
@@ -88,12 +107,19 @@ const Index = () => {
             ))}
           </div>
         ) : topPlayers.length > 0 ? (
-          <RankingTable players={topPlayers} itemsPerPage={10} showRankings={true} />
+          <RankingTable
+            players={topPlayers}
+            itemsPerPage={10}
+            showRankings={true}
+          />
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-300" />
             <p>No players found</p>
-            <p className="text-sm">Players will appear here once they are uploaded by the Rating Officer</p>
+            <p className="text-sm">
+              Players will appear here once they are uploaded by the Rating
+              Officer
+            </p>
           </div>
         )}
       </CardContent>
@@ -103,7 +129,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 pt-24 pb-20">
         {/* Hero Section */}
         <div className="text-center mb-16">
@@ -119,11 +145,16 @@ const Index = () => {
             </span>
           </h1>
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
-            The official platform for chess tournament management and player ratings across Nigeria. 
-            Track your progress, participate in tournaments, and climb the national rankings.
+            The official platform for chess tournament management and player
+            ratings across Nigeria. Track your progress, participate in
+            tournaments, and climb the national rankings.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-nigeria-green hover:bg-nigeria-green-dark">
+            <Button
+              asChild
+              size="lg"
+              className="bg-nigeria-green hover:bg-nigeria-green-dark"
+            >
               <Link to="/players">
                 <Users className="h-5 w-5 mr-2" />
                 View Player Rankings
@@ -152,37 +183,51 @@ const Index = () => {
                   `${topPlayers.length}+`
                 )}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Registered Players</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Registered Players
+              </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <div className="flex justify-center mb-2">
                 <MapPin className="h-8 w-8 text-nigeria-green" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">37</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">States & FCT</p>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                37
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                States & FCT
+              </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <div className="flex justify-center mb-2">
                 <Calendar className="h-8 w-8 text-nigeria-green" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">0</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Active Tournaments</p>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                0
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Active Tournaments
+              </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <div className="flex justify-center mb-2">
                 <Trophy className="h-8 w-8 text-nigeria-green" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">0</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Completed Tournaments</p>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                0
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Completed Tournaments
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -199,9 +244,7 @@ const Index = () => {
                 <Calendar className="h-5 w-5 text-nigeria-green" />
                 Recent Tournaments
               </CardTitle>
-              <CardDescription>
-                Latest tournament activity
-              </CardDescription>
+              <CardDescription>Latest tournament activity</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-muted-foreground">
@@ -222,11 +265,12 @@ const Index = () => {
               </div>
               <h3 className="text-lg font-semibold mb-2">Track Your Rating</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Monitor your chess rating progress across Classical, Rapid, and Blitz formats
+                Monitor your chess rating progress across Classical, Rapid, and
+                Blitz formats
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <div className="flex justify-center mb-4">
@@ -238,7 +282,7 @@ const Index = () => {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <div className="flex justify-center mb-4">
@@ -246,7 +290,8 @@ const Index = () => {
               </div>
               <h3 className="text-lg font-semibold mb-2">Official Ratings</h3>
               <p className="text-gray-600 dark:text-gray-400">
-                Get officially recognized ratings that count towards national rankings
+                Get officially recognized ratings that count towards national
+                rankings
               </p>
             </CardContent>
           </Card>
@@ -257,7 +302,9 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold mb-2">Quick Access</h3>
-              <p className="opacity-90">Navigate to key sections of the application</p>
+              <p className="opacity-90">
+                Navigate to key sections of the application
+              </p>
             </div>
             <Button variant="secondary" asChild>
               <Link to="/" className="flex items-center gap-2">
@@ -270,9 +317,12 @@ const Index = () => {
 
         {/* CTA Section */}
         <div className="text-center bg-gradient-to-r from-nigeria-green to-nigeria-green-dark rounded-lg p-8 text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Your Chess Journey?</h2>
+          <h2 className="text-3xl font-bold mb-4">
+            Ready to Start Your Chess Journey?
+          </h2>
           <p className="text-lg mb-6 opacity-90">
-            Join the Nigerian Chess Rating system and compete with the best players across the nation
+            Join the Nigerian Chess Rating system and compete with the best
+            players across the nation
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary">
@@ -281,7 +331,11 @@ const Index = () => {
                 Get Started
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-nigeria-green">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white text-white hover:bg-white hover:text-nigeria-green"
+            >
               <Link to="/about" className="flex items-center gap-2">
                 Learn More
               </Link>

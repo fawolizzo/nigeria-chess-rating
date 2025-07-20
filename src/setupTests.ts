@@ -1,4 +1,3 @@
-
 // jest-dom adds custom jest matchers for asserting on DOM nodes.
 import '@testing-library/jest-dom';
 
@@ -47,7 +46,7 @@ class BroadcastChannelMock {
   postMessage(message: any) {
     // Simulate posting a message
     const event = new MessageEvent('message', { data: message });
-    this.handlers.forEach(handler => handler(event));
+    this.handlers.forEach((handler) => handler(event));
   }
 
   addEventListener(type: string, handler: (event: MessageEvent) => void) {
@@ -74,14 +73,16 @@ class BroadcastChannelMock {
 beforeEach(() => {
   // Setup localStorage mock
   Object.defineProperty(window, 'localStorage', { value: localStorageMock });
-  
+
   // Setup sessionStorage mock
-  Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
-  
+  Object.defineProperty(window, 'sessionStorage', {
+    value: sessionStorageMock,
+  });
+
   // Setup BroadcastChannel mock if needed in tests
   if (!('BroadcastChannel' in window)) {
     Object.defineProperty(window, 'BroadcastChannel', {
-      value: BroadcastChannelMock
+      value: BroadcastChannelMock,
     });
   }
 

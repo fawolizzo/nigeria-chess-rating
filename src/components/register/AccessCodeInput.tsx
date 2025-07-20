@@ -1,8 +1,12 @@
-
-import { Shield, Info } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { FormLabel } from "@/components/ui/form";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Shield, Info } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FormLabel } from '@/components/ui/form';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AccessCodeInputProps {
   accessCode: string;
@@ -10,15 +14,15 @@ interface AccessCodeInputProps {
   onChange: (value: string) => void;
 }
 
-const AccessCodeInput = ({ 
-  accessCode, 
-  isAccessCodeValid, 
-  onChange 
+const AccessCodeInput = ({
+  accessCode,
+  isAccessCodeValid,
+  onChange,
 }: AccessCodeInputProps) => {
   return (
     <div>
       <FormLabel className="flex items-center gap-1">
-        <span>Access Code</span> 
+        <span>Access Code</span>
         <span className="text-red-500">*</span>
         <TooltipProvider>
           <Tooltip>
@@ -34,8 +38,8 @@ const AccessCodeInput = ({
       </FormLabel>
       <div className="relative">
         <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input 
-          placeholder="Enter Rating Officer access code" 
+        <Input
+          placeholder="Enter Rating Officer access code"
           className={`pl-10 ${isAccessCodeValid ? 'border-green-500 focus:ring-green-500' : ''}`}
           type="password"
           value={accessCode}
@@ -47,9 +51,7 @@ const AccessCodeInput = ({
           Required for Rating Officer registration
         </p>
         {isAccessCodeValid && (
-          <p className="text-xs text-green-500">
-            ✓ Valid access code
-          </p>
+          <p className="text-xs text-green-500">✓ Valid access code</p>
         )}
       </div>
     </div>

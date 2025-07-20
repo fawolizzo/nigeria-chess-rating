@@ -1,27 +1,36 @@
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { logMessage, LogLevel } from '@/utils/debugLogger';
+import { useOfficerDashboardData } from '@/hooks/dashboard/useOfficerDashboardData';
+import { DashboardContextType } from './types';
 
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { logMessage, LogLevel } from "@/utils/debugLogger";
-import { useOfficerDashboardData } from "@/hooks/dashboard/useOfficerDashboardData";
-import { DashboardContextType } from "./types";
+const DashboardContext = createContext<DashboardContextType | undefined>(
+  undefined
+);
 
-const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
-
-export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const OfficerDashboardProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
   const {
     pendingTournaments,
     completedTournaments,
-    pendingPlayers, 
+    pendingPlayers,
     pendingOrganizers,
     isLoading,
     refreshData: refreshDashboard,
     dataTimeoutRef,
     hasError,
-    errorMessage
+    errorMessage,
   } = useOfficerDashboardData();
-  
+
   // Use a ref to track if we've logged already to prevent excess logging on rerenders
   const hasLoggedRef = useRef<boolean>(false);
-  
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -30,20 +39,20 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       }
     };
   }, [dataTimeoutRef]);
-  
+
   // Log dashboard data loading state changes - but only on actual changes
   useEffect(() => {
     // Only log if the state actually changed or on first render
     if (!hasLoggedRef.current || hasLoggedRef.current !== isLoading) {
       logMessage(
         LogLevel.INFO, // Use INFO level for consistency
-        'OfficerDashboardContext', 
+        'OfficerDashboardContext',
         `Dashboard state: ${isLoading ? 'loading' : 'ready'}`
       );
       hasLoggedRef.current = isLoading;
     }
   }, [isLoading]);
-  
+
   // Log errors if they occur - but only once
   useEffect(() => {
     if (hasError && errorMessage) {
@@ -55,28 +64,31 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
       );
     }
   }, [hasError, errorMessage]);
-  
+
   // Create a memoized context value to prevent unnecessary re-renders
-  const contextValue = React.useMemo(() => ({
-    pendingTournaments,
-    completedTournaments,
-    pendingPlayers,
-    pendingOrganizers,
-    refreshDashboard,
-    isLoading,
-    hasError,
-    errorMessage
-  }), [
-    pendingTournaments,
-    completedTournaments,
-    pendingPlayers,
-    pendingOrganizers,
-    refreshDashboard,
-    isLoading,
-    hasError,
-    errorMessage
-  ]);
-  
+  const contextValue = React.useMemo(
+    () => ({
+      pendingTournaments,
+      completedTournaments,
+      pendingPlayers,
+      pendingOrganizers,
+      refreshDashboard,
+      isLoading,
+      hasError,
+      errorMessage,
+    }),
+    [
+      pendingTournaments,
+      completedTournaments,
+      pendingPlayers,
+      pendingOrganizers,
+      refreshDashboard,
+      isLoading,
+      hasError,
+      errorMessage,
+    ]
+  );
+
   return (
     <DashboardContext.Provider value={contextValue}>
       {children}
@@ -87,7 +99,9 @@ export const OfficerDashboardProvider: React.FC<{ children: React.ReactNode }> =
 export const useDashboard = (): DashboardContextType => {
   const context = useContext(DashboardContext);
   if (context === undefined) {
-    throw new Error("useDashboard must be used within an OfficerDashboardProvider");
+    throw new Error(
+      'useDashboard must be used within an OfficerDashboardProvider'
+    );
   }
   return context;
 };

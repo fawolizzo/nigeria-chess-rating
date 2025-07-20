@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,28 +34,35 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  
+
   const { login: localLogin, currentUser, logout } = useUser();
 
   const { isRatingOfficer, isTournamentOrganizer } = getUserRoleInfo(user);
 
   // Sign in function
-  const handleSignIn = async (email: string, password: string): Promise<boolean> => {
+  const handleSignIn = async (
+    email: string,
+    password: string
+  ): Promise<boolean> => {
     try {
       setIsLoading(true);
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase().trim(),
-        password: password
+        password: password,
       });
-      
+
       if (error) {
         // Try local login as fallback
-        const success = await localLogin(email, password, 'tournament_organizer');
+        const success = await localLogin(
+          email,
+          password,
+          'tournament_organizer'
+        );
         setIsAuthenticated(success);
         return success;
       }
-      
+
       setIsAuthenticated(!!data.session);
       return !!data.session;
     } catch (error) {
@@ -70,7 +76,11 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Placeholder signup function
-  const handleSignUp = async (email: string, password: string, metadata: any): Promise<boolean> => {
+  const handleSignUp = async (
+    email: string,
+    password: string,
+    metadata: any
+  ): Promise<boolean> => {
     return false;
   };
 
@@ -78,13 +88,13 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   const handleSignOut = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      
+
       // Sign out from Supabase
       await supabase.auth.signOut();
-      
+
       // Clear local state
       logout();
-      
+
       setSession(null);
       setUser(null);
       setIsAuthenticated(false);
@@ -107,11 +117,13 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize auth state
   useEffect(() => {
     let mounted = true;
-    
+
     // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
-      
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(newSession);
         setUser(newSession?.user || null);
@@ -129,7 +141,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     const getInitialSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (mounted) {
           setSession(data.session);
           setUser(data.session?.user || null);
@@ -160,7 +172,7 @@ export const SupabaseAuthProvider = ({ children }: { children: ReactNode }) => {
     isLoading,
     isRatingOfficer,
     isTournamentOrganizer,
-    isAuthenticated
+    isAuthenticated,
   };
 
   return (

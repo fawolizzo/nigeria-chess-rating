@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -17,7 +16,7 @@ const SyncStatusDisplay: React.FC<SyncStatusDisplayProps> = ({
   syncSuccess,
   lastSyncTime,
   onSyncClick,
-  syncError
+  syncError,
 }) => {
   return (
     <div className="flex items-center gap-2">
@@ -32,15 +31,17 @@ const SyncStatusDisplay: React.FC<SyncStatusDisplayProps> = ({
           <span>Not synced</span>
         )}
       </div>
-      
-      <Button 
-        variant="outline" 
+
+      <Button
+        variant="outline"
         size="sm"
-        onClick={onSyncClick} 
+        onClick={onSyncClick}
         disabled={isSyncing}
         className="h-8 px-2"
       >
-        <RefreshCw className={`h-4 w-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+        <RefreshCw
+          className={`h-4 w-4 mr-1 ${isSyncing ? 'animate-spin' : ''}`}
+        />
         {isSyncing ? 'Syncing...' : 'Sync'}
       </Button>
     </div>

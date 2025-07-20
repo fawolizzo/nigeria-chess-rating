@@ -1,5 +1,4 @@
-
-import { Tournament } from "@/lib/mockData";
+import { Tournament } from '@/lib/mockData';
 
 export interface DashboardState {
   pendingTournaments: Tournament[];

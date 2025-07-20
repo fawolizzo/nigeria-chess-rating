@@ -1,6 +1,5 @@
-
-import React from "react";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface PlayerLinkProps {
   playerId: string;
@@ -12,7 +11,11 @@ interface PlayerLinkProps {
  * A simple wrapper component that ensures player links always point to
  * the consolidated profile route at `/players/:id`.
  */
-const PlayerLink: React.FC<PlayerLinkProps> = ({ playerId, className, children }) => {
+const PlayerLink: React.FC<PlayerLinkProps> = ({
+  playerId,
+  className,
+  children,
+}) => {
   // Ensure we are using the correct route format: /players/:id
   return (
     <Link to={`/players/${playerId}`} className={className}>

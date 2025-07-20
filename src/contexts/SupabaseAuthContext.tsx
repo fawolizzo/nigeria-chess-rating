@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { SupabaseAuthProvider } from '@/services/auth/SupabaseAuthProvider';
 import { useSupabaseAuth } from '@/services/auth/useSupabaseAuth';

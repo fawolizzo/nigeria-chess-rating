@@ -4,17 +4,17 @@ import { monitorSync } from '@/utils/monitorSync';
 // Mock dependencies
 jest.mock('@/utils/storageUtils', () => ({
   getFromStorage: jest.fn(),
-  saveToStorage: jest.fn()
+  saveToStorage: jest.fn(),
 }));
 
 jest.mock('@/utils/monitorSync', () => ({
-  monitorSync: jest.fn((_, __, callback) => callback())
+  monitorSync: jest.fn((_, __, callback) => callback()),
 }));
 
 jest.mock('@/utils/debugLogger', () => ({
   logMessage: jest.fn(),
   LogLevel: { INFO: 'info', ERROR: 'error', WARNING: 'warning' },
-  logUserEvent: jest.fn()
+  logUserEvent: jest.fn(),
 }));
 
 describe('loginOperations', () => {
@@ -34,7 +34,7 @@ describe('loginOperations', () => {
       phone: '1234567890',
       status: 'approved' as const,
       registrationDate: '2023-01-01',
-      lastModified: Date.now()
+      lastModified: Date.now(),
     };
 
     const mockSetCurrentUser = jest.fn();
@@ -80,11 +80,11 @@ describe('loginOperations', () => {
 
     it('should fail login if user status is not approved', async () => {
       // Create a pending user
-      const pendingUser = { 
-        ...mockUser, 
-        status: 'pending' as const 
+      const pendingUser = {
+        ...mockUser,
+        status: 'pending' as const,
       };
-      
+
       // Set up mocks
       (getFromStorage as jest.Mock).mockReturnValue([pendingUser]);
 

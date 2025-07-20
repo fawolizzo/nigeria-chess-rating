@@ -1,20 +1,12 @@
-
 // Re-export the toast functionality from the hook implementation
-import { 
-  useToast, 
-  toast, 
-  dismissToast, 
+import {
+  useToast,
+  toast,
+  dismissToast,
   type Toast,
-  type ToasterToast 
-} from "@/hooks/use-toast";
+  type ToasterToast,
+} from '@/hooks/use-toast';
 
-export { 
-  useToast, 
-  toast, 
-  dismissToast 
-};
+export { useToast, toast, dismissToast };
 
-export type {
-  Toast,
-  ToasterToast
-};
+export type { Toast, ToasterToast };

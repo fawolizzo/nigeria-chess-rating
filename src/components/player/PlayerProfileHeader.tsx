@@ -1,9 +1,8 @@
-
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Player } from "@/lib/mockData";
-import { Edit, Award, Calendar, MapPin } from "lucide-react";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Player } from '@/lib/mockData';
+import { Edit, Award, Calendar, MapPin } from 'lucide-react';
 
 export interface PlayerProfileHeaderProps {
   player: Player;
@@ -11,10 +10,10 @@ export interface PlayerProfileHeaderProps {
   isRatingOfficer?: boolean;
 }
 
-const PlayerProfileHeader: React.FC<PlayerProfileHeaderProps> = ({ 
-  player, 
+const PlayerProfileHeader: React.FC<PlayerProfileHeaderProps> = ({
+  player,
   onEditClick,
-  isRatingOfficer = false
+  isRatingOfficer = false,
 }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border p-6">
@@ -41,7 +40,7 @@ const PlayerProfileHeader: React.FC<PlayerProfileHeaderProps> = ({
               {player.state && (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-4 w-4" />
-                  {player.city}, {player.state}
+                  {player.state}
                 </div>
               )}
               {player.fideId && (
@@ -53,7 +52,7 @@ const PlayerProfileHeader: React.FC<PlayerProfileHeaderProps> = ({
             </div>
           </div>
         </div>
-        
+
         {isRatingOfficer && (
           <Button variant="outline" onClick={onEditClick}>
             <Edit className="h-4 w-4 mr-2" />

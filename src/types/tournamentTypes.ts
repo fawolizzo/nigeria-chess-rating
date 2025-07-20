@@ -1,4 +1,3 @@
-
 export interface TournamentFormData {
   name: string;
   description?: string;
@@ -23,7 +22,13 @@ export interface Tournament {
   city: string;
   state: string;
   organizer_id: string;
-  status: "pending" | "approved" | "rejected" | "ongoing" | "completed" | "processed";
+  status:
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'ongoing'
+    | 'completed'
+    | 'processed';
   time_control: string;
   rounds: number;
   current_round: number;
@@ -32,7 +37,7 @@ export interface Tournament {
   players?: any[];
   pairings?: any[];
   results?: any[];
-  category?: "classical" | "rapid" | "blitz";
+  category?: 'classical' | 'rapid' | 'blitz';
   created_at?: string;
   updated_at?: string;
 }

@@ -1,16 +1,21 @@
-
-import React from "react";
-import { UseFormReturn } from "react-hook-form";
+import React from 'react';
+import { UseFormReturn } from 'react-hook-form';
 import {
   FormControl,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 interface TournamentConfigFieldsProps {
   form: UseFormReturn<any>;
@@ -28,11 +33,11 @@ export const TournamentConfigFields: React.FC<TournamentConfigFieldsProps> = ({
   watchTimeControl,
 }) => {
   const timeControlOptions = [
-    { value: "90+30", label: "90 minutes + 30 seconds (Classical)" },
-    { value: "25+10", label: "25 minutes + 10 seconds (Rapid)" },
-    { value: "5+3", label: "5 minutes + 3 seconds (Blitz)" },
-    { value: "3+2", label: "3 minutes + 2 seconds (Blitz)" },
-    { value: "custom", label: "Custom Time Control" },
+    { value: '90+30', label: '90 minutes + 30 seconds (Classical)' },
+    { value: '25+10', label: '25 minutes + 10 seconds (Rapid)' },
+    { value: '5+3', label: '5 minutes + 3 seconds (Blitz)' },
+    { value: '3+2', label: '3 minutes + 2 seconds (Blitz)' },
+    { value: 'custom', label: 'Custom Time Control' },
   ];
 
   return (
@@ -44,10 +49,10 @@ export const TournamentConfigFields: React.FC<TournamentConfigFieldsProps> = ({
           <FormItem>
             <FormLabel>Number of Rounds *</FormLabel>
             <FormControl>
-              <Input 
-                type="number" 
-                min="1" 
-                max="20" 
+              <Input
+                type="number"
+                min="1"
+                max="20"
                 {...field}
                 onChange={(e) => field.onChange(parseInt(e.target.value))}
               />
@@ -63,10 +68,13 @@ export const TournamentConfigFields: React.FC<TournamentConfigFieldsProps> = ({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Time Control *</FormLabel>
-            <Select onValueChange={(value) => {
-              field.onChange(value);
-              updateCustomTimeControlState(value);
-            }} defaultValue={field.value}>
+            <Select
+              onValueChange={(value) => {
+                field.onChange(value);
+                updateCustomTimeControlState(value);
+              }}
+              defaultValue={field.value}
+            >
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select time control" />
@@ -93,7 +101,7 @@ export const TournamentConfigFields: React.FC<TournamentConfigFieldsProps> = ({
             <FormItem className="md:col-span-2">
               <FormLabel>Custom Time Control *</FormLabel>
               <FormControl>
-                <Input 
+                <Input
                   placeholder="e.g., 60+15 (format: minutes+increment)"
                   {...field}
                 />
@@ -110,18 +118,13 @@ export const TournamentConfigFields: React.FC<TournamentConfigFieldsProps> = ({
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 md:col-span-2">
             <div className="space-y-0.5">
-              <FormLabel className="text-base">
-                Open Registration
-              </FormLabel>
+              <FormLabel className="text-base">Open Registration</FormLabel>
               <div className="text-sm text-muted-foreground">
                 Allow players to register for this tournament
               </div>
             </div>
             <FormControl>
-              <Switch
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
             </FormControl>
           </FormItem>
         )}

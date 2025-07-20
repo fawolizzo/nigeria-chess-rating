@@ -1,23 +1,30 @@
-
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { format } from 'date-fns';
-import { useUser } from "@/contexts/UserContext";
-import { Badge } from "@/components/ui/badge";
+import { useUser } from '@/contexts/UserContext';
+import { Badge } from '@/components/ui/badge';
 
 const ApprovedOrganizers: React.FC = () => {
   const { users } = useUser();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [approvedOrganizers, setApprovedOrganizers] = useState<any[]>([]);
 
   useEffect(() => {
     // Filter approved tournament organizers
     const filtered = users.filter(
-      (user) => user.role === "tournament_organizer" && user.status === "approved"
+      (user) =>
+        user.role === 'tournament_organizer' && user.status === 'approved'
     );
     setApprovedOrganizers(filtered);
   }, [users]);
@@ -33,7 +40,9 @@ const ApprovedOrganizers: React.FC = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl font-semibold">Approved Tournament Organizers</CardTitle>
+        <CardTitle className="text-xl font-semibold">
+          Approved Tournament Organizers
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
@@ -67,16 +76,24 @@ const ApprovedOrganizers: React.FC = () => {
               <TableBody>
                 {filteredOrganizers.map((organizer) => (
                   <TableRow key={organizer.id}>
-                    <TableCell className="font-medium">{organizer.fullName}</TableCell>
+                    <TableCell className="font-medium">
+                      {organizer.fullName}
+                    </TableCell>
                     <TableCell>{organizer.email}</TableCell>
                     <TableCell>{organizer.state}</TableCell>
                     <TableCell>
-                      {organizer.approvalDate 
-                        ? format(new Date(organizer.approvalDate), 'MMM dd, yyyy') 
+                      {organizer.approvalDate
+                        ? format(
+                            new Date(organizer.approvalDate),
+                            'MMM dd, yyyy'
+                          )
                         : 'Unknown date'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Badge
+                        variant="outline"
+                        className="bg-green-50 text-green-700 border-green-200"
+                      >
                         Approved
                       </Badge>
                     </TableCell>

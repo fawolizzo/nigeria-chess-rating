@@ -1,4 +1,3 @@
-
 import { logMessage, LogLevel } from './debugLogger';
 
 /**
@@ -19,21 +18,24 @@ export const monitorSync = async <T>(
   let isTimedOut = false;
 
   try {
-    logMessage(LogLevel.INFO, 'MonitorSync', `Starting monitoring for ${operation} (${context})`);
+    logMessage(
+      LogLevel.INFO,
+      'MonitorSync',
+      `Starting monitoring for ${operation} (${context})`
+    );
 
     // Create a timeout promise
     const timeoutPromise = new Promise<T>((_, reject) => {
       timeoutId = setTimeout(() => {
         isTimedOut = true;
-        reject(new Error(`Operation ${operation} timed out after ${timeoutMs}ms`));
+        reject(
+          new Error(`Operation ${operation} timed out after ${timeoutMs}ms`)
+        );
       }, timeoutMs);
     });
 
     // Race between the sync function and the timeout
-    const result = await Promise.race([
-      syncFunction(),
-      timeoutPromise
-    ]);
+    const result = await Promise.race([syncFunction(), timeoutPromise]);
 
     // Clear the timeout if it's still active
     if (timeoutId) {
@@ -41,7 +43,11 @@ export const monitorSync = async <T>(
       timeoutId = null;
     }
 
-    logMessage(LogLevel.INFO, 'MonitorSync', `Completed monitoring for ${operation} (${context})`);
+    logMessage(
+      LogLevel.INFO,
+      'MonitorSync',
+      `Completed monitoring for ${operation} (${context})`
+    );
     return result;
   } catch (error) {
     // Clear the timeout if it's still active
@@ -52,11 +58,20 @@ export const monitorSync = async <T>(
 
     // Log the error
     if (isTimedOut) {
-      logMessage(LogLevel.ERROR, 'MonitorSync', `Operation ${operation} (${context}) timed out after ${timeoutMs}ms`);
+      logMessage(
+        LogLevel.ERROR,
+        'MonitorSync',
+        `Operation ${operation} (${context}) timed out after ${timeoutMs}ms`
+      );
     } else {
-      logMessage(LogLevel.ERROR, 'MonitorSync', `Error during ${operation} (${context}):`, error);
+      logMessage(
+        LogLevel.ERROR,
+        'MonitorSync',
+        `Error during ${operation} (${context}):`,
+        error
+      );
     }
-    
+
     throw error;
   }
 };
@@ -86,7 +101,11 @@ export const withTimeout = async <T>(
     timeoutId = setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
-        logMessage(LogLevel.WARNING, 'withTimeout', `${operationName} timed out after ${timeoutMs}ms`);
+        logMessage(
+          LogLevel.WARNING,
+          'withTimeout',
+          `${operationName} timed out after ${timeoutMs}ms`
+        );
         if (onTimeout) onTimeout();
         resolve(undefined);
       }
@@ -104,7 +123,12 @@ export const withTimeout = async <T>(
       .catch((error) => {
         if (!isResolved) {
           isResolved = true;
-          logMessage(LogLevel.ERROR, 'withTimeout', `Error in ${operationName}:`, error);
+          logMessage(
+            LogLevel.ERROR,
+            'withTimeout',
+            `Error in ${operationName}:`,
+            error
+          );
           if (timeoutId) clearTimeout(timeoutId);
           resolve(undefined);
         }

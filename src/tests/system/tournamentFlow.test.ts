@@ -1,12 +1,11 @@
-
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { Tournament, Player } from "@/lib/mockData";
-import { 
-  createTournament, 
-  getAllTournaments, 
+import { Tournament, Player } from '@/lib/mockData';
+import {
+  createTournament,
+  getAllTournaments,
   getTournamentById,
-  addPlayerToTournament 
-} from "@/services/tournamentService";
+  addPlayerToTournament,
+} from '@/services/tournamentService';
 
 describe('Tournament Flow Tests', () => {
   let mockTournament: Tournament;
@@ -15,7 +14,7 @@ describe('Tournament Flow Tests', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
-    
+
     mockPlayer = {
       id: 'player-1',
       name: 'Test Player',
@@ -31,7 +30,7 @@ describe('Tournament Flow Tests', () => {
       gamesPlayed: 5,
       created_at: new Date().toISOString(),
       gender: 'M',
-      country: 'Nigeria'
+      country: 'Nigeria',
     };
 
     mockTournament = {
@@ -54,7 +53,7 @@ describe('Tournament Flow Tests', () => {
       registration_open: true,
       players: [],
       pairings: [],
-      results: []
+      results: [],
     };
   });
 
@@ -80,7 +79,9 @@ describe('Tournament Flow Tests', () => {
 
   it('should add a player to a tournament', async () => {
     await createTournament(mockTournament);
-    const success = await addPlayerToTournament(mockTournament.id, [mockPlayer]);
+    const success = await addPlayerToTournament(mockTournament.id, [
+      mockPlayer,
+    ]);
     expect(success).toBe(true);
 
     const tournament = await getTournamentById(mockTournament.id);

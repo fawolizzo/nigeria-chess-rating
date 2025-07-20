@@ -1,17 +1,16 @@
-
 // This file manages the toast state and reducer logic
 
-type ToastActionType = 
-  | "ADD_TOAST" 
-  | "UPDATE_TOAST" 
-  | "DISMISS_TOAST" 
-  | "REMOVE_TOAST";
+type ToastActionType =
+  | 'ADD_TOAST'
+  | 'UPDATE_TOAST'
+  | 'DISMISS_TOAST'
+  | 'REMOVE_TOAST';
 
 export const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
+  ADD_TOAST: 'ADD_TOAST',
+  UPDATE_TOAST: 'UPDATE_TOAST',
+  DISMISS_TOAST: 'DISMISS_TOAST',
+  REMOVE_TOAST: 'REMOVE_TOAST',
 } as const;
 
 export type ToasterToast = {
@@ -21,7 +20,7 @@ export type ToasterToast = {
   action?: ToastActionElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  variant?: "default" | "destructive" | "warning";
+  variant?: 'default' | 'destructive' | 'warning';
   duration?: number;
 };
 

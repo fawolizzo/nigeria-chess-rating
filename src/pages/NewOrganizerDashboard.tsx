@@ -1,7 +1,6 @@
-
-import React from "react";
-import Navbar from "@/components/Navbar";
-import NewOrganizerDashboard from "@/components/organizer/NewOrganizerDashboard";
+import React from 'react';
+import Navbar from '@/components/Navbar';
+import NewOrganizerDashboard from '@/components/organizer/NewOrganizerDashboard';
 
 export default function NewOrganizerDashboardPage() {
   return (

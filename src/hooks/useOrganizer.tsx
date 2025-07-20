@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/user';
 import { Tournament } from '@/types/tournamentTypes';
@@ -12,10 +11,12 @@ export const useOrganizer = () => {
   const { currentUser, isLoading, refreshUserData } = useUser();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isLoadingTournaments, setIsLoadingTournaments] = useState<boolean>(false);
+  const [isLoadingTournaments, setIsLoadingTournaments] =
+    useState<boolean>(false);
 
   // Filter current user to ensure it's an organizer
-  const organizer = currentUser?.role === 'tournament_organizer' ? currentUser : null;
+  const organizer =
+    currentUser?.role === 'tournament_organizer' ? currentUser : null;
 
   // Load tournaments for the current organizer
   useEffect(() => {
@@ -32,7 +33,7 @@ export const useOrganizer = () => {
         // In a real app, you'd fetch tournaments from an API or database
         // For now we'll use mock data - we'll assume tournaments would be fetched elsewhere
         // and are not directly on the user object
-        
+
         // Mock empty tournaments array for now
         setTournaments([]);
       } catch (err) {

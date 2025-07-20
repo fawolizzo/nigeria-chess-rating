@@ -3,10 +3,12 @@ import { logMessage, LogLevel, logUserEvent } from '@/utils/debugLogger';
 import { supabase } from '@/integrations/supabase/client';
 import { sendEmailToUser } from './emailOperations';
 
-const DEFAULT_ACCESS_CODE = "RNCR25";
+const DEFAULT_ACCESS_CODE = 'RNCR25';
 
 export const registerUser = async (
-  userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' },
+  userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & {
+    status?: 'pending' | 'approved' | 'rejected';
+  },
   setUsers: React.Dispatch<React.SetStateAction<User[]>>,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
   _forceSyncAllStorage: (keys?: string[]) => Promise<boolean>,
@@ -27,11 +29,16 @@ export const registerUser = async (
             state: userData.state,
             role: 'rating_officer',
             status: 'approved',
-          }
-        }
+          },
+        },
       });
       if (error) {
-        logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
+        logMessage(
+          LogLevel.ERROR,
+          'RegisterOperations',
+          'Registration error:',
+          error
+        );
         throw new Error(error.message || 'Registration failed');
       }
       const user = data.user;
@@ -45,7 +52,7 @@ export const registerUser = async (
         status: 'approved',
         registrationDate: user?.created_at || new Date().toISOString(),
         lastModified: Date.now(),
-        accessCode: userData.accessCode || DEFAULT_ACCESS_CODE
+        accessCode: userData.accessCode || DEFAULT_ACCESS_CODE,
       };
       // Send access code email
       await sendEmailToUser(
@@ -69,12 +76,17 @@ export const registerUser = async (
             ...(userData.phoneNumber ? { phone: userData.phoneNumber } : {}),
             role: 'tournament_organizer',
             status: userData.status || 'pending',
-          }
+          },
         ])
         .select()
         .single();
       if (error) {
-        logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
+        logMessage(
+          LogLevel.ERROR,
+          'RegisterOperations',
+          'Registration error:',
+          error
+        );
         throw new Error(error.message || 'Registration failed');
       }
       newUser = {
@@ -84,7 +96,7 @@ export const registerUser = async (
         phoneNumber: data.phone || '',
         state: '', // Add state if available in data
         role: 'tournament_organizer',
-        status: (data.status as 'pending' | 'approved' | 'rejected'),
+        status: data.status as 'pending' | 'approved' | 'rejected',
         registrationDate: data.created_at,
         lastModified: Date.now(),
       };
@@ -110,12 +122,17 @@ export const registerUser = async (
       logUserEvent('register', newUser.id, {
         email: newUser.email,
         role: newUser.role,
-        status: newUser.status
+        status: newUser.status,
       });
     }
     return true;
   } catch (error: any) {
-    logMessage(LogLevel.ERROR, 'RegisterOperations', 'Registration error:', error);
+    logMessage(
+      LogLevel.ERROR,
+      'RegisterOperations',
+      'Registration error:',
+      error
+    );
     throw error;
   } finally {
     setIsLoading(false);

@@ -1,8 +1,7 @@
-
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import { Tournament } from "@/types/tournamentTypes";
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { Tournament } from '@/types/tournamentTypes';
 
 interface TournamentGridProps {
   tournaments: Tournament[];
@@ -14,7 +13,9 @@ export function TournamentGrid({ tournaments }: TournamentGridProps) {
   if (tournaments.length === 0) {
     return (
       <Card className="p-6 text-center">
-        <p className="text-gray-600">No tournaments yet. Create your first tournament!</p>
+        <p className="text-gray-600">
+          No tournaments yet. Create your first tournament!
+        </p>
       </Card>
     );
   }

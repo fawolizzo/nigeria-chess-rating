@@ -1,15 +1,14 @@
-
-import { Search, X, Filter } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { 
+import { Search, X, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
   Popover,
   PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
-import StateSelector from "@/components/selectors/StateSelector";
-import CitySelector from "@/components/selectors/CitySelector";
-import { useState } from "react";
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import StateSelector from '@/components/selectors/StateSelector';
+import CitySelector from '@/components/selectors/CitySelector';
+import { useState } from 'react';
 
 interface PlayerSearchInputProps {
   searchQuery: string;
@@ -22,9 +21,9 @@ interface PlayerSearchInputProps {
 export const PlayerSearchInput = ({
   searchQuery,
   setSearchQuery,
-  placeholder = "Search players by name, title, rating...",
+  placeholder = 'Search players by name, title, rating...',
   onFilterChange,
-  showFilters = false
+  showFilters = false,
 }: PlayerSearchInputProps) => {
   const [selectedState, setSelectedState] = useState<string | undefined>();
   const [selectedCity, setSelectedCity] = useState<string | undefined>();
@@ -67,7 +66,7 @@ export const PlayerSearchInput = ({
             variant="ghost"
             size="icon"
             className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-            onClick={() => setSearchQuery("")}
+            onClick={() => setSearchQuery('')}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -77,10 +76,14 @@ export const PlayerSearchInput = ({
       {showFilters && (
         <Popover>
           <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="icon"
-              className={selectedState || selectedCity ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100" : ""}
+              className={
+                selectedState || selectedCity
+                  ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                  : ''
+              }
             >
               <Filter className="h-4 w-4" />
             </Button>
@@ -88,7 +91,7 @@ export const PlayerSearchInput = ({
           <PopoverContent className="w-80 p-4">
             <div className="space-y-4">
               <h4 className="font-medium text-sm">Filter Players</h4>
-              
+
               <div className="space-y-2">
                 <label className="text-sm">State</label>
                 <StateSelector
@@ -97,7 +100,7 @@ export const PlayerSearchInput = ({
                   className="w-full"
                 />
               </div>
-              
+
               {selectedState && (
                 <div className="space-y-2">
                   <label className="text-sm">City</label>
@@ -109,11 +112,11 @@ export const PlayerSearchInput = ({
                   />
                 </div>
               )}
-              
+
               <div className="flex justify-end">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={clearFilters}
                   disabled={!selectedState && !selectedCity}
                 >

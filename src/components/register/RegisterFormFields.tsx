@@ -1,19 +1,31 @@
-
-import { User, Mail, Phone, Map, Lock } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { getAllStates } from "@/lib/nigerianStates";
-import { UseFormReturn } from "react-hook-form";
-import { RegisterFormData } from "./RegisterFormSchema";
+import { User, Mail, Phone, Map, Lock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { getAllStates } from '@/lib/nigerianStates';
+import { UseFormReturn } from 'react-hook-form';
+import { RegisterFormData } from './RegisterFormSchema';
 
 interface RegisterFormFieldsProps {
   form: UseFormReturn<RegisterFormData>;
 }
 
 const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
-  const selectedRole = form.watch("role");
-  const isRatingOfficer = selectedRole === "rating_officer";
+  const selectedRole = form.watch('role');
+  const isRatingOfficer = selectedRole === 'rating_officer';
 
   return (
     <>
@@ -26,9 +38,9 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
             <FormControl>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input 
-                  placeholder="Enter your full name" 
-                  className="pl-10" 
+                <Input
+                  placeholder="Enter your full name"
+                  className="pl-10"
                   {...field}
                 />
               </div>
@@ -37,7 +49,7 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="email"
@@ -47,9 +59,9 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
             <FormControl>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input 
-                  placeholder="Enter your email address" 
-                  className="pl-10" 
+                <Input
+                  placeholder="Enter your email address"
+                  className="pl-10"
                   type="email"
                   {...field}
                 />
@@ -59,7 +71,7 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="phoneNumber"
@@ -69,9 +81,9 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
             <FormControl>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input 
-                  placeholder="Enter your phone number" 
-                  className="pl-10" 
+                <Input
+                  placeholder="Enter your phone number"
+                  className="pl-10"
                   {...field}
                 />
               </div>
@@ -80,17 +92,14 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={form.control}
         name="state"
         render={({ field }) => (
           <FormItem>
             <FormLabel>State</FormLabel>
-            <Select 
-              onValueChange={field.onChange} 
-              defaultValue={field.value}
-            >
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <div className="relative">
                   <Map className="absolute left-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -111,7 +120,7 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
           </FormItem>
         )}
       />
-      
+
       {/* Only show password fields for tournament organizers */}
       {!isRatingOfficer && (
         <>
@@ -124,9 +133,9 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input 
-                      placeholder="Create a password" 
-                      className="pl-10" 
+                    <Input
+                      placeholder="Create a password"
+                      className="pl-10"
                       type="password"
                       {...field}
                     />
@@ -136,7 +145,7 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="confirmPassword"
@@ -146,9 +155,9 @@ const RegisterFormFields = ({ form }: RegisterFormFieldsProps) => {
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input 
-                      placeholder="Confirm your password" 
-                      className="pl-10" 
+                    <Input
+                      placeholder="Confirm your password"
+                      className="pl-10"
                       type="password"
                       {...field}
                     />

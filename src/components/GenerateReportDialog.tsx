@@ -1,19 +1,24 @@
-
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { FileText, Download, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Tournament, Player } from "@/lib/mockData";
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { FileText, Download, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Tournament, Player } from '@/lib/mockData';
 
 interface GenerateReportDialogProps {
   tournament: Tournament;
   players: Player[];
 }
 
-const GenerateReportDialog: React.FC<GenerateReportDialogProps> = ({ 
-  tournament, 
-  players 
+const GenerateReportDialog: React.FC<GenerateReportDialogProps> = ({
+  tournament,
+  players,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -23,8 +28,8 @@ const GenerateReportDialog: React.FC<GenerateReportDialogProps> = ({
     setIsGenerating(true);
     try {
       // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // Create a simple text report
       const reportContent = `
 Tournament Report: ${tournament.name}
@@ -49,17 +54,17 @@ ${players.map((player, index) => `${index + 1}. ${player.name} (Rating: ${player
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: "Report Generated",
-        description: "Tournament report has been downloaded successfully.",
+        title: 'Report Generated',
+        description: 'Tournament report has been downloaded successfully.',
       });
-      
+
       setIsOpen(false);
     } catch (error) {
-      console.error("Error generating report:", error);
+      console.error('Error generating report:', error);
       toast({
-        title: "Error",
-        description: "Failed to generate report. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to generate report. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsGenerating(false);
@@ -78,10 +83,12 @@ ${players.map((player, index) => `${index + 1}. ${player.name} (Rating: ${player
         <DialogHeader>
           <DialogTitle>Generate Tournament Report</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="text-sm text-muted-foreground">
-            <p>Generate a comprehensive report for this tournament including:</p>
+            <p>
+              Generate a comprehensive report for this tournament including:
+            </p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Tournament details and standings</li>
               <li>Player roster and ratings</li>
@@ -89,7 +96,7 @@ ${players.map((player, index) => `${index + 1}. ${player.name} (Rating: ${player
               <li>Rating changes for each player</li>
             </ul>
           </div>
-          
+
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel

@@ -1,25 +1,20 @@
-
-import React from "react";
-import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
-import { DashboardLoadingState } from "@/components/dashboard/DashboardLoadingState";
-import { DashboardErrorState } from "@/components/dashboard/DashboardErrorState";
-import { useDashboard } from "@/contexts/officer/OfficerDashboardContext";
-import OfficerDashboardTabs from "../OfficerDashboardTabs";
+import React from 'react';
+import { DashboardErrorBoundary } from '@/components/dashboard/DashboardErrorBoundary';
+import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingState';
+import { DashboardErrorState } from '@/components/dashboard/DashboardErrorState';
+import { useDashboard } from '@/contexts/officer/OfficerDashboardContext';
+import OfficerDashboardTabs from '../OfficerDashboardTabs';
 
 export const DashboardContainer: React.FC = () => {
-  const { 
-    isLoading, 
-    hasError, 
-    errorMessage, 
-    refreshDashboard 
-  } = useDashboard();
-  
+  const { isLoading, hasError, errorMessage, refreshDashboard } =
+    useDashboard();
+
   // Show loading state when data is loading
   if (isLoading) {
     return (
-      <DashboardLoadingState 
-        progress={50} 
-        message="Loading dashboard data..." 
+      <DashboardLoadingState
+        progress={50}
+        message="Loading dashboard data..."
       />
     );
   }

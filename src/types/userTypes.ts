@@ -28,9 +28,17 @@ export interface UserContextType {
   currentUser: User | null;
   users: User[];
   isLoading: boolean;
-  login: (email: string, authValue: string, role: 'tournament_organizer' | 'rating_officer') => Promise<boolean>;
+  login: (
+    email: string,
+    authValue: string,
+    role: 'tournament_organizer' | 'rating_officer'
+  ) => Promise<boolean>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & { status?: 'pending' | 'approved' | 'rejected' }) => Promise<boolean>;
+  register: (
+    userData: Omit<User, 'id' | 'registrationDate' | 'lastModified'> & {
+      status?: 'pending' | 'approved' | 'rejected';
+    }
+  ) => Promise<boolean>;
   approveUser: (userId: string) => void;
   rejectUser: (userId: string) => void;
   sendEmail: (to: string, subject: string, html: string) => Promise<boolean>;
@@ -58,15 +66,15 @@ export enum SyncEventType {
   APPROVAL = 'APPROVAL',
   FORCE_SYNC = 'FORCE_SYNC',
   CLEAR_DATA = 'CLEAR_DATA',
-  SYNC = 'SYNC',           // Add SYNC event type
-  SYNC_REQUEST = 'SYNC_REQUEST'  // Add SYNC_REQUEST event type
+  SYNC = 'SYNC', // Add SYNC event type
+  SYNC_REQUEST = 'SYNC_REQUEST', // Add SYNC_REQUEST event type
 }
 
 // Function to generate a unique device ID
 export const generateDeviceId = (): string => {
   const nav = window.navigator;
   const screen = window.screen;
-  
+
   // Create components for the device fingerprint
   const components = [
     nav.userAgent,
@@ -74,18 +82,20 @@ export const generateDeviceId = (): string => {
     screen.height,
     screen.colorDepth,
     new Date().getTimezoneOffset(),
-    Math.random().toString(36).substring(2, 15) // Add some randomness
+    Math.random().toString(36).substring(2, 15), // Add some randomness
   ].join('|');
-  
+
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < components.length; i++) {
     const char = components.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  
-  return 'device_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(36);
+
+  return (
+    'device_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(36)
+  );
 };
 
 // Function to generate a secure access code
@@ -99,26 +109,36 @@ export const generateAccessCode = (): string => {
 };
 
 // Add this function since it's imported in storageSync.ts
-export const sendSyncMessage = (channel: 'sync' | 'auth', type: SyncEventType, data?: any): void => {
+export const sendSyncMessage = (
+  channel: 'sync' | 'auth',
+  type: SyncEventType,
+  data?: any
+): void => {
   try {
     // Ensure BroadcastChannel exists
     if (typeof BroadcastChannel === 'undefined') {
-      console.warn("[UserTypes] BroadcastChannel not supported in this browser");
+      console.warn(
+        '[UserTypes] BroadcastChannel not supported in this browser'
+      );
       return;
     }
-    
-    const channelName = channel === 'sync' ? 'ncr_sync_channel' : 'ncr_auth_channel';
+
+    const channelName =
+      channel === 'sync' ? 'ncr_sync_channel' : 'ncr_auth_channel';
     const broadcastChannel = new BroadcastChannel(channelName);
-    
+
     broadcastChannel.postMessage({
       type,
       data,
       timestamp: Date.now(),
-      deviceId: localStorage.getItem('ncr_device_id') || 'unknown'
+      deviceId: localStorage.getItem('ncr_device_id') || 'unknown',
     });
-    
+
     broadcastChannel.close();
   } catch (error) {
-    console.error(`[UserTypes] Error sending ${channel} message (${type}):`, error);
+    console.error(
+      `[UserTypes] Error sending ${channel} message (${type}):`,
+      error
+    );
   }
 };

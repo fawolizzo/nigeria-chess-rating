@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Test Players Database</title>
+  </head>
+  <body>
+    <h1>Testing Players Database</h1>
+    <button onclick="testPlayers()">Test Load Players</button>
+    <div id="result"></div>
+
+    <script type="module">
+      import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+      const supabase = createClient(
+        'https://ixqjqfqjqfqjqfqjqfqj.supabase.co', // Replace with your URL
+        'your-anon-key' // Replace with your anon key
+      );
+
+      window.testPlayers = async function () {
+        try {
+          console.log('Testing players database...');
+          const { data, error } = await supabase
+            .from('players')
+            .select('*')
+            .limit(5);
+
+          if (error) {
+            document.getElementById('result').innerHTML =
+              `Error: ${error.message}`;
+            console.error('Error:', error);
+          } else {
+            document.getElementById('result').innerHTML =
+              `Found ${data.length} players: ${JSON.stringify(data, null, 2)}`;
+            console.log('Players:', data);
+          }
+        } catch (err) {
+          document.getElementById('result').innerHTML =
+            `Exception: ${err.message}`;
+          console.error('Exception:', err);
+        }
+      };
+    </script>
+  </body>
+</html>

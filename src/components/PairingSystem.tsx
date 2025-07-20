@@ -1,28 +1,39 @@
-
-import React, { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Loader2, Save } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Player } from "@/lib/mockData";
+import React, { useState, useEffect } from 'react';
+import { Button } from './ui/button';
+import { Loader2, Save } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Player } from '@/lib/mockData';
 
 interface PairingSystemProps {
   players: Player[];
   pairings: Array<{
     whiteId: string;
     blackId: string;
-    result?: "1-0" | "0-1" | "1/2-1/2" | "*";
+    result?: '1-0' | '0-1' | '1/2-1/2' | '*';
   }>;
   roundNumber: number;
   readonly?: boolean;
-  onSaveResults?: (results: Array<{ whiteId: string; blackId: string; result: "1-0" | "0-1" | "1/2-1/2" | "*" }>) => Promise<void>;
+  onSaveResults?: (
+    results: Array<{
+      whiteId: string;
+      blackId: string;
+      result: '1-0' | '0-1' | '1/2-1/2' | '*';
+    }>
+  ) => Promise<void>;
   isProcessing?: boolean; // Add the isProcessing prop
 }
 
 const ResultSelectOptions = [
-  { value: "1-0", label: "1-0 (White Wins)" },
-  { value: "0-1", label: "0-1 (Black Wins)" },
-  { value: "1/2-1/2", label: "½-½ (Draw)" },
-  { value: "*", label: "* (Not Played)" },
+  { value: '1-0', label: '1-0 (White Wins)' },
+  { value: '0-1', label: '0-1 (Black Wins)' },
+  { value: '1/2-1/2', label: '½-½ (Draw)' },
+  { value: '*', label: '* (Not Played)' },
 ];
 
 const PairingSystem: React.FC<PairingSystemProps> = ({
@@ -31,16 +42,18 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
   roundNumber,
   readonly = false,
   onSaveResults,
-  isProcessing = false // Default to false
+  isProcessing = false, // Default to false
 }) => {
-  const [localPairings, setLocalPairings] = useState<Array<{
-    whiteId: string;
-    blackId: string;
-    result: "1-0" | "0-1" | "1/2-1/2" | "*";
-  }>>(
+  const [localPairings, setLocalPairings] = useState<
+    Array<{
+      whiteId: string;
+      blackId: string;
+      result: '1-0' | '0-1' | '1/2-1/2' | '*';
+    }>
+  >(
     pairings.map((pairing) => ({
       ...pairing,
-      result: pairing.result || "*",
+      result: pairing.result || '*',
     }))
   );
 
@@ -51,7 +64,7 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
     setLocalPairings(
       pairings.map((pairing) => ({
         ...pairing,
-        result: pairing.result || "*",
+        result: pairing.result || '*',
       }))
     );
     setHasChanges(false);
@@ -61,7 +74,10 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
     return players.find((player) => player.id === id);
   };
 
-  const handleResultChange = (index: number, result: "1-0" | "0-1" | "1/2-1/2" | "*") => {
+  const handleResultChange = (
+    index: number,
+    result: '1-0' | '0-1' | '1/2-1/2' | '*'
+  ) => {
     const newPairings = [...localPairings];
     newPairings[index].result = result;
     setLocalPairings(newPairings);
@@ -102,20 +118,22 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
                         <td className="py-2">
                           <div className="flex items-center">
                             <div className="font-medium">
-                              {whitePlayer?.name || `Unknown (${pairing.whiteId})`}
+                              {whitePlayer?.name ||
+                                `Unknown (${pairing.whiteId})`}
                             </div>
                             <div className="ml-2 text-gray-500">
-                              {whitePlayer ? `(${whitePlayer.rating})` : ""}
+                              {whitePlayer ? `(${whitePlayer.rating})` : ''}
                             </div>
                           </div>
                         </td>
                         <td className="py-2">
                           <div className="flex items-center">
                             <div className="font-medium">
-                              {blackPlayer?.name || `Unknown (${pairing.blackId})`}
+                              {blackPlayer?.name ||
+                                `Unknown (${pairing.blackId})`}
                             </div>
                             <div className="ml-2 text-gray-500">
-                              {blackPlayer ? `(${blackPlayer.rating})` : ""}
+                              {blackPlayer ? `(${blackPlayer.rating})` : ''}
                             </div>
                           </div>
                         </td>
@@ -124,16 +142,18 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
                             <div
                               className={`px-3 py-1 rounded-md inline-block 
                                 ${
-                                  pairing.result === "1-0"
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                    : pairing.result === "0-1"
-                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                    : pairing.result === "1/2-1/2"
-                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                                  pairing.result === '1-0'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : pairing.result === '0-1'
+                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                      : pairing.result === '1/2-1/2'
+                                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                                 }`}
                             >
-                              {pairing.result === "1/2-1/2" ? "½-½" : pairing.result}
+                              {pairing.result === '1/2-1/2'
+                                ? '½-½'
+                                : pairing.result}
                             </div>
                           ) : (
                             <Select
@@ -141,7 +161,7 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
                               onValueChange={(value) =>
                                 handleResultChange(
                                   index,
-                                  value as "1-0" | "0-1" | "1/2-1/2" | "*"
+                                  value as '1-0' | '0-1' | '1/2-1/2' | '*'
                                 )
                               }
                               disabled={isProcessing}
@@ -151,7 +171,10 @@ const PairingSystem: React.FC<PairingSystemProps> = ({
                               </SelectTrigger>
                               <SelectContent>
                                 {ResultSelectOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
                                     {option.label}
                                   </SelectItem>
                                 ))}

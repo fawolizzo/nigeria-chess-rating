@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast, dismissToast } from './toast-utils';
 import { memoryState, ToastState, listeners } from './toast-state';
