@@ -1,40 +1,116 @@
 # Nigerian Chess Rating System
 
-## Project info
+A comprehensive tournament management and rating system for chess in Nigeria, built with React, TypeScript, and Supabase.
 
-**URL**: https://lovable.dev/projects/58f2ba71-e798-4260-b488-27ea9520843d
+## 🚀 Live Application
 
-## How can I edit this code?
+**Production URL**: [https://nigeriachessrating.com](https://nigeriachessrating.com)
 
-There are several ways of editing your application.
+## 📋 Features
 
-**Use Lovable**
+- **Tournament Management**: Create and manage chess tournaments
+- **Player Registration**: Register players and manage profiles
+- **Swiss Pairing System**: Automatic pairing generation for rounds
+- **Result Entry**: Easy result entry and round management
+- **Rating Calculation**: Nigerian Chess Rating System implementation
+- **PDF Export**: Professional pairings and standings sheets
+- **Mobile Responsive**: Works on all devices
+- **Role-Based Access**: Tournament Organizers and Rating Officers
+- **Email Confirmation**: Secure user registration with email verification
+- **Password Reset**: Self-service password recovery
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/58f2ba71-e798-4260-b488-27ea9520843d) and start prompting.
+## 🛠️ Technology Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, RLS)
+- **PDF Generation**: @react-pdf/renderer
+- **Deployment**: Cloudflare Pages + GitHub Actions
+- **Testing**: Jest, React Testing Library
 
-**Use your preferred IDE**
+## 🏗️ Project Structure
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
 ```
+src/
+├── features/           # Feature-based modules
+│   ├── auth/          # Authentication
+│   ├── tournaments/   # Tournament management
+│   ├── players/       # Player management
+│   ├── ratings/       # Rating calculations
+│   └── pdf/           # PDF export
+├── components/        # Shared UI components
+├── pages/            # Page components
+├── utils/            # Utility functions
+└── integrations/     # External service integrations
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Supabase account (for database)
+
+### Local Development
+
+1. **Clone the repository**
+
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd nigerian-chess-rating-system
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your Supabase credentials
+   ```
+
+4. **Start development server**
+
+   ```bash
+   npm run dev
+   ```
+
+5. **Open in browser**
+   ```
+   http://localhost:5173
+   ```
+
+### Database Setup
+
+1. Create a new Supabase project
+2. Run the migrations in `supabase/migrations/`
+3. Apply the seed data in `supabase/seed/`
+4. Configure authentication settings
+
+## 📦 Deployment
+
+The application is automatically deployed to production using GitHub Actions and Cloudflare Pages.
+
+### Production Deployment
+
+1. **Set up GitHub Secrets**:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `CLOUDFLARE_API_TOKEN`
+   - `CLOUDFLARE_ACCOUNT_ID`
+
+2. **Push to main branch**:
+
+   ```bash
+   git push origin main
+   ```
+
+3. **Automatic deployment** via GitHub Actions
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Running Tests
 

@@ -1,0 +1,10 @@
+# Cloudflare Pages Redirects Configuration
+
+# SPA fallback - serve index.html for all routes
+/*    /index.html   200
+
+# API routes (if using Cloudflare Functions in the future)
+/api/*  /api/:splat  200
+
+# Health check endpoint
+/health  /index.html  200

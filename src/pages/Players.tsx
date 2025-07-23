@@ -170,11 +170,6 @@ const Players = () => {
                     of {allPlayers.length} players
                   </p>
                 )}
-              {/* Debug info */}
-              <div className="mt-2 text-xs text-gray-400">
-                Debug: Loading={isLoading.toString()}, AllPlayers=
-                {allPlayers.length}, Error={error || 'none'}
-              </div>
             </div>
 
             <div className="flex gap-2">

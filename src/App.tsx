@@ -11,15 +11,20 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import About from '@/pages/About';
 import PendingApproval from '@/pages/PendingApproval';
-import SystemTesting from '@/pages/SystemTesting';
-import CrossPlatformTesting from '@/pages/CrossPlatformTesting';
 import Tournaments from '@/pages/Tournaments';
 import TournamentDetails from '@/pages/TournamentDetails';
 import TournamentManagement from '@/pages/TournamentManagement';
 import CreateTournament from '@/pages/CreateTournament';
 import Players from '@/pages/Players';
 import PlayerProfile from '@/pages/PlayerProfile';
-import TestStorage from '@/pages/TestStorage';
+
+// Auth pages
+import ForgotPassword from '@/pages/auth/ForgotPassword';
+import ResetPassword from '@/pages/auth/ResetPassword';
+import ConfirmationSent from '@/pages/auth/ConfirmationSent';
+import ConfirmEmail from '@/pages/auth/ConfirmEmail';
+import RegisterOrganizer from '@/pages/auth/RegisterOrganizer';
+import HealthCheck from '@/pages/HealthCheck';
 
 // Import dashboard components
 import NewOfficerDashboard from '@/pages/NewOfficerDashboard';
@@ -44,6 +49,22 @@ function App() {
               <Route path="/about" element={<About />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
 
+              {/* Auth routes */}
+              <Route
+                path="/auth/forgot-password"
+                element={<ForgotPassword />}
+              />
+              <Route path="/auth/reset-password" element={<ResetPassword />} />
+              <Route
+                path="/auth/confirmation-sent"
+                element={<ConfirmationSent />}
+              />
+              <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
+              <Route
+                path="/register-organizer"
+                element={<RegisterOrganizer />}
+              />
+
               {/* Dashboard routes - use only the new ones */}
               <Route
                 path="/officer-dashboard"
@@ -64,11 +85,6 @@ function App() {
                 element={<Navigate to="/organizer-dashboard" replace />}
               />
 
-              <Route path="/system-testing" element={<SystemTesting />} />
-              <Route
-                path="/cross-platform"
-                element={<CrossPlatformTesting />}
-              />
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:id" element={<TournamentDetails />} />
               <Route
@@ -81,7 +97,7 @@ function App() {
               />
               <Route path="/players" element={<Players />} />
               <Route path="/players/:id" element={<PlayerProfile />} />
-              <Route path="/test-storage" element={<TestStorage />} />
+              <Route path="/health" element={<HealthCheck />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
