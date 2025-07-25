@@ -9,8 +9,8 @@ export const config = {
 
   // Supabase configuration
   supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL || '',
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    url: 'https://caagbqzwkgfhtzyizyzy.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhYWdicXp3a2dmaHR6eWl6eXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2NzM4NzEsImV4cCI6MjA1NjI0OTg3MX0.tGKwRfauviZoFCaf0-QD5T7VWW0cfZsOnwb9qnzIrlE',
   },
 
   // Feature flags

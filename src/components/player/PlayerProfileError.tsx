@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import { forceSyncAllStorage } from '@/utils/storageUtils';
+// import { forceSyncAllStorage } from '@/utils/storageUtils';
 
 interface PlayerProfileErrorProps {
   error: string | null;
@@ -56,7 +56,7 @@ const PlayerProfileError: React.FC<PlayerProfileErrorProps> = ({
       }
 
       // Force sync storage
-      forceSyncAllStorage();
+      // forceSyncAllStorage();
 
       // Log diagnostic information
       const diagnosticReport = {
