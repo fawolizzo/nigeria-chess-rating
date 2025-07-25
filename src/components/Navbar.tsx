@@ -11,13 +11,14 @@ import {
   User,
   Settings,
 } from 'lucide-react';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import Logo from './Logo';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { currentUser, logout } = useUser();
+  const { user, profile, signOut } = useAuth();
+  const currentUser = user ? { ...user, ...profile } : null;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -28,8 +29,8 @@ const Navbar = () => {
     { path: '/about', label: 'About', icon: Trophy },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     setIsOpen(false);
   };
 

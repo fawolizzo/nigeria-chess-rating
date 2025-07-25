@@ -2,105 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { logUserEvent, LogLevel, logMessage } from '@/utils/debugLogger';
-import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { RegisterFormData } from '@/components/register/RegisterFormSchema';
 
-// Default rating officer email
-const DEFAULT_RATING_OFFICER_EMAIL = 'fawolizzo@gmail.com';
-
-export const useRegistrationSubmit = (
-  accessCode: string,
-  isAccessCodeValid: boolean,
-  RATING_OFFICER_ACCESS_CODE: string
-) => {
+export const useRegistrationSubmit = () => {
   const navigate = useNavigate();
-  const { register: registerInLocalSystem } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [registrationAttempts, setRegistrationAttempts] = useState(0);
   const { toast } = useToast();
-
-  // Validate access code for rating officers
-  const validateRatingOfficerAccessCode = (role: string): boolean => {
-    if (role === 'rating_officer') {
-      if (accessCode !== RATING_OFFICER_ACCESS_CODE) {
-        setErrorMessage('Invalid access code for Rating Officer registration');
-        toast({
-          title: 'Invalid Access Code',
-          description:
-            'Please enter a valid access code for Rating Officer registration',
-          variant: 'destructive',
-        });
-        return false;
-      }
-    }
-    return true;
-  };
-
-  // Validate password for tournament organizers
-  const validateTournamentOrganizerPassword = (
-    data: RegisterFormData
-  ): boolean => {
-    if (data.role === 'tournament_organizer' && !data.password) {
-      setErrorMessage(
-        'Password is required for Tournament Organizer registration'
-      );
-      toast({
-        title: 'Password Required',
-        description:
-          'Please enter a password for your Tournament Organizer account',
-        variant: 'destructive',
-      });
-      return false;
-    }
-    return true;
-  };
-
-  // Register a rating officer (directly in local system only)
-  const registerRatingOfficer = async (
-    normalizedData: any
-  ): Promise<boolean> => {
-    try {
-      logMessage(
-        LogLevel.INFO,
-        'RegistrationSubmit',
-        `Attempting to register rating officer with email: ${normalizedData.email}`
-      );
-
-      // For Rating Officers in UAT, use the email provided by the user
-      const success = await registerInLocalSystem({
-        fullName: normalizedData.fullName,
-        email: normalizedData.email, // Use the user-provided email
-        phoneNumber: normalizedData.phoneNumber,
-        state: normalizedData.state,
-        role: 'rating_officer' as const,
-        status: 'approved' as const,
-        accessCode: RATING_OFFICER_ACCESS_CODE,
-      });
-
-      if (!success) {
-        throw new Error('Failed to register Rating Officer in local system');
-      }
-
-      logMessage(
-        LogLevel.INFO,
-        'RegistrationSubmit',
-        `Successfully registered rating officer: ${normalizedData.email}`
-      );
-      return true;
-    } catch (error) {
-      console.error('Error registering rating officer:', error);
-      logMessage(
-        LogLevel.ERROR,
-        'RegistrationSubmit',
-        `Error registering rating officer: ${normalizedData.email}`,
-        error
-      );
-      throw error;
-    }
-  };
 
   // Register a tournament organizer
   const registerTournamentOrganizer = async (
@@ -131,15 +42,6 @@ export const useRegistrationSubmit = (
         throw new Error('Registration failed - no user data returned');
       }
 
-      // Then register in local system as backup
-      await registerInLocalSystem({
-        fullName: normalizedData.fullName,
-        email: normalizedData.email,
-        phoneNumber: normalizedData.phoneNumber,
-        state: normalizedData.state,
-        role: 'tournament_organizer' as const,
-        status: 'pending' as const,
-      });
 
       return true;
     } catch (error) {
@@ -255,18 +157,6 @@ export const useRegistrationSubmit = (
 
       setRegistrationAttempts((prev) => prev + 1);
 
-      // Check access code for rating officers
-      if (!validateRatingOfficerAccessCode(data.role)) {
-        setIsSubmitting(false);
-        return false;
-      }
-
-      // Validate password for tournament organizers
-      if (!validateTournamentOrganizerPassword(data)) {
-        setIsSubmitting(false);
-        return false;
-      }
-
       // Show immediate feedback that submission is processing
       toast({
         title: 'Processing',
@@ -288,15 +178,9 @@ export const useRegistrationSubmit = (
 
       let success = false;
 
-      if (data.role === 'rating_officer') {
-        console.log('Attempting to register rating officer...');
-        success = await registerRatingOfficer(normalizedData);
-        console.log('Rating officer registration result:', success);
-      } else {
-        console.log('Attempting to register tournament organizer...');
-        success = await registerTournamentOrganizer(normalizedData);
-        console.log('Tournament organizer registration result:', success);
-      }
+      console.log('Attempting to register tournament organizer...');
+      success = await registerTournamentOrganizer(normalizedData);
+      console.log('Tournament organizer registration result:', success);
 
       if (success) {
         return handleRegistrationSuccess(data.role, data.email);
@@ -309,13 +193,6 @@ export const useRegistrationSubmit = (
     } catch (error: any) {
       console.error('Registration error caught in handleSubmit:', error);
 
-      // Special case for Rating Officer - always succeed regardless of Supabase errors
-      if (data.role === 'rating_officer') {
-        console.log(
-          'Rating officer registration - proceeding with success flow'
-        );
-        return handleRegistrationSuccess(data.role, data.email);
-      }
 
       return handleRegistrationError(error);
     } finally {

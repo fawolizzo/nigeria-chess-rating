@@ -16,12 +16,7 @@ const RegisterForm = () => {
     isSubmitting,
     successMessage,
     errorMessage,
-    showAccessCode,
-    accessCode,
-    isAccessCodeValid,
     isSubmitDisabled,
-    handleShowAccessCode,
-    setAccessCode,
     onSubmit,
   } = useRegisterForm();
 
@@ -132,36 +127,12 @@ const RegisterForm = () => {
             onRoleSelect={(role) => {
               console.log('Role selected:', role);
               form.setValue('role', role);
-              handleShowAccessCode(role);
             }}
           />
 
           <input type="hidden" {...form.register('role')} />
 
           <RegisterFormFields form={form} />
-
-          {showAccessCode && (
-            <>
-              <AccessCodeInput
-                accessCode={accessCode}
-                isAccessCodeValid={isAccessCodeValid}
-                onChange={(value) => {
-                  console.log('Access code changed:', value);
-                  setAccessCode(value);
-                }}
-              />
-
-              {!isAccessCodeValid && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md flex items-start">
-                  <Info className="h-5 w-5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                  <p className="ml-3 text-sm text-amber-700 dark:text-amber-300">
-                    To create a Rating Officer account, you must enter the valid
-                    access code: <strong>RNCR25</strong>
-                  </p>
-                </div>
-              )}
-            </>
-          )}
 
           <Button
             type="submit"
