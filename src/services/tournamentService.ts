@@ -17,9 +17,9 @@ export const createTournament = async (
   };
 
   try {
-    const tournaments = getFromStorage('tournaments', []);
+    const tournaments = (await getFromStorage('tournaments', [])) || [];
     tournaments.push(newTournament);
-    saveToStorage('tournaments', tournaments);
+    await saveToStorage('tournaments', tournaments);
     return newTournament;
   } catch (error) {
     console.error('Error creating tournament:', error);

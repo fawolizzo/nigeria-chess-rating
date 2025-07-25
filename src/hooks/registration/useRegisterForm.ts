@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema } from '@/components/register/RegisterFormSchema';
+import { useAccessCode } from './useAccessCode';
 import { useRegistrationSubmit } from './useRegistrationSubmit';
 import type { RegisterFormData } from '@/components/register/RegisterFormSchema';
 
@@ -21,8 +22,6 @@ export const useRegisterForm = () => {
     },
   });
 
-  const selectedRole = form.watch('role');
-
   const onSubmit = async (data: RegisterFormData) => {
     return handleSubmit(data);
   };
@@ -31,7 +30,6 @@ export const useRegisterForm = () => {
 
   return {
     form,
-    selectedRole,
     isSubmitting,
     successMessage,
     errorMessage,

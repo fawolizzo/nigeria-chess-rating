@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/contexts/UserContext';
+import { supabase } from '@/integrations/supabase/client';
 import OrganizerApprovalList from '@/components/OrganizerApprovalList';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 
@@ -10,22 +10,35 @@ interface OrganizerApprovalsProps {
 const OrganizerApprovals: React.FC<OrganizerApprovalsProps> = ({
   onApprovalUpdate,
 }) => {
-  const { users, approveUser, rejectUser } = useUser();
   const [pendingOrganizers, setPendingOrganizers] = useState<any[]>([]);
 
-  // Get pending tournament organizers whenever users change
   useEffect(() => {
-    const filteredOrganizers = users.filter(
-      (user) =>
-        user.role === 'tournament_organizer' && user.status === 'pending'
-    );
-    setPendingOrganizers(filteredOrganizers);
-    logMessage(
-      LogLevel.INFO,
-      'OrganizerApprovals',
-      `Found ${filteredOrganizers.length} pending organizers`
-    );
-  }, [users]);
+    const fetchPendingOrganizers = async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'tournament_organizer')
+        .eq('status', 'pending');
+
+      if (error) {
+        logMessage(
+          LogLevel.ERROR,
+          'OrganizerApprovals',
+          'Error fetching pending organizers',
+          error
+        );
+      } else {
+        setPendingOrganizers(data);
+        logMessage(
+          LogLevel.INFO,
+          'OrganizerApprovals',
+          `Found ${data.length} pending organizers`
+        );
+      }
+    };
+
+    fetchPendingOrganizers();
+  }, []);
 
   // Handler for approval
   const handleApprove = (userId: string) => {
@@ -35,13 +48,24 @@ const OrganizerApprovals: React.FC<OrganizerApprovalsProps> = ({
         'OrganizerApprovals',
         `Approving organizer: ${userId}`
       );
-      // Call the approveUser method from UserContext
-      approveUser(userId);
-
-      // Update local state for immediate UI feedback
-      setPendingOrganizers((current) =>
-        current.filter((organizer) => organizer.id !== userId)
-      );
+      supabase
+        .from('users')
+        .update({ status: 'approved' })
+        .eq('id', userId)
+        .then(({ error }) => {
+          if (error) {
+            logMessage(
+              LogLevel.ERROR,
+              'OrganizerApprovals',
+              `Error approving organizer: ${error.message}`
+            );
+          } else {
+            setPendingOrganizers((current) =>
+              current.filter((organizer) => organizer.id !== userId)
+            );
+            onApprovalUpdate();
+          }
+        });
 
       // Trigger dashboard refresh
       onApprovalUpdate();
@@ -62,13 +86,24 @@ const OrganizerApprovals: React.FC<OrganizerApprovalsProps> = ({
         'OrganizerApprovals',
         `Rejecting organizer: ${userId}`
       );
-      // Call the rejectUser method from UserContext
-      rejectUser(userId);
-
-      // Update local state for immediate UI feedback
-      setPendingOrganizers((current) =>
-        current.filter((organizer) => organizer.id !== userId)
-      );
+      supabase
+        .from('users')
+        .update({ status: 'rejected' })
+        .eq('id', userId)
+        .then(({ error }) => {
+          if (error) {
+            logMessage(
+              LogLevel.ERROR,
+              'OrganizerApprovals',
+              `Error rejecting organizer: ${error.message}`
+            );
+          } else {
+            setPendingOrganizers((current) =>
+              current.filter((organizer) => organizer.id !== userId)
+            );
+            onApprovalUpdate();
+          }
+        });
 
       // Trigger dashboard refresh
       onApprovalUpdate();

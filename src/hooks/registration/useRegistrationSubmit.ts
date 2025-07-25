@@ -2,16 +2,22 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { logUserEvent, LogLevel, logMessage } from '@/utils/debugLogger';
+import { useUser } from '@/contexts/UserContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { RegisterFormData } from '@/components/register/RegisterFormSchema';
 
+// Default rating officer email
+const DEFAULT_RATING_OFFICER_EMAIL = 'fawolizzo@gmail.com';
+
 export const useRegistrationSubmit = () => {
   const navigate = useNavigate();
+  const { register: registerInLocalSystem } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [registrationAttempts, setRegistrationAttempts] = useState(0);
   const { toast } = useToast();
+
 
   // Register a tournament organizer
   const registerTournamentOrganizer = async (
@@ -42,6 +48,15 @@ export const useRegistrationSubmit = () => {
         throw new Error('Registration failed - no user data returned');
       }
 
+      // Then register in local system as backup
+      await registerInLocalSystem({
+        fullName: normalizedData.fullName,
+        email: normalizedData.email,
+        phoneNumber: normalizedData.phoneNumber,
+        state: normalizedData.state,
+        role: 'tournament_organizer' as const,
+        status: 'pending' as const,
+      });
 
       return true;
     } catch (error) {

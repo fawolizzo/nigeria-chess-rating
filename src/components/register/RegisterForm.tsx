@@ -16,7 +16,12 @@ const RegisterForm = () => {
     isSubmitting,
     successMessage,
     errorMessage,
+    showAccessCode,
+    accessCode,
+    isAccessCodeValid,
     isSubmitDisabled,
+    handleShowAccessCode,
+    setAccessCode,
     onSubmit,
   } = useRegisterForm();
 
@@ -122,17 +127,9 @@ const RegisterForm = () => {
           onSubmit={form.handleSubmit(handleFormSubmit)}
           className="space-y-5"
         >
-          <RoleSelector
-            selectedRole={selectedRole}
-            onRoleSelect={(role) => {
-              console.log('Role selected:', role);
-              form.setValue('role', role);
-            }}
-          />
-
-          <input type="hidden" {...form.register('role')} />
 
           <RegisterFormFields form={form} />
+
 
           <Button
             type="submit"

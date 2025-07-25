@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useSupabaseAuth } from '@/services/auth/useSupabaseAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,12 +34,40 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [resendingConfirmation, setResendingConfirmation] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
-  const { signIn, loading: authLoading, user } = useAuth();
-  const isAuthenticated = !!user;
+  const authContext = useSupabaseAuth();
+  const { signIn, isLoading: authLoading, isAuthenticated } = authContext;
+  const resetAuthState = (authContext as any).resetAuthState;
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as any)?.from?.pathname || '/';
+
+  // Debug authentication state
+  useEffect(() => {
+    logMessage(LogLevel.INFO, 'LoginForm', 'Auth state changed', {
+      authLoading,
+      isAuthenticated,
+      isLoading,
+      error,
+    });
+
+    // Log to console for easier debugging
+    console.log('🔍 LoginForm Auth State:', {
+      authLoading,
+      isAuthenticated,
+      isLoading,
+      error,
+      timestamp: new Date().toISOString(),
+    });
+  }, [authLoading, isAuthenticated, isLoading, error]);
+
+  // Reset loading state if auth loading changes
+  useEffect(() => {
+    if (!authLoading && isLoading) {
+      logMessage(LogLevel.INFO, 'LoginForm', 'Resetting loading state');
+      setIsLoading(false);
+    }
+  }, [authLoading, isLoading]);
 
   const {
     register,
@@ -99,7 +127,7 @@ export function LoginForm() {
       if (error) {
         setError(error.message);
       } else {
-        navigate(from, { replace: true });
+        navigate('/organizer-dashboard', { replace: true });
       }
     } catch (err) {
       logMessage(LogLevel.ERROR, 'LoginForm', 'Login error', err);
@@ -269,22 +297,18 @@ export function LoginForm() {
                 Register
               </Link>
             </p>
+            <p className="text-sm text-gray-600 mt-2">
+              Are you a Rating Officer?{' '}
+              <Link
+                to="/login/ro"
+                className="text-green-600 hover:text-green-700 font-medium"
+              >
+                Login here
+              </Link>
+            </p>
           </div>
 
 
-          {/* Debug info in development */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-600 mb-2 font-medium">
-                Debug Info:
-              </p>
-              <div className="text-xs space-y-1 text-blue-500">
-                <p>Form Loading: {isLoading ? 'Yes' : 'No'}</p>
-                <p>Auth Loading: {authLoading ? 'Yes' : 'No'}</p>
-                <p>Authenticated: {isAuthenticated ? 'Yes' : 'No'}</p>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

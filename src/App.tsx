@@ -24,6 +24,7 @@ import ResetPassword from '@/pages/auth/ResetPassword';
 import ConfirmationSent from '@/pages/auth/ConfirmationSent';
 import ConfirmEmail from '@/pages/auth/ConfirmEmail';
 import RegisterOrganizer from '@/pages/auth/RegisterOrganizer';
+import RatingOfficerLoginPage from '@/pages/RatingOfficerLogin';
 import HealthCheck from '@/pages/HealthCheck';
 
 // Import dashboard components
@@ -45,6 +46,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/login/ro" element={<RatingOfficerLoginPage />} />
               <Route path="/register" element={<Register />} />
               <Route path="/about" element={<About />} />
               <Route path="/pending-approval" element={<PendingApproval />} />
