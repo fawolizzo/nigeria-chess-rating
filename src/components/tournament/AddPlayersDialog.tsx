@@ -46,16 +46,23 @@ const AddPlayersDialog: React.FC<AddPlayersDialogProps> = ({
       try {
         const { data, error } = await supabaseAdmin
           .from('players')
-          .select('id, name, email, rating, state, status')
+          .select('id, name, email, rating, state, status, phone, city')
           .eq('status', 'approved');
 
         if (!error && data && data.length > 0) {
           console.log('Found players from database:', data.length);
 
-          // Filter out players already in tournament
+          // Filter out players already in tournament and map to correct Player type
           const availablePlayers = data.filter(
             (player) => !existingPlayerIds.includes(player.id)
-          );
+          ).map(player => ({
+            ...player,
+            phone: player.phone || '',
+            city: player.city || '',
+            status: player.status as 'pending' | 'approved' | 'rejected',
+            country: 'Nigeria',
+            gamesPlayed: 0
+          }));
 
           setPlayers(availablePlayers);
           return;

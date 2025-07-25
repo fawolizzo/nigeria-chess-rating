@@ -67,10 +67,9 @@ export const registerUser = async (
     } else if (userData.role === 'tournament_organizer') {
       // Register tournament organizer in organizers table
       const { data, error } = await supabase
-        .from('organizers')
+        .from('organizers' as any)
         .insert([
           {
-            id: undefined,
             email: userData.email,
             name: userData.fullName,
             ...(userData.phoneNumber ? { phone: userData.phoneNumber } : {}),
@@ -79,7 +78,7 @@ export const registerUser = async (
           },
         ])
         .select()
-        .single();
+        .maybeSingle();
       if (error) {
         logMessage(
           LogLevel.ERROR,
@@ -90,14 +89,14 @@ export const registerUser = async (
         throw new Error(error.message || 'Registration failed');
       }
       newUser = {
-        id: data.id,
-        email: data.email,
-        fullName: data.name,
-        phoneNumber: data.phone || '',
+        id: (data as any)?.id || '',
+        email: (data as any)?.email || '',
+        fullName: (data as any)?.name || '',
+        phoneNumber: (data as any)?.phone || '',
         state: '', // Add state if available in data
         role: 'tournament_organizer',
-        status: data.status as 'pending' | 'approved' | 'rejected',
-        registrationDate: data.created_at,
+        status: ((data as any)?.status as 'pending' | 'approved' | 'rejected') || 'pending',
+        registrationDate: (data as any)?.created_at || new Date().toISOString(),
         lastModified: Date.now(),
       };
       // Notify rating officers

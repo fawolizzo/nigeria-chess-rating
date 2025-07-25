@@ -81,7 +81,7 @@ const PlayersTab = ({
         created_at: new Date().toISOString(),
       };
 
-      const createdPlayer = await createPlayer(newPlayerData);
+      const createdPlayer = await createPlayer(newPlayerData as any);
       console.log('✅ Player created successfully:', createdPlayer);
 
       // Convert to Player interface format and add to tournament
@@ -102,8 +102,8 @@ const PlayersTab = ({
         blitzGamesPlayed: createdPlayer.blitzGamesPlayed,
         fideId: createdPlayer.fideId,
         country: 'Nigeria',
-        title: '',
-        registrationDate: createdPlayer.created_at,
+        title: undefined,
+        // No registrationDate in Player interface
       };
 
       // Add the new player to the tournament

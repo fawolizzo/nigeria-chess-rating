@@ -98,10 +98,10 @@ export const loginUser = async (
         '@/integrations/supabase/adminClient'
       );
       const { data: orgData, error: orgError } = await supabaseAdmin
-        .from('organizers')
+        .from('organizers' as any)
         .select('*')
         .eq('id', supabaseUser.id)
-        .single();
+        .maybeSingle();
 
       if (orgError || !orgData) {
         logMessage(
@@ -138,14 +138,14 @@ export const loginUser = async (
           'Found organizer profile in database'
         );
         userProfile = {
-          id: orgData.id,
-          email: orgData.email,
-          fullName: orgData.name,
-          phoneNumber: orgData.phone || '',
-          state: orgData.organization || '',
+          id: (orgData as any)?.id || '',
+          email: (orgData as any)?.email || '',
+          fullName: (orgData as any)?.name || '',
+          phoneNumber: (orgData as any)?.phone || '',
+          state: (orgData as any)?.organization || '',
           role: 'tournament_organizer',
-          status: orgData.status as 'pending' | 'approved' | 'rejected',
-          registrationDate: orgData.created_at,
+          status: ((orgData as any)?.status as 'pending' | 'approved' | 'rejected') || 'pending',
+          registrationDate: (orgData as any)?.created_at || new Date().toISOString(),
           lastModified: Date.now(),
         };
       }
