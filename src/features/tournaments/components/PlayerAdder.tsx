@@ -56,11 +56,11 @@ interface Player {
 }
 
 interface TournamentPlayer {
-  id: string;
+  id?: string;
   player_id: string;
-  seed_rating: number;
-  score: number;
-  withdrawn: boolean;
+  seed_rating?: number;
+  score?: number;
+  withdrawn?: boolean;
   players: Player;
 }
 
@@ -91,7 +91,7 @@ export function PlayerAdder({ tournamentId, onPlayerAdded }: PlayerAdderProps) {
   const loadTournamentPlayers = async () => {
     const result = await getTournamentPlayers(tournamentId);
     if (result.success) {
-      setTournamentPlayers(result.players);
+      setTournamentPlayers(result.players as TournamentPlayer[]);
     }
   };
 

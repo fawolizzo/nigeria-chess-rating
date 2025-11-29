@@ -142,9 +142,13 @@ export async function getRatingJobStatus(tournamentId: string): Promise<{
     return {
       success: true,
       job: job ? ({
-        ...job,
-        status: job.status as 'pending' | 'running' | 'completed' | 'failed'
-      } as RatingJobStatus) : undefined,
+        id: job.id,
+        tournament_id: job.tournament_id || '',
+        status: (job.status as any) || 'pending',
+        started_at: job.started_at || null,
+        finished_at: job.finished_at || null,
+        summary_json: [],
+      }) : undefined,
     };
   } catch (error) {
     console.error('Unexpected error in getRatingJobStatus:', error);

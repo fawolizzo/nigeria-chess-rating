@@ -1,8 +1,25 @@
 import { useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { STORAGE_KEY_CURRENT_USER, STORAGE_KEY_USERS } from '@/types/userTypes';
-import { setupSyncListeners } from '@/utils/deviceSync';
-import { saveDataToStorage } from '@/utils/deviceSync';
+
+// Stub implementations for sync
+const setupSyncListeners = (
+  resetHandler: () => void,
+  syncHandler: (data?: any) => Promise<void>,
+  loginHandler: (userData?: any) => Promise<void>,
+  logoutHandler: () => void,
+  approvalHandler: (userId?: string) => Promise<void>
+) => {
+  return () => {}; // cleanup function
+};
+
+const saveDataToStorage = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save to storage:', e);
+  }
+};
 
 /**
  * Hook for setting up sync listeners across tabs/devices

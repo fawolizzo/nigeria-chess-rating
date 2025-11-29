@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Tournament, Player } from '@/lib/mockData';
+import { Tournament } from '@/types/tournamentTypes';
+import { Player, Pairing, Result } from '@/lib/mockData';
 import { TournamentFormData } from '@/components/tournament/form/TournamentFormSchema';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import {
   getAllTournaments,
   getTournamentsByOrganizer,
@@ -144,7 +145,7 @@ export const useTournamentManager = (): TournamentManagerHook => {
         await createTournamentInSupabase(tournamentToCreate);
 
       // Update local state
-      setTournaments((prev) => [newTournament, ...prev]);
+      setTournaments((prev) => [newTournament as Tournament, ...prev]);
 
       toast({
         title: 'Tournament Created',

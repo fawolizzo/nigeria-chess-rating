@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tournament, Player, Pairing, Result } from '@/lib/mockData';
+import { Tournament } from '@/types/tournamentTypes';
+import { Player, Pairing, Result } from '@/lib/mockData';
 import { useUser } from '@/contexts/user/index';
 import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { useToast } from '@/hooks/use-toast';
@@ -116,39 +117,46 @@ export default function TournamentDetails() {
     (tournament?.players || []).length >= 2 &&
     !tournament.registration_open;
 
-  const handleAddPlayer = async (player: Player) => {
+  const handleAddPlayer = async (players: Player[]) => {
     if (!tournament) return;
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await addPlayerToTournament(
-        tournament.id,
-        player
-      );
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-      }
+      await addPlayerToTournament(tournament.id, players);
+      // Reload tournament data
+      toast({
+        title: 'Success',
+        description: 'Players added successfully',
+      });
     } catch (error) {
       console.error('Error adding player:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add players',
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleRemovePlayer = async (player: Player) => {
+  const handleRemovePlayer = async (playerId: string) => {
     if (!tournament) return;
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await removePlayerFromTournament(
-        tournament.id,
-        player
-      );
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-      }
+      await removePlayerFromTournament(tournament.id, playerId);
+      toast({
+        title: 'Success',
+        description: 'Player removed successfully',
+      });
     } catch (error) {
       console.error('Error removing player:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove player',
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -159,10 +167,11 @@ export default function TournamentDetails() {
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await toggleRegistration(tournament.id);
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-      }
+      await toggleRegistration(tournament.id);
+      toast({
+        title: 'Success',
+        description: 'Registration status updated',
+      });
     } catch (error) {
       console.error('Error toggling registration:', error);
     } finally {
@@ -175,10 +184,11 @@ export default function TournamentDetails() {
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await startTournament(tournament.id);
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-      }
+      await startTournament(tournament.id);
+      toast({
+        title: 'Success',
+        description: 'Tournament started',
+      });
     } catch (error) {
       console.error('Error starting tournament:', error);
     } finally {
@@ -191,10 +201,11 @@ export default function TournamentDetails() {
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await completeTournament(tournament.id);
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-      }
+      await completeTournament(tournament.id);
+      toast({
+        title: 'Success',
+        description: 'Tournament completed',
+      });
     } catch (error) {
       console.error('Error completing tournament:', error);
     } finally {
@@ -338,13 +349,8 @@ export default function TournamentDetails() {
                     : []
                 }
                 onCreatePlayer={() => {}}
-                onAddPlayers={(players) => players.forEach(handleAddPlayer)}
-                onRemovePlayer={(playerId) => {
-                  const player = (
-                    Array.isArray(tournament.players) ? tournament.players : []
-                  ).find((p) => p.id === playerId);
-                  if (player) handleRemovePlayer(player);
-                }}
+                onAddPlayers={handleAddPlayer}
+                onRemovePlayer={handleRemovePlayer}
                 isProcessing={isProcessing}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -354,10 +360,10 @@ export default function TournamentDetails() {
             <TabsContent value="pairings" className="space-y-4">
               <PairingsTab
                 tournament={tournament}
-                onGeneratePairings={generatePairings}
-                onRecordResult={recordResult}
-                onNextRound={nextRound}
-                isOrganizer={isOrganizer}
+                onGeneratePairings={() => generatePairings(tournament.id)}
+                onRecordResult={(pairingId, result) => recordResult(tournament.id, pairingId, result)}
+                onNextRound={() => nextRound(tournament.id)}
+                isOrganizer={isOrganizer || false}
                 isProcessing={isProcessing}
               />
             </TabsContent>

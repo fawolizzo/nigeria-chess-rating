@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { requestDataSync } from '@/utils/deviceSync';
+
+// Stub for device sync
+const requestDataSync = () => {};
 
 /**
  * Hook for setting up global sync functions

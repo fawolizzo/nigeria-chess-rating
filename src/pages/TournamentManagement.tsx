@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tournament, Player, Pairing, Result } from '@/lib/mockData';
-import { useUser } from '@/contexts/UserContext';
+import { Tournament } from '@/types/tournamentTypes';
+import { Player, Pairing, Result } from '@/lib/mockData';
+import { useUser } from '@/contexts/user/index';
 import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -124,13 +125,13 @@ export default function TournamentManagement() {
           const { data, error } = await supabaseAdmin
             .from('players')
             .select(
-              'id, name, email, rating, state, status, phone, city, country, gamesPlayed'
+              'id, name, email, rating, state, status, phone, city'
             )
             .eq('status', 'approved');
 
           if (!error && data && data.length > 0) {
             console.log('✅ Found players from database:', data.length);
-            setAllAvailablePlayers(data);
+            setAllAvailablePlayers(data as Player[]);
             return;
           }
         } catch (dbError) {
@@ -218,39 +219,33 @@ export default function TournamentManagement() {
     selectedPlayers.length >= 2 &&
     !tournament.registration_open;
 
-  const handleAddPlayer = async (player: Player) => {
+  const handleAddPlayers = async (players: Player[]) => {
     if (!tournament) return;
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await addPlayerToTournament(
-        tournament.id,
-        player
-      );
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-        setSelectedPlayers(updatedTournament.players || []);
-      }
+      await addPlayerToTournament(tournament.id, players);
+      toast({
+        title: 'Success',
+        description: 'Players added successfully',
+      });
     } catch (error) {
-      console.error('Error adding player:', error);
+      console.error('Error adding players:', error);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleRemovePlayer = async (player: Player) => {
+  const handleRemovePlayer = async (playerId: string) => {
     if (!tournament) return;
 
     try {
       setIsProcessing(true);
-      const updatedTournament = await removePlayerFromTournament(
-        tournament.id,
-        player
-      );
-      if (updatedTournament) {
-        setTournament(updatedTournament);
-        setSelectedPlayers(updatedTournament.players || []);
-      }
+      await removePlayerFromTournament(tournament.id, playerId);
+      toast({
+        title: 'Success',
+        description: 'Player removed successfully',
+      });
     } catch (error) {
       console.error('Error removing player:', error);
     } finally {
