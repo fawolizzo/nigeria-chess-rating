@@ -73,7 +73,7 @@ export async function completeRound({
 
     // Call the RPC function to complete the round
     const { data: result, error: rpcError } = await supabase.rpc(
-      'rpc_mark_round_complete',
+      'rpc_mark_round_complete' as any,
       { round_id: roundId }
     );
 
@@ -86,18 +86,19 @@ export async function completeRound({
 
     // Parse the result from the RPC function
     if (result && typeof result === 'object' && 'success' in result) {
-      if (result.success) {
+      const typedResult = result as any;
+      if (typedResult.success) {
         return {
           success: true,
-          roundId: result.round_id,
-          roundNumber: result.round_number,
-          tournamentId: result.tournament_id,
-          isFinalRound: result.is_final_round,
+          roundId: typedResult.round_id,
+          roundNumber: typedResult.round_number,
+          tournamentId: typedResult.tournament_id,
+          isFinalRound: typedResult.is_final_round,
         };
       } else {
         return {
           success: false,
-          error: result.error || 'Failed to complete round',
+          error: typedResult.error || 'Failed to complete round',
         };
       }
     }
@@ -106,9 +107,9 @@ export async function completeRound({
     return {
       success: true,
       roundId: roundId,
-      roundNumber: round.number,
+      roundNumber: round.round_number,
       tournamentId: round.tournament_id,
-      isFinalRound: round.number === round.tournaments.rounds_total,
+      isFinalRound: round.round_number === round.tournaments.rounds_total,
     };
   } catch (error) {
     console.error('Unexpected error in completeRound:', error);

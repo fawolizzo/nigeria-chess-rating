@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { useToast } from '@/hooks/use-toast';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { useSyncStorage } from './useSyncStorage';

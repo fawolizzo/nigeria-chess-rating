@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Tournament } from '@/lib/mockData';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { useToast } from '@/hooks/use-toast';
 import {
   getTournamentsFromSupabase,

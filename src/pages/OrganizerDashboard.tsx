@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { OrganizerDashboardLayout } from '@/components/organizer/dashboard/OrganizerDashboardLayout';
 import { OrganizerTabsWrapper } from '@/components/organizer/dashboard/OrganizerTabsWrapper';

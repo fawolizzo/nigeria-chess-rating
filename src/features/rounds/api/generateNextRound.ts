@@ -53,7 +53,7 @@ export async function generateNextRound({
 
     // Call the RPC function to generate next round
     const { data: result, error: rpcError } = await supabase.rpc(
-      'rpc_generate_next_round',
+      'rpc_generate_next_round' as any,
       { tournament_id: tournamentId }
     );
 
@@ -66,18 +66,19 @@ export async function generateNextRound({
 
     // Parse the result from the RPC function
     if (result && typeof result === 'object' && 'success' in result) {
-      if (result.success) {
+      const typedResult = result as any;
+      if (typedResult.success) {
         return {
           success: true,
-          roundId: result.round_id,
-          roundNumber: result.round_number,
-          pairingsCount: result.pairings_count,
-          hasBye: result.has_bye,
+          roundId: typedResult.round_id,
+          roundNumber: typedResult.round_number,
+          pairingsCount: typedResult.pairings_count,
+          hasBye: typedResult.has_bye,
         };
       } else {
         return {
           success: false,
-          error: result.error || 'Failed to generate next round',
+          error: typedResult.error || 'Failed to generate next round',
         };
       }
     }
@@ -120,7 +121,7 @@ export async function completeTournament({
 
     // Call the RPC function to complete tournament
     const { data: result, error: rpcError } = await supabase.rpc(
-      'rpc_complete_tournament',
+      'rpc_complete_tournament' as any,
       { tournament_id: tournamentId }
     );
 
@@ -133,17 +134,18 @@ export async function completeTournament({
 
     // Parse the result from the RPC function
     if (result && typeof result === 'object' && 'success' in result) {
-      if (result.success) {
+      const typedResult = result as any;
+      if (typedResult.success) {
         return {
           success: true,
-          tournamentId: result.tournament_id,
-          finalRound: result.final_round,
-          status: result.status,
+          tournamentId: typedResult.tournament_id,
+          finalRound: typedResult.final_round,
+          status: typedResult.status,
         };
       } else {
         return {
           success: false,
-          error: result.error || 'Failed to complete tournament',
+          error: typedResult.error || 'Failed to complete tournament',
         };
       }
     }
@@ -167,7 +169,7 @@ export async function completeTournament({
 export async function getTournamentStandings(tournamentId: string) {
   try {
     const { data: standings, error } = await supabase.rpc(
-      'get_tournament_standings_detailed',
+      'get_tournament_standings_detailed' as any,
       { tournament_id: tournamentId }
     );
 

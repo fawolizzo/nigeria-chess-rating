@@ -1,7 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
 
-export type GameResult = Database['public']['Enums']['game_result'];
+export type GameResult = 'white_win' | 'black_win' | 'draw' | 'bye' | 'white_forfeit' | 'black_forfeit' | 'double_forfeit';
 
 export interface UpdateResultRequest {
   pairingId: string;

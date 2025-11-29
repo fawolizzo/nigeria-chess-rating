@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { ClockIcon, LogOutIcon, RefreshCwIcon } from 'lucide-react';

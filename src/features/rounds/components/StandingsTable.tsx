@@ -68,7 +68,7 @@ export function StandingsTable({
       const result = await getTournamentStandings(tournamentId);
 
       if (result.success) {
-        setStandings(result.standings);
+        setStandings(Array.isArray(result.standings) ? result.standings : []);
       } else {
         setError(result.error || 'Failed to load standings');
       }

@@ -61,7 +61,7 @@ export function RoleGate({
   // Check role requirements
   if (role) {
     const allowedRoles = Array.isArray(role) ? role : [role];
-    const userRole = profile.role;
+    const userRole = profile.role as UserRole;
 
     if (!allowedRoles.includes(userRole)) {
       return (
