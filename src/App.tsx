@@ -37,11 +37,10 @@ function App() {
   }, [storedTheme]);
 
   return (
-    <SupabaseAuthProvider>
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <UserProvider>
-        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-          <BrowserRouter>
-            <Routes>
+        <BrowserRouter>
+          <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -98,12 +97,11 @@ function App() {
               <Route path="/players/:id" element={<PlayerProfile />} />
               <Route path="/health" element={<HealthCheck />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </BrowserRouter>
-        </ThemeProvider>
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
       </UserProvider>
-    </SupabaseAuthProvider>
+    </ThemeProvider>
   );
 }
 
