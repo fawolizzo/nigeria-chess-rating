@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { getUserRoleInfo } from './authUtils';
 
 export type SupabaseAuthContextProps = {

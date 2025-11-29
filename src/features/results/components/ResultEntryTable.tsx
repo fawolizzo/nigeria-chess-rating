@@ -45,7 +45,7 @@ interface Pairing {
   white_player: Player;
   black_player: Player | null;
   result: GameResult | null;
-  result_entered_by: string | null;
+  result_entered_by?: string | null;
   updated_at: string;
 }
 
@@ -107,7 +107,7 @@ export function ResultEntryTable({
       const result = await getRoundPairings(round.id);
 
       if (result.success) {
-        setPairings(result.pairings);
+        setPairings(result.pairings as Pairing[]);
 
         // Check round completion status
         const statusResult = await checkRoundComplete(round.id);

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { LoginFormData, loginSchema } from '@/components/login/LoginFormInputs';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 
 export const useLoginForm = (setErrorExternal?: (msg: string) => void) => {
   const { login: localLogin } = useUser();

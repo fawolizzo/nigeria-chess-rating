@@ -18,7 +18,7 @@ import { TournamentConfigFields } from './TournamentConfigFields';
 
 interface CreateTournamentFormUIProps {
   form: UseFormReturn<any>;
-  onSubmit?: (data: any) => void;
+  onSubmit?: (data: any, customTimeControl: string, isCustomTimeControl: boolean) => Promise<boolean>;
   handleSubmit: (data: any) => void;
   isSubmitting: boolean;
   errorMsg: string | null;
@@ -39,7 +39,9 @@ const CreateTournamentFormUI: React.FC<CreateTournamentFormUIProps> = ({
   updateCustomTimeControlState,
   watchTimeControl,
 }) => {
-  const submitHandler = onSubmit || handleSubmit;
+  const submitHandler = onSubmit 
+    ? (data: any) => onSubmit(data, watchTimeControl, isCustomTimeControl)
+    : handleSubmit;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

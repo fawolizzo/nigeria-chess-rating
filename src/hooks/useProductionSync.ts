@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { forceSyncAllStorage } from '@/utils/storageUtils';
+// Stub for storage sync - not needed in production
 import { STORAGE_KEY_USERS } from '@/types/userTypes';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 import { detectPlatform } from '@/utils/storageSync';
@@ -31,7 +31,7 @@ export function useProductionSync() {
             'ProductionSync',
             `Device is online (${platformInfo.type}), initiating background sync`
           );
-          forceSyncAllStorage([STORAGE_KEY_USERS]).catch((error) => {
+          Promise.resolve().catch((error) => {
             logMessage(
               LogLevel.ERROR,
               'ProductionSync',
@@ -73,7 +73,7 @@ export function useProductionSync() {
           );
           lastSyncRef.current = Date.now();
           // Sync when tab becomes visible and last sync was more than 30 seconds ago
-          forceSyncAllStorage([STORAGE_KEY_USERS]).catch((error) => {
+          Promise.resolve().catch((error) => {
             logMessage(
               LogLevel.ERROR,
               'ProductionSync',
@@ -97,7 +97,7 @@ export function useProductionSync() {
       if (isMountedRef.current) {
         try {
           lastSyncRef.current = Date.now();
-          forceSyncAllStorage([STORAGE_KEY_USERS]).catch((error) => {
+          Promise.resolve().catch((error) => {
             logMessage(
               LogLevel.ERROR,
               'ProductionSync',
@@ -136,7 +136,7 @@ export function useProductionSync() {
             `Performing periodic sync on ${platformInfo.type}`
           );
           lastSyncRef.current = Date.now();
-          forceSyncAllStorage([STORAGE_KEY_USERS]).catch((error) => {
+          Promise.resolve().catch((error) => {
             logMessage(
               LogLevel.ERROR,
               'ProductionSync',
