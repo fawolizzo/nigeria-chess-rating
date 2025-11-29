@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
@@ -56,6 +56,73 @@ export type Database = {
         }
         Relationships: []
       }
+      pairings: {
+        Row: {
+          black_player_id: string | null
+          black_rating_after: number | null
+          black_rating_before: number | null
+          board_number: number
+          created_at: string | null
+          id: string
+          result: string | null
+          round_id: string
+          updated_at: string | null
+          white_player_id: string | null
+          white_rating_after: number | null
+          white_rating_before: number | null
+        }
+        Insert: {
+          black_player_id?: string | null
+          black_rating_after?: number | null
+          black_rating_before?: number | null
+          board_number: number
+          created_at?: string | null
+          id?: string
+          result?: string | null
+          round_id: string
+          updated_at?: string | null
+          white_player_id?: string | null
+          white_rating_after?: number | null
+          white_rating_before?: number | null
+        }
+        Update: {
+          black_player_id?: string | null
+          black_rating_after?: number | null
+          black_rating_before?: number | null
+          board_number?: number
+          created_at?: string | null
+          id?: string
+          result?: string | null
+          round_id?: string
+          updated_at?: string | null
+          white_player_id?: string | null
+          white_rating_after?: number | null
+          white_rating_before?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pairings_black_player_id_fkey"
+            columns: ["black_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pairings_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pairings_white_player_id_fkey"
+            columns: ["white_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       "Player's Table": {
         Row: {
           created_at: string
@@ -74,18 +141,25 @@ export type Database = {
       players: {
         Row: {
           birth_year: number | null
+          blitz_games: number | null
           blitz_games_played: number | null
           blitz_rating: number | null
           city: string | null
+          classical_games: number | null
+          classical_rating: number | null
           club: string | null
           created_at: string
           email: string
           fide_id: string | null
+          full_name: string | null
           games_played: number
           gender: string | null
+          has_rating_bonus: boolean | null
           id: string
           name: string
           phone: string | null
+          player_number: number
+          rapid_games: number | null
           rapid_games_played: number | null
           rapid_rating: number | null
           rating: number | null
@@ -96,18 +170,25 @@ export type Database = {
         }
         Insert: {
           birth_year?: number | null
+          blitz_games?: number | null
           blitz_games_played?: number | null
           blitz_rating?: number | null
           city?: string | null
+          classical_games?: number | null
+          classical_rating?: number | null
           club?: string | null
           created_at?: string
           email: string
           fide_id?: string | null
+          full_name?: string | null
           games_played?: number
           gender?: string | null
+          has_rating_bonus?: boolean | null
           id?: string
           name: string
           phone?: string | null
+          player_number: number
+          rapid_games?: number | null
           rapid_games_played?: number | null
           rapid_rating?: number | null
           rating?: number | null
@@ -118,18 +199,25 @@ export type Database = {
         }
         Update: {
           birth_year?: number | null
+          blitz_games?: number | null
           blitz_games_played?: number | null
           blitz_rating?: number | null
           city?: string | null
+          classical_games?: number | null
+          classical_rating?: number | null
           club?: string | null
           created_at?: string
           email?: string
           fide_id?: string | null
+          full_name?: string | null
           games_played?: number
           gender?: string | null
+          has_rating_bonus?: boolean | null
           id?: string
           name?: string
           phone?: string | null
+          player_number?: number
+          rapid_games?: number | null
           rapid_games_played?: number | null
           rapid_rating?: number | null
           rating?: number | null
@@ -139,6 +227,73 @@ export type Database = {
           title_verified?: boolean | null
         }
         Relationships: []
+      }
+      rating_officers: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_officers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rounds: {
+        Row: {
+          created_at: string | null
+          end_time: string | null
+          id: string
+          round_number: number
+          start_time: string | null
+          status: string
+          tournament_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          round_number: number
+          start_time?: string | null
+          status?: string
+          tournament_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          round_number?: number
+          start_time?: string | null
+          status?: string
+          tournament_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rounds_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       "Rounds Table": {
         Row: {
@@ -169,6 +324,32 @@ export type Database = {
           id?: number
         }
         Relationships: []
+      }
+      tournament_organizers: {
+        Row: {
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_organizers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tournament_players: {
         Row: {
@@ -205,68 +386,122 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          arbiter_name: string | null
           city: string
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           current_round: number | null
           description: string | null
           end_date: string
+          entry_fee: number | null
+          format: string
           id: string
-          location: string
+          location: string | null
+          max_players: number | null
           name: string
-          organizer_id: string
+          notes: string | null
+          organizer_id: string | null
+          pairing_system: string | null
+          pairings: Json | null
           participants: number | null
+          players: Json | null
+          prize_fund: number | null
+          public_registration_open: boolean | null
+          rating_system: string | null
+          registration_deadline: string | null
           registration_open: boolean | null
-          rounds: number
+          results: Json | null
+          rounds_completed: number | null
+          rounds_total: number | null
           start_date: string
           state: string
           status: string
-          time_control: string
+          time_control: string | null
+          tournament_type: string | null
           updated_at: string
+          venue: string | null
         }
         Insert: {
+          arbiter_name?: string | null
           city: string
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           current_round?: number | null
           description?: string | null
           end_date: string
+          entry_fee?: number | null
+          format?: string
           id?: string
-          location: string
-          name: string
-          organizer_id: string
+          location?: string | null
+          max_players?: number | null
+          name?: string
+          notes?: string | null
+          organizer_id?: string | null
+          pairing_system?: string | null
+          pairings?: Json | null
           participants?: number | null
+          players?: Json | null
+          prize_fund?: number | null
+          public_registration_open?: boolean | null
+          rating_system?: string | null
+          registration_deadline?: string | null
           registration_open?: boolean | null
-          rounds: number
+          results?: Json | null
+          rounds_completed?: number | null
+          rounds_total?: number | null
           start_date: string
           state: string
           status: string
-          time_control: string
+          time_control?: string | null
+          tournament_type?: string | null
           updated_at?: string
+          venue?: string | null
         }
         Update: {
+          arbiter_name?: string | null
           city?: string
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           current_round?: number | null
           description?: string | null
           end_date?: string
+          entry_fee?: number | null
+          format?: string
           id?: string
-          location?: string
+          location?: string | null
+          max_players?: number | null
           name?: string
-          organizer_id?: string
+          notes?: string | null
+          organizer_id?: string | null
+          pairing_system?: string | null
+          pairings?: Json | null
           participants?: number | null
+          players?: Json | null
+          prize_fund?: number | null
+          public_registration_open?: boolean | null
+          rating_system?: string | null
+          registration_deadline?: string | null
           registration_open?: boolean | null
-          rounds?: number
+          results?: Json | null
+          rounds_completed?: number | null
+          rounds_total?: number | null
           start_date?: string
           state?: string
           status?: string
-          time_control?: string
+          time_control?: string | null
+          tournament_type?: string | null
           updated_at?: string
+          venue?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "tournaments_organizer_id_fkey"
             columns: ["organizer_id"]
             isOneToOne: false
-            referencedRelation: "organizers"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -303,7 +538,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_expected_score: {
+        Args: { rating_a: number; rating_b: number }
+        Returns: number
+      }
+      generate_player_number: { Args: never; Returns: number }
+      get_k_factor: {
+        Args: {
+          current_rating?: number
+          player_id: string
+          tournament_format: string
+        }
+        Returns: number
+      }
+      result_to_score: {
+        Args: { game_result: string; player_color: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
