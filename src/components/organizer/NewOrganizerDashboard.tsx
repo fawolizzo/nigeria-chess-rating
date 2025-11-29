@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { useNavigate } from 'react-router-dom';
 import { useTournamentManager } from '@/hooks/useTournamentManager';
 import { Tournament, TournamentFormData } from '@/types/tournamentTypes';

@@ -23,7 +23,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { getAllPlayersFromSupabase } from '@/services/playerService';
 
 interface TournamentPlayerSelectorProps {
