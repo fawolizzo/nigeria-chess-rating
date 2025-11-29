@@ -59,7 +59,7 @@ export const approveUserOperation = (
 
   // Force a sync event for the users key to ensure cross-platform consistency
   setTimeout(() => {
-    sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEYS.USERS, updatedUsers);
+    sendSyncEvent(SyncEventType.UPDATE, updatedUsers);
     logMessage(
       LogLevel.INFO,
       'ApprovalOperations',
@@ -116,7 +116,7 @@ export const rejectUserOperation = (
 
   // Force a sync event for the users key to ensure cross-platform consistency
   setTimeout(() => {
-    sendSyncEvent(SyncEventType.UPDATE, STORAGE_KEYS.USERS, updatedUsers);
+    sendSyncEvent(SyncEventType.UPDATE, updatedUsers);
     logMessage(
       LogLevel.INFO,
       'ApprovalOperations',
@@ -136,7 +136,7 @@ function sendApprovalEmail(users: User[], userId: string): void {
         approvedUser.email,
         'Tournament Organizer Account Approved',
         `<h1>Account Approved</h1>
-        <p>Dear ${approvedUser.fullName},</p>
+        <p>Dear ${approvedUser.email},</p>
         <p>Your tournament organizer account has been approved. You can now log in and create tournaments.</p>`
       ).catch((error) => {
         logMessage(
@@ -168,7 +168,7 @@ function sendRejectionEmail(users: User[], userId: string): void {
         rejectedUser.email,
         'Tournament Organizer Account Rejected',
         `<h1>Account Status Update</h1>
-        <p>Dear ${rejectedUser.fullName},</p>
+        <p>Dear ${rejectedUser.email},</p>
         <p>We regret to inform you that your tournament organizer account application has been rejected.</p>
         <p>Please contact the Nigerian Chess Federation for more information.</p>`
       ).catch((error) => {
