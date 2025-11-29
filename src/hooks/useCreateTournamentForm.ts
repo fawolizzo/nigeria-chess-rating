@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createTournament } from '@/services/tournament/tournamentService';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import {
   TournamentFormData,
   createTournamentSchema,

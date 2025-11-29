@@ -170,10 +170,12 @@ export async function createAndAddPlayerToTournament({
     // Create new player
     const newPlayerData: TablesInsert<'players'> = {
       full_name: playerData.fullName,
+      name: playerData.fullName,
+      email: `player_${Date.now()}@temp.local`,
+      player_number: Math.floor(100000 + Math.random() * 900000),
       state: playerData.state || null,
       gender: playerData.gender || null,
       status: 'pending',
-      created_by: organizerId,
     };
 
     const { data: player, error: playerError } = await supabase

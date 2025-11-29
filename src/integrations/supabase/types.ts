@@ -619,9 +619,37 @@ export type Database = {
         }
         Returns: number
       }
+      get_tournament_standings_detailed: {
+        Args: { tournament_id: string }
+        Returns: {
+          draws: number
+          games_played: number
+          losses: number
+          player_id: string
+          player_name: string
+          rank: number
+          score: number
+          seed_rating: number
+          wins: number
+        }[]
+      }
       result_to_score: {
         Args: { game_result: string; player_color: string }
         Returns: number
+      }
+      rpc_complete_tournament: {
+        Args: { tournament_id: string }
+        Returns: Json
+      }
+      rpc_generate_next_round: {
+        Args: { tournament_id: string }
+        Returns: Json
+      }
+      rpc_generate_round1: { Args: { tournament_id: string }; Returns: Json }
+      rpc_mark_round_complete: { Args: { round_id: string }; Returns: Json }
+      rpc_process_tournament_ratings: {
+        Args: { tournament_id: string }
+        Returns: Json
       }
     }
     Enums: {

@@ -76,7 +76,7 @@ export async function processRatings({
 
     // Call the RPC function to process ratings
     const { data: result, error: rpcError } = await supabase.rpc(
-      'rpc_process_tournament_ratings',
+      'rpc_process_tournament_ratings' as any,
       { tournament_id: tournamentId }
     );
 
@@ -89,16 +89,17 @@ export async function processRatings({
 
     // Parse the result from the RPC function
     if (result && typeof result === 'object' && 'success' in result) {
-      if (result.success) {
+      const typedResult = result as any;
+      if (typedResult.success) {
         return {
           success: true,
-          playersProcessed: result.players_processed,
-          summary: result.summary,
+          playersProcessed: typedResult.players_processed,
+          summary: typedResult.summary,
         };
       } else {
         return {
           success: false,
-          error: result.error || 'Failed to process ratings',
+          error: typedResult.error || 'Failed to process ratings',
         };
       }
     }
@@ -140,7 +141,10 @@ export async function getRatingJobStatus(tournamentId: string): Promise<{
 
     return {
       success: true,
-      job: job || undefined,
+      job: job ? ({
+        ...job,
+        status: job.status as 'pending' | 'running' | 'completed' | 'failed'
+      } as RatingJobStatus) : undefined,
     };
   } catch (error) {
     console.error('Unexpected error in getRatingJobStatus:', error);
@@ -179,7 +183,7 @@ export async function getTournamentRatingChanges(
 
     return {
       success: true,
-      changes: (job.summary_json as RatingChange[]) || [],
+      changes: (job.summary_json as unknown as RatingChange[]) || [],
     };
   } catch (error) {
     console.error('Unexpected error in getTournamentRatingChanges:', error);

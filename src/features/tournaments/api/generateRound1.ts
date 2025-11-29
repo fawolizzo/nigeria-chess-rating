@@ -39,7 +39,7 @@ export async function generateRound1({
 
     // Call the RPC function to generate Round 1
     const { data: result, error: rpcError } = await supabase.rpc(
-      'rpc_generate_round1',
+      'rpc_generate_round1' as any,
       { tournament_id: tournamentId }
     );
 
@@ -52,17 +52,18 @@ export async function generateRound1({
 
     // Parse the result from the RPC function
     if (result && typeof result === 'object' && 'success' in result) {
-      if (result.success) {
+      const typedResult = result as any;
+      if (typedResult.success) {
         return {
           success: true,
-          roundId: result.round_id,
-          pairingsCount: result.pairings_count,
-          hasBye: result.has_bye,
+          roundId: typedResult.round_id,
+          pairingsCount: typedResult.pairings_count,
+          hasBye: typedResult.has_bye,
         };
       } else {
         return {
           success: false,
-          error: result.error || 'Failed to generate pairings',
+          error: typedResult.error || 'Failed to generate pairings',
         };
       }
     }
