@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action_type: string
+          actor_user_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          meta_json: Json | null
+        }
+        Insert: {
+          action_type: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          meta_json?: Json | null
+        }
+        Update: {
+          action_type?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          meta_json?: Json | null
+        }
+        Relationships: []
+      }
       organizers: {
         Row: {
           certifications: string[] | null
@@ -227,6 +257,44 @@ export type Database = {
           title_verified?: boolean | null
         }
         Relationships: []
+      }
+      rating_jobs: {
+        Row: {
+          created_at: string | null
+          finished_at: string | null
+          id: string
+          started_at: string | null
+          status: string | null
+          summary_json: Json | null
+          tournament_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string | null
+          summary_json?: Json | null
+          tournament_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          finished_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string | null
+          summary_json?: Json | null
+          tournament_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_jobs_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rating_officers: {
         Row: {

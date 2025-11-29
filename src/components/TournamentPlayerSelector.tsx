@@ -120,7 +120,7 @@ const TournamentPlayerSelector = ({
               if (!open) handleDialogClose(false);
             }}
             onPlayersSelected={handlePlayersSelected}
-            excludeIds={existingPlayerIds}
+            excludePlayerIds={existingPlayerIds}
             hideDialog={true}
             includePendingPlayers={true}
           />

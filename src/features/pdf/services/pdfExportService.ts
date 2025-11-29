@@ -59,7 +59,7 @@ export class PDFExportService {
     }
   ): Promise<void> {
     try {
-      const doc = PairingsPDF({ tournament, round });
+      const doc = PairingsPDF({ tournament, round }) as React.ReactElement;
       const blob = await pdf(doc).toBlob();
 
       const filename =
@@ -89,7 +89,7 @@ export class PDFExportService {
         tournament,
         standings,
         currentRound: options?.currentRound,
-      });
+      }) as React.ReactElement;
       const blob = await pdf(doc).toBlob();
 
       const filename =
@@ -111,7 +111,7 @@ export class PDFExportService {
     round: Round
   ): Promise<Blob> {
     try {
-      const doc = PairingsPDF({ tournament, round });
+      const doc = PairingsPDF({ tournament, round }) as React.ReactElement;
       return await pdf(doc).toBlob();
     } catch (error) {
       console.error('Error generating pairings blob:', error);
@@ -128,7 +128,7 @@ export class PDFExportService {
     currentRound?: number
   ): Promise<Blob> {
     try {
-      const doc = StandingsPDF({ tournament, standings, currentRound });
+      const doc = StandingsPDF({ tournament, standings, currentRound }) as React.ReactElement;
       return await pdf(doc).toBlob();
     } catch (error) {
       console.error('Error generating standings blob:', error);

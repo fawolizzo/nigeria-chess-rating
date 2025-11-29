@@ -29,7 +29,7 @@ const TournamentRatingProcessor: React.FC<TournamentRatingProcessorProps> = ({
 
     try {
       // Get current players from storage
-      const players = getFromStorage('players', []);
+      const players = await getFromStorage('players', []);
       const updatedPlayers = [...players];
 
       // Process each result and update ratings
@@ -75,7 +75,7 @@ const TournamentRatingProcessor: React.FC<TournamentRatingProcessorProps> = ({
       saveToStorage('players', updatedPlayers);
 
       // Mark tournament as processed
-      const tournaments = getFromStorage('tournaments', []);
+      const tournaments = await getFromStorage('tournaments', []);
       const tournamentIndex = tournaments.findIndex(
         (t: any) => t.id === tournament.id
       );

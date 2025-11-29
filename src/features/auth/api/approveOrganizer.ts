@@ -98,7 +98,7 @@ export async function approveOrganizer({
       user: {
         id: updatedUser.id,
         email: updatedUser.email,
-        status: updatedUser.status,
+        status: updatedUser.status as UserStatus,
       },
     };
   } catch (error) {

@@ -59,17 +59,12 @@ const RegisterForm = () => {
     isSubmitting,
     successMessage,
     errorMessage,
-    showAccessCode,
-    accessCode,
-    isAccessCodeValid,
     isSubmitDisabled,
   });
 
   const handleFormSubmit = async (data: any) => {
     console.log('Form submitted with values:', data);
     console.log('Selected role:', selectedRole);
-    console.log('Access code (rating officer):', accessCode);
-    console.log('Is access code valid:', isAccessCodeValid);
 
     try {
       return await onSubmit(data);
