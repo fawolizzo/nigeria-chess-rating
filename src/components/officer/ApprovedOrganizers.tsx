@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { format } from 'date-fns';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import { Badge } from '@/components/ui/badge';
 
 const ApprovedOrganizers: React.FC = () => {

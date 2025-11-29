@@ -18,6 +18,7 @@ interface MultiSelectPlayersProps {
   excludePlayerIds?: string[];
   allPlayers?: Player[];
   includePendingPlayers?: boolean;
+  hideDialog?: boolean;
 }
 
 const MultiSelectPlayers = ({

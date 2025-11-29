@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/user/index';
 import OrganizerApprovalList from '@/components/OrganizerApprovalList';
 import { logMessage, LogLevel } from '@/utils/debugLogger';
 

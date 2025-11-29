@@ -89,7 +89,7 @@ const Navbar = () => {
 
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {currentUser.fullName || currentUser.email}
+                    {currentUser.email}
                   </span>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     Logout
@@ -192,7 +192,7 @@ const Navbar = () => {
 
                   <div className="flex flex-col space-y-2">
                     <span className="text-sm text-gray-600 dark:text-gray-300 px-3">
-                      Logged in as: {currentUser.fullName || currentUser.email}
+                      Logged in as: {currentUser.email}
                     </span>
                     <Button
                       variant="ghost"

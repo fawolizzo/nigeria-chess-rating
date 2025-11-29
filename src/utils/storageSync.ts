@@ -4,9 +4,9 @@
 /**
  * Detect the current platform
  */
-export const detectPlatform = (): string => {
+export const detectPlatform = (): { type: string } => {
   if (typeof window === 'undefined') {
-    return 'server';
+    return { type: 'server' };
   }
 
   const userAgent = window.navigator.userAgent.toLowerCase();
@@ -16,10 +16,10 @@ export const detectPlatform = (): string => {
     userAgent.includes('android') ||
     userAgent.includes('iphone')
   ) {
-    return 'mobile';
+    return { type: 'mobile' };
   }
 
-  return 'desktop';
+  return { type: 'desktop' };
 };
 
 /**
